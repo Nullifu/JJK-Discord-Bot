@@ -54,8 +54,8 @@ client.on("messageCreate", async (message) => {
 			await message.reply("skull")
 
 		// fetch WIP v3
-		} else if  (command === "fetch") {
-			const subredditName = "dankmemes" // replace with subreddit to fetch from
+		} else if  (command === "meme") {
+			const subredditName = "meme" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
 			subreddit.getRandomSubmission().then( async ( randomPost ) => {
 				if (randomPost.url) {
@@ -70,8 +70,31 @@ client.on("messageCreate", async (message) => {
 				}
 			} ).catch( error => {
 				console.error("Error fetching image from Reddit:", error)
+				message.reply("An error occurred while fetching the image from Reddit.")				
+			} )
+
+		// eslint-disable-next-line no-dupe-else-if
+		} else if  (command === "hentai") {
+			const subredditName = "hentai" // replace with subreddit to fetch from
+			const subreddit = reddit.getSubreddit(subredditName)
+			subreddit.getRandomSubmission().then( async ( randomPost ) => {
+				if (randomPost.url) {
+					const embed = new EmbedBuilder()
+						.setTitle(randomPost.title)
+						.setImage(randomPost.url)
+						.setColor("#0099ff")
+	
+					await message.reply({ embeds: [embed] })
+				} else {
+					message.reply("No images found")
+				}
+			} ).catch( error => {
+				console.error("Error fetching image from Reddit:", error)
 				message.reply("An error occurred while fetching the image from Reddit.")
 			} )
+	
+
+			
 		}
 	}
 })
