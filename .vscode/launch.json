@@ -1,0 +1,21 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"program": "${workspaceFolder}/build/bot.js",
+			"outFiles": [
+				"${workspaceFolder}/build/**/*.js"
+			],
+			"cwd": "${workspaceFolder}",
+			"preLaunchTask": "Build",
+			"console": "internalConsole",
+			"internalConsoleOptions": "openOnSessionStart"
+		}
+	]
+}
