@@ -92,6 +92,26 @@ client.on("messageCreate", async (message) => {
 				console.error("Error fetching image from Reddit:", error)
 				message.reply("An error occurred while fetching the image from Reddit.")
 			} )
+			
+			// eslint-disable-next-line no-dupe-else-if
+		} else if  (command === "!aww") {
+			const subredditName = "Awww" // replace with subreddit to fetch from
+			const subreddit = reddit.getSubreddit(subredditName)
+			subreddit.getRandomSubmission().then( async ( randomPost ) => {
+				if (randomPost.url) {
+					const embed = new EmbedBuilder()
+						.setTitle(randomPost.title)
+						.setImage(randomPost.url)
+						.setColor("#0099ff")
+	
+					await message.reply({ embeds: [embed] })
+				} else {
+					message.reply("No images found")
+				}
+			} ).catch( error => {
+				console.error("Error fetching image from Reddit:", error)
+				message.reply("An error occurred while fetching the image from Reddit.")
+			} )
 	
 
 			
