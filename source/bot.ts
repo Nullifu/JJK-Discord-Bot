@@ -94,7 +94,7 @@ client.on("messageCreate", async (message) => {
 			} )
 			
 			// eslint-disable-next-line no-dupe-else-if
-		} else if  (command === "!aww") {
+		} else if  (command === "aww") {
 			const subredditName = "Awww" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
 			subreddit.getRandomSubmission().then( async ( randomPost ) => {
