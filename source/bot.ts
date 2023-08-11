@@ -12,6 +12,8 @@ const client = new Client({
 })
 
 const clientId = "817876265791913985"
+
+
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(15) // Set it to a reasonable value based on your use case
 
@@ -27,7 +29,9 @@ const commands = [
 		.setName("hello")
 		.setDescription("Responds with a greeting"),
 ].map(command => command.toJSON())
-const rest = new REST({ version: "9" }).setToken(token);
+
+const rest = new REST({ version: "10" }).setToken(token);
+
 (async () => {
 	try {
 		console.log("Started refreshing application (/) commands.")
@@ -49,10 +53,10 @@ client.on("interactionCreate", async (interaction) => {
 	const { commandName } = interaction
   
 	if (commandName === "hello") {
-	// eslint-disable-next-line no-mixed-spaces-and-tabs
-	  await interaction.reply("Hello! This is a response to your slash command.")
+		await interaction.reply("Hello! This is a response to your slash command.")
 	}
 })
+
 
 const reddit = new snoowrap({
 	userAgent: "discordbot v1.0 by /u/Nullifu",
@@ -67,19 +71,14 @@ client.once("ready", () => {
 	console.log(`Logged in as ${client.user!.tag}`)
 })
 
+
+//START --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 client.on("messageCreate", async (message) => {
 	if (message.author.bot) return // Ignore messages from bots
 	if (message.content.startsWith(prefix)) {
 		const args = message.content.slice(prefix.length).trim().split(/ +/)
 		const command = args.shift()!.toLowerCase()
-
-		client.on("interactionCreate", async (interaction) => {
-			if (!interaction.isCommand()) return
-			const { commandName } = interaction
-			if (commandName === "hello") {
-				await interaction.reply("Hello, world!")
-			}
-		}	)
 
 
 		// eslint-disable-next-line no-mixed-spaces-and-tabs
