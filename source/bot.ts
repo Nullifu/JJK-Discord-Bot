@@ -1,7 +1,8 @@
 import snoowrap from "snoowrap"
 const token = "ODE3ODc2MjY1NzkxOTEzOTg1.YEP4oQ.2gsmSbbwdLhXnkYCmhgWVuP5YyQ"
 const prefix = "!"
-import { Client, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js"
+import { Client, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder,} from "discord.js"
+
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -81,27 +82,23 @@ client.on("messageCreate", async (message) => {
 		const command = args.shift()!.toLowerCase()
 
 
-		// eslint-disable-next-line no-mixed-spaces-and-tabs
-			 if (command === "gif") {
-			// Sending an embedded GIF
+		if (command === "gif") {
 			const embed = new EmbedBuilder()
 				.setTitle("Heres a OMAR")
 				.setImage("https://cdn.discordapp.com/attachments/681985000521990179/1138510507565920296/ezgif-5-04af2554ed.gif")
 				.setColor("#0099ff")
 			await message.reply({ embeds: [embed] })
 
-		} else if (command === "help") {
 
-			// Sending an embedded image
+			// HELP COMMAND
+		} else if (command === "help") {
 			const embed = new EmbedBuilder()
 				.setTitle("List of current commands\n**PREFIX > !**")
 				.setDescription("meme\nhentai\naww")
 				.setColor("#ff9900")
 			await 	message.reply({ embeds: [embed] })
 
-		// TEST?
-		} else if (command === "yummy") {
-			await message.reply("skull")
+
 
 		// fetch WIP v3
 		} else if  (command === "meme") {
@@ -121,9 +118,9 @@ client.on("messageCreate", async (message) => {
 			} ).catch( error => {
 				console.error("Error fetching image from Reddit:", error)
 				message.reply("An error occurred while fetching the image from Reddit.")				
-			} )
+			} )	
 
-		// eslint-disable-next-line no-dupe-else-if
+
 		} else if  (command === "hentai") {
 			const subredditName = "hentai" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
@@ -161,10 +158,7 @@ client.on("messageCreate", async (message) => {
 			} ).catch( error => {
 				console.error("Error fetching image from Reddit:", error)
 				message.reply("An error occurred while fetching the image from Reddit.")
-			} )
-	
-
-			
+			} )	  				
 		}
 	}
 })
