@@ -1,6 +1,6 @@
 const Discord = require('discord.js');
-const token = 'ODE3ODc2MjY1NzkxOTEzOTg1.YEP4oQ.2gsmSbbwdLhXnkYCmhgWVuP5YyQ'; // Replace with your actual bot token
-const prefix = '!';     // PREFIX FOR COMMANDS
+const token = 'ODMxMjU2NzI5NjY4ODEyODYy.GgrQMo.F2m440lXkujcF2JhDLzeSbCYJt7bccbo0mL5Ic'; // Replace with your actual bot token
+const prefix = '.';     // PREFIX FOR COMMANDS
 const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
