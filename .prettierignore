@@ -1,0 +1,48 @@
+# GitHub
+.git
+.github/
+
+# IDEs
+.vscode/
+
+# Dependencies
+node_modules/
+npm-*.log
+yarn-*.log
+.pnp.*
+.yarn/*
+*.lock
+
+# Builds
+dist/
+lib/
+docs/
+*.tsbuildinfo
+*.d.ts
+*.map
+
+# Source
+*.js
+
+# GIFs
+gifs/
+
+# Package Configuration
+*.config.*s
+
+# Persistent Data
+*.json
+
+# Documentation
+*.md
+*.txt
+
+# Environment Variables
+.env*
+
+# Ignores
+.*ignore
+
+# macOS & Windows
+.DS_Store
+Thumbs.db
