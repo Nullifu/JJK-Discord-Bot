@@ -335,7 +335,7 @@ client.on("messageCreate", async (message) => {
 
 				}	else if (message.content.startsWith('.dig')) {
 						// Random amount of coins (e.g., between 1 to 100)
-						const coinsFound = Math.floor(Math.random() * 10000000000000000000000) + 100000000;
+						const coinsFound = Math.floor(Math.random() * 100) + 1;
 		
 						// Update user currency
 						await addUserCurrency(message.author.id, coinsFound);
@@ -524,10 +524,3 @@ client.on("messageCreate", async (message) => {
 			})
 	   
 client.login(token)
-<<<<<<< HEAD
-
-function findItem() {
-	throw new Error("Function not implemented.");
-}
-=======
->>>>>>> 000ed1f976290a9e2d1b0d9a334f9229c8e6c0e0
