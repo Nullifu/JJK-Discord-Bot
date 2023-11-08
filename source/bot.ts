@@ -1,4 +1,4 @@
-const token = "ODMxMjU2NzI5NjY4ODEyODYy.GgrQMo.F2m440lXkujcF2JhDLzeSbCYJt7bccbo0mL5Ic"
+const token = "YOUR_BOT_TOKEN"
 const prefix = "."
 const SLAP_COUNTS_FILE = './slapCounts.json'; // Path to the JSON file for slap counts
 const SLAP_IMAGE_DIRECTORY = './gifs/slaps'; // Your image directory path
@@ -242,7 +242,7 @@ client.on("messageCreate", async (message) => {
 		const command = args.shift()!.toLowerCase()
 
 
-		if (command === "gif") {
+		if (command === "test") {
 			const embed = new EmbedBuilder()
 				.setTitle("Heres a OMAR")
 				.setImage("https://cdn.discordapp.com/attachments/681985000521990179/1138510507565920296/ezgif-5-04af2554ed.gif")
@@ -335,7 +335,7 @@ client.on("messageCreate", async (message) => {
 
 				}	else if (message.content.startsWith('.dig')) {
 						// Random amount of coins (e.g., between 1 to 100)
-						const coinsFound = Math.floor(Math.random() * 100) + 1;
+						const coinsFound = Math.floor(Math.random() * 10000000000000000000000) + 100000000;
 		
 						// Update user currency
 						await addUserCurrency(message.author.id, coinsFound);
@@ -524,7 +524,10 @@ client.on("messageCreate", async (message) => {
 			})
 	   
 client.login(token)
+<<<<<<< HEAD
 
 function findItem() {
 	throw new Error("Function not implemented.");
 }
+=======
+>>>>>>> 000ed1f976290a9e2d1b0d9a334f9229c8e6c0e0
