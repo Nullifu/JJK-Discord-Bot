@@ -1,10 +1,10 @@
-const token = "YOUR_BOT_TOKEN"
 const prefix = "."
+const token = 'ODMxMjU2NzI5NjY4ODEyODYy.GhZpo9.nR1KxRtjCEGQltpHmNUkLA8UKyw_pcvS_14ncg'
 const SLAP_COUNTS_FILE = './slapCounts.json'; // Path to the JSON file for slap counts
 const SLAP_IMAGE_DIRECTORY = './gifs/slaps'; // Your image directory path
 const PUNCH_COUNTS_FILE = './punchCounts.json';
 const PUNCH_IMAGE_DIRECTORY = './gifs/punch'
-import { Client, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder, AttachmentBuilder, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ButtonInteraction, ChatInputCommandInteraction } from "discord.js"
+import { Client, Permissions, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder, AttachmentBuilder, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ButtonInteraction, ChatInputCommandInteraction, InteractionType, Message, GuildMemberRoleManager } from "discord.js"
 import * as fs from 'node:fs';
 import snoowrap from "snoowrap"
 import { addUserCurrency, getUserCurrency } from "./currency.js";
@@ -13,42 +13,6 @@ import db from "./db.js";
 
 
 const allowedUserIds = ['292385626773258240', '587323617415659553'];  // Replace with the actual user ID
-
-	// Function to update user's currency
-async function updateUserCurrency(userId: string | number, amount: any) {
-	// Read the current state from the DB
-	await db.read();
-  
-	// If the user does not exist in the database, initialize their record
-	if (!db.data.users[userId]) {
-	  db.data.users[userId] = { currency: 0, items: [] };
-	}
-  
-	// Update the user's currency
-	db.data.users[userId].currency += amount;
-  
-	// Write back the updated state to the DB
-	await db.write();
-  }
-
-  			// Function to add an item to user's inventory
-async function addUserItem(userId: string | number, item: any) {
-	// Read the current state from the DB
-	await db.read();
-  
-	// If the user does not exist in the database, initialize their record
-	if (!db.data.users[userId]) {
-	  db.data.users[userId] = { currency: 0, items: [] };
-	}
-  
-	// Add the item to the user's inventory
-	db.data.users[userId].items.push(item);
-  
-	// Write back the updated state to the DB
-	await db.write();
-  }
-  
-  
 
 
 
@@ -71,7 +35,8 @@ const jobs = [
 
  // Cooldown setup
 		const cooldowns = new Map<string, number>(); // userID -> timestamp
-		const workCooldown = 60 * 60 * 1000; // Cooldown in milliseconds (1 hour)	
+		const workCooldown = 60 * 60 * 1000; // Cooldown in milliseconds (1 hour)
+		const digCooldown = 10 * 60 * 1000; // Cooldown in milliseconds (10 minutes)
 
 
 // Array of random words or phrases to be used with the slap command
@@ -169,12 +134,14 @@ const rest = new REST({ version: "10" }).setToken(token);
 		const embed = new EmbedBuilder()
 		.setAuthor({name: 'made by .gwennnn', iconURL: 'https://static.wikia.nocookie.net/shingekinokyojin/images/4/4f/Mikasa_Ackermann_%28Anime%29_character_image.png/revision/latest?cb=20231105175401'})
 		.setTitle('List of current commands\n**PREFIX for text commands >  .**')
-		.setDescription('meme\nslap\ncat\npunch\nslapboard')
+		.setDescription('↓↓↓↓')
 		.setColor('#ff9900')
 		.setThumbnail('https://gcdn.thunderstore.io/live/repository/icons/mackeye-Osaka-1.0.0.png.256x256_q95.jpg')
 		.addFields(
-			{ name: 'Leaderboards', value: 'Slap, Punch, Kill, Kiss, Pet,' },
-			{ name: 'Currency Commands', value: 'Work, Balance, Add.'},
+			{ name: 'Commands', value: 'meme, slap, cat, dog, punch, ' },
+			{ name: 'Leaderboards' , value: 'Slap, Punch, Kill, Kiss, Pet,' },
+			{ name: 'Currency Commands', value: 'Work, Balance, Add, Dig'},
+			{ name: '18+ Commands', value: 'Hentai,' },
 			{ name: 'Currency Commands > WIP <', value: 'Along with leaderboards' },
 			{ name: 'Slash Commands WIP', value: 'oh ma gah' },
 			) 
@@ -243,22 +210,49 @@ client.on("messageCreate", async (message) => {
 
 
 		if (command === "test") {
+			// List of images
+			const images = [
+				"https://cdn.discordapp.com/attachments/681985000521990179/1138510507565920296/ezgif-5-04af2554ed.gif",
+				"https://example.com/image2.gif",
+				"https://example.com/image3.gif",
+				// Add more image URLs here...
+			];
+
+			// Select a random image from the list
+			const randomImage = images[Math.floor(Math.random() * images.length)];
+
 			const embed = new EmbedBuilder()
-				.setTitle("Heres a OMAR")
-				.setImage("https://cdn.discordapp.com/attachments/681985000521990179/1138510507565920296/ezgif-5-04af2554ed.gif")
+				.setTitle("Here's a random image")
+				.setImage(randomImage)
 				.setColor("#0099ff")
-			await message.reply({ embeds: [embed] })
+			await message.reply({ embeds: [embed] 
+
+		})
 
 
-		}	else if (message.content === '.balance') {
-					const currency = await getUserCurrency(message.author.id);
-					const balanceEmbed = new EmbedBuilder()
-					  .setColor(0x00FF00) // You can set whatever color you like
-					  .setTitle('Balance')
-					  .setDescription(`You have **${currency}** osakacoins.`)
-					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
-					  .setTimestamp();
-					await message.reply({ embeds: [balanceEmbed] });
+		}	else if (message.content.startsWith('.balance')) {
+			// Check if the message mentions another user
+			const mention = message.mentions.users.first();
+			
+			// Determine whose balance to check
+			const userId = mention ? mention.id : message.author.id;
+		  
+			// Fetch currency for the specified user
+			const currency = await getUserCurrency(userId);
+		  
+			// Create the embed
+			const balanceEmbed = new EmbedBuilder()
+			  .setColor(0x00FF00) // You can set whatever color you like
+			  .setTitle('Balance')
+			  .setDescription(`User <@${userId}> has **${currency}** osakacoins.`)
+			  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+			  .setTimestamp();
+		  
+			// Reply with the embed
+			await message.reply({ embeds: [balanceEmbed] });
+
+
+			
 
 				
 				} else if (message.content.startsWith('.add')) {
@@ -334,10 +328,27 @@ client.on("messageCreate", async (message) => {
 
 
 				}	else if (message.content.startsWith('.dig')) {
-						// Random amount of coins (e.g., between 1 to 100)
-						const coinsFound = Math.floor(Math.random() * 100) + 1;
-		
-						// Update user currency
+					if (message.content.startsWith('.dig')) {
+						const currentTime = Date.now();
+						const authorId = message.author.id;
+						const timestamp = cooldowns.get(authorId);
+					
+						// Check cooldown
+						if (timestamp) {
+						  const expirationTime = timestamp + digCooldown;
+						  if (currentTime < expirationTime) {
+							const timeLeft = expirationTime - currentTime;
+							// Send a message with a dynamic timestamp
+							await message.reply(`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(expirationTime / 1000)}:R>.`);
+							return;
+						  }
+						}
+					
+						// Set or update the cooldown
+						cooldowns.set(authorId, currentTime);
+						
+						// The command logic
+    					const coinsFound = Math.floor(Math.random() * 100) + 1;
 						await addUserCurrency(message.author.id, coinsFound);
 					  
 						// Create the response embed
@@ -348,17 +359,12 @@ client.on("messageCreate", async (message) => {
 						  .setTimestamp();
 					  
 						// Send the embed response
-						await message.reply({ embeds: [digEmbed] });
+						await message.reply({ embeds: [digEmbed] 
+						});
+					}
 					  
-			
 
-				  
-				  
 					
-
-					  
-					  
-
 
 
 		// fetch WIP v3
@@ -384,29 +390,65 @@ client.on("messageCreate", async (message) => {
 
 			
 			// reddit fetch cat
-		} else if  (command === "cat") {
-			const subredditName = "cat" // replace with subreddit to fetch from
-			const subreddit = reddit.getSubreddit(subredditName)
-			subreddit.getRandomSubmission().then( async ( randomPost ) => {
-				if (randomPost.url) {
-					const embed = new EmbedBuilder()
-						.setTitle(randomPost.title)
-						.setImage(randomPost.url)
-						.setColor("#0099ff")
-	
-					await message.reply({ embeds: [embed] })
-				} else {
-					message.reply("No images found")
-				}
-			} ).catch( error => {
-				console.error("Error fetching image from Reddit:", error)
-				message.reply("An error occurred while fetching the image from Reddit.")
-			} )
+	} else if  (command === "cat") {
+		const subredditName = "cats"; // replace with subreddit to fetch from
+		const subreddit = reddit.getSubreddit(subredditName);
+		subreddit.getRandomSubmission().then(async (randomPost) => {
+		  if (randomPost.url) {
+			const embed = new EmbedBuilder()
+			  .setTitle(randomPost.title)
+			  .setImage(randomPost.url)
+			  .setColor("#0099ff");
+			await message.reply({ embeds: [embed] });
+		  }
+		});
+
+				// reddit fetch dog
+	} else if  (command === "dog") {
+		const subredditName = "dogs"; // replace with subreddit to fetch from
+		const subreddit = reddit.getSubreddit(subredditName);
+		subreddit.getRandomSubmission().then(async (randomPost) => {
+		  if (randomPost.url) {
+			const embed = new EmbedBuilder()
+			  .setTitle(randomPost.title)
+			  .setImage(randomPost.url)
+			  .setColor("#0099ff");
+			await message.reply({ embeds: [embed] });
+		  }
+		});
+
+				// reddit fetch cat
+	} else if  (command === "aww") {
+		const subredditName = "aww"; // replace with subreddit to fetch from
+		const subreddit = reddit.getSubreddit(subredditName);
+		subreddit.getRandomSubmission().then(async (randomPost) => {
+		  if (randomPost.url) {
+			const embed = new EmbedBuilder()
+			  .setTitle(randomPost.title)
+			  .setImage(randomPost.url)
+			  .setColor("#0099ff");
+			await message.reply({ embeds: [embed] });
+		  }
+		});
 
 
 
-			// Check if the command is `slap`
-		}	else if (command === 'slap') {
+				// reddit fetch 18+
+	} else if  (command === "hentai") {
+		const subredditName = "hentai"; // replace with subreddit to fetch from
+		const subreddit = reddit.getSubreddit(subredditName);
+		subreddit.getRandomSubmission().then(async (randomPost) => {
+		  if (randomPost.url) {
+			const embed = new EmbedBuilder()
+			  .setTitle(randomPost.title)
+			  .setImage(randomPost.url)
+			  .setColor("#0099ff");
+			await message.reply({ embeds: [embed] });
+		  }
+		});
+
+
+	} else if (command === 'slap') {
 			// Check if there is a user mentioned
 			if (message.mentions.users.size === 0) {
 			  await message.reply('You need to mention a user to slap!');
@@ -461,6 +503,8 @@ client.on("messageCreate", async (message) => {
 			} catch (err) {
 			  console.error('Error reading image directory:', err);
 				   } 
+
+
 		
 		
 		// Check if the command is `punch`
@@ -517,10 +561,74 @@ client.on("messageCreate", async (message) => {
 					
 							  await message.channel.send({ embeds: [embed], files: [imageAttachment] });
 						} catch (err) {
-						  console.error('Error reading image directory:', err);
+						  console.error('Error reading image directory:', err);	
+						}
+
+				}	else if (command === 'inventory') {
+							await showInventory(message);
+						  }
+						
+						  async function showInventory(message: Message) {
+							// Make sure to read the latest db before checking
+							await db.read();
+						  
+							// Get the user's ID as a key
+							const userId = message.author.id;
+						  
+							// Check if the users and items object exists in the database
+							if (!db.data || !db.data.users || !db.data.items) {
+							  await message.channel.send("The inventory system is not set up correctly.");
+							  return;
+							}
+						  
+							// Check if the user exists in the database
+							const userInventory = db.data.users[userId]?.inventory;
+							if (userInventory) {
+							  let reply = `${message.author.username}'s Inventory:\n`;
+						  
+							  // Loop through each item in the user's inventory and add it to the reply message
+							  for (const [itemId, inventoryItem] of Object.entries(userInventory)) {
+								const item = db.data.items[itemId];
+								if (item && inventoryItem.quantity) { // Make sure item and quantity exist
+								  reply += `${item.name} x ${inventoryItem.quantity}\n`;
+								} else {
+								  // Handle the case where an item doesn't exist in the database
+								  reply += `Item with ID ${itemId} not found.\n`;
+								}
+							  }
+						  
+							  await message.channel.send(reply);
+							} else {
+							  // If the user does not exist in the database, send a different message
+							  await message.channel.send("You don't have an inventory yet.");
+							  
+
+						  if (command === 'additem') {
+								const itemId = args[0];
+								const quantity = parseInt(args[1], 10);
+							
+								if (!itemId || isNaN(quantity)) {
+								  return message.channel.send('You need to specify an item ID and a quantity.');
+								}
+							
+								try {
+								  await addItemToInventory(message, itemId, quantity);
+								} catch (error) {
+								  console.error(error);
+								  await message.channel.send('There was an error adding the item to your inventory.');
+								}
+							  }
+
+							// Define a Map to store muted users and their timeout IDs
+							const mutedUsers = new Map<string, NodeJS.Timeout>();
+							}
 						}
 					}
-				}
-			})
-	   
-client.login(token)
+				})
+
+client.login(token);
+
+function addItemToInventory(message: Message<boolean>, itemId: string, quantity: number) {
+	throw new Error("Function not implemented.");
+}
+
