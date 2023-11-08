@@ -12,7 +12,7 @@ import path from "node:path";
 
 
 // Array of random words or phrases to be used with the slap command
-const randomReactions = ['Ouch!', 'Wow!', 'Bam!', 'Slap!', 'Pow!', 'Whack!'];
+const randomReactions = ['Ouch!', 'Wow!', 'Bam!', 'Slap!', 'Pow!', 'Whack!, '];
 
 // Interface for a user's slap count
 interface UserSlapCount {
@@ -184,19 +184,55 @@ client.on("messageCreate", async (message) => {
 			await message.reply({ embeds: [embed] })
 
 
-
 		}	else if (message.content === '.balance') {
-				const currency = await getUserCurrency(message.author.id);
-				message.reply(`You have ${currency} coins.`);
-			  } else if (message.content.startsWith('.add')) {
-				const amount = parseInt(message.content.split(' ')[1]);
-				if (isNaN(amount)) {
-				  message.reply('Please enter a valid number of coins to add.');
-				  return;
-				}	
-				await addUserCurrency(message.author.id, amount);
-				message.reply(`${amount} coins added to your balance.`);
+					const currency = await getUserCurrency(message.author.id);
+					const balanceEmbed = new EmbedBuilder()
+					  .setColor(0x00FF00) // You can set whatever color you like
+					  .setTitle('Balance')
+					  .setDescription(`You have **${currency}** coins.`)
+					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+					  .setTimestamp();
+					await message.reply({ embeds: [balanceEmbed] });
 
+				
+				} else if (message.content.startsWith('.add')) {
+					const parts = message.content.split(' ');
+					const amount = parts.length > 1 ? parseInt(parts[1], 10) : NaN;
+					if (isNaN(amount)) {
+					  const errorEmbed = new EmbedBuilder()
+						.setColor(0xFF0000) // Red for errors
+						.setTitle('Error')
+						.setDescription('Please enter a valid number of coins to add.')
+						.setTimestamp();
+					  await message.reply({ embeds: [errorEmbed] });
+					  return;
+					}
+					await addUserCurrency(message.author.id, amount);
+					const addEmbed = new EmbedBuilder()
+					  .setColor(0x00FF00)
+					  .setTitle('Coins Added')
+					  .setDescription(`${amount} coins added to your balance.`)
+					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+					  .setTimestamp();
+					await message.reply({ embeds: [addEmbed] });
+
+				} else if (message.content === '.work') {
+					// Define the amount earned when working - this can be a fixed value or random
+					const amountEarned = Math.floor(Math.random() * 100) + 1; // Earn between 1 to 100 coins
+				
+					// Add the amount earned to the user's balance using your existing addUserCurrency function
+					await addUserCurrency(message.author.id, amountEarned);
+				
+					// Create an embed to let the user know they've earned money
+					const workEmbed = new EmbedBuilder()
+					  .setColor(0x00FF00) // Green color for success
+					  .setTitle('Work')
+					  .setDescription(`You worked hard and earned ${amountEarned} coins!`)
+					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+					  .setTimestamp();
+				
+					// Reply with the embed
+					await message.reply({ embeds: [workEmbed] });
 
 
 
