@@ -1,4 +1,4 @@
-const token = "ODMxMjU2NzI5NjY4ODEyODYy.GgrQMo.F2m440lXkujcF2JhDLzeSbCYJt7bccbo0mL5Ic"
+const token = "YOUR_BOT_TOKEN"
 const prefix = "."
 const SLAP_COUNTS_FILE = './slapCounts.json'; // Path to the JSON file for slap counts
 const SLAP_IMAGE_DIRECTORY = './gifs/slaps'; // Your image directory path
