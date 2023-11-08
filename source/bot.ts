@@ -176,7 +176,7 @@ client.on("messageCreate", async (message) => {
 		const command = args.shift()!.toLowerCase()
 
 
-		if (command === "gif") {
+		if (command === "test") {
 			const embed = new EmbedBuilder()
 				.setTitle("Heres a OMAR")
 				.setImage("https://cdn.discordapp.com/attachments/681985000521990179/1138510507565920296/ezgif-5-04af2554ed.gif")
