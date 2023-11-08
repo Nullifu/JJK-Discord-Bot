@@ -9,13 +9,20 @@ type Record = {
 };
 // Define typings for the data schema
 interface Data {
+  users: any;
   records: Record[];
 }
 // Use JSON file for storage
-const file = join(__dirname, 'db.json');
+const file =  './db.json';
 const adapter = new JSONFile<Data>(file);
-const defaultData: Data = { records: [] }; // Provide default data here
+const defaultData: Data = {
+  records: [],
+  users: undefined
+};
+
+
 const db = new Low(adapter, defaultData); // Pass default data to the Low constructor
-// Set default data
-db.data ||= { records: [] }; // If db.data is null or undefined, initialize it with default data
+await db.read();
+db.data ||= defaultData; // Now it includes both users and records
+
 export default db;

@@ -4,18 +4,15 @@ const SLAP_COUNTS_FILE = './slapCounts.json'; // Path to the JSON file for slap 
 const SLAP_IMAGE_DIRECTORY = './gifs/slaps'; // Your image directory path
 const PUNCH_COUNTS_FILE = './punchCounts.json';
 const PUNCH_IMAGE_DIRECTORY = './gifs/punch'
-import { Client, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder, AttachmentBuilder, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ButtonInteraction } from "discord.js"
-import * as path from 'path';
+import { Client, EmbedBuilder, GatewayIntentBits, REST, Routes, SlashCommandBuilder, AttachmentBuilder, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ButtonInteraction, ChatInputCommandInteraction } from "discord.js"
 import * as fs from 'node:fs';
 import snoowrap from "snoowrap"
-import { getUserCurrency, addUserCurrency } from "./currency";
+import { addUserCurrency, getUserCurrency } from "./currency.js";
+import path from "node:path";
+
 
 // Array of random words or phrases to be used with the slap command
 const randomReactions = ['Ouch!', 'Wow!', 'Bam!', 'Slap!', 'Pow!', 'Whack!'];
-
-
-
-
 
 // Interface for a user's slap count
 interface UserSlapCount {
@@ -57,11 +54,7 @@ const clientId = "831256729668812862"
 
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(15) // Set it to a reasonable value based on your use case
-
-// Now you can add your event listeners without triggering the warning
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-client.on("interactionCreate", (_interaction) => {
-	// Handle the interaction
+client.on('interactionCreate', async (interaction) => {	
 })
 
 
@@ -69,9 +62,23 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("help")
 		.setDescription("list of current commands"),
+		new SlashCommandBuilder()
+    	.setName('balance')
+    	.setDescription('Check your current balance!'),
+		new SlashCommandBuilder()
+    	.setName('add')
+    	.setDescription('Add currency to your balance.')
+    	.addIntegerOption(option =>
+      option.setName('amount')
+        .setDescription('The amount of currency to add')
+        .setRequired(true)
+		)
 ].map(command => command.toJSON())
-
 const rest = new REST({ version: "10" }).setToken(token);
+
+
+
+
 
 (async () => {
     try {
@@ -91,9 +98,7 @@ const rest = new REST({ version: "10" }).setToken(token);
 
   client.on('interactionCreate', async (interaction: Interaction) => {
 	if (interaction.isChatInputCommand()) {
-	  // Handle your slash commands here
 	  if (interaction.commandName === 'help') {
-		// Defer the reply to get more time for processing
 		await interaction.deferReply();
 		
 		const embed = new EmbedBuilder()
@@ -106,9 +111,7 @@ const rest = new REST({ version: "10" }).setToken(token);
 			{ name: 'Leaderboards', value: 'Slap, Punch, Kill, Kiss, Pet,' },
 			{ name: 'Slapboard is a global leaderboard', value: '.' },
 			{ name: 'Slash Commands WIP', value: 'oh ma gah' },
-			)
-
-  
+			) 
 		
 		const button = new ButtonBuilder()
 		  .setCustomId('more_help')
@@ -150,10 +153,6 @@ const rest = new REST({ version: "10" }).setToken(token);
 	
 		  
 
-
-		
-
-
 const reddit = new snoowrap({
 	userAgent: "discordbot v1.0 by /u/Nullifu",
 	clientId: "aP693eIa52Hw33RAU_BLBg",
@@ -185,27 +184,20 @@ client.on("messageCreate", async (message) => {
 			await message.reply({ embeds: [embed] })
 
 
-			// HELP COMMAND
-		} else if (command === "help") {
-			const embed = new EmbedBuilder()
-				.setTitle("List of current commands\n**PREFIX > .**")
-				.setDescription("meme\nslap\ncat\nslapboard")
-				.setColor("#ff9900")
-			await 	message.reply({ embeds: [embed] })
 
-			if (message.content === 'balance') {
+		}	else if (message.content === '.balance') {
 				const currency = await getUserCurrency(message.author.id);
 				message.reply(`You have ${currency} coins.`);
-			  } else if (message.content.startsWith('!add')) {
+			  } else if (message.content.startsWith('.add')) {
 				const amount = parseInt(message.content.split(' ')[1]);
 				if (isNaN(amount)) {
 				  message.reply('Please enter a valid number of coins to add.');
 				  return;
-				}
-			
+				}	
 				await addUserCurrency(message.author.id, amount);
 				message.reply(`${amount} coins added to your balance.`);
-			  }
+
+
 
 
 
@@ -253,124 +245,122 @@ client.on("messageCreate", async (message) => {
 
 
 
-
-
-		// Check if the command is `slap`
+			// Check if the command is `slap`
 		}	else if (command === 'slap') {
-    // Check if there is a user mentioned
-    if (message.mentions.users.size === 0) {
-      await message.reply('You need to mention a user to slap!');
-      return;
-    }
-
-    const userToSlap = message.mentions.users.first()!;
-    let slapCounts: Record<string, number>;
-
-    try {
-      slapCounts = JSON.parse(fs.readFileSync(SLAP_COUNTS_FILE, 'utf8'));
-    } catch (err) {
-      slapCounts = {};
-    }
-
-    const userId = userToSlap.id;
-    slapCounts[userId] = (slapCounts[userId] || 0) + 1;
-
-    try {
-      fs.writeFileSync(SLAP_COUNTS_FILE, JSON.stringify(slapCounts, null, 2), 'utf8');
-    } catch (err) {
-      console.error('Error writing to slap counts file:', err);
-      return;
-    }
-
-    try {
-      const files = fs.readdirSync(SLAP_IMAGE_DIRECTORY);
-      const imageFiles = files.filter(file => /\.(png|jpe?g|gif)$/i.test(file));
-
-      if (imageFiles.length === 0) {
-        console.error('No images found in the directory');
-        return;
-      }
-
-      	const randomImage = imageFiles[Math.floor(Math.random() * imageFiles.length)];
-      	const imagePath = path.join(SLAP_IMAGE_DIRECTORY, randomImage);
-
-		// Select a random word or phrase
-		const randomReaction = randomReactions[Math.floor(Math.random() * randomReactions.length)];
-
-      	const embed = new EmbedBuilder()
-        .setColor(0xFF0000)
-        .setTitle('Slap!')
-        .setDescription(`${message.author.tag} just slapped ${userToSlap.tag}! ${randomReaction} `)
-        .setImage(`attachment://${randomImage}`)
-		.setFooter({ text: `That's slap number ${slapCounts[userId]} for them!` })
-        .setTimestamp();
-
-      	const imageAttachment = new AttachmentBuilder(imagePath, { name: randomImage });
-
-      	await message.channel.send({ embeds: [embed], files: [imageAttachment] });
-    } catch (err) {
-      console.error('Error reading image directory:', err);
-   		} 
-
-
-		// Check if the command is `punch`
-		}	else if (command === 'punch') {
-		// Check if there is a user mentioned
+			// Check if there is a user mentioned
 			if (message.mentions.users.size === 0) {
-				await message.reply('You need to mention a user to slap!');
-				return;
-					}
-			
-		const userToPunch = message.mentions.users.first()!;
-			let punchCounts: Record<string, number>;
-			
-			try {
-				punchCounts = JSON.parse(fs.readFileSync(PUNCH_COUNTS_FILE, 'utf8'));
-					} catch (err) {
-				  		punchCounts = {};
-						}
-			
-		const userId = userToPunch.id;
-			punchCounts[userId] = (punchCounts[userId] || 0) + 1;
-			
-		try {
-			 fs.writeFileSync(PUNCH_COUNTS_FILE, JSON.stringify(punchCounts, null, 2), 'utf8');
-				} catch (err) {
-				  console.error('Error writing to slap counts file:', err);
-				  return;
-				}
-			
-			try {
-				const files = fs.readdirSync(PUNCH_IMAGE_DIRECTORY);
-				const imageFiles = files.filter(file => /\.(png|jpe?g|gif)$/i.test(file));
-			
-				  if (imageFiles.length === 0) {
-					console.error('No images found in the directory');
-					return;
-				  }
-			
-				const randomImage = imageFiles[Math.floor(Math.random() * imageFiles.length)];
-					const imagePath = path.join(PUNCH_IMAGE_DIRECTORY, randomImage);
-			
-					// Select a random word or phrase
-					const randomReaction = randomReactions[Math.floor(Math.random() * randomReactions.length)];
-			
-					  const embed = new EmbedBuilder()
-					.setColor(0xFF0000)
-					.setTitle('Punch!')
-					.setDescription(`${message.author.tag} just punched ${userToPunch.tag}! ${randomReaction} `)
-					.setImage(`attachment://${randomImage}`)
-					.setFooter({ text: `That's punch number ${punchCounts[userId]} for them!` })
-					.setTimestamp();
-			
-					  const imageAttachment = new AttachmentBuilder(imagePath, { name: randomImage });
-			
-					  await message.channel.send({ embeds: [embed], files: [imageAttachment] });
-				} catch (err) {
-				  console.error('Error reading image directory:', err);
-				}
+			  await message.reply('You need to mention a user to slap!');
+			  return;
 			}
-		}
-	})
+		
+			const userToSlap = message.mentions.users.first()!;
+			let slapCounts: Record<string, number>; 
+		
+			try {
+			  slapCounts = JSON.parse(fs.readFileSync(SLAP_COUNTS_FILE, 'utf8'));
+			} catch (err) {
+			  slapCounts = {};
+			}
+		
+			const userId = userToSlap.id;
+			slapCounts[userId] = (slapCounts[userId] || 0) + 1;
+		
+			try {
+			  fs.writeFileSync(SLAP_COUNTS_FILE, JSON.stringify(slapCounts, null, 2), 'utf8');
+			} catch (err) {
+			  console.error('Error writing to slap counts file:', err);
+			  return;
+			}
+		
+			try {
+			  const files = fs.readdirSync(SLAP_IMAGE_DIRECTORY);
+			  const imageFiles = files.filter(file => /\.(png|jpe?g|gif)$/i.test(file));
+		
+			  if (imageFiles.length === 0) {
+				console.error('No images found in the directory');
+				return;
+			  }
+		
+				  const randomImage = imageFiles[Math.floor(Math.random() * imageFiles.length)];
+				  const imagePath = path.join(SLAP_IMAGE_DIRECTORY, randomImage);
+		
+				// Select a random word or phrase
+				const randomReaction = randomReactions[Math.floor(Math.random() * randomReactions.length)];
+		
+				  const embed = new EmbedBuilder()
+				.setColor(0xFF0000)
+				.setTitle('Slap!')
+				.setDescription(`${message.author.tag} just slapped ${userToSlap.tag}! ${randomReaction} `)
+				.setImage(`attachment://${randomImage}`)
+				.setFooter({ text: `That's slap number ${slapCounts[userId]} for them!` })
+				.setTimestamp();
+		
+				  const imageAttachment = new AttachmentBuilder(imagePath, { name: randomImage });
+		
+				  await message.channel.send({ embeds: [embed], files: [imageAttachment] });
+			} catch (err) {
+			  console.error('Error reading image directory:', err);
+				   } 
+		
+		
+		// Check if the command is `punch`
+			}	else if (command === 'punch') {
+				// Check if there is a user mentioned
+					if (message.mentions.users.size === 0) {
+						await message.reply('You need to mention a user to slap!');
+						return;
+							}
+					
+				const userToPunch = message.mentions.users.first()!;
+					let punchCounts: Record<string, number>;
+					
+					try {
+						punchCounts = JSON.parse(fs.readFileSync(PUNCH_COUNTS_FILE, 'utf8'));
+							} catch (err) {
+								  punchCounts = {};
+								}
+					
+				const userId = userToPunch.id;
+					punchCounts[userId] = (punchCounts[userId] || 0) + 1;
+					
+				try {
+					 fs.writeFileSync(PUNCH_COUNTS_FILE, JSON.stringify(punchCounts, null, 2), 'utf8');
+						} catch (err) {
+						  console.error('Error writing to slap counts file:', err);
+						  return;
+						}
+					
+					try {
+						const files = fs.readdirSync(PUNCH_IMAGE_DIRECTORY);
+						const imageFiles = files.filter(file => /\.(png|jpe?g|gif)$/i.test(file));
+					
+						  if (imageFiles.length === 0) {
+							console.error('No images found in the directory');
+							return;
+						  }
+					
+						const randomImage = imageFiles[Math.floor(Math.random() * imageFiles.length)];
+							const imagePath = path.join(PUNCH_IMAGE_DIRECTORY, randomImage);
+					
+							// Select a random word or phrase
+							const randomReaction = randomReactions[Math.floor(Math.random() * randomReactions.length)];
+					
+							  const embed = new EmbedBuilder()
+							.setColor(0xFF0000)
+							.setTitle('Punch!')
+							.setDescription(`${message.author.tag} just punched ${userToPunch.tag}! ${randomReaction} `)
+							.setImage(`attachment://${randomImage}`)
+							.setFooter({ text: `That's punch number ${punchCounts[userId]} for them!` })
+							.setTimestamp();
+					
+							  const imageAttachment = new AttachmentBuilder(imagePath, { name: randomImage });
+					
+							  await message.channel.send({ embeds: [embed], files: [imageAttachment] });
+						} catch (err) {
+						  console.error('Error reading image directory:', err);
+						}
+					}
+				}
+			})
 	   
 client.login(token)
