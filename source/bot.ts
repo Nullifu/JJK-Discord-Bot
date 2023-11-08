@@ -9,6 +9,22 @@ import * as fs from 'node:fs';
 import snoowrap from "snoowrap"
 import { addUserCurrency, getUserCurrency } from "./currency.js";
 import path from "node:path";
+import db from "./db.js";
+
+
+
+
+// Define some example jobs. Each job could have a different payout range.
+const jobs = [
+	{ name: 'Osaka', payout: { min: 3500, max: 10000 }, cost: 2500 },
+	{ name: 'Osakas Friend', payout: { min: 2500, max: 5000 }, cost: 1000 },
+	{ name: 'newbie', payout: { min: 70, max: 200 }, cost: 100 },
+	// ... add as many jobs as you want
+  ];
+
+ // Cooldown setup
+		const cooldowns = new Map<string, number>(); // userID -> timestamp
+		const workCooldown = 60 * 60 * 1000; // Cooldown in milliseconds (1 hour)	
 
 
 // Array of random words or phrases to be used with the slap command
@@ -100,6 +116,8 @@ const rest = new REST({ version: "10" }).setToken(token);
 	if (interaction.isChatInputCommand()) {
 	  if (interaction.commandName === 'help') {
 		await interaction.deferReply();
+
+		// START OF MOST COMMANDS -----------------------------------------------------------------------------------------------------------------------------------------------
 		
 		const embed = new EmbedBuilder()
 		.setAuthor({name: 'made by .gwennnn', iconURL: 'https://static.wikia.nocookie.net/shingekinokyojin/images/4/4f/Mikasa_Ackermann_%28Anime%29_character_image.png/revision/latest?cb=20231105175401'})
@@ -109,7 +127,8 @@ const rest = new REST({ version: "10" }).setToken(token);
 		.setThumbnail('https://gcdn.thunderstore.io/live/repository/icons/mackeye-Osaka-1.0.0.png.256x256_q95.jpg')
 		.addFields(
 			{ name: 'Leaderboards', value: 'Slap, Punch, Kill, Kiss, Pet,' },
-			{ name: 'Slapboard is a global leaderboard', value: '.' },
+			{ name: 'Currency Commands', value: 'Work, Balance, Add.'},
+			{ name: 'Currency Commands > WIP <', value: 'Along with leaderboards' },
 			{ name: 'Slash Commands WIP', value: 'oh ma gah' },
 			) 
 		
@@ -216,29 +235,54 @@ client.on("messageCreate", async (message) => {
 					  .setTimestamp();
 					await message.reply({ embeds: [addEmbed] });
 
-				} else if (message.content === '.work') {
-					// Define the amount earned when working - this can be a fixed value or random
-					const amountEarned = Math.floor(Math.random() * 100) + 1; // Earn between 1 to 100 coins
+
+
+				}	else if (message.content === '.work') {
+					const now = Date.now();
+					const lastWorkTime = cooldowns.get(message.author.id) || 0;
+					const cooldownRemaining = lastWorkTime + workCooldown - now;
 				
-					// Add the amount earned to the user's balance using your existing addUserCurrency function
+					if (cooldownRemaining > 0) {
+					  // User is still on cooldown
+					  const timeLeft = (cooldownRemaining / 1000 / 60).toFixed(2); // Convert to minutes and format
+					  const cooldownEmbed = new EmbedBuilder()
+						.setColor(0xFF0000) // Red color for alert
+						.setTitle('Work Cooldown')
+						.setDescription(`You need to rest! Please wait ${timeLeft} more minutes before working again.`)
+						.setTimestamp();
+					  await message.reply({ embeds: [cooldownEmbed] });
+					  return;
+					}
+				
+					// User is not on cooldown, proceed with work command
+					const job = jobs[Math.floor(Math.random() * jobs.length)];
+					const amountEarned = Math.floor(Math.random() * (job.payout.max - job.payout.min + 1)) + job.payout.min;
+				
+					// Add the amount earned to the user's balance
 					await addUserCurrency(message.author.id, amountEarned);
 				
-					// Create an embed to let the user know they've earned money
+					// Update the cooldown for the user
+					cooldowns.set(message.author.id, now);
+				
+					// Create and send the work embed
 					const workEmbed = new EmbedBuilder()
 					  .setColor(0x00FF00) // Green color for success
-					  .setTitle('Work')
-					  .setDescription(`You worked hard and earned ${amountEarned} coins!`)
+					  .setTitle(`${job.name} Work`)
+					  .setDescription(`You worked as a ${job.name} and earned ${amountEarned} coins!`)
 					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
 					  .setTimestamp();
 				
-					// Reply with the embed
 					await message.reply({ embeds: [workEmbed] });
+				  
 
+
+					  
+					  
 
 
 
 		// fetch WIP v3
-		} else if  (command === "meme") {
+	} else if  (command === "meme") {
 			const subredditName = "meme" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
 			subreddit.getRandomSubmission().then( async ( randomPost ) => {

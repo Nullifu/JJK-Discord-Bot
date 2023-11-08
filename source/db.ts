@@ -11,18 +11,31 @@ type Record = {
 interface Data {
   users: any;
   records: Record[];
-}
-// Use JSON file for storage
-const file =  './db.json';
-const adapter = new JSONFile<Data>(file);
-const defaultData: Data = {
-  records: [],
-  users: undefined
-};
+  }
+    // Use JSON file for storage
+    const file =  './db.json';
+      const adapter = new JSONFile<Data>(file);
+    const defaultData: Data = {
+      records: [],
+      users: undefined
+    };
 
 
-const db = new Low(adapter, defaultData); // Pass default data to the Low constructor
-await db.read();
-db.data ||= defaultData; // Now it includes both users and records
+    const db = new Low(adapter, defaultData); // Pass default data to the Low constructor
+      await db.read();
+        db.data ||= defaultData; // Now it includes both users and records
+
+        //------------------------------------------------------------------------------------------------------------------------
+
+
+              
+
+        
+  
+
+        
+
+
+  
 
 export default db;
