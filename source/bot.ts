@@ -12,6 +12,44 @@ import path from "node:path";
 import db from "./db.js";
 
 
+const allowedUserIds = ['292385626773258240', '587323617415659553'];  // Replace with the actual user ID
+
+	// Function to update user's currency
+async function updateUserCurrency(userId: string | number, amount: any) {
+	// Read the current state from the DB
+	await db.read();
+  
+	// If the user does not exist in the database, initialize their record
+	if (!db.data.users[userId]) {
+	  db.data.users[userId] = { currency: 0, items: [] };
+	}
+  
+	// Update the user's currency
+	db.data.users[userId].currency += amount;
+  
+	// Write back the updated state to the DB
+	await db.write();
+  }
+
+  			// Function to add an item to user's inventory
+async function addUserItem(userId: string | number, item: any) {
+	// Read the current state from the DB
+	await db.read();
+  
+	// If the user does not exist in the database, initialize their record
+	if (!db.data.users[userId]) {
+	  db.data.users[userId] = { currency: 0, items: [] };
+	}
+  
+	// Add the item to the user's inventory
+	db.data.users[userId].items.push(item);
+  
+	// Write back the updated state to the DB
+	await db.write();
+  }
+  
+  
+
 
 
 // Define some example jobs. Each job could have a different payout range.
@@ -21,6 +59,15 @@ const jobs = [
 	{ name: 'newbie', payout: { min: 70, max: 200 }, cost: 100 },
 	// ... add as many jobs as you want
   ];
+
+  const items = [
+	{ name: "Gold Nugget", rarity: 5 }, // Rarity indicates how often it's found (1 = common, higher numbers = rarer)
+	{ name: "Old Coin", rarity: 10 },
+	{ name: "Rare Crystal", rarity: 20 },
+	{ name: "Osaka", rarity: 100 },
+	// ... more items
+  ];
+  
 
  // Cooldown setup
 		const cooldowns = new Map<string, number>(); // userID -> timestamp
@@ -208,13 +255,23 @@ client.on("messageCreate", async (message) => {
 					const balanceEmbed = new EmbedBuilder()
 					  .setColor(0x00FF00) // You can set whatever color you like
 					  .setTitle('Balance')
-					  .setDescription(`You have **${currency}** coins.`)
+					  .setDescription(`You have **${currency}** osakacoins.`)
 					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
 					  .setTimestamp();
 					await message.reply({ embeds: [balanceEmbed] });
 
 				
 				} else if (message.content.startsWith('.add')) {
+					if (!allowedUserIds.includes(message.author.id)) {
+						const errorEmbed = new EmbedBuilder()
+      					.setColor(0xFF0000) // Red for errors
+      					.setTitle('Error')
+      					.setDescription('You do not have permission to use this command. **DEV Only**')
+      					.setTimestamp();
+    					await message.reply({ embeds: [errorEmbed] });
+    					return;
+  						}
+
 					const parts = message.content.split(' ');
 					const amount = parts.length > 1 ? parseInt(parts[1], 10) : NaN;
 					if (isNaN(amount)) {
@@ -268,13 +325,36 @@ client.on("messageCreate", async (message) => {
 					const workEmbed = new EmbedBuilder()
 					  .setColor(0x00FF00) // Green color for success
 					  .setTitle(`${job.name} Work`)
-					  .setDescription(`You worked as a ${job.name} and earned ${amountEarned} coins!`)
+					  .setDescription(`You worked as a ${job.name} and earned ${amountEarned} osakacoins!`)
 					  .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
 					  .setTimestamp();
 				
 					await message.reply({ embeds: [workEmbed] });
-				  
 
+
+
+				}	else if (message.content.startsWith('.dig')) {
+						// Random amount of coins (e.g., between 1 to 100)
+						const coinsFound = Math.floor(Math.random() * 100) + 1;
+		
+						// Update user currency
+						await addUserCurrency(message.author.id, coinsFound);
+					  
+						// Create the response embed
+						const digEmbed = new EmbedBuilder()
+						  .setColor(0xFFD700) // Gold color
+						  .setTitle('Digging Results')
+						  .setDescription(`You found ${coinsFound} coins!`)
+						  .setTimestamp();
+					  
+						// Send the embed response
+						await message.reply({ embeds: [digEmbed] });
+					  
+			
+
+				  
+				  
+					
 
 					  
 					  
@@ -282,7 +362,7 @@ client.on("messageCreate", async (message) => {
 
 
 		// fetch WIP v3
-	} else if  (command === "meme") {
+	} else if (command === "meme") {
 			const subredditName = "meme" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
 			subreddit.getRandomSubmission().then( async ( randomPost ) => {
@@ -444,3 +524,7 @@ client.on("messageCreate", async (message) => {
 			})
 	   
 client.login(token)
+
+function findItem() {
+	throw new Error("Function not implemented.");
+}

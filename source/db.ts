@@ -1,41 +1,64 @@
-// db.ts
+import { JSONFile } from 'lowdb/node';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
-import { join } from 'path';
-// Define typings for the records in the database
-type Record = {
-  id: string;
+
+// If you're using ES modules, for example in a TypeScript setting
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+type User = {
   currency: number;
+  items: string[];
+  job?: string; // Optional job field if a user has a job
 };
-// Define typings for the data schema
+
+interface Job {
+  name: string;
+  cost: number;
+  payout: { min: number; max: number };
+}
+
 interface Data {
-  users: any;
-  records: Record[];
+  users: Record<string, User>;
+  jobs: Job[];
+}
+
+// Set up a JSON file for storage
+const file = join(__dirname, 'db.json');
+const adapter = new JSONFile<Data>(file);
+
+// Define a default structure for your database
+const defaultData: Data = {
+  users: {},
+  jobs: [
+    // You can define default jobs here
+    { name: 'Cashier', cost: 100, payout: { min: 20, max: 30 } },
+    { name: 'Security Guard', cost: 200, payout: { min: 30, max: 40 } },
+    // ...other default jobs
+  ],
+};
+
+// Create an instance of LowDB with the JSON file and the default data
+const db = new Low<Data>(adapter, defaultData);
+
+
+// Utility function to initialize the database with default data
+const initializeDB = async () => {
+  // Read data from JSON file, this will set db.data content
+  await db.read();
+
+  // If db.data is null or undefined, populate it with default data
+  db.data ||= defaultData;
+
+  // You can also check if the jobs array is empty and populate it
+  if (db.data.jobs.length === 0) {
+    db.data.jobs = defaultData.jobs;
   }
-    // Use JSON file for storage
-    const file =  './db.json';
-      const adapter = new JSONFile<Data>(file);
-    const defaultData: Data = {
-      records: [],
-      users: undefined
-    };
 
+  // Write the default data to the database if it was missing
+  await db.write();
+};
 
-    const db = new Low(adapter, defaultData); // Pass default data to the Low constructor
-      await db.read();
-        db.data ||= defaultData; // Now it includes both users and records
-
-        //------------------------------------------------------------------------------------------------------------------------
-
-
-              
-
-        
-  
-
-        
-
-
-  
 
 export default db;
+export { defaultData, db, initializeDB, User, Job, Data };
