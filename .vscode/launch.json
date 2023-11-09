@@ -8,9 +8,9 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"program": "${workspaceFolder}/build/bot.js",
+			"program": "${workspaceFolder}/dist/bot.js",
 			"outFiles": [
-				"${workspaceFolder}/build/**/*.js"
+				"${workspaceFolder}/dist/**/*.js"
 			],
 			"cwd": "${workspaceFolder}",
 			"preLaunchTask": "Build",

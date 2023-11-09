@@ -8,8 +8,8 @@ import {
 	EmbedBuilder,
 	GatewayIntentBits,
 	Interaction,
-	Message,
 	Partials,
+	PermissionsBitField,
 	REST,
 	Routes,
 	SlashCommandBuilder
@@ -19,7 +19,6 @@ import * as fs from "fs"
 import path from "path"
 import snoowrap from "snoowrap"
 import { addUserCurrency, getUserCurrency } from "./currency.js"
-import db from "./db.js"
 
 // Load secrets from the .env file
 dotenv()
@@ -196,7 +195,13 @@ const reddit = new snoowrap({
 })
 
 client.on("ready", () => {
-	console.log(`Logged in as ${client.user.tag}`)
+	console.log(`Logged in as ${client.user?.tag}!`)
+	if (client.user) {
+		client.user.setPresence({
+			activities: [{ name: "Azumanga Daioh ", type: 1 }], // 2 is the type for "Listening"
+			status: "dnd"
+		})
+	}
 })
 
 client.on("messageCreate", async message => {
@@ -410,7 +415,7 @@ client.on("messageCreate", async message => {
 			})
 
 			// reddit fetch 18+
-		} else if (command === "hentai") {
+		} else if (command === "TEST DONT SEND THIS!") {
 			const subredditName = "hentai" // replace with subreddit to fetch from
 			const subreddit = reddit.getSubreddit(subredditName)
 			subreddit.getRandomSubmission().then(async randomPost => {
@@ -534,70 +539,33 @@ client.on("messageCreate", async message => {
 			} catch (err) {
 				console.error("Error reading image directory:", err)
 			}
-		} else if (command === "inventory") {
-			await showInventory(message, command, args)
+		} else if (command === "mute") {
+			// Check if the message author has the required permission to mute members
+			if (!message.member.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
+				await message.reply("You do not have permission to mute members.")
+			}
+
+			// Check if the bot has the required permission to manage roles
+			if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+				await message.reply("I do not have permission to manage roles.")
+			}
+
+			if (!args.length) await message.reply("You need to mention a user to mute!")
+
+			const user = message.mentions.members.first()
+			const muteRole = message.guild.roles.cache.find(role => role.name === "Muted")
+
+			if (!muteRole) await message.reply("Mute role does not exist!")
+
+			// Check if the bot's highest role is above the target's highest role
+			if (message.guild.members.me.roles.highest.comparePositionTo(user.roles.highest) <= 0) {
+				await message.reply("I cannot mute this user as their role is higher than or equal to mine.")
+			}
+
+			await user.roles.add(muteRole)
+			await message.reply(`${user.user.tag} has been muted.`)
 		}
 	}
 })
-
-async function showInventory(message: Message, command: string, args: string[]) {
-	// Make sure to read the latest db before checking
-	await db.read()
-
-	// Get the user's ID as a key
-	const userId = message.author.id
-
-	// Check if the users and items object exists in the database
-	if (!db.data || !db.data.users || !db.data.items) {
-		await message.channel.send("The inventory system is not set up correctly.")
-		return
-	}
-
-	// Check if the user exists in the database
-	const userInventory = db.data.users[userId]?.inventory
-	if (userInventory) {
-		let reply = `${message.author.username}'s Inventory:\n`
-
-		// Loop through each item in the user's inventory and add it to the reply message
-		for (const [itemId, inventoryItem] of Object.entries(userInventory)) {
-			const item = db.data.items[itemId]
-			if (item && inventoryItem.quantity) {
-				// Make sure item and quantity exist
-				reply += `${item.name} x ${inventoryItem.quantity}\n`
-			} else {
-				// Handle the case where an item doesn't exist in the database
-				reply += `Item with ID ${itemId} not found.\n`
-			}
-		}
-
-		await message.channel.send(reply)
-	} else {
-		// If the user does not exist in the database, send a different message
-		await message.channel.send("You don't have an inventory yet.")
-
-		if (command === "additem") {
-			const itemId = args[0]
-			const quantity = parseInt(args[1], 10)
-
-			if (!itemId || isNaN(quantity)) {
-				return message.channel.send("You need to specify an item ID and a quantity.")
-			}
-
-			try {
-				await addItemToInventory(message, itemId, quantity)
-			} catch (error) {
-				console.error(error)
-				await message.channel.send("There was an error adding the item to your inventory.")
-			}
-		}
-
-		// Define a Map to store muted users and their timeout IDs
-		const mutedUsers = new Map<string, NodeJS.Timeout>()
-	}
-}
-
-function addItemToInventory(message: Message<boolean>, itemId: string, quantity: number) {
-	throw new Error("Function not implemented.")
-}
 
 client.login(process.env["DISCORD_BOT_TOKEN"])
