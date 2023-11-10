@@ -8,6 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Define your types and interfaces
 type User = {
+	xp: any
+	level: any
 	currency: number
 	inventory: Record<string, InventoryItem> // Using a record to keep track of item quantities
 	job?: string // Optional job field if a user has a job

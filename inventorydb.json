@@ -10,7 +10,7 @@
       {
         "id": "noj",
         "name": "Noj",
-        "description": "A uncommon item found while digging.",
+        "description": "A uncommon item**.",
         "quantity": 5
       },
       {
@@ -34,31 +34,31 @@
       {
         "id": "stone",
         "name": "Stone",
-        "description": "A common item found while digging.",
-        "quantity": 4
+        "description": "A common item**.",
+        "quantity": 7
       },
       {
         "id": "empty_tin",
         "name": "Empty Tin",
-        "description": "A rare item found while digging.",
+        "description": "A rare item**.",
         "quantity": 1
       },
       {
         "id": "osaka",
         "name": "Osaka",
-        "description": "A super_rare item found while digging.",
+        "description": "A super_rare item**.",
         "quantity": 6
       },
       {
         "id": "nothing",
         "name": "Nothing",
-        "description": "A common item found while digging.",
+        "description": "A common item**.",
         "quantity": 1
       },
       {
         "id": "ayanna",
         "name": "ayanna",
-        "description": "A legendary item found while digging.",
+        "description": "A legendary item**.",
         "quantity": 1
       },
       {
@@ -66,113 +66,173 @@
         "name": "noj",
         "description": "babe",
         "quantity": 1
+      },
+      {
+        "id": "sans_playz125",
+        "name": "sans_playz125",
+        "description": "A common item**.",
+        "quantity": 3
+      },
+      {
+        "id": "ant",
+        "name": "Ant",
+        "description": "**A Common Item Woah**.",
+        "quantity": 8
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "description": "**A Common Item Lucky!,Nice!,Woah,Amazing!**.",
+        "quantity": 6
       }
     ],
     "587323617415659553": [
       {
         "id": "noj",
         "name": "Noj",
-        "description": "A uncommon item found while digging.",
-        "quantity": 1
+        "description": "A uncommon item**.",
+        "quantity": 8
       },
       {
         "id": "stone",
         "name": "Stone",
-        "description": "A common item found while digging.",
-        "quantity": 1
+        "description": "A common item **.",
+        "quantity": 20
       },
       {
         "id": "osaka",
         "name": "Osaka",
-        "description": "A super_rare item found while digging.",
-        "quantity": 1
+        "description": "A super_rare item **.",
+        "quantity": 7
+      },
+      {
+        "id": "sans_playz125",
+        "name": "sans_playz125",
+        "description": "A common item **.",
+        "quantity": 12
+      },
+      {
+        "id": "ant",
+        "name": "Ant",
+        "description": "**A common item**.",
+        "quantity": 21
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "description": "**A common item**.",
+        "quantity": 9
       }
     ],
     "917146454940844103": [
       {
         "id": "stone",
         "name": "Stone",
-        "description": "A common item found while digging.",
-        "quantity": 45
+        "description": "**A common item**.",
+        "quantity": 56
       },
       {
         "id": "osaka",
         "name": "Osaka",
-        "description": "A super_rare item found while digging.",
-        "quantity": 87
+        "description": "**A super_rare item**.",
+        "quantity": 89
       },
       {
         "id": "empty_tin",
         "name": "Empty Tin",
-        "description": "A rare item found while digging.",
+        "description": "**A rare item**.",
         "quantity": 6
       },
       {
         "id": "noj",
         "name": "Noj",
-        "description": "A uncommon item found while digging.",
-        "quantity": 16
+        "description": "**A uncommon item**.",
+        "quantity": 21
       },
       {
         "id": "v3x",
         "name": "v3x",
-        "description": "A common item found while digging.",
+        "description": "**A common item**.",
         "quantity": 1
       },
       {
         "id": "nothing",
         "name": "Nothing",
-        "description": "A common item found while digging.",
+        "description": "**A common item**.",
         "quantity": 45
       },
       {
         "id": "ayanna",
         "name": "ayanna",
-        "description": "A legendary item found while digging.",
+        "description": "**A legendary item**.",
         "quantity": 1
       },
       {
         "id": "v3x",
         "name": "V3x",
-        "description": "A super_rare item found while digging.",
-        "quantity": 2
+        "description": "**A super_rare item**.",
+        "quantity": 3
       },
       {
         "id": "aaya",
         "name": "Aaya",
-        "description": "A super rare item found while digging.",
-        "quantity": 1
+        "description": "**A super rare item**.",
+        "quantity": 2
+      },
+      {
+        "id": "sans_playz125",
+        "name": "sans_playz125",
+        "description": "**A common item**.",
+        "quantity": 12
+      },
+      {
+        "id": "diamond",
+        "name": "Diamond",
+        "description": "**A rare item**.",
+        "quantity": 2
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "description": "**A common item**.",
+        "quantity": 52
+      },
+      {
+        "id": "ant",
+        "name": "Ant",
+        "description": "**A common item**.",
+        "quantity": 47
       }
     ],
     "1155920349423222814": [
       {
         "id": "stone",
         "name": "Stone",
-        "description": "A common item found while digging.",
+        "description": "**A common item**.",
         "quantity": 14
       },
       {
         "id": "nothing",
         "name": "Nothing",
-        "description": "A common item found while digging.",
+        "description": "**A common item**.",
         "quantity": 62
       },
       {
         "id": "osaka",
         "name": "Osaka",
-        "description": "A super_rare item found while digging.",
+        "description": "**A super rare item**.",
         "quantity": 95
       },
       {
         "id": "noj",
         "name": "Noj",
-        "description": "A uncommon item found while digging.",
+        "description": "**A uncommon item**.",
         "quantity": 5
       },
       {
         "id": "v3x",
         "name": "V3x",
-        "description": "A super rare item found while digging.",
+        "description": "**A super rare item**.",
         "quantity": 1
       }
     ],
@@ -180,32 +240,56 @@
       {
         "id": "noj",
         "name": "Noj",
-        "description": "A uncommon item found while digging.",
-        "quantity": 6
+        "description": "**A uncommon item**.",
+        "quantity": 24
       },
       {
         "id": "stone",
         "name": "Stone",
-        "description": "A common item found while digging.",
-        "quantity": 12
+        "description": "**A common item**.",
+        "quantity": 54
       },
       {
         "id": "v3x",
         "name": "V3x",
-        "description": "A super rare item found while digging.",
-        "quantity": 2
+        "description": "**A super rare item**.",
+        "quantity": 3
       },
       {
         "id": "osaka",
         "name": "Osaka",
-        "description": "A rare item found while digging.",
-        "quantity": 2
+        "description": "**A rare item**.",
+        "quantity": 9
       },
       {
         "id": "aaya",
         "name": "Aaya",
-        "description": "A super rare item found while digging.",
-        "quantity": 2
+        "description": "**A super rare item**.",
+        "quantity": 3
+      },
+      {
+        "id": "sans_playz125",
+        "name": "sans_playz125",
+        "description": "**A common item**.",
+        "quantity": 35
+      },
+      {
+        "id": "diamond",
+        "name": "Diamond",
+        "description": "**A rare item**.",
+        "quantity": 8
+      },
+      {
+        "id": "ant",
+        "name": "Ant",
+        "description": "**A common item**.",
+        "quantity": 36
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "description": "**A common item**.",
+        "quantity": 28
       }
     ]
   }

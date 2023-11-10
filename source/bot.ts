@@ -30,18 +30,18 @@ interface Item {
 // Function to add an item to the inventory
 async function addItemToInventory(userId: string, item: Item) {
 	// Ensure there's an inventory array for the user
-	db.data.inventories[userId] = db.data.inventories[userId] || []
+	inventoryDb.data.inventories[userId] = inventoryDb.data.inventories[userId] || []
 	// Check if the item already exists in the inventory
-	const existingItemIndex = db.data.inventories[userId].findIndex(i => i.name === item.name)
+	const existingItemIndex = inventoryDb.data.inventories[userId].findIndex(i => i.name === item.name)
 	if (existingItemIndex > -1) {
 		// If the item exists, just update the quantity
-		db.data.inventories[userId][existingItemIndex].quantity += item.quantity
+		inventoryDb.data.inventories[userId][existingItemIndex].quantity += item.quantity
 	} else {
 		// If the item does not exist, add it to the inventory
-		db.data.inventories[userId].push(item)
+		inventoryDb.data.inventories[userId].push(item)
 	}
 	// Write the updated inventory to the database
-	await db.write()
+	await inventoryDb.write()
 }
 function formatInventoryItems(items: Item[]): string {
 	return items.map(item => `${item.quantity}x ${item.name}: ${item.description}`).join("\n")
@@ -58,8 +58,12 @@ const SLAP_IMAGE_DIRECTORY = "./gifs/slaps" // Your image directory path
 const PUNCH_COUNTS_FILE = "./punchCounts.json"
 const PUNCH_IMAGE_DIRECTORY = "./gifs/punch"
 
-const defaultData = { inventories: {} }
-const db = await JSONPreset("inventorydb.json", defaultData)
+const defaultInventoryData = { inventories: {} }
+const inventoryDb = await JSONPreset("inventorydb.json", defaultInventoryData)
+
+// Initialize the database with an empty users object if it's not present
+inventoryDb.data ??= defaultInventoryData
+await inventoryDb.write()
 
 // Define some example jobs. Each job could have a different payout range.
 const jobs = [
@@ -71,16 +75,21 @@ const jobs = [
 	{ name: "Lead Developer", payout: { min: 5000, max: 10000 }, cost: 20000 },
 	{ name: "Manager", payout: { min: 10000, max: 20000 }, cost: 50000 },
 	{ name: "CEO", payout: { min: 20000, max: 150000 }, cost: 100000 }
-
 	// ... add as many jobs as you want
 ]
 const items = [
-	{ name: "Stone", rarity: "common", chance: 0.5 },
-	{ name: "Noj", rarity: "uncommon", chance: 0.25 },
-	{ name: "Osaka", rarity: "rare", chance: 0.15 },
-	{ name: "V3x", rarity: "super rare", chance: 0.07 },
-	{ name: "Aaya", rarity: "super rare", chance: 0.07 },
-	{ name: "ayana and noj", rarity: "legendary", chance: 0.03 } // New item
+	{ name: "sans_playz125", rarity: "Common", chance: 0.1 },
+	{ name: "Ant", rarity: "Common", chance: 0.5 },
+	{ name: "Bread", rarity: "Common", chance: 0.5 },
+	{ name: "Stone", rarity: "Common", chance: 0.5 },
+	{ name: "Noj", rarity: "Uncommon", chance: 0.2 },
+	{ name: "Osaka", rarity: "Rare", chance: 0.1 },
+	{ name: "Diamond", rarity: "Rare", chance: 0.1 },
+	{ name: "Ruby", rarity: "Rare", chance: 0.1 },
+	{ name: "V3x", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Aaya", rarity: "Super Rare", chance: 0.07 },
+	{ name: "ayana and noj", rarity: "Legendary", chance: 0.03 },
+	{ name: "Jonathans Head", rarity: "Legendary", chance: 0.03 }
 ]
 
 function getRandomItem() {
@@ -95,29 +104,74 @@ function getRandomItem() {
 	}
 	return null // If no item is found based on the chances
 }
+
+interface User {
+	xp: number
+	level: number
+}
+
+const levelDefaultData = { levels: {} }
+const levelDb = await JSONPreset("leveldb.json", levelDefaultData)
+
+// Initialize the database with an empty users object if it's not present
+levelDb.data ??= levelDefaultData
+await levelDb.write()
+
+// Get or initialize user's XP and level
+async function getUserData(userId: string): Promise<User> {
+	await levelDb.read() // Make sure we have the latest data
+	if (!levelDb.data?.levels[userId]) {
+		levelDb.data.levels[userId] = { xp: 0, level: 1 }
+		await levelDb.write()
+	}
+	return levelDb.data.levels[userId]
+}
+// Add XP and calculate level up
+async function addXP(userId: string, xpToAdd: number): Promise<void> {
+	const userData = await getUserData(userId)
+	userData.xp += xpToAdd
+	userData.level = calculateLevel(userData.xp)
+
+	levelDb.data.levels[userId] = userData
+	await levelDb.write()
+}
+
+// Calculate level based on XP
+function calculateLevel(xp: number): number {
+	const xpPerLevel = 100 // Define XP needed for each level
+	return Math.floor(xp / xpPerLevel) + 1 // Level 1 is the starting level
+}
+
 // Cooldown setup
+const robCooldowns = new Map<string, number>()
+const robCooldownAmount = 5 * 60 * 1000 // 5 minutes cooldown
 const digcooldowns = new Map<string, number>() // userID -> timestamp
 const cooldowns = new Map<string, number>() // userID -> timestamp
 const workCooldown = 60 * 60 * 1000 // Cooldown in milliseconds (1 hour)
 const digCooldown = 10 * 60 * 1000 // Cooldown in milliseconds (10 minutes)
-const cooldownsBypassIDs: string[] = ["917146454940844103", "292385626773258240", "1155920349423222814"] // Replace with actual user IDs
+const cooldownsBypassIDs: string[] = [
+	"917146454940844103",
+	"292385626773258240",
+	"1155920349423222814",
+	"587323617415659553"
+] // Replace with actual user IDs
 const digcooldownsBypassIDs: string[] = [
 	"917146454940844103",
 	"292385626773258240",
 	"1155920349423222814",
-	"1002163723256987649"
+	"1002163723256987649",
+	"587323617415659553"
 ] // Replace with actual user IDs
 
 // Array of random words or phrases to be used with the slap command
 const randomReactions = ["Ouch!", "Wow!", "Bam!", "Slap!", "Pow!", "Whack!", "Boom!", "Biff!", "Zap!", "Bop!"]
+const randomdig2 = ["Burrowed", "Found", "Unearthed", "Discovered", "Excavated", "Uncovered", "Dug up"]
 
 // Interface for a user's slap count
 interface UserSlapCount {
 	userId: string
 	count: number
 }
-
-// ...
 
 // Function to read slap counts and return a sorted array
 function getSortedSlapCounts(): UserSlapCount[] {
@@ -146,13 +200,16 @@ const client = new Client({
 })
 
 const clientId = "831256729668812862"
+// The rob success rate
+const robSuccessRate = 0.35 // 50% chance to rob successfully
 
 // Increase the listener limit for the interactionCreate event
-client.setMaxListeners(15) // Set it to a reasonable value based on your use case
+client.setMaxListeners(20) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
 
 // SLASH COMMAND BUILDERS
 const commands = [
+	new SlashCommandBuilder().setName("search").setDescription("Search for items!"),
 	new SlashCommandBuilder().setName("help").setDescription("list of current commands"),
 	new SlashCommandBuilder().setName("balance").setDescription("Check your current balance!"),
 	new SlashCommandBuilder()
@@ -202,6 +259,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 					{ name: "Leaderboards", value: "Slap, Punch, Kill, Kiss, Pet," },
 					{ name: "Currency Commands", value: "Work, Balance, Add, Dig, Inventory, Sell" },
 					{ name: "Currency Commands > WIP <", value: "Along with leaderboards" },
+					{ name: "Todo List", value: "Add Shop, Sell, Gamble, Give, Steal, Rob, Crime, Crime Leaderboards" },
 					{ name: "Slash Commands WIP", value: "oh ma gah" }
 				)
 
@@ -260,11 +318,11 @@ client.on("ready", () => {
 	}
 })
 // Load the database
-await db.read()
+await inventoryDb.read()
 // Set the default data structure if it's null or undefined
-db.data ||= { inventories: {} }
+inventoryDb.data ||= { inventories: {} }
 // You may also need to write the default data back in case the file was empty or non-existent
-await db.write()
+await inventoryDb.write()
 
 client.on("messageCreate", async message => {
 	if (message.author.bot) return // Ignore messages from bots
@@ -403,25 +461,25 @@ client.on("messageCreate", async message => {
 
 				// The logic for finding an item
 				const itemFound = getRandomItem()
-				const itemMessage = ""
 				if (itemFound) {
 					// Define the item with a quantity of 1
 					const itemToAdd: Item = {
 						id: itemFound.name.toLowerCase().replace(/\s/g, "_"),
 						name: itemFound.name,
-						description: `A ${itemFound.rarity} item found while digging.`,
+						description: `**A ${itemFound.rarity} Item**.`,
 						quantity: 1
 					}
 
 					// Add the found item to the user's inventory
 					await addItemToInventory(authorId, itemToAdd)
-					const itemMessage = `You found a ${itemFound.name}!`
+					const itemMessage = `You also found a ${itemFound.name}!`
 
+					const randomdigs = randomdig2[Math.floor(Math.random() * randomdig2.length)]
 					// Create the response embed
 					const digEmbed = new EmbedBuilder()
-						.setColor(0xffd700) // Gold color
+						.setColor(0x00ff00) // Gold color
 						.setTitle("Digging Results")
-						.setDescription(`You found ${coinsFound} coins! ${itemMessage}`)
+						.setDescription(`You ${randomdigs} \`⌬${coinsFound}\` coins! **${itemMessage}**`)
 						.setTimestamp()
 
 					// Send the embed response
@@ -687,7 +745,7 @@ client.on("messageCreate", async message => {
 
 			// Show inventory
 			if (!args.length) {
-				const userInventory = db.data.inventories[userId] || []
+				const userInventory = inventoryDb.data.inventories[userId] || []
 				const inventoryEmbed = new EmbedBuilder()
 					.setColor(0x00ae86) // Set the color of the embed
 					.setTitle(`${message.author.username}'s Inventory`)
@@ -707,10 +765,10 @@ client.on("messageCreate", async message => {
 
 				// Initialize inventory for user if it doesn't exist
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				db.data!.inventories[userId] = db.data!.inventories[userId] || []
+				inventoryDb.data!.inventories[userId] = inventoryDb.data!.inventories[userId] || []
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				db.data!.inventories[userId].push(item)
-				await db.write() // Save the database
+				inventoryDb.data!.inventories[userId].push(item)
+				await inventoryDb.write() // Save the database
 				await message.reply(`${item} added to your inventory.`)
 			}
 		}
@@ -741,9 +799,63 @@ client.on("messageCreate", async message => {
 			await addItemToInventory(userId, newItem)
 			await message.reply(`Added ${quantity}x ${itemName} to your inventory.`)
 		}
+		if (command === "searchtest") {
+			const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("search_street").setLabel("Street").setStyle(ButtonStyle.Primary),
+				new ButtonBuilder().setCustomId("search_park").setLabel("Park").setStyle(ButtonStyle.Primary),
+				new ButtonBuilder().setCustomId("search_dumpster").setLabel("Dumpster").setStyle(ButtonStyle.Primary)
+			)
 
-		if (command === "chiyo") {
-			await message.reply("You brutally murder chiyo!")
+			await message.reply({ content: "Where would you like to search?", components: [row] })
+		} else if (command === "rob") {
+			const targetUser = message.mentions.users.first()
+			const authorId = message.author.id
+			const robCooldownAmount = 5 * 60 * 1000 // 5 minutes cooldown
+
+			// Check for correct usage
+			if (!targetUser) {
+				message.reply("You must mention a user to rob!")
+				return
+			}
+
+			// Cooldown check
+			const now = Date.now()
+			const cooldownExpiration = robCooldowns.get(authorId) || 0
+			if (now < cooldownExpiration) {
+				const timeLeft = ((cooldownExpiration - now) / 1000).toFixed(0)
+				message.reply(`You must wait ${timeLeft} more seconds before attempting to rob again.`)
+				return
+			}
+
+			// Set the cooldown
+			robCooldowns.set(authorId, now + robCooldownAmount)
+
+			// Rob logic
+			const robSuccessRate = 0.5 // 50% chance to succeed
+			if (Math.random() < robSuccessRate) {
+				// Calculate the stolen amount and update the balances accordingly
+				const stolenAmount = Math.floor(Math.random() * 100) + 1 // Example amount
+				message.reply(`You successfully robbed ${targetUser.username} and got ${stolenAmount} coins!`)
+				// Implement the actual currency transfer logic here
+			} else {
+				message.reply(`Your attempt to rob ${targetUser.username} failed!`)
+			}
+		} else if (command === "profile") {
+			const userData = await getUserData(message.author.id)
+
+			const profileEmbed = new EmbedBuilder()
+				.setColor(0x00ae86)
+				.setTitle(`${message.author.username}'s Profile`)
+				.addFields(
+					{ name: "Level", value: userData.level.toString(), inline: true },
+					{ name: "XP", value: userData.xp.toString(), inline: true }
+				)
+
+			await message.reply({ embeds: [profileEmbed] })
+		} else if (message.content.startsWith(".")) {
+			// Assuming all commands start with '.', add random XP for any command used
+			const xpToAdd = Math.floor(Math.random() * 10) + 15 // Random XP between 15 and 25
+			await addXP(message.author.id, xpToAdd)
 		}
 	}
 })
