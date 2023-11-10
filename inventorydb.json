@@ -11,7 +11,7 @@
         "id": "noj",
         "name": "Noj",
         "description": "A uncommon item found while digging.",
-        "quantity": 1
+        "quantity": 5
       },
       {
         "id": "1699611468204",
@@ -24,6 +24,188 @@
         "name": "10",
         "description": "jojo",
         "quantity": 1
+      },
+      {
+        "id": "1699619324845",
+        "name": "1",
+        "description": "1",
+        "quantity": 1
+      },
+      {
+        "id": "stone",
+        "name": "Stone",
+        "description": "A common item found while digging.",
+        "quantity": 4
+      },
+      {
+        "id": "empty_tin",
+        "name": "Empty Tin",
+        "description": "A rare item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "osaka",
+        "name": "Osaka",
+        "description": "A super_rare item found while digging.",
+        "quantity": 6
+      },
+      {
+        "id": "nothing",
+        "name": "Nothing",
+        "description": "A common item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "ayanna",
+        "name": "ayanna",
+        "description": "A legendary item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "1699634254765",
+        "name": "noj",
+        "description": "babe",
+        "quantity": 1
+      }
+    ],
+    "587323617415659553": [
+      {
+        "id": "noj",
+        "name": "Noj",
+        "description": "A uncommon item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "stone",
+        "name": "Stone",
+        "description": "A common item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "osaka",
+        "name": "Osaka",
+        "description": "A super_rare item found while digging.",
+        "quantity": 1
+      }
+    ],
+    "917146454940844103": [
+      {
+        "id": "stone",
+        "name": "Stone",
+        "description": "A common item found while digging.",
+        "quantity": 45
+      },
+      {
+        "id": "osaka",
+        "name": "Osaka",
+        "description": "A super_rare item found while digging.",
+        "quantity": 87
+      },
+      {
+        "id": "empty_tin",
+        "name": "Empty Tin",
+        "description": "A rare item found while digging.",
+        "quantity": 6
+      },
+      {
+        "id": "noj",
+        "name": "Noj",
+        "description": "A uncommon item found while digging.",
+        "quantity": 16
+      },
+      {
+        "id": "v3x",
+        "name": "v3x",
+        "description": "A common item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "nothing",
+        "name": "Nothing",
+        "description": "A common item found while digging.",
+        "quantity": 45
+      },
+      {
+        "id": "ayanna",
+        "name": "ayanna",
+        "description": "A legendary item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "v3x",
+        "name": "V3x",
+        "description": "A super_rare item found while digging.",
+        "quantity": 2
+      },
+      {
+        "id": "aaya",
+        "name": "Aaya",
+        "description": "A super rare item found while digging.",
+        "quantity": 1
+      }
+    ],
+    "1155920349423222814": [
+      {
+        "id": "stone",
+        "name": "Stone",
+        "description": "A common item found while digging.",
+        "quantity": 14
+      },
+      {
+        "id": "nothing",
+        "name": "Nothing",
+        "description": "A common item found while digging.",
+        "quantity": 62
+      },
+      {
+        "id": "osaka",
+        "name": "Osaka",
+        "description": "A super_rare item found while digging.",
+        "quantity": 95
+      },
+      {
+        "id": "noj",
+        "name": "Noj",
+        "description": "A uncommon item found while digging.",
+        "quantity": 5
+      },
+      {
+        "id": "v3x",
+        "name": "V3x",
+        "description": "A super rare item found while digging.",
+        "quantity": 1
+      }
+    ],
+    "1002163723256987649": [
+      {
+        "id": "noj",
+        "name": "Noj",
+        "description": "A uncommon item found while digging.",
+        "quantity": 6
+      },
+      {
+        "id": "stone",
+        "name": "Stone",
+        "description": "A common item found while digging.",
+        "quantity": 12
+      },
+      {
+        "id": "v3x",
+        "name": "V3x",
+        "description": "A super rare item found while digging.",
+        "quantity": 2
+      },
+      {
+        "id": "osaka",
+        "name": "Osaka",
+        "description": "A rare item found while digging.",
+        "quantity": 2
+      },
+      {
+        "id": "aaya",
+        "name": "Aaya",
+        "description": "A super rare item found while digging.",
+        "quantity": 2
       }
     ]
   }

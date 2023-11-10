@@ -20,11 +20,6 @@ import { JSONPreset } from "lowdb/node"
 import path from "path"
 import snoowrap from "snoowrap"
 import { addUserCurrency, getUserCurrency } from "./currency.js"
-
-type DataSchema = {
-	inventories: { [key: string]: string[] }
-}
-
 interface Item {
 	id: string
 	name: string
@@ -68,42 +63,53 @@ const db = await JSONPreset("inventorydb.json", defaultData)
 
 // Define some example jobs. Each job could have a different payout range.
 const jobs = [
-	{ name: "Osaka", payout: { min: 3500, max: 10000 }, cost: 2500 },
-	{ name: "Osakas Friend", payout: { min: 2500, max: 5000 }, cost: 1000 },
-	{ name: "newbie", payout: { min: 70, max: 200 }, cost: 100 }
+	{ name: "Osaka", payout: { min: 25000, max: 90000 }, cost: 2500 },
+	{ name: "Osakas Friend", payout: { min: 5000, max: 10000 }, cost: 1000 },
+	{ name: "newbie", payout: { min: 2500, max: 7600 }, cost: 100 },
+	{ name: "Junior Developer", payout: { min: 1000, max: 2000 }, cost: 5000 },
+	{ name: "Senior Developer", payout: { min: 2000, max: 5000 }, cost: 10000 },
+	{ name: "Lead Developer", payout: { min: 5000, max: 10000 }, cost: 20000 },
+	{ name: "Manager", payout: { min: 10000, max: 20000 }, cost: 50000 },
+	{ name: "CEO", payout: { min: 20000, max: 150000 }, cost: 100000 }
+
 	// ... add as many jobs as you want
 ]
 const items = [
-	{ name: "Stone", rarity: "common" },
-	{ name: "Noj", rarity: "uncommon" },
-	{ name: "Empty Tin", rarity: "rare" },
-	{ name: "Osaka", rarity: "super_rare" }
+	{ name: "Stone", rarity: "common", chance: 0.5 },
+	{ name: "Noj", rarity: "uncommon", chance: 0.25 },
+	{ name: "Osaka", rarity: "rare", chance: 0.15 },
+	{ name: "V3x", rarity: "super rare", chance: 0.07 },
+	{ name: "Aaya", rarity: "super rare", chance: 0.07 },
+	{ name: "ayana and noj", rarity: "legendary", chance: 0.03 } // New item
 ]
-// Function to get a random item based on rarity
-function getRandomItem() {
-	const rarity = Math.random()
-	if (rarity < 0.5) {
-		// 50% chance
-		return items.find(item => item.rarity === "common")
-	} else if (rarity < 0.75) {
-		// 25% chance
-		return items.find(item => item.rarity === "uncommon")
-	} else if (rarity < 0.9) {
-		// 15% chance
-		return items.find(item => item.rarity === "rare")
-	} else {
-		// 10% chance
-		return items.find(item => item.rarity === "super_rare")
-	}
-}
 
+function getRandomItem() {
+	const roll = Math.random()
+	let cumulativeChance = 0
+
+	for (const item of items) {
+		cumulativeChance += item.chance
+		if (roll < cumulativeChance) {
+			return item
+		}
+	}
+	return null // If no item is found based on the chances
+}
 // Cooldown setup
+const digcooldowns = new Map<string, number>() // userID -> timestamp
 const cooldowns = new Map<string, number>() // userID -> timestamp
 const workCooldown = 60 * 60 * 1000 // Cooldown in milliseconds (1 hour)
 const digCooldown = 10 * 60 * 1000 // Cooldown in milliseconds (10 minutes)
+const cooldownsBypassIDs: string[] = ["917146454940844103", "292385626773258240", "1155920349423222814"] // Replace with actual user IDs
+const digcooldownsBypassIDs: string[] = [
+	"917146454940844103",
+	"292385626773258240",
+	"1155920349423222814",
+	"1002163723256987649"
+] // Replace with actual user IDs
 
 // Array of random words or phrases to be used with the slap command
-const randomReactions = ["Ouch!", "Wow!", "Bam!", "Slap!", "Pow!", "Whack!, "]
+const randomReactions = ["Ouch!", "Wow!", "Bam!", "Slap!", "Pow!", "Whack!", "Boom!", "Biff!", "Zap!", "Bop!"]
 
 // Interface for a user's slap count
 interface UserSlapCount {
@@ -145,6 +151,7 @@ const clientId = "831256729668812862"
 client.setMaxListeners(15) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
 
+// SLASH COMMAND BUILDERS
 const commands = [
 	new SlashCommandBuilder().setName("help").setDescription("list of current commands"),
 	new SlashCommandBuilder().setName("balance").setDescription("Check your current balance!"),
@@ -193,7 +200,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 				.addFields(
 					{ name: "Image Commands", value: "meme, dog, cat, " },
 					{ name: "Leaderboards", value: "Slap, Punch, Kill, Kiss, Pet," },
-					{ name: "Currency Commands", value: "Work, Balance, Add, Dig, Inventory" },
+					{ name: "Currency Commands", value: "Work, Balance, Add, Dig, Inventory, Sell" },
 					{ name: "Currency Commands > WIP <", value: "Along with leaderboards" },
 					{ name: "Slash Commands WIP", value: "oh ma gah" }
 				)
@@ -329,6 +336,8 @@ client.on("messageCreate", async message => {
 				.setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
 				.setTimestamp()
 			await message.reply({ embeds: [addEmbed] })
+
+			// Work command logic
 		} else if (message.content === ".work") {
 			const now = Date.now()
 			const lastWorkTime = cooldowns.get(message.author.id) || 0
@@ -369,12 +378,12 @@ client.on("messageCreate", async message => {
 			if (message.content.startsWith(".dig")) {
 				const currentTime = Date.now()
 				const authorId = message.author.id
-				const timestamp = cooldowns.get(authorId)
+				const timestamp = digcooldowns.get(authorId)
 
 				// Check cooldown
 				if (timestamp) {
 					const expirationTime = timestamp + digCooldown
-					if (currentTime < expirationTime) {
+					if (currentTime < expirationTime && !digcooldownsBypassIDs.includes(authorId)) {
 						// Send a message with a dynamic timestamp
 						await message.reply(
 							`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(
@@ -386,14 +395,15 @@ client.on("messageCreate", async message => {
 				}
 
 				// Set or update the cooldown
-				cooldowns.set(authorId, currentTime)
+				digcooldowns.set(authorId, currentTime)
 
 				// The command logic
-				const coinsFound = Math.floor(Math.random() * 100) + 1
+				const coinsFound = Math.floor(Math.random() * 20000) + 1
 				await addUserCurrency(message.author.id, coinsFound)
 
 				// The logic for finding an item
 				const itemFound = getRandomItem()
+				const itemMessage = ""
 				if (itemFound) {
 					// Define the item with a quantity of 1
 					const itemToAdd: Item = {
@@ -405,8 +415,7 @@ client.on("messageCreate", async message => {
 
 					// Add the found item to the user's inventory
 					await addItemToInventory(authorId, itemToAdd)
-					// Update itemMessage to include the found item
-					const itemMessage = `You found ${itemFound.name}!`
+					const itemMessage = `You found a ${itemFound.name}!`
 
 					// Create the response embed
 					const digEmbed = new EmbedBuilder()
@@ -707,32 +716,34 @@ client.on("messageCreate", async message => {
 		}
 
 		if (command === "additem") {
-			if (!allowedUserIds.includes(message.author.id)) {
-				const userId = message.author.id
-				const itemName = args[0]
-				const itemDescription = args.slice(1).join(" ")
-				const quantity = 1 // Default quantity to 1, you can parse args for a different quantity
+			const userId = message.author.id
+			const itemName = args[0]
+			const itemDescription = args.slice(1).join(" ")
+			const quantity = 1 // Default quantity to 1, you can parse args for a different quantity
 
-				if (!itemName) {
-					await message.reply("Please specify an item name.")
-					return
-				}
-
-				if (!itemDescription) {
-					await message.reply("Please provide a description for the item.")
-					return
-				}
-
-				const newItem: Item = {
-					id: `${Date.now()}`, // Simple generation of a unique ID based on the current timestamp
-					name: itemName,
-					description: itemDescription,
-					quantity: quantity
-				}
-
-				await addItemToInventory(userId, newItem)
-				await message.reply(`Added ${quantity}x ${itemName} to your inventory.`)
+			if (!itemName) {
+				await message.reply("Please specify an item name.")
+				return
 			}
+
+			if (!itemDescription) {
+				await message.reply("Please provide a description for the item.")
+				return
+			}
+
+			const newItem: Item = {
+				id: `${Date.now()}`, // Simple generation of a unique ID based on the current timestamp
+				name: itemName,
+				description: itemDescription,
+				quantity: quantity
+			}
+
+			await addItemToInventory(userId, newItem)
+			await message.reply(`Added ${quantity}x ${itemName} to your inventory.`)
+		}
+
+		if (command === "chiyo") {
+			await message.reply("You brutally murder chiyo!")
 		}
 	}
 })
