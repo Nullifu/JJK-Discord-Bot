@@ -16,9 +16,41 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 import * as fs from "fs"
+import { JSONPreset } from "lowdb/node"
 import path from "path"
 import snoowrap from "snoowrap"
 import { addUserCurrency, getUserCurrency } from "./currency.js"
+
+type DataSchema = {
+	inventories: { [key: string]: string[] }
+}
+
+interface Item {
+	id: string
+	name: string
+	description: string
+	quantity: number
+}
+
+// Function to add an item to the inventory
+async function addItemToInventory(userId: string, item: Item) {
+	// Ensure there's an inventory array for the user
+	db.data.inventories[userId] = db.data.inventories[userId] || []
+	// Check if the item already exists in the inventory
+	const existingItemIndex = db.data.inventories[userId].findIndex(i => i.name === item.name)
+	if (existingItemIndex > -1) {
+		// If the item exists, just update the quantity
+		db.data.inventories[userId][existingItemIndex].quantity += item.quantity
+	} else {
+		// If the item does not exist, add it to the inventory
+		db.data.inventories[userId].push(item)
+	}
+	// Write the updated inventory to the database
+	await db.write()
+}
+function formatInventoryItems(items: Item[]): string {
+	return items.map(item => `${item.quantity}x ${item.name}: ${item.description}`).join("\n")
+}
 
 // Load secrets from the .env file
 dotenv()
@@ -31,6 +63,9 @@ const SLAP_IMAGE_DIRECTORY = "./gifs/slaps" // Your image directory path
 const PUNCH_COUNTS_FILE = "./punchCounts.json"
 const PUNCH_IMAGE_DIRECTORY = "./gifs/punch"
 
+const defaultData = { inventories: {} }
+const db = await JSONPreset("inventorydb.json", defaultData)
+
 // Define some example jobs. Each job could have a different payout range.
 const jobs = [
 	{ name: "Osaka", payout: { min: 3500, max: 10000 }, cost: 2500 },
@@ -38,14 +73,29 @@ const jobs = [
 	{ name: "newbie", payout: { min: 70, max: 200 }, cost: 100 }
 	// ... add as many jobs as you want
 ]
-
 const items = [
-	{ name: "Gold Nugget", rarity: 5 }, // Rarity indicates how often it's found (1 = common, higher numbers = rarer)
-	{ name: "Old Coin", rarity: 10 },
-	{ name: "Rare Crystal", rarity: 20 },
-	{ name: "Osaka", rarity: 100 }
-	// ... more items
+	{ name: "Stone", rarity: "common" },
+	{ name: "Noj", rarity: "uncommon" },
+	{ name: "Empty Tin", rarity: "rare" },
+	{ name: "Osaka", rarity: "super_rare" }
 ]
+// Function to get a random item based on rarity
+function getRandomItem() {
+	const rarity = Math.random()
+	if (rarity < 0.5) {
+		// 50% chance
+		return items.find(item => item.rarity === "common")
+	} else if (rarity < 0.75) {
+		// 25% chance
+		return items.find(item => item.rarity === "uncommon")
+	} else if (rarity < 0.9) {
+		// 15% chance
+		return items.find(item => item.rarity === "rare")
+	} else {
+		// 10% chance
+		return items.find(item => item.rarity === "super_rare")
+	}
+}
 
 // Cooldown setup
 const cooldowns = new Map<string, number>() // userID -> timestamp
@@ -141,10 +191,9 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 					"https://gcdn.thunderstore.io/live/repository/icons/mackeye-Osaka-1.0.0.png.256x256_q95.jpg"
 				)
 				.addFields(
-					{ name: "Commands", value: "meme, slap, cat, dog, punch, " },
+					{ name: "Image Commands", value: "meme, dog, cat, " },
 					{ name: "Leaderboards", value: "Slap, Punch, Kill, Kiss, Pet," },
-					{ name: "Currency Commands", value: "Work, Balance, Add, Dig" },
-					{ name: "18+ Commands", value: "Hentai," },
+					{ name: "Currency Commands", value: "Work, Balance, Add, Dig, Inventory" },
 					{ name: "Currency Commands > WIP <", value: "Along with leaderboards" },
 					{ name: "Slash Commands WIP", value: "oh ma gah" }
 				)
@@ -203,6 +252,12 @@ client.on("ready", () => {
 		})
 	}
 })
+// Load the database
+await db.read()
+// Set the default data structure if it's null or undefined
+db.data ||= { inventories: {} }
+// You may also need to write the default data back in case the file was empty or non-existent
+await db.write()
 
 client.on("messageCreate", async message => {
 	if (message.author.bot) return // Ignore messages from bots
@@ -244,7 +299,7 @@ client.on("messageCreate", async message => {
 
 			// Reply with the embed
 			await message.reply({ embeds: [balanceEmbed] })
-		} else if (message.content.startsWith(".add")) {
+		} else if (command === "addcoins") {
 			if (!allowedUserIds.includes(message.author.id)) {
 				const errorEmbed = new EmbedBuilder()
 					.setColor(0xff0000) // Red for errors
@@ -320,7 +375,6 @@ client.on("messageCreate", async message => {
 				if (timestamp) {
 					const expirationTime = timestamp + digCooldown
 					if (currentTime < expirationTime) {
-						const timeLeft = expirationTime - currentTime
 						// Send a message with a dynamic timestamp
 						await message.reply(
 							`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(
@@ -338,15 +392,32 @@ client.on("messageCreate", async message => {
 				const coinsFound = Math.floor(Math.random() * 100) + 1
 				await addUserCurrency(message.author.id, coinsFound)
 
-				// Create the response embed
-				const digEmbed = new EmbedBuilder()
-					.setColor(0xffd700) // Gold color
-					.setTitle("Digging Results")
-					.setDescription(`You found ${coinsFound} coins!`)
-					.setTimestamp()
+				// The logic for finding an item
+				const itemFound = getRandomItem()
+				if (itemFound) {
+					// Define the item with a quantity of 1
+					const itemToAdd: Item = {
+						id: itemFound.name.toLowerCase().replace(/\s/g, "_"),
+						name: itemFound.name,
+						description: `A ${itemFound.rarity} item found while digging.`,
+						quantity: 1
+					}
 
-				// Send the embed response
-				await message.reply({ embeds: [digEmbed] })
+					// Add the found item to the user's inventory
+					await addItemToInventory(authorId, itemToAdd)
+					// Update itemMessage to include the found item
+					const itemMessage = `You found ${itemFound.name}!`
+
+					// Create the response embed
+					const digEmbed = new EmbedBuilder()
+						.setColor(0xffd700) // Gold color
+						.setTitle("Digging Results")
+						.setDescription(`You found ${coinsFound} coins! ${itemMessage}`)
+						.setTimestamp()
+
+					// Send the embed response
+					await message.reply({ embeds: [digEmbed] })
+				}
 			}
 
 			// fetch WIP v3
@@ -540,30 +611,128 @@ client.on("messageCreate", async message => {
 				console.error("Error reading image directory:", err)
 			}
 		} else if (command === "mute") {
+			const embed = new EmbedBuilder()
+
 			// Check if the message author has the required permission to mute members
 			if (!message.member.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
-				await message.reply("You do not have permission to mute members.")
+				embed
+					.setColor(0xff0000) // Red color for error
+					.setDescription("You do not have permission to mute members.")
+				await message.reply({ embeds: [embed] })
+				return
 			}
 
 			// Check if the bot has the required permission to manage roles
 			if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
-				await message.reply("I do not have permission to manage roles.")
+				embed
+					.setColor(0xff0000) // Red color for error
+					.setDescription("I do not have permission to manage roles.")
+				await message.reply({ embeds: [embed] })
+				return
 			}
 
-			if (!args.length) await message.reply("You need to mention a user to mute!")
+			if (!args.length) {
+				embed
+					.setColor(0xffa500) // Orange color for warning
+					.setDescription("You need to mention a user to mute!")
+				await message.reply({ embeds: [embed] })
+				return
+			}
 
 			const user = message.mentions.members.first()
-			const muteRole = message.guild.roles.cache.find(role => role.name === "Muted")
+			if (!user) {
+				embed
+					.setColor(0xffa500) // Orange color for warning
+					.setDescription("Please mention a valid user to mute!")
+				await message.reply({ embeds: [embed] })
+				return
+			}
 
-			if (!muteRole) await message.reply("Mute role does not exist!")
+			const muteRole = message.guild.roles.cache.find(role => role.name === "Muted")
+			if (!muteRole) {
+				embed
+					.setColor(0xffa500) // Orange color for warning
+					.setDescription("Mute role does not exist!")
+				await message.reply({ embeds: [embed] })
+				return
+			}
 
 			// Check if the bot's highest role is above the target's highest role
 			if (message.guild.members.me.roles.highest.comparePositionTo(user.roles.highest) <= 0) {
-				await message.reply("I cannot mute this user as their role is higher than or equal to mine.")
+				embed
+					.setColor(0xff0000) // Red color for error
+					.setDescription("I cannot mute this user as their role is higher than or equal to mine.")
+				await message.reply({ embeds: [embed] })
+				return
 			}
 
 			await user.roles.add(muteRole)
-			await message.reply(`${user.user.tag} has been muted.`)
+			embed
+				.setColor(0x00ff00) // Green color for success
+				.setDescription(`${user.user.tag} has been muted.`)
+			await message.reply({ embeds: [embed] })
+		}
+
+		if (command === "inventory") {
+			const userId = message.author.id
+
+			// Show inventory
+			if (!args.length) {
+				const userInventory = db.data.inventories[userId] || []
+				const inventoryEmbed = new EmbedBuilder()
+					.setColor(0x00ae86) // Set the color of the embed
+					.setTitle(`${message.author.username}'s Inventory`)
+					.setDescription(formatInventoryItems(userInventory)) // Use the function to format items
+					.setTimestamp()
+
+				await message.reply({ embeds: [inventoryEmbed] })
+			}
+
+			// Add item to inventory
+			if (args[0] === "additem") {
+				const item = args[1]
+				if (!item) {
+					message.reply("Please specify an item to add.")
+					return
+				}
+
+				// Initialize inventory for user if it doesn't exist
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				db.data!.inventories[userId] = db.data!.inventories[userId] || []
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				db.data!.inventories[userId].push(item)
+				await db.write() // Save the database
+				await message.reply(`${item} added to your inventory.`)
+			}
+		}
+
+		if (command === "additem") {
+			if (!allowedUserIds.includes(message.author.id)) {
+				const userId = message.author.id
+				const itemName = args[0]
+				const itemDescription = args.slice(1).join(" ")
+				const quantity = 1 // Default quantity to 1, you can parse args for a different quantity
+
+				if (!itemName) {
+					await message.reply("Please specify an item name.")
+					return
+				}
+
+				if (!itemDescription) {
+					await message.reply("Please provide a description for the item.")
+					return
+				}
+
+				const newItem: Item = {
+					id: `${Date.now()}`, // Simple generation of a unique ID based on the current timestamp
+					name: itemName,
+					description: itemDescription,
+					quantity: quantity
+				}
+
+				await addItemToInventory(userId, newItem)
+				await message.reply(`Added ${quantity}x ${itemName} to your inventory.`)
+			}
 		}
 	}
 })

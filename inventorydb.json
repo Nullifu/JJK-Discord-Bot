@@ -1,0 +1,30 @@
+{
+  "inventories": {
+    "292385626773258240": [
+      {
+        "id": "1699609940359",
+        "name": "osaka",
+        "description": "funny",
+        "quantity": 1
+      },
+      {
+        "id": "noj",
+        "name": "Noj",
+        "description": "A uncommon item found while digging.",
+        "quantity": 1
+      },
+      {
+        "id": "1699611468204",
+        "name": "jojo",
+        "description": "1",
+        "quantity": 1
+      },
+      {
+        "id": "1699611479704",
+        "name": "10",
+        "description": "jojo",
+        "quantity": 1
+      }
+    ]
+  }
+}

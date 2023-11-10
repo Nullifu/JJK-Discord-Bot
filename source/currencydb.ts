@@ -8,7 +8,7 @@ type Record = {
 }
 // Define typings for the data schema
 interface Data {
-	users: any
+	users: unknown
 	records: Record[]
 }
 // Use JSON file for storage
