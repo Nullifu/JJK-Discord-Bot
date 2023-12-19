@@ -30,12 +30,14 @@
 		"discord.js": "^14.13.0",
 		"dotenv": "^16.3.1",
 		"lowdb": "^6.1.1",
+		"mysql": "^2.18.1",
 		"openai": "^3.3.0",
 		"snoowrap": "^1.23.0"
 	},
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.7",
 		"@types/lowdb": "^1.0.15",
+		"@types/mysql": "^2.15.24",
 		"@types/node": "^20.9.0",
 		"@typescript-eslint/eslint-plugin": "^6.10.0",
 		"@typescript-eslint/parser": "^6.10.0",

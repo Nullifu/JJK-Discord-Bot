@@ -34,3 +34,20 @@ export async function removeUserCurrency(userId: string, amount: number): Promis
 
 	await db.write()
 }
+
+export async function updateUserBalance(userId: string, coinsChange: number): Promise<void> {
+	// Read the current state of the database
+	await db.read()
+
+	// If the user doesn't have a balance, initialize it to 0
+	const currentBalance = db.data?.users[userId]?.balance || 0
+
+	// Update the user's balance
+	db.data.users[userId] = {
+		...db.data.users[userId],
+		balance: currentBalance + coinsChange
+	}
+
+	// Write the changes back to the database
+	await db.write()
+}

@@ -11,7 +11,7 @@
         "id": "noj",
         "name": "Noj",
         "description": "A uncommon item**.",
-        "quantity": 5
+        "quantity": 9
       },
       {
         "id": "1699611468204",
@@ -47,7 +47,7 @@
         "id": "osaka",
         "name": "Osaka",
         "description": "A super_rare item**.",
-        "quantity": 6
+        "quantity": 8
       },
       {
         "id": "nothing",
@@ -77,13 +77,55 @@
         "id": "ant",
         "name": "Ant",
         "description": "**A Common Item Woah**.",
-        "quantity": 8
+        "quantity": 22
       },
       {
         "id": "bread",
         "name": "Bread",
         "description": "**A Common Item Lucky!,Nice!,Woah,Amazing!**.",
-        "quantity": 6
+        "quantity": 15
+      },
+      {
+        "id": "diamond",
+        "name": "Diamond",
+        "description": "**A Rare Item**.",
+        "quantity": 3
+      },
+      {
+        "id": "sapphire",
+        "name": "Sapphire",
+        "description": "**A Rare Item**.",
+        "quantity": 3
+      },
+      {
+        "id": "1701183558686",
+        "name": "<@917146454940844103>",
+        "description": "ayana",
+        "quantity": 2
+      },
+      {
+        "id": "ayana",
+        "name": "Ayana",
+        "description": "**A Super Rare Item**.",
+        "quantity": 3
+      },
+      {
+        "id": "ruby",
+        "name": "Ruby",
+        "description": "**A Rare Item**.",
+        "quantity": 5
+      },
+      {
+        "id": "gold",
+        "name": "Gold",
+        "description": "**A Rare Item**.",
+        "quantity": 4
+      },
+      {
+        "id": "platinum",
+        "name": "Platinum",
+        "description": "**A Rare Item**.",
+        "quantity": 3
       }
     ],
     "587323617415659553": [
@@ -115,13 +157,13 @@
         "id": "ant",
         "name": "Ant",
         "description": "**A common item**.",
-        "quantity": 21
+        "quantity": 59
       },
       {
         "id": "bread",
         "name": "Bread",
         "description": "**A common item**.",
-        "quantity": 9
+        "quantity": 29
       }
     ],
     "917146454940844103": [
@@ -135,7 +177,7 @@
         "id": "osaka",
         "name": "Osaka",
         "description": "**A super_rare item**.",
-        "quantity": 89
+        "quantity": 111
       },
       {
         "id": "empty_tin",
@@ -147,7 +189,7 @@
         "id": "noj",
         "name": "Noj",
         "description": "**A uncommon item**.",
-        "quantity": 21
+        "quantity": 62
       },
       {
         "id": "v3x",
@@ -171,7 +213,7 @@
         "id": "v3x",
         "name": "V3x",
         "description": "**A super_rare item**.",
-        "quantity": 3
+        "quantity": 6
       },
       {
         "id": "aaya",
@@ -183,25 +225,61 @@
         "id": "sans_playz125",
         "name": "sans_playz125",
         "description": "**A common item**.",
-        "quantity": 12
+        "quantity": 23
       },
       {
         "id": "diamond",
         "name": "Diamond",
         "description": "**A rare item**.",
-        "quantity": 2
+        "quantity": 30
       },
       {
         "id": "bread",
         "name": "Bread",
         "description": "**A common item**.",
-        "quantity": 52
+        "quantity": 156
       },
       {
         "id": "ant",
         "name": "Ant",
         "description": "**A common item**.",
-        "quantity": 47
+        "quantity": 188
+      },
+      {
+        "id": "gold",
+        "name": "Gold",
+        "description": "**A Rare Item**.",
+        "quantity": 22
+      },
+      {
+        "id": "ruby",
+        "name": "Ruby",
+        "description": "**A Rare Item**.",
+        "quantity": 21
+      },
+      {
+        "id": "platinum",
+        "name": "Platinum",
+        "description": "**A Rare Item**.",
+        "quantity": 31
+      },
+      {
+        "id": "emerald",
+        "name": "Emerald",
+        "description": "**A Rare Item**.",
+        "quantity": 33
+      },
+      {
+        "id": "sapphire",
+        "name": "Sapphire",
+        "description": "**A Rare Item**.",
+        "quantity": 23
+      },
+      {
+        "id": "ayana",
+        "name": "Ayana",
+        "description": "**A Super Rare Item**.",
+        "quantity": 12
       }
     ],
     "1155920349423222814": [
@@ -289,7 +367,21 @@
         "id": "bread",
         "name": "Bread",
         "description": "**A common item**.",
-        "quantity": 28
+        "quantity": 29
+      }
+    ],
+    "787801245792337962": [
+      {
+        "id": "ant",
+        "name": "Ant",
+        "description": "**A Common Item**.",
+        "quantity": 2
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "description": "**A Common Item**.",
+        "quantity": 1
       }
     ]
   }

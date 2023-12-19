@@ -19,33 +19,55 @@ import * as fs from "fs"
 import { JSONPreset } from "lowdb/node"
 import path from "path"
 import snoowrap from "snoowrap"
-import { addUserCurrency, getUserCurrency } from "./currency.js"
-interface Item {
-	id: string
-	name: string
-	description: string
-	quantity: number
-}
+import { handlecraftcommand } from "./command.js"
+import { addUserCurrency } from "./currency.js"
+import { formatInventoryItems } from "./inventory.js"
+import {
+	addItem,
+	addUser,
+	connect,
+	getBalance,
+	getItem,
+	getUserInventory,
+	getUserProfile,
+	giveItemToUser,
+	incrementInventoryItemQuantity,
+	isConnected,
+	removeBalance,
+	updateBalance,
+	updateExperience,
+	userHasItem
+} from "./mysql.js"
+
+// interface Item {
+// 	id: string
+// 	name: string
+// 	description: string
+// 	quantity: number
+// }
+// Define the structure for an inventory item
+// interface InventoryItem {
+// 	name: string
+// 	quantity: number
+// 	price: number
+// }
 
 // Function to add an item to the inventory
-async function addItemToInventory(userId: string, item: Item) {
-	// Ensure there's an inventory array for the user
-	inventoryDb.data.inventories[userId] = inventoryDb.data.inventories[userId] || []
-	// Check if the item already exists in the inventory
-	const existingItemIndex = inventoryDb.data.inventories[userId].findIndex(i => i.name === item.name)
-	if (existingItemIndex > -1) {
-		// If the item exists, just update the quantity
-		inventoryDb.data.inventories[userId][existingItemIndex].quantity += item.quantity
-	} else {
-		// If the item does not exist, add it to the inventory
-		inventoryDb.data.inventories[userId].push(item)
-	}
-	// Write the updated inventory to the database
-	await inventoryDb.write()
-}
-function formatInventoryItems(items: Item[]): string {
-	return items.map(item => `${item.quantity}x ${item.name}: ${item.description}`).join("\n")
-}
+// async function addItemToInventory(userId: string, item: Item) {
+// 	// Ensure there's an inventory array for the user
+// 	inventoryDb.data.inventories[userId] = inventoryDb.data.inventories[userId] || []
+// 	// Check if the item already exists in the inventory
+// 	const existingItemIndex = inventoryDb.data.inventories[userId].findIndex(i => i.name === item.name)
+// 	if (existingItemIndex > -1) {
+// 		// If the item exists, just update the quantity
+// 		inventoryDb.data.inventories[userId][existingItemIndex].quantity += item.quantity
+// 	} else {
+// 		// If the item does not exist, add it to the inventory
+// 		inventoryDb.data.inventories[userId].push(item)
+// 	}
+// 	// Write the updated inventory to the database
+// 	await inventoryDb.write()
+// }
 
 // Load secrets from the .env file
 dotenv()
@@ -64,6 +86,7 @@ const inventoryDb = await JSONPreset("inventorydb.json", defaultInventoryData)
 // Initialize the database with an empty users object if it's not present
 inventoryDb.data ??= defaultInventoryData
 await inventoryDb.write()
+const xpPerCommand = 10 // XP to award per command
 
 // Define some example jobs. Each job could have a different payout range.
 const jobs = [
@@ -74,22 +97,32 @@ const jobs = [
 	{ name: "Senior Developer", payout: { min: 2000, max: 5000 }, cost: 10000 },
 	{ name: "Lead Developer", payout: { min: 5000, max: 10000 }, cost: 20000 },
 	{ name: "Manager", payout: { min: 10000, max: 20000 }, cost: 50000 },
-	{ name: "CEO", payout: { min: 20000, max: 150000 }, cost: 100000 }
+	{ name: "CEO", payout: { min: 20000, max: 150000 }, cost: 100000 },
+	{ name: "President", payout: { min: 150000, max: 300000 }, cost: 500000 },
+	{ name: "God", payout: { min: 300000, max: 1000000 }, cost: 1000000 }
+
 	// ... add as many jobs as you want
 ]
 const items = [
-	{ name: "sans_playz125", rarity: "Common", chance: 0.1 },
-	{ name: "Ant", rarity: "Common", chance: 0.5 },
-	{ name: "Bread", rarity: "Common", chance: 0.5 },
-	{ name: "Stone", rarity: "Common", chance: 0.5 },
+	{ name: "Wood", rarity: "Common", chance: 0.5 },
 	{ name: "Noj", rarity: "Uncommon", chance: 0.2 },
+	{ name: "Sukuna Finger", rarity: "Uncommon", chance: 0.2 },
+	{ name: "Prisom Realm Fragment", rarity: "Uncommon", chance: 0.2 },
 	{ name: "Osaka", rarity: "Rare", chance: 0.1 },
 	{ name: "Diamond", rarity: "Rare", chance: 0.1 },
 	{ name: "Ruby", rarity: "Rare", chance: 0.1 },
+	{ name: "Emerald", rarity: "Rare", chance: 0.1 },
+	{ name: "Sapphire", rarity: "Rare", chance: 0.1 },
+	{ name: "Gold", rarity: "Rare", chance: 0.1 },
+	{ name: "Platinum", rarity: "Rare", chance: 0.1 },
+	{ name: "Cum", rarity: "Super Rare", chance: 0.07 },
 	{ name: "V3x", rarity: "Super Rare", chance: 0.07 },
 	{ name: "Aaya", rarity: "Super Rare", chance: 0.07 },
-	{ name: "ayana and noj", rarity: "Legendary", chance: 0.03 },
-	{ name: "Jonathans Head", rarity: "Legendary", chance: 0.03 }
+	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07 },
+	{ name: "ayana and vex", rarity: "Legendary", chance: 0.05 },
+	{ name: "Six Eyes", rarity: "Legendary", chance: 0.05 }
+	{ name: "Prisom Realm", rarity: "Mythical", chance: 0.03 },
 ]
 
 function getRandomItem() {
@@ -118,7 +151,7 @@ levelDb.data ??= levelDefaultData
 await levelDb.write()
 
 // Get or initialize user's XP and level
-async function getUserData(userId: string): Promise<User> {
+async function getExperience(userId: string): Promise<User> {
 	await levelDb.read() // Make sure we have the latest data
 	if (!levelDb.data?.levels[userId]) {
 		levelDb.data.levels[userId] = { xp: 0, level: 1 }
@@ -128,7 +161,7 @@ async function getUserData(userId: string): Promise<User> {
 }
 // Add XP and calculate level up
 async function addXP(userId: string, xpToAdd: number): Promise<void> {
-	const userData = await getUserData(userId)
+	const userData = await getExperience(userId)
 	userData.xp += xpToAdd
 	userData.level = calculateLevel(userData.xp)
 
@@ -172,6 +205,19 @@ interface UserSlapCount {
 	userId: string
 	count: number
 }
+const shopPages = [
+	// Page 1 Embed
+	new EmbedBuilder()
+		.setColor(0x0099ff)
+		.setTitle("Shop Items - Page 1")
+		.setDescription("**Here are the items for sale:**")
+		.addFields({ name: "Chiyo", value: "Who? `5000`" }, { name: "Assault Rifle", value: "oh `25000`" })
+	// Add more EmbedBuilder instances for additional pages
+]
+const shopItems = [
+	{ id: "item1", name: "**Chiyo**", description: "yep", price: 1 },
+	{ id: "item2", name: "**sans_playz125**", description: "fag", price: 200000 }
+]
 
 // Function to read slap counts and return a sorted array
 function getSortedSlapCounts(): UserSlapCount[] {
@@ -200,9 +246,6 @@ const client = new Client({
 })
 
 const clientId = "831256729668812862"
-// The rob success rate
-const robSuccessRate = 0.35 // 50% chance to rob successfully
-
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(20) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
@@ -210,6 +253,13 @@ client.setMaxListeners(20) // Set it to a reasonable value based on your use cas
 // SLASH COMMAND BUILDERS
 const commands = [
 	new SlashCommandBuilder().setName("search").setDescription("Search for items!"),
+	new SlashCommandBuilder().setName("profile").setDescription("Displays your profile information."),
+	new SlashCommandBuilder()
+		.setName("craft")
+		.setDescription("Craft an item using fragments")
+		.addSubcommand(subcommand =>
+			subcommand.setName("prison_realm").setDescription("Craft a Prison Realm using fragments")
+		),
 	new SlashCommandBuilder().setName("help").setDescription("list of current commands"),
 	new SlashCommandBuilder().setName("balance").setDescription("Check your current balance!"),
 	new SlashCommandBuilder()
@@ -275,28 +325,52 @@ client.on("interactionCreate", async (interaction: Interaction) => {
 				embeds: [embed],
 				components: [row]
 			})
-		}
-	} else if (interaction.isButton()) {
-		const buttonInteraction = interaction as ButtonInteraction
+		} else if (interaction.commandName === "balance") {
+			await interaction.deferReply() // makes it say the bot is thinking
 
-		if (buttonInteraction.customId === "more_help") {
-			const sortedSlapCounts = getSortedSlapCounts()
-			// Take the top 10 slap counts, or less if there aren't enough entries
-			const topSlaps = sortedSlapCounts.slice(0, 10)
+			// Get the user who did the command
+			const userWhoDidTheCommand = interaction.user
 
-			// Format the leaderboard string
-			const leaderboard = topSlaps
-				.map((entry, index) => `${index + 1}. <@${entry.userId}> - ${entry.count} slap(s)`)
-				.join("\n")
+			// Fetch the balance for the user
+			const balance = await getBalance(userWhoDidTheCommand.id)
 
-			// Create and send the embed
-			const moreHelpEmbed = new EmbedBuilder()
-				.setColor(0x00ae86)
-				.setTitle("Slap Leaderboard")
-				.setDescription(leaderboard)
+			// Create the embed
+			const balanceEmbed = new EmbedBuilder()
+				.setColor(0x00ff00) // You can set whatever color you like
+				.setTitle("Balance")
+				.setDescription(`User <@${userWhoDidTheCommand.id}> has **${balance}** osakacoins.`)
+				.setFooter({
+					text: `Requested by ${userWhoDidTheCommand.tag}`,
+					iconURL: userWhoDidTheCommand.displayAvatarURL()
+				})
 				.setTimestamp()
 
-			await buttonInteraction.update({ embeds: [moreHelpEmbed], components: [] })
+			// Reply with the embed
+			await interaction.editReply({ embeds: [balanceEmbed] })
+		} else if (interaction.commandName === "craft") {
+			await handlecraftcommand(interaction)
+		} else if (interaction.isButton()) {
+			const buttonInteraction = interaction as ButtonInteraction
+
+			if (buttonInteraction.customId === "more_help") {
+				const sortedSlapCounts = getSortedSlapCounts()
+				// Take the top 10 slap counts, or less if there aren't enough entries
+				const topSlaps = sortedSlapCounts.slice(0, 10)
+
+				// Format the leaderboard string
+				const leaderboard = topSlaps
+					.map((entry, index) => `${index + 1}. <@${entry.userId}> - ${entry.count} slap(s)`)
+					.join("\n")
+
+				// Create and send the embed
+				const moreHelpEmbed = new EmbedBuilder()
+					.setColor(0x00ae86)
+					.setTitle("Slap Leaderboard")
+					.setDescription(leaderboard)
+					.setTimestamp()
+
+				await buttonInteraction.update({ embeds: [moreHelpEmbed], components: [] })
+			}
 		}
 	}
 })
@@ -308,7 +382,7 @@ const reddit = new snoowrap({
 	refreshToken: process.env["REDDIT_REFRESH_TOKEN"]
 })
 
-client.on("ready", () => {
+client.on("ready", async () => {
 	console.log(`Logged in as ${client.user?.tag}!`)
 	if (client.user) {
 		client.user.setPresence({
@@ -316,13 +390,43 @@ client.on("ready", () => {
 			status: "dnd"
 		})
 	}
+
+	console.log("Connecting to the database...")
+	await connect()
+	console.log("Connected to the database!")
+
+	const isConnectedToDatabase = await isConnected()
+	console.log("Is connected to the database:", isConnectedToDatabase)
 })
+
 // Load the database
 await inventoryDb.read()
 // Set the default data structure if it's null or undefined
 inventoryDb.data ||= { inventories: {} }
 // You may also need to write the default data back in case the file was empty or non-existent
 await inventoryDb.write()
+// Fetch the user's inventory from the database
+// async function getUserInventory(userId: string): Promise<InventoryItem[]> {
+// 	await db.read() // Ensure we have the latest data
+// 	return inventoryDb.data?.inventories[userId] || []
+// }
+
+// Update the user's inventory in the database
+// async function updateUserInventory(userId: string, itemName: string, quantityChange: number): Promise<void> {
+// 	await db.read()
+// 	const inventory = inventoryDb.data.inventories[userId] || []
+// 	const itemIndex = inventory.findIndex(item => item.name === itemName)
+
+// 	if (itemIndex > -1) {
+// 		inventory[itemIndex].quantity += quantityChange
+// 		if (inventory[itemIndex].quantity <= 0) {
+// 			inventory.splice(itemIndex, 1) // Remove the item if quantity is 0 or less
+// 		}
+// 	}
+
+// 	inventoryDb.data.inventories[userId] = inventory
+// 	await db.write()
+// }
 
 client.on("messageCreate", async message => {
 	if (message.author.bot) return // Ignore messages from bots
@@ -352,13 +456,13 @@ client.on("messageCreate", async message => {
 			const userId = mention ? mention.id : message.author.id
 
 			// Fetch currency for the specified user
-			const currency = await getUserCurrency(userId)
+			const currency = await getBalance(userId)
 
 			// Create the embed
 			const balanceEmbed = new EmbedBuilder()
 				.setColor(0x00ff00) // You can set whatever color you like
 				.setTitle("Balance")
-				.setDescription(`User <@${userId}> has **${currency}** osakacoins.`)
+				.setDescription(`User <@${userId}> has **${currency}** osakacoins. `)
 				.setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
 				.setTimestamp()
 
@@ -418,7 +522,7 @@ client.on("messageCreate", async message => {
 			const amountEarned = Math.floor(Math.random() * (job.payout.max - job.payout.min + 1)) + job.payout.min
 
 			// Add the amount earned to the user's balance
-			await addUserCurrency(message.author.id, amountEarned)
+			await updateBalance(message.author.id, amountEarned)
 
 			// Update the cooldown for the user
 			cooldowns.set(message.author.id, now)
@@ -443,12 +547,16 @@ client.on("messageCreate", async message => {
 					const expirationTime = timestamp + digCooldown
 					if (currentTime < expirationTime && !digcooldownsBypassIDs.includes(authorId)) {
 						// Send a message with a dynamic timestamp
-						await message.reply(
-							`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(
-								expirationTime / 1000
-							)}:R>.`
-						)
-						return
+						const digCooldownEmbed = new EmbedBuilder()
+							.setColor(0xff0000) // Red color for error
+							.setTitle("Digging Cooldown")
+							.setTimestamp()
+							.setDescription(
+								`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(
+									expirationTime / 1000
+								)}:R>.`
+							)
+						await message.reply({ embeds: [digCooldownEmbed] })
 					}
 				}
 
@@ -457,29 +565,48 @@ client.on("messageCreate", async message => {
 
 				// The command logic
 				const coinsFound = Math.floor(Math.random() * 20000) + 1
-				await addUserCurrency(message.author.id, coinsFound)
+				await updateBalance(message.author.id, coinsFound)
 
 				// The logic for finding an item
 				const itemFound = getRandomItem()
 				if (itemFound) {
 					// Define the item with a quantity of 1
-					const itemToAdd: Item = {
-						id: itemFound.name.toLowerCase().replace(/\s/g, "_"),
-						name: itemFound.name,
-						description: `**A ${itemFound.rarity} Item**.`,
-						quantity: 1
+					// const itemToAdd: Item = {
+					// 	id: itemFound.name.toLowerCase().replace(/\s/g, "_"),
+					// 	name: itemFound.name,
+					// 	description: `**A ${itemFound.rarity} Item**.`,
+					// 	quantity: 1
+					// }
+
+					// // Add the found item to the user's inventory
+					// await addItemToInventory(authorId, itemToAdd)
+					// const itemMessage = `You also found a ${itemFound.name}!`
+
+					// Create item
+					let fkingItem = await getItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`)
+					if (!fkingItem) {
+						fkingItem = await addItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`)
 					}
 
-					// Add the found item to the user's inventory
-					await addItemToInventory(authorId, itemToAdd)
-					const itemMessage = `You also found a ${itemFound.name}!`
+					// do they already have this item
+					const hasFkingItem = await userHasItem(authorId, fkingItem.id)
+					if (hasFkingItem) {
+						await incrementInventoryItemQuantity(authorId, fkingItem.id)
+					} else {
+						// Give item to user
+						await giveItemToUser(authorId, fkingItem.id)
+					}
+
+					// Give item to user
 
 					const randomdigs = randomdig2[Math.floor(Math.random() * randomdig2.length)]
 					// Create the response embed
 					const digEmbed = new EmbedBuilder()
 						.setColor(0x00ff00) // Gold color
 						.setTitle("Digging Results")
-						.setDescription(`You ${randomdigs} \`⌬${coinsFound}\` coins! **${itemMessage}**`)
+						.setDescription(
+							`You ${randomdigs} \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`
+						)
 						.setTimestamp()
 
 					// Send the embed response
@@ -745,7 +872,9 @@ client.on("messageCreate", async message => {
 
 			// Show inventory
 			if (!args.length) {
-				const userInventory = inventoryDb.data.inventories[userId] || []
+				//const userInventory = inventoryDb.data.inventories[userId] || []
+				const userInventory = await getUserInventory(userId)
+
 				const inventoryEmbed = new EmbedBuilder()
 					.setColor(0x00ae86) // Set the color of the embed
 					.setTitle(`${message.author.username}'s Inventory`)
@@ -754,27 +883,53 @@ client.on("messageCreate", async message => {
 
 				await message.reply({ embeds: [inventoryEmbed] })
 			}
-
-			// Add item to inventory
-			if (args[0] === "additem") {
-				const item = args[1]
-				if (!item) {
-					message.reply("Please specify an item to add.")
-					return
-				}
-
-				// Initialize inventory for user if it doesn't exist
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				inventoryDb.data!.inventories[userId] = inventoryDb.data!.inventories[userId] || []
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				inventoryDb.data!.inventories[userId].push(item)
-				await inventoryDb.write() // Save the database
-				await message.reply(`${item} added to your inventory.`)
-			}
 		}
 
+		client.on("messageCreate", async message => {
+			if (message.content === ".testshop") {
+				const shopEmbed = new EmbedBuilder()
+					.setColor("#0099ff")
+					.setTitle("Shop Items")
+					.setDescription("Select an item to purchase.")
+
+				shopItems.forEach(item => {
+					shopEmbed.addFields({ name: item.name, value: `${item.description} - ${item.price} coins` })
+				})
+
+				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+					shopItems.map(item =>
+						new ButtonBuilder().setCustomId(item.id).setLabel(item.name).setStyle(ButtonStyle.Primary)
+					)
+				)
+
+				await message.channel.send({ embeds: [shopEmbed], components: [row] })
+			}
+		})
+
+		client.on("interactionCreate", async interaction => {
+			if (!interaction.isButton()) return
+			await interaction.deferReply()
+			const itemId = interaction.customId
+			const item = shopItems.find(i => i.id === itemId)
+			const userId = interaction.user.id
+
+			if (item) {
+				try {
+					// Here, call your function to add the item to the user's inventory
+					await addItem(userId, item.id)
+
+					// Deduct the item's cost from the user's balance
+					await removeBalance(userId, item.price)
+
+					await interaction.reply(`You have purchased ${item.name} for ${item.price} coins.`)
+				} catch (error) {
+					// Handle any errors, like insufficient balance or inventory issues
+					await interaction.reply("Sorry, the purchase could not be completed.")
+				}
+			}
+		})
+
 		if (command === "additem") {
-			const userId = message.author.id
 			const itemName = args[0]
 			const itemDescription = args.slice(1).join(" ")
 			const quantity = 1 // Default quantity to 1, you can parse args for a different quantity
@@ -789,14 +944,14 @@ client.on("messageCreate", async message => {
 				return
 			}
 
-			const newItem: Item = {
-				id: `${Date.now()}`, // Simple generation of a unique ID based on the current timestamp
-				name: itemName,
-				description: itemDescription,
-				quantity: quantity
-			}
+			// const newItem: Item = {
+			// 	id: `${Date.now()}`, // Simple generation of a unique ID based on the current timestamp
+			// 	name: itemName,
+			// 	description: itemDescription,
+			// 	quantity: quantity
+			// }
 
-			await addItemToInventory(userId, newItem)
+			//await addItemToInventory(userId, newItem)
 			await message.reply(`Added ${quantity}x ${itemName} to your inventory.`)
 		}
 		if (command === "searchtest") {
@@ -807,41 +962,8 @@ client.on("messageCreate", async message => {
 			)
 
 			await message.reply({ content: "Where would you like to search?", components: [row] })
-		} else if (command === "rob") {
-			const targetUser = message.mentions.users.first()
-			const authorId = message.author.id
-			const robCooldownAmount = 5 * 60 * 1000 // 5 minutes cooldown
-
-			// Check for correct usage
-			if (!targetUser) {
-				message.reply("You must mention a user to rob!")
-				return
-			}
-
-			// Cooldown check
-			const now = Date.now()
-			const cooldownExpiration = robCooldowns.get(authorId) || 0
-			if (now < cooldownExpiration) {
-				const timeLeft = ((cooldownExpiration - now) / 1000).toFixed(0)
-				message.reply(`You must wait ${timeLeft} more seconds before attempting to rob again.`)
-				return
-			}
-
-			// Set the cooldown
-			robCooldowns.set(authorId, now + robCooldownAmount)
-
-			// Rob logic
-			const robSuccessRate = 0.5 // 50% chance to succeed
-			if (Math.random() < robSuccessRate) {
-				// Calculate the stolen amount and update the balances accordingly
-				const stolenAmount = Math.floor(Math.random() * 100) + 1 // Example amount
-				message.reply(`You successfully robbed ${targetUser.username} and got ${stolenAmount} coins!`)
-				// Implement the actual currency transfer logic here
-			} else {
-				message.reply(`Your attempt to rob ${targetUser.username} failed!`)
-			}
-		} else if (command === "profile") {
-			const userData = await getUserData(message.author.id)
+		} else if (command === "oldprofile") {
+			const userData = await getExperience(message.author.id)
 
 			const profileEmbed = new EmbedBuilder()
 				.setColor(0x00ae86)
@@ -852,11 +974,68 @@ client.on("messageCreate", async message => {
 				)
 
 			await message.reply({ embeds: [profileEmbed] })
-		} else if (message.content.startsWith(".")) {
-			// Assuming all commands start with '.', add random XP for any command used
-			const xpToAdd = Math.floor(Math.random() * 10) + 15 // Random XP between 15 and 25
-			await addXP(message.author.id, xpToAdd)
+		} else if (command === "register") {
+			try {
+				const discordId = message.author.id
+				const result = await addUser(discordId)
+				message.reply("User registered successfully!")
+				console.log(result)
+			} catch (error) {
+				console.error("Error registering user:", error)
+				message.reply("There was an error registering the user.")
+			}
 		}
+		try {
+			// Process the command
+			switch (command) {
+				case "profile":
+					// ... handle profile command
+					break
+				// Add cases for other commands
+				default:
+					return // Skip XP update for unknown commands
+			}
+
+			// Update user experience after executing any command
+			const userId = message.author.id
+			await updateExperience(userId, xpPerCommand)
+			console.log(`Awarded ${xpPerCommand} XP to user ${userId} for using a command.`)
+		} catch (error) {
+			console.error("Error handling command:", error)
+			await message.reply("There was an error processing your command.")
+		}
+
+		// Check if the message is the .profile command
+		if (command === "profile") {
+			const userId = message.author.id
+
+			try {
+				const userProfile = await getUserProfile(userId)
+				if (userProfile) {
+					const profileEmbed = new EmbedBuilder()
+						.setFooter({
+							text: `Requested by ${message.author.tag}`,
+							iconURL: message.author.displayAvatarURL()
+						})
+						.setTimestamp()
+						.setColor(0x0099ff)
+						.setTitle(`${message.author.username}'s Profile`) // Display the username
+						.addFields(
+							{ name: "**Osakian Coins**", value: `\`${userProfile.balance.toString()}\``, inline: true },
+							{ name: "**Experience**", value: userProfile.experience.toString(), inline: true }
+							// add inventory here, or others
+						)
+					await updateExperience(userId, xpPerCommand)
+					await message.reply({ embeds: [profileEmbed] })
+				} else {
+					await message.reply("Profile not found, Try using `.register`")
+				}
+			} catch (error) {
+				console.error("Failed to retrieve user profile:", error)
+				await message.reply("There was an error retrieving your profile.")
+			}
+		}
+		if (command === "craft") await handlecraftcommand
 	}
 })
 
