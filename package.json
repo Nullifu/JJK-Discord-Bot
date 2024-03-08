@@ -27,7 +27,7 @@
 		"@discordjs/builders": "^1.6.4",
 		"@discordjs/rest": "^2.0.0",
 		"@sapphire/shapeshift": "^3.9.2",
-		"better-sqlite3": "^9.0.0",
+		"better-sqlite3": "^9.4.3",
 		"discord.js": "^14.13.0",
 		"dotenv": "^16.3.1",
 		"lowdb": "^6.1.1",
