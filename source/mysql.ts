@@ -1,6 +1,7 @@
 /* eslint-disable indent */
 import { config as dotenv } from "dotenv"
 import mysql from "mysql"
+import { BossData } from "./interface"
 import { InventoryItem } from "./inventory"
 import { Item } from "./item"
 
@@ -250,7 +251,7 @@ export async function updateExperience(id: string, amount: number): Promise<any>
  */
 export async function getUserProfile(id: string): Promise<any> {
 	return new Promise((resolve, reject) => {
-		const query = "SELECT id, balance, experience FROM users WHERE id = ?"
+		const query = "SELECT balance, experience, energy, grade FROM users WHERE id = ?"
 
 		connection.query(query, [id], (error, results) => {
 			if (error) {
@@ -343,11 +344,11 @@ export async function getItem(name: string, description: string): Promise<Item |
 }
 
 //  1. Add an item with the specified name and description to the items table and return its data
-export async function addItem(name: string, description: string): Promise<Item> {
+export async function addItem(name: string, description: string, price: number): Promise<Item> {
 	return new Promise((resolve, reject) => {
-		const query = "INSERT INTO items (name, description) VALUES (?, ?)"
+		const query = "INSERT INTO items (name, description, price) VALUES (?, ?, ?)"
 
-		connection.query(query, [name, description], (error, results) => {
+		connection.query(query, [name, description, price], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
@@ -355,7 +356,8 @@ export async function addItem(name: string, description: string): Promise<Item> 
 				resolve({
 					id: results.insertId,
 					name,
-					description
+					description,
+					price
 				})
 			}
 		})
@@ -409,11 +411,11 @@ export async function incrementInventoryItemQuantity(userId: string, itemId: num
 }
 
 // 3. Removing the item from a user. - DELETE FROM inventories WHERE user_id = 'UserID' AND item_id = ItemID;
-export async function removeItemFromUser(userId: string, itemId: number) {
+export async function removeItemFromUser(userId: string, itemId: number, quantity: number): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const query = "DELETE FROM inventories WHERE user_id = ? AND item_id = ?"
 
-		connection.query(query, [userId, itemId], (error, results) => {
+		connection.query(query, [userId, itemId, quantity], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
@@ -424,11 +426,11 @@ export async function removeItemFromUser(userId: string, itemId: number) {
 }
 
 // 4. Incrementing the number of a given item a user has. UPDATE inventories SET quantity = quantity + IncrementValue WHERE user_id = 'UserID' AND item_id = ItemID;
-export async function incrementItemForUser(userId: string, itemId: number, incrementValue: number) {
+export async function incrementItemForUser(userId: string, itemId: number, incrementValue: number, quantity: number) {
 	return new Promise((resolve, reject) => {
 		const query = "UPDATE inventories SET quantity = quantity + ? WHERE user_id = ? AND item_id = ?"
 
-		connection.query(query, [incrementValue, userId, itemId], (error, results) => {
+		connection.query(query, [incrementValue, userId, itemId, quantity], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
@@ -502,6 +504,107 @@ export async function craftItem(userId: string, itemId: number, quantity: number
 				reject(error)
 			} else {
 				resolve(results)
+			}
+		})
+	})
+}
+// 9. faggot
+export async function getAllItems(): Promise<Item[]> {
+	return new Promise(resolve => {
+		const query = "SELECT * FROM items"
+
+		connection.query(query, (error, results) => {
+			if (error) {
+				resolve([])
+			} else {
+				const items = results.map(row => ({
+					id: row.id,
+					name: row.name,
+					description: row.description,
+					price: row.price
+				}))
+				resolve(items)
+			}
+		})
+	})
+}
+
+// Function to fetch boss data by name
+export async function getBossByName(bossName: string): Promise<BossData | null> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT * FROM bosses WHERE name = ?"
+		connection.query(sql, [bossName], (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results.length > 0 ? results[0] : null)
+			}
+		})
+	})
+}
+
+export async function updateBossHealth(bossName: string, newHealth: number): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (typeof newHealth !== "number" || isNaN(newHealth)) {
+			return reject(new Error(`Invalid newHealth value: ${newHealth}`))
+		}
+
+		const sql = "UPDATE bosses SET current_health = ? WHERE name = ?"
+		console.log(`Updating health of boss '${bossName}' to ${newHealth}`) // Log for debugging
+		connection.query(sql, [newHealth, bossName], err => {
+			if (err) {
+				console.error(`Error updating health of boss '${bossName}':`, err) // Enhanced error logging
+				reject(err)
+			} else {
+				resolve()
+			}
+		})
+	})
+}
+
+export async function getAllBossesFromDatabase(): Promise<BossData[]> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT * FROM bosses"
+		connection.query(sql, (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results)
+			}
+		})
+	})
+}
+
+/**
+ * Retrieves a user's profile data from the database.
+ * @param id The user's ID.
+ * @returns A promise that resolves to the user's profile data.
+ */
+export async function getPlayerGradeFromDatabase(id: string): Promise<any> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT grade FROM users WHERE id = ?"
+
+		connection.query(query, [id], (error, results) => {
+			if (error) {
+				reject(error)
+			} else {
+				// Assuming the user is found, return the user's profile data
+				resolve(results.length > 0 ? results[0] : null)
+			}
+		})
+	})
+}
+
+export async function getPlayerHealth(id: string): Promise<any> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT health FROM users WHERE id = ?"
+
+		connection.query(query, [id], (error, results) => {
+			if (error) {
+				reject(error)
+			} else {
+				// Assuming the user is found, return the user's profile data
+				resolve(results.length > 0 ? results[0] : null)
 			}
 		})
 	})
