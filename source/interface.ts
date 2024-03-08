@@ -5,7 +5,6 @@ export interface UserSlapCount {
 
 export interface BossData {
 	id: number
-	bossName: string
 	name: string
 	max_health: number
 	current_health: number

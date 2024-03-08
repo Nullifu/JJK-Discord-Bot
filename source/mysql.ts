@@ -576,6 +576,21 @@ export async function getAllBossesFromDatabase(): Promise<BossData[]> {
 	})
 }
 
+export async function getBossAttackLine(bossName: string, attackName: string): Promise<string> {
+	switch (bossName) {
+		case "Sukuna":
+			if (attackName === "Cleave") {
+				return "Domain Expansion: Malevolent Shrine!"
+			} else {
+				// Dismantle
+				return "You're weak!"
+			}
+		// ... add cases for other bosses ...
+		default:
+			return "You dare challenge me?"
+	}
+}
+
 /**
  * Retrieves a user's profile data from the database.
  * @param id The user's ID.
@@ -596,7 +611,7 @@ export async function getPlayerGradeFromDatabase(id: string): Promise<UserProfil
 	})
 }
 
-export async function getPlayerHealth(id: string): Promise<unknown> {
+export async function getPlayerHealth(id: string): Promise<UserProfile> {
 	return new Promise((resolve, reject) => {
 		const query = "SELECT health FROM users WHERE id = ?"
 
@@ -606,6 +621,25 @@ export async function getPlayerHealth(id: string): Promise<unknown> {
 			} else {
 				// Assuming the user is found, return the user's profile data
 				resolve(results.length > 0 ? results[0] : null)
+			}
+		})
+	})
+}
+
+export async function updatePlayerHealth(id: string, newHealth: number): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (typeof newHealth !== "number" || isNaN(newHealth)) {
+			return reject(new Error(`Invalid newHealth value: ${newHealth}`))
+		}
+
+		const sql = "UPDATE users SET health = ? WHERE id = ?"
+		console.log(`Updating health of user '${id}' to ${newHealth}`) // Log for debugging
+		connection.query(sql, [newHealth, id], err => {
+			if (err) {
+				console.error(`Error updating health of user '${id}':`, err) // Enhanced error logging
+				reject(err)
+			} else {
+				resolve()
 			}
 		})
 	})

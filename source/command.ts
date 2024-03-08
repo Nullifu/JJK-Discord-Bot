@@ -1,4 +1,5 @@
-import { EmbedBuilder } from "@discordjs/builders"
+import { setTimeout } from "node:timers/promises"
+
 import {
 	ActionRowBuilder,
 	AttachmentBuilder,
@@ -8,11 +9,13 @@ import {
 	CacheType,
 	ChatInputCommandInteraction,
 	ComponentType,
+	EmbedBuilder,
 	Interaction,
 	SelectMenuBuilder,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder
 } from "discord.js"
+import { attacks, chooseRandomAttackForBossBasedOnProbability } from "./attacks.js"
 import {
 	COOLDOWN_TIME,
 	digCooldown,
@@ -34,6 +37,7 @@ import {
 	getBalance,
 	getItem,
 	getPlayerGradeFromDatabase,
+	getPlayerHealth,
 	getUserInventory,
 	getUserProfile,
 	giveItemToUser,
@@ -41,6 +45,7 @@ import {
 	removeItemFromUser,
 	updateBalance,
 	updateBossHealth,
+	updatePlayerHealth,
 	userHasItem
 } from "./mysql.js"
 // Profile Command
@@ -52,6 +57,7 @@ export interface UserProfile {
 	jujutsu: number
 	grade: string
 	energy: number
+	health: number
 }
 
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
@@ -673,13 +679,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		const randomIndex = Math.floor(Math.random() * allBosses.length)
 		const randomOpponent = allBosses[randomIndex]
 
-		// Set the bossName property for JJK flavor text
-		randomOpponent.bossName = randomOpponent.name
-
 		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
 
 		// Create embed
-		const embed = new EmbedBuilder()
+		const primaryEmbed = new EmbedBuilder()
 			.setColor(cursedEnergyPurple)
 			.setTitle("Cursed Battle!")
 			.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
@@ -688,12 +691,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
 		const healthBar = createHealthBar(remainingHealthPercentage)
 
-		embed.addFields({ name: "Cursed Energy", value: healthBar })
+		primaryEmbed.addFields({ name: "Cursed Energy", value: healthBar })
 
-		// Add JJK Flavor Text
-		const flavorText = getJujutsuFlavorText(randomOpponent.bossName)
+		// Add JJK Flavor Text based for this boss
+		const flavorText = getJujutsuFlavorText(randomOpponent.name)
 		if (flavorText) {
-			embed.addFields([flavorText])
+			primaryEmbed.addFields([flavorText])
 		}
 
 		// Create buttons
@@ -704,7 +707,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 		// Defer reply and send initial message
 		await interaction.deferReply()
-		const fightMessage = await interaction.editReply({ embeds: [embed], components: [row] })
+		const fightMessage = await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 		// Button Interaction Logic
 		const collector = fightMessage.createMessageComponentCollector({
@@ -715,6 +718,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			if (buttonInteraction.customId === "fight") {
 				await buttonInteraction.deferUpdate()
 
+				// Get player's health
+				const { health: playerHealth } = await getPlayerHealth(interaction.user.id)
+
 				// Get player's grade
 				const playerGradeData = await getPlayerGradeFromDatabase(interaction.user.id)
 				const playerGradeString = playerGradeData.grade
@@ -723,25 +729,70 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				// Calculate damage
 				const damage = calculateDamage(playerGrade)
 
-				// Update boss health in database
+				// Calculate boss new health after damage dealt
 				randomOpponent.current_health -= damage
-				await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
+				//await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
+
+				// Ensure boss health is never below 0
+				randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
 
 				// Construct result message
 				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGrade, damage)
+				primaryEmbed.setDescription(fightResult)
+				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
 
+				// Is the boss dead?
 				if (randomOpponent.current_health <= 0) {
-					// Check if the player won
-					// ... your victory message logic ...
-
 					// Reset health in the database
 					await updateBossHealth(randomOpponent.name, randomOpponent.max_health) // Assuming max_health is the original health
+				} else {
+					// Update to new boss health after damage dealt
+					await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
+
+					// Delay 1 second for a bit until the boss attack
+					await setTimeout(1000) // this is milliseconds
+
+					// *** Boss Attack ***
+					const possibleAttacks = attacks[randomOpponent.name]
+					const chosenAttack = chooseRandomAttackForBossBasedOnProbability(possibleAttacks)
+
+					// Calculate damage done to player
+					//const damageToPlayer = Math.floor(chosenAttack.baseDamage * Math.random())
+					const damageToPlayer = chosenAttack.baseDamage
+
+					// Calculate player new health after damage dealt by boss
+					const newPlayerHealth = playerHealth - damageToPlayer
+
+					// Ensure player health is never below 0
+					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+					// Did the player die?
+					if (clampedPlayerHealth <= 0) {
+						// Update embed with attack message from boss
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setDescription(bossAttackMessage)
+						await buttonInteraction.editReply({
+							embeds: [chosenAttack.embedUpdate(primaryEmbed as EmbedBuilder)]
+						})
+
+						// Reset player health in the database
+						await updatePlayerHealth(interaction.user.id, 100)
+					} else {
+						// Update to new player health after damage dealt
+						await updatePlayerHealth(interaction.user.id, clampedPlayerHealth)
+
+						// Update embed with attack message from boss
+						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+						primaryEmbed.setDescription(bossAttackMessage)
+						await buttonInteraction.editReply({ embeds: [chosenAttack.embedUpdate(primaryEmbed)] })
+					}
 				}
+			}
 
-				// Update the embed if needed
-				const updatedEmbed = updateEmbedIfNecessary(fightResult, randomOpponent, embed)
-
-				await buttonInteraction.editReply({ content: fightResult, embeds: [updatedEmbed] })
+			if (buttonInteraction.customId === "domain") {
+				await buttonInteraction.deferUpdate()
+				primaryEmbed.setImage("https://i.pinimg.com/originals/d7/4b/67/d74b6737ae912d33bba82f3a4dcc4a30.gif")
+				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
 			}
 		})
 	} catch (error) {
@@ -768,13 +819,4 @@ async function handleFightLogic(
 	}
 
 	return resultMessage
-}
-
-function updateEmbedIfNecessary(
-	fightResult: string,
-	randomOpponent: BossData,
-	originalEmbed: EmbedBuilder
-): EmbedBuilder {
-	// Add your embed modification logic here when you're ready
-	return originalEmbed // For now, return the original embed
 }
