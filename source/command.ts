@@ -46,10 +46,12 @@ import {
 // Profile Command
 
 // Assuming you have types defined for these:
-interface UserProfile {
+export interface UserProfile {
 	balance: number
 	experience: number
 	jujutsu: number
+	grade: string
+	energy: number
 }
 
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {

@@ -1,6 +1,7 @@
 /* eslint-disable indent */
 import { config as dotenv } from "dotenv"
 import mysql from "mysql"
+import { UserProfile } from "./command"
 import { BossData } from "./interface"
 import { InventoryItem } from "./inventory"
 import { Item } from "./item"
@@ -86,11 +87,11 @@ const connection = mysql.createConnection({
  * @returns A promise that resolves to the connection object.
  */
 export function connect() {
-	const mysqlUser = process.env["MYSQL_USER"]
-	const mysqlPassword = process.env["MYSQL_PASSWORD"]
-	const mysqlDatabase = process.env["MYSQL_DATABASE"]
-	const mysqlHost = process.env["MYSQL_HOST"]
-	const mysqlPort = parseInt(process.env["MYSQL_PORT"])
+	// const mysqlUser = process.env["MYSQL_USER"]
+	// const mysqlPassword = process.env["MYSQL_PASSWORD"]
+	// const mysqlDatabase = process.env["MYSQL_DATABASE"]
+	// const mysqlHost = process.env["MYSQL_HOST"]
+	// const mysqlPort = parseInt(process.env["MYSQL_PORT"])
 
 	return new Promise((resolve, reject) => {
 		connection.connect(error => {
@@ -184,7 +185,7 @@ export async function getBalance(id: string): Promise<number> {
  * @param amount The amount to update the balance by.
  * @returns A promise that resolves to the result of the update query.
  */
-export async function updateBalance(id: string, amount: number): Promise<any> {
+export async function updateBalance(id: string, amount: number): Promise<number> {
 	return new Promise((resolve, reject) => {
 		// Assuming the balance column exists in the users table and is a numeric type
 		const query = "UPDATE users SET balance = balance + ? WHERE id = ?"
@@ -230,7 +231,7 @@ export async function getExperience(id: string): Promise<number> {
  * @param amount The amount to update the experience points by.
  * @returns A promise that resolves to the result of the update query.
  */
-export async function updateExperience(id: string, amount: number): Promise<any> {
+export async function updateExperience(id: string, amount: number): Promise<number> {
 	return new Promise((resolve, reject) => {
 		// Assuming the experience column exists in the users table and is a numeric type
 		const query = "UPDATE users SET experience = experience + ? WHERE id = ?"
@@ -249,7 +250,7 @@ export async function updateExperience(id: string, amount: number): Promise<any>
  * @param id The user's ID.
  * @returns A promise that resolves to the user's profile data.
  */
-export async function getUserProfile(id: string): Promise<any> {
+export async function getUserProfile(id: string): Promise<UserProfile> {
 	return new Promise((resolve, reject) => {
 		const query = "SELECT balance, experience, energy, grade FROM users WHERE id = ?"
 
@@ -580,7 +581,7 @@ export async function getAllBossesFromDatabase(): Promise<BossData[]> {
  * @param id The user's ID.
  * @returns A promise that resolves to the user's profile data.
  */
-export async function getPlayerGradeFromDatabase(id: string): Promise<any> {
+export async function getPlayerGradeFromDatabase(id: string): Promise<UserProfile> {
 	return new Promise((resolve, reject) => {
 		const query = "SELECT grade FROM users WHERE id = ?"
 
@@ -595,7 +596,7 @@ export async function getPlayerGradeFromDatabase(id: string): Promise<any> {
 	})
 }
 
-export async function getPlayerHealth(id: string): Promise<any> {
+export async function getPlayerHealth(id: string): Promise<unknown> {
 	return new Promise((resolve, reject) => {
 		const query = "SELECT health FROM users WHERE id = ?"
 

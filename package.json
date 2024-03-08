@@ -6,8 +6,9 @@
 	"types": "./dist/bot.d.js",
 	"type": "module",
 	"scripts": {
-		"lint": "npx eslint source",
-		"build": "npm run lint && npx tsc",
+		"clean": "rm -r -f node_modules dist",
+		"lint": "eslint source --ext ts --max-warnings 0",
+		"build": "npm run lint && tsc",
 		"start": "npm run build && node ."
 	},
 	"keywords": [],
