@@ -1,3 +1,8 @@
+interface QuestData {
+	id: number
+	name: string
+	// add other quest properties here
+}
 /* eslint-disable indent */
 import { config as dotenv } from "dotenv"
 import mysql from "mysql"
@@ -677,7 +682,7 @@ export async function addItemToUserInventory(userId: string, itemId: number) {
 }
 
 // fetchAllQuestsFromDatabase function
-export async function fetchAllQuestsFromDatabase(): Promise<any> {
+export async function fetchAllQuestsFromDatabase(): Promise<QuestData[]> {
 	return new Promise((resolve, reject) => {
 		const sql = "SELECT * FROM quest"
 		connection.query(sql, (err, results) => {

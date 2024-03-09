@@ -1,3 +1,8 @@
+interface Opponent {
+	name: string
+	current_health: number
+	max_health: number
+}
 import { setTimeout } from "node:timers/promises"
 
 import {
@@ -776,7 +781,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 					// Did the player die?
 					if (clampedPlayerHealth <= 0) {
-						if ((randomOpponent as any).name === "Sukuna") {
+						if ((randomOpponent as Opponent).name === "Sukuna") {
 							primaryEmbed
 								.setDescription(
 									`Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`
