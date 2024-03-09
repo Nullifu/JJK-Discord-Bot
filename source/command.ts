@@ -29,7 +29,7 @@ import {
 import { calculateDamage } from "./calculate.js"
 import { BossData } from "./interface.js"
 import { getRandomItem } from "./items jobs.js"
-import { createHealthBar, getJujutsuFlavorText } from "./jujutsuFlavor.js"
+import { createHealthBar, getJujutsuFlavorText, triggerSukunaTransformation } from "./jujutsuFlavor.js"
 import {
 	addItem,
 	addUser,
@@ -730,8 +730,45 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const damage = calculateDamage(playerGrade)
 
 				// Calculate boss new health after damage dealt
+				if (randomOpponent.name !== "Itadori") {
+					// This transformation logic only applies to Itadori
+					return
+				}
+
 				randomOpponent.current_health -= damage
-				//await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
+
+				if (
+					randomOpponent.name === "Itadori" &&
+					randomOpponent.current_health <= randomOpponent.max_health * 0.25
+				) {
+					const allBosses = await getAllBossesFromDatabase()
+					const sukunaData = allBosses.find(boss => boss.name === "Sukuna (Suppressed)")
+
+					if (sukunaData) {
+						// ... update randomOpponent with Sukuna's data ...
+
+						// Narrator Message 1
+						const narratorEmbed1 = new EmbedBuilder()
+							.setDescription("Itadori coughs up a surge of blood...")
+							.setColor(0xaa0000)
+
+						await setTimeout(4000) // this is milliseconds
+
+						primaryEmbed.setDescription(`*${narratorEmbed1}*`).setColor(0xaa0000)
+
+						await setTimeout(2000) // this is milliseconds
+
+						// Narrator Message 2
+						const narratorMessage2 = "A monstrous aura erupts from his body!"
+						primaryEmbed.setDescription(`*${narratorMessage2}*`)
+
+						// Sukuna Transformation Trigger
+						await triggerSukunaTransformation(interaction, primaryEmbed)
+					} else {
+						// Handle the case where Sukuna is not found (might indicate a data inconsistency)
+						console.error("Sukuna (Suppressed) not found after transformation!")
+					}
+				}
 
 				// Ensure boss health is never below 0
 				randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
@@ -756,7 +793,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
 
 					// Delay 1 second for a bit until the boss attack
-					await setTimeout(1000) // this is milliseconds
+					await setTimeout(2000) // this is milliseconds
 
 					// *** Boss Attack ***
 					const possibleAttacks = attacks[randomOpponent.name]
@@ -774,8 +811,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 					// Did the player die?
 					if (clampedPlayerHealth <= 0) {
-						if (randomOpponent.name === "Sukuna") {
-							// Sukuna-specific defeat updates
+						if ((randomOpponent as any).name === "Sukuna") {
 							primaryEmbed
 								.setDescription(
 									`Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`
@@ -835,48 +871,4 @@ async function handleFightLogic(
 	}
 
 	return resultMessage
-}
-// ryomen summon
-export async function handleSummonCommand(interaction: ChatInputCommandInteraction) {
-	try {
-		const userId = interaction.user.id
-		const bossToSummon = "Sukuna" // Summon Sukuna specifically
-		const curseFingerItemId = 79 // Assuming you have an ID for Curse Fingers in your items table
-
-		// 1. Check for Curse Fingers
-		const userInventory = await getUserInventory(userId)
-		const curseFingerItem = userInventory.find(item => item.name === "Sukuna Finger")
-
-		if (!curseFingerItem || curseFingerItem.quantity < 1) {
-			return await interaction.reply({
-				content: "You need at least one Sukuna Finger to summon Ryomen Sukuna!",
-				ephemeral: true
-			})
-		}
-
-		// 2. Check if Sukuna is Summonable
-		// You might not need this check if Sukuna is always summonable
-
-		// 3. Decrement Curse Fingers
-		await removeItemFromUser(userId, curseFingerItemId, 1)
-
-		// 4. Initiate Boss Fight
-		const allBosses = await getAllBossesFromDatabase() // Assuming you have this function
-		const sukuna = allBosses.find(boss => boss.name === bossToSummon)
-
-		if (!sukuna) {
-			// This shouldn't happen if Sukuna is always available
-			console.error("Sukuna data not found!")
-			return await interaction.reply({ content: "An error occurred during the summon!", ephemeral: true })
-		}
-
-		// Copy Sukuna's data to randomOpponent (or adjust your fight logic directly)
-		const randomOpponent = { ...sukuna } // Adjust as needed based on how you store boss data
-
-		// ... Your existing boss fight logic using randomOpponent ...
-		await interaction.reply({ content: "You've summoned Sukuna! Prepare for battle!", ephemeral: true })
-	} catch (error) {
-		console.error("Error in summon command:", error)
-		await interaction.reply({ content: "An error occurred during the summon!", ephemeral: true })
-	}
 }

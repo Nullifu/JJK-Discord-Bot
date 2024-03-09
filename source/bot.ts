@@ -22,7 +22,6 @@ import {
 	handleRegistercommand,
 	handleRulesCommand,
 	handleStatusCommand,
-	handleSummonCommand,
 	handleWorkCommand
 } from "./command.js"
 import { handleFiddleCommand, handleKissCommand } from "./commandgifs.js"
@@ -88,6 +87,7 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 // Slash Commands
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
+	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
 	new SlashCommandBuilder().setName("summon").setDescription("blahblah"),
 	new SlashCommandBuilder().setName("fight").setDescription("wat"),
 	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu!"),
@@ -299,15 +299,6 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "fight") {
 		await handleFightCommand(chatInputInteraction)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "summon") {
-		await handleSummonCommand(chatInputInteraction)
 	}
 })
 

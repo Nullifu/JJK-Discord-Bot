@@ -368,7 +368,7 @@ export async function addItem(name: string, description: string, price: number):
 // 2. Giving the item to a user. - INSERT INTO inventories (user_id, item_id, quantity) VALUES ('UserID', ItemID, Quantity);
 export async function giveItemToUser(userId: string, itemId: number) {
 	return new Promise((resolve, reject) => {
-		const query = "INSERT INTO inventories (user_id, item_id) VALUES (?, ?)"
+		const query = "INSERT INTO inventories (user_id, item_id, quantity) VALUES (?, ?, ?)"
 
 		connection.query(query, [userId, itemId], (error, results) => {
 			if (error) {
@@ -640,6 +640,37 @@ export async function updatePlayerHealth(id: string, newHealth: number): Promise
 				reject(err)
 			} else {
 				resolve()
+			}
+		})
+	})
+}
+
+export async function addItemToUserInventory(userId: string, itemId: number) {
+	return new Promise((resolve, reject) => {
+		// First, check if the item already exists in the user's inventory
+		const checkQuery = "SELECT quantity FROM inventories WHERE user_id = ? AND item_id = ?"
+
+		connection.query(checkQuery, [userId, itemId], async (error, results) => {
+			if (error) {
+				return reject(error)
+			}
+
+			// If the item exists, increment its quantity
+			if (results.length > 0) {
+				try {
+					const incrementResult = await incrementInventoryItemQuantity(userId, itemId)
+					resolve(incrementResult)
+				} catch (error) {
+					reject(error)
+				}
+			} else {
+				// If the item does not exist, add it to the inventory
+				try {
+					const addItemResult = await giveItemToUser(userId, itemId)
+					resolve(addItemResult)
+				} catch (error) {
+					reject(error)
+				}
 			}
 		})
 	})

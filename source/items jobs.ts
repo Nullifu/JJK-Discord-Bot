@@ -18,6 +18,13 @@ export const craftingitems = [
 	{ name: "Prison Realm", rarity: "Special Grade", chance: 0.01, price: 500000 }
 ]
 
+export const bossItems = [
+	{ id: 90, name: "Chain of Hundred Miles", rarity: "Common", chance: 0.1 },
+	{ id: 1, name: "jogos balls", rarity: "Common", chance: 0.1 }
+]
+
+// Inside your boss data
+
 export type items = {
 	name: string
 	rarity: string

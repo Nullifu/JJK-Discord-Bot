@@ -114,6 +114,54 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 10,
 			embedUpdate: embed => embed.setDescription("Let's ramp this up!")
 		}
+	],
+	// Itadori's attacks
+	"Zenin Toji": [
+		{
+			name: "Soul Severance",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Slice!")
+		},
+		{
+			name: "Chain Snare",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => {
+				embed.setImage(
+					"https://steamuserimages-a.akamaihd.net/ugc/2062139566417589090/95CBCD4D225D5511D70FC68FB8879CB208BA6A20/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false"
+				)
+				embed.setDescription("I'm going to lose huh?")
+				return embed
+			}
+		},
+		{
+			name: "Null Strike",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("This fight's not over.")
+		}
+	],
+	// Itadori's attacks
+	"Sukuna (Suppressed)": [
+		{
+			name: "Fire Manipulation (Weakened)",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("BURN!")
+		},
+		{
+			name: "Barrage of punches",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Pathetic!")
+		},
+		{
+			name: "Null Strike",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("This fight's not over.")
+		}
 	]
 	// ... Add the other attacks for Gojo, Todo, and Megumi ...
 }
