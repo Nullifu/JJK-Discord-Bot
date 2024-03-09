@@ -252,7 +252,7 @@ export async function updateExperience(id: string, amount: number): Promise<numb
  */
 export async function getUserProfile(id: string): Promise<UserProfile> {
 	return new Promise((resolve, reject) => {
-		const query = "SELECT balance, experience, energy, grade FROM users WHERE id = ?"
+		const query = "SELECT balance, experience, grade FROM users WHERE id = ?"
 
 		connection.query(query, [id], (error, results) => {
 			if (error) {

@@ -13,18 +13,28 @@ export const attacks: Record<string, Attack[]> = {
 	"Sukuna": [
 		{
 			name: "Cleave", // Simple attack, no special embed changes
-			probability: 0,
+			probability: 60,
 			baseDamage: 10,
 			embedUpdate: embed => embed
 		},
 		{
 			name: "Domain Expansion: Malevolent Shrine!",
-			probability: 100,
+			probability: 20,
 			baseDamage: 100,
 			embedUpdate: embed =>
 				embed.setImage(
-					"https://64.media.tumblr.com/0feb91da89a4966ba9c9f74d10ec8aaf/9fff42c908e7280c-a7/s500x750/9d2d7fafe04e0da03dd8b1838a5b4cc98140f04e.gifv"
+					"https://tenor.com/en-GB/view/jjk-jujutsu-kaisen-jjk-fight-jujutsu-kaisen-fight-sukuna-gif-15525695609492803291"
 				)
+		},
+		{
+			name: "Flame Arrow",
+			probability: 20,
+			baseDamage: 20,
+			embedUpdate: embed => {
+				embed.setImage("https://i.pinimg.com/originals/80/8a/92/808a927200ed3552e01bf77b6349d2b8.gif")
+				embed.setDescription("Fuga... Never seen this one before have you?")
+				return embed
+			}
 		}
 	],
 
@@ -34,10 +44,10 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Black Flash",
 			probability: 50,
 			baseDamage: 10,
-			embedUpdate: embed => embed.setDescription("A surge of cursed energy!")
+			embedUpdate: embed => embed.setDescription("A surge of cursed energy... BLACK FLASH!")
 		},
 		{
-			name: "Divergent Fist",
+			name: "Divergent Fist: Hundred Folds!",
 			probability: 50,
 			baseDamage: 10,
 			embedUpdate: embed => embed
@@ -47,10 +57,62 @@ export const attacks: Record<string, Attack[]> = {
 	// Gojo's attacks
 	"Satoru Gojo": [
 		{
-			name: "Limitless",
+			name: "Limitless: Blue!",
 			probability: 50,
 			baseDamage: 10,
 			embedUpdate: embed => embed.setColor("#0000FF")
+		},
+		{
+			name: "Reversal: Red",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setColor("#0000FF")
+		},
+		{
+			name: "Hollow: PURPLE!",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setColor("#0000FF")
+		}
+	],
+	// Itadori's attacks
+	"Aoi Todo & Itadori": [
+		{
+			name: "Brotherly Bond: Chain Blitz!",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Let's go BROTHER!")
+		},
+		{
+			name: "Unison Impact",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed
+		}
+	],
+	// Itadori's attacks
+	"Megumi Fushiguro": [
+		{
+			name: "Divine Dogs: Shadow Pursuit",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Demon Dogs!")
+		},
+		{
+			name: "Domain Expansion: Chimera Shadow Garden",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => {
+				embed.setImage("https://i.imgur.com/eGaZjlO.gif")
+				embed.setDescription("HAHAHAHA WHY THE HELL NOT!")
+				return embed
+			}
+		},
+		{
+			name: "Shikigami Fusion: Shadow Behemoth",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Let's ramp this up!")
 		}
 	]
 	// ... Add the other attacks for Gojo, Todo, and Megumi ...

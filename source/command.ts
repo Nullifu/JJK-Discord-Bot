@@ -8,6 +8,7 @@ import {
 	ButtonStyle,
 	CacheType,
 	ChatInputCommandInteraction,
+	Colors,
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
@@ -56,7 +57,6 @@ export interface UserProfile {
 	experience: number
 	jujutsu: number
 	grade: string
-	energy: number
 	health: number
 }
 
@@ -654,7 +654,7 @@ export async function handleJujutsuCommand(interaction: ChatInputCommandInteract
 			.addFields(
 				{
 					name: "**Cursed Energy**",
-					value: `\`${userProfile.energy.toString()}\``,
+					value: `\`${userProfile.experience.toString()}\``,
 					inline: true
 				},
 				{ name: "**Grade**", value: userProfile.grade.toString(), inline: false }
@@ -740,11 +740,17 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGrade, damage)
 				primaryEmbed.setDescription(fightResult)
 				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
-
 				// Is the boss dead?
 				if (randomOpponent.current_health <= 0) {
 					// Reset health in the database
 					await updateBossHealth(randomOpponent.name, randomOpponent.max_health) // Assuming max_health is the original health
+
+					const victoryMessage = "You won the fight!"
+					primaryEmbed.setDescription(victoryMessage)
+					await buttonInteraction.editReply({
+						embeds: [primaryEmbed],
+						components: []
+					})
 				} else {
 					// Update to new boss health after damage dealt
 					await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
@@ -768,12 +774,22 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 					// Did the player die?
 					if (clampedPlayerHealth <= 0) {
-						// Update embed with attack message from boss
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setDescription(bossAttackMessage)
-						await buttonInteraction.editReply({
-							embeds: [chosenAttack.embedUpdate(primaryEmbed as EmbedBuilder)]
-						})
+						if (randomOpponent.name === "Sukuna") {
+							// Sukuna-specific defeat updates
+							primaryEmbed
+								.setDescription(
+									`Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`
+								)
+
+								.setColor(Colors.DarkRed) // Ominous color change
+								.setImage(
+									"https://i.pinimg.com/originals/5f/65/af/5f65af379d98902fe53122f45808ca47.gif"
+								)
+						} else {
+							// Generic defeat message for other bosses
+							const bossAttackMessage = `${randomOpponent.name} killed you!`
+							primaryEmbed.setDescription(bossAttackMessage)
+						}
 
 						// Reset player health in the database
 						await updatePlayerHealth(interaction.user.id, 100)
@@ -819,4 +835,48 @@ async function handleFightLogic(
 	}
 
 	return resultMessage
+}
+// ryomen summon
+export async function handleSummonCommand(interaction: ChatInputCommandInteraction) {
+	try {
+		const userId = interaction.user.id
+		const bossToSummon = "Sukuna" // Summon Sukuna specifically
+		const curseFingerItemId = 79 // Assuming you have an ID for Curse Fingers in your items table
+
+		// 1. Check for Curse Fingers
+		const userInventory = await getUserInventory(userId)
+		const curseFingerItem = userInventory.find(item => item.name === "Sukuna Finger")
+
+		if (!curseFingerItem || curseFingerItem.quantity < 1) {
+			return await interaction.reply({
+				content: "You need at least one Sukuna Finger to summon Ryomen Sukuna!",
+				ephemeral: true
+			})
+		}
+
+		// 2. Check if Sukuna is Summonable
+		// You might not need this check if Sukuna is always summonable
+
+		// 3. Decrement Curse Fingers
+		await removeItemFromUser(userId, curseFingerItemId, 1)
+
+		// 4. Initiate Boss Fight
+		const allBosses = await getAllBossesFromDatabase() // Assuming you have this function
+		const sukuna = allBosses.find(boss => boss.name === bossToSummon)
+
+		if (!sukuna) {
+			// This shouldn't happen if Sukuna is always available
+			console.error("Sukuna data not found!")
+			return await interaction.reply({ content: "An error occurred during the summon!", ephemeral: true })
+		}
+
+		// Copy Sukuna's data to randomOpponent (or adjust your fight logic directly)
+		const randomOpponent = { ...sukuna } // Adjust as needed based on how you store boss data
+
+		// ... Your existing boss fight logic using randomOpponent ...
+		await interaction.reply({ content: "You've summoned Sukuna! Prepare for battle!", ephemeral: true })
+	} catch (error) {
+		console.error("Error in summon command:", error)
+		await interaction.reply({ content: "An error occurred during the summon!", ephemeral: true })
+	}
 }

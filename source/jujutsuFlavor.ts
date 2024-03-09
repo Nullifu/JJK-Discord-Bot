@@ -10,6 +10,10 @@ function getJujutsuFlavorText(bossName: string): FlavorText | null {
 		return { name: "Gojo's Challenge", value: "Let's see if you're worthy." }
 	} else if (bossName === "Itadori") {
 		return { name: "Itadori's Determination", value: "I won't lose!" }
+	} else if (bossName === "Aoi Todo & Itadori") {
+		return { name: "Brotherly Bond", value: "Let's start cooking.. Brother" }
+	} else if (bossName === "Megumi Fushiguro") {
+		return { name: "Fushiguro's Willpower", value: "With this treasure.. I SUMMON" }
 	}
 
 	// Add a default case if you'd like
