@@ -29,7 +29,7 @@ import {
 import { calculateDamage } from "./calculate.js"
 import { BossData } from "./interface.js"
 import { getRandomItem } from "./items jobs.js"
-import { createHealthBar, getJujutsuFlavorText, triggerSukunaTransformation } from "./jujutsuFlavor.js"
+import { createHealthBar, getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItem,
 	addUser,
@@ -680,6 +680,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		const randomOpponent = allBosses[randomIndex]
 
 		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+		const { health: playerHealth } = await getPlayerHealth(interaction.user.id)
 
 		// Create embed
 		const primaryEmbed = new EmbedBuilder()
@@ -688,6 +689,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
 			.setImage(randomOpponent.image_url)
 			.addFields({ name: "Health", value: randomOpponent.current_health.toString() })
+			.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
 		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
 		const healthBar = createHealthBar(remainingHealthPercentage)
 
@@ -730,45 +732,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const damage = calculateDamage(playerGrade)
 
 				// Calculate boss new health after damage dealt
-				if (randomOpponent.name !== "Itadori") {
-					// This transformation logic only applies to Itadori
-					return
-				}
 
 				randomOpponent.current_health -= damage
-
-				if (
-					randomOpponent.name === "Itadori" &&
-					randomOpponent.current_health <= randomOpponent.max_health * 0.25
-				) {
-					const allBosses = await getAllBossesFromDatabase()
-					const sukunaData = allBosses.find(boss => boss.name === "Sukuna (Suppressed)")
-
-					if (sukunaData) {
-						// ... update randomOpponent with Sukuna's data ...
-
-						// Narrator Message 1
-						const narratorEmbed1 = new EmbedBuilder()
-							.setDescription("Itadori coughs up a surge of blood...")
-							.setColor(0xaa0000)
-
-						await setTimeout(4000) // this is milliseconds
-
-						primaryEmbed.setDescription(`*${narratorEmbed1}*`).setColor(0xaa0000)
-
-						await setTimeout(2000) // this is milliseconds
-
-						// Narrator Message 2
-						const narratorMessage2 = "A monstrous aura erupts from his body!"
-						primaryEmbed.setDescription(`*${narratorMessage2}*`)
-
-						// Sukuna Transformation Trigger
-						await triggerSukunaTransformation(interaction, primaryEmbed)
-					} else {
-						// Handle the case where Sukuna is not found (might indicate a data inconsistency)
-						console.error("Sukuna (Suppressed) not found after transformation!")
-					}
-				}
 
 				// Ensure boss health is never below 0
 				randomOpponent.current_health = Math.max(0, randomOpponent.current_health)

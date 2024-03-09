@@ -48,8 +48,14 @@ export const attacks: Record<string, Attack[]> = {
 		},
 		{
 			name: "Divergent Fist: Hundred Folds!",
-			probability: 50,
+			probability: 30,
 			baseDamage: 10,
+			embedUpdate: embed => embed
+		},
+		{
+			name: "Divergent Fist: Collapsing Spear",
+			probability: 20,
+			baseDamage: 20,
 			embedUpdate: embed => embed
 		}
 	],
@@ -163,6 +169,8 @@ export const attacks: Record<string, Attack[]> = {
 			embedUpdate: embed => embed.setDescription("This fight's not over.")
 		}
 	]
+	// Kashimo
+
 	// ... Add the other attacks for Gojo, Todo, and Megumi ...
 }
 

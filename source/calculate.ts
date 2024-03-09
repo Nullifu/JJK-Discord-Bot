@@ -1,6 +1,6 @@
 export function calculateDamage(playerGrade: number): number {
 	// Customizable parameters
-	const baseDamage = 20
+	const baseDamage = 1
 	const gradeMultiplier = 1.2
 	const randomVariationPercentage = 0.2 // 20% random variation
 

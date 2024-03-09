@@ -2,7 +2,7 @@
 import { config as dotenv } from "dotenv"
 import mysql from "mysql"
 import { UserProfile } from "./command"
-import { BossData } from "./interface"
+import { BossData, CurseData } from "./interface"
 import { InventoryItem } from "./inventory"
 import { Item } from "./item"
 
@@ -671,6 +671,56 @@ export async function addItemToUserInventory(userId: string, itemId: number) {
 				} catch (error) {
 					reject(error)
 				}
+			}
+		})
+	})
+}
+
+// fetchAllQuestsFromDatabase function
+export async function fetchAllQuestsFromDatabase(): Promise<any> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT * FROM quest"
+		connection.query(sql, (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results)
+			}
+		})
+	})
+}
+
+export async function getPlayerStatsFromDatabase(id: string): Promise<UserProfile> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT grade, health FROM users WHERE id = ?"
+
+		connection.query(query, [id], (error, results) => {
+			if (error) {
+				reject(error)
+			} else {
+				// Assuming the user is found, return the user's profile data
+				resolve(results.length > 0 ? results[0] : null)
+			}
+		})
+	})
+}
+// fetch curse data from database curses
+export async function fetchCurseDataFromDatabase(curseId: number): Promise<CurseData | null> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT id, name, health, strength FROM curses WHERE id = ?"
+		connection.query(sql, [curseId], (err, results) => {
+			if (err) {
+				reject(err)
+			} else if (results.length === 0) {
+				resolve(null)
+			} else {
+				const curseData = {
+					id: results[0].id,
+					name: results[0].name,
+					health: results[0].health,
+					strength: results[0].strength
+				}
+				resolve(curseData)
 			}
 		})
 	})

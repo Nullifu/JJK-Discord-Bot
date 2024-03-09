@@ -87,6 +87,7 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 // Slash Commands
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
+	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
 	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
 	new SlashCommandBuilder().setName("summon").setDescription("blahblah"),
 	new SlashCommandBuilder().setName("fight").setDescription("wat"),

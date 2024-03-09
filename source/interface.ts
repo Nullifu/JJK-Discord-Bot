@@ -16,6 +16,23 @@ export interface BossData {
 	}[]
 }
 
+export interface QuestData {
+	id: number
+	name: string
+	description: string
+	curse_name: string
+	grade_xp_reward: number
+	difficulty?: string // If difficulty is optional
+}
+
+export interface CurseData {
+	id: number
+	name: string
+	health: number
+	strength: number
+	// ... add other properties as needed
+}
+
 // Define information about the items
 export const domain1Details = {
 	six_eyes: {
