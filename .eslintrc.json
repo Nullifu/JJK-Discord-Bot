@@ -25,7 +25,7 @@
 			"SwitchCase": 1,
 			"ignoredNodes": [ "ConditionalExpression" ]
 		} ],
-		"linebreak-style": [ "warn", "windows" ],
+		"linebreak-style": [ "warn", "unix" ],
 		"quotes": [ "warn", "double" ],
 		"semi": [ "warn", "never" ],
 		"@typescript-eslint/no-explicit-any": "warn",

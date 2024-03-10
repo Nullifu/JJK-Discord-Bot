@@ -371,11 +371,11 @@ export async function addItem(name: string, description: string, price: number):
 }
 
 // 2. Giving the item to a user. - INSERT INTO inventories (user_id, item_id, quantity) VALUES ('UserID', ItemID, Quantity);
-export async function giveItemToUser(userId: string, shopItemId: number) {
+export async function giveItemToUser(userId: string, itemId: number) {
 	return new Promise((resolve, reject) => {
-		const query = "INSERT INTO inventories (user_id, shop_item_id, item_id, quantity) VALUES (?, ?, ?, ?)"
+		const query = "INSERT INTO inventories (user_id, item_id, quantity) VALUES (?, ?, ?)"
 
-		connection.query(query, [userId, shopItemId, 1], (error, results) => {
+		connection.query(query, [userId, itemId, 1], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
@@ -762,7 +762,7 @@ export async function getItemPrice(itemId: number): Promise<number> {
 // getshopitems
 export async function getShopItems(): Promise<Item[]> {
 	return new Promise((resolve, reject) => {
-		const query = "SELECT * FROM shop"
+		const query = "SELECT * FROM items WHERE is_in_shop = 1"
 		connection.query(query, (err, results) => {
 			if (err) {
 				reject(err)

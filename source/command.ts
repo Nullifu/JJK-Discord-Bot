@@ -676,7 +676,7 @@ export async function handleJujutsuCommand(interaction: ChatInputCommandInteract
 		await interaction.reply("There was an error retrieving your jujutsu stats.")
 	}
 }
-// faggot lair
+// Full fight command for Jujutsu
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	try {
 		// Fetch boss data from database
@@ -785,14 +785,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					if (clampedPlayerHealth <= 0) {
 						if ((randomOpponent as Opponent).name === "Sukuna") {
 							primaryEmbed
+								.setDescription("Sukuna has killed you!")
 								.setFields({
-									name: `Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`,
-									value: "You have been killed by Sukuna!"
-								}) // Set player health to 0
+									name: "Heh, Guess you weren't strong enough after all..",
+									value: `Stand Proud. ${interaction.user.username}, You are strong.`
+								})
 
 								.setColor(Colors.DarkRed) // Ominous color change
 								.setImage(
-									"https://i.pinimg.com/originals/5f/65/af/5f65af379d98902fe53122f45808ca47.gif"
+									"https://i.ytimg.com/vi/DDOQKfnS17U/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQMa8AEB-AHUBoAC4AOKAgwIABABGCIgVihyMA8=&rs=AOn4CLDAgsnklMsuzmmglFHWIDdhs9IwMA"
 								)
 						} else {
 							// Generic defeat message for other bosses
@@ -891,12 +892,16 @@ export async function handleSelectMenuInteraction(interaction) {
 		const itemId = interaction.values[0]
 		const userId = interaction.user.id
 
+		console.log(`User ${userId} has selected item ${itemId}`)
+
 		try {
-			// Wrap the core logic in a try-catch block
+			// faggot
 			const items = await getShopItems()
 			const item = items.find(item => item.id.toString() === itemId)
 			const itemPrice = item.price
 			const userBalance = await getBalance(userId)
+
+			console.log(`${userBalance} ${itemPrice}`)
 
 			if (userBalance >= itemPrice) {
 				await addItemToUserInventory(userId, itemId)
@@ -920,6 +925,6 @@ export async function handleSelectMenuInteraction(interaction) {
 			})
 		}
 	} else {
-		// ... your code
+		// next
 	}
 }

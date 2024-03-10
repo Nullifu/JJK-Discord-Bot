@@ -195,10 +195,14 @@ client.on("interactionCreate", async interaction => {
 				"https://upload.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/220px-SatoruGojomanga.png"
 			)
 			.setTitle("↓↓↓↓ **Commands** ↓↓↓↓")
-			.setDescription("**Register, Dig, Sell, Inventory, Profile, Balance, Work, Lookup, Daily, Craft.**")
+			.setDescription("**Register, Dig, Sell, Inventory, Profile, Balance, Work, Lookup, Daily,**")
 			.addFields({
 				name: "**PREFIX __G__** Image Commands",
 				value: "Kiss, Hug, Snuggle, Fuck, Bite, Lick, Fiddle."
+			})
+			.addFields({
+				name: "**Jujutsu System!**",
+				value: "Fight, Craft, "
 			})
 			.setTimestamp()
 
