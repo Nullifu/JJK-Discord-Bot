@@ -33,6 +33,13 @@ export interface CurseData {
 	// ... add other properties as needed
 }
 
+export interface Item {
+	id: number
+	name: string
+	description: string
+	price: number
+}
+
 // Define information about the items
 export const domain1Details = {
 	six_eyes: {

@@ -371,11 +371,11 @@ export async function addItem(name: string, description: string, price: number):
 }
 
 // 2. Giving the item to a user. - INSERT INTO inventories (user_id, item_id, quantity) VALUES ('UserID', ItemID, Quantity);
-export async function giveItemToUser(userId: string, itemId: number) {
+export async function giveItemToUser(userId: string, shopItemId: number) {
 	return new Promise((resolve, reject) => {
-		const query = "INSERT INTO inventories (user_id, item_id, quantity) VALUES (?, ?, ?)"
+		const query = "INSERT INTO inventories (user_id, shop_item_id, item_id, quantity) VALUES (?, ?, ?, ?)"
 
-		connection.query(query, [userId, itemId], (error, results) => {
+		connection.query(query, [userId, shopItemId, 1], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
@@ -726,6 +726,54 @@ export async function fetchCurseDataFromDatabase(curseId: number): Promise<Curse
 					strength: results[0].strength
 				}
 				resolve(curseData)
+			}
+		})
+	})
+}
+
+// does player have domain 0 = no 1 = yes
+export async function doesPlayerHaveDomain(id: string): Promise<boolean> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT has_domain FROM users WHERE id = ?"
+		connection.query(query, [id], (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results.length > 0 ? results[0].has_domain === 1 : false)
+			}
+		})
+	})
+}
+export async function getItemPrice(itemId: number): Promise<number> {
+	return new Promise((resolve, reject) => {
+		// Corrected query to include WHERE clause for filtering by itemId
+		const query = "SELECT price FROM items WHERE id = ?"
+		connection.query(query, [itemId], (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				// Assuming the item exists, return its price, otherwise return 0
+				resolve(results.length > 0 ? results[0].price : 0)
+			}
+		})
+	})
+}
+
+// getshopitems
+export async function getShopItems(): Promise<Item[]> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT * FROM shop"
+		connection.query(query, (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				const items = results.map(row => ({
+					id: row.id,
+					name: row.name,
+					description: row.description,
+					price: row.price
+				}))
+				resolve(items)
 			}
 		})
 	})

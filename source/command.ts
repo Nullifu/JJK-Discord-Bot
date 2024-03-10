@@ -37,6 +37,7 @@ import { getRandomItem } from "./items jobs.js"
 import { createHealthBar, getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItem,
+	addItemToUserInventory,
 	addUser,
 	getAllBossesFromDatabase,
 	getAllItems,
@@ -44,6 +45,7 @@ import {
 	getItem,
 	getPlayerGradeFromDatabase,
 	getPlayerHealth,
+	getShopItems,
 	getUserInventory,
 	getUserProfile,
 	giveItemToUser,
@@ -783,9 +785,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					if (clampedPlayerHealth <= 0) {
 						if ((randomOpponent as Opponent).name === "Sukuna") {
 							primaryEmbed
-								.setDescription(
-									`Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`
-								)
+								.setFields({
+									name: `Heh, Guess you weren't strong enough after all... Stand Proud. ${interaction.user.username}, You are strong.`,
+									value: "You have been killed by Sukuna!"
+								}) // Set player health to 0
 
 								.setColor(Colors.DarkRed) // Ominous color change
 								.setImage(
@@ -799,6 +802,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 						// Reset player health in the database
 						await updatePlayerHealth(interaction.user.id, 100)
+						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 					} else {
 						// Update to new player health after damage dealt
 						await updatePlayerHealth(interaction.user.id, clampedPlayerHealth)
@@ -809,12 +813,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						await buttonInteraction.editReply({ embeds: [chosenAttack.embedUpdate(primaryEmbed)] })
 					}
 				}
-			}
-
-			if (buttonInteraction.customId === "domain") {
-				await buttonInteraction.deferUpdate()
-				primaryEmbed.setImage("https://i.pinimg.com/originals/d7/4b/67/d74b6737ae912d33bba82f3a4dcc4a30.gif")
-				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
 			}
 		})
 	} catch (error) {
@@ -841,4 +839,87 @@ async function handleFightLogic(
 	}
 
 	return resultMessage
+}
+
+// command to dm a user
+export async function handleDmCommand(interaction: ChatInputCommandInteraction) {
+	const user = interaction.options.getUser("user")
+	const message = interaction.options.getString("message")
+
+	try {
+		await user.send(message)
+		await interaction.reply({ content: `Message sent to ${user.tag}.` })
+	} catch (error) {
+		console.error("Failed to send message:", error)
+		await interaction.reply({ content: "Failed to send the message.", ephemeral: true })
+	}
+}
+
+// test
+
+export async function handleShopCommand(interaction) {
+	const items = await getShopItems()
+
+	// Create a simple embed
+	const shopEmbed = new EmbedBuilder()
+		.setTitle("Welcome to the Shop")
+		.setDescription("Select an item from the dropdown to view details and purchase.")
+
+	const options = items.map(item => ({
+		label: `${item.name} - ${item.price}`,
+		description: item.description.substring(0, 50) + "...",
+		value: item.id.toString()
+	}))
+
+	const selectMenu = new ActionRowBuilder().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("select-item")
+			.setPlaceholder("Select an item to buy")
+			.addOptions(options)
+	)
+
+	await interaction.reply({
+		embeds: [shopEmbed],
+		components: [selectMenu]
+	})
+}
+export async function handleSelectMenuInteraction(interaction) {
+	console.log("Select menu interaction is happening.")
+	if (!interaction.isSelectMenu()) return
+
+	if (interaction.customId === "select-item") {
+		const itemId = interaction.values[0]
+		const userId = interaction.user.id
+
+		try {
+			// Wrap the core logic in a try-catch block
+			const items = await getShopItems()
+			const item = items.find(item => item.id.toString() === itemId)
+			const itemPrice = item.price
+			const userBalance = await getBalance(userId)
+
+			if (userBalance >= itemPrice) {
+				await addItemToUserInventory(userId, itemId)
+				console.log(`User ${userId} has purchased item ${itemId}`)
+				await updateBalance(userId, -itemPrice)
+				console.log(`User ${userId} has been charged ${itemPrice} coins`)
+			}
+
+			const shopEmbed = new EmbedBuilder()
+				.setTitle("Welcome to the Shop")
+				.setDescription("You have successfully purchased the item!")
+			await interaction.update({
+				embeds: [shopEmbed.setDescription("You have successfully purchased the item!")],
+				components: []
+			})
+		} catch (error) {
+			console.error("Error during purchase process:", error)
+			await interaction.update({
+				content: "An error occurred during purchase. Please try again later.",
+				ephemeral: true
+			})
+		}
+	} else {
+		// ... your code
+	}
 }

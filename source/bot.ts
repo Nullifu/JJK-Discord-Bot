@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "@discordjs/builders"
 import {
+	ActivityType,
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
@@ -14,6 +15,7 @@ import {
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigcommand,
+	handleDmCommand,
 	handleFightCommand,
 	handleInventoryCommand,
 	handleJujutsuCommand,
@@ -21,6 +23,8 @@ import {
 	handleProfileCommand,
 	handleRegistercommand,
 	handleRulesCommand,
+	handleSelectMenuInteraction,
+	handleShopCommand,
 	handleStatusCommand,
 	handleWorkCommand
 } from "./command.js"
@@ -69,6 +73,19 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 })
 
+// status update when bot turns on or refreshes
+client.once("ready", () => {
+	console.log("Ready!")
+	client.user.setPresence({
+		activities: [
+			{
+				name: "Jujutsu Kaisen!",
+				type: ActivityType.Watching
+			}
+		],
+		status: "online"
+	})
+})
 const clientId = "991443928790335518"
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(20) // Set it to a reasonable value based on your use case
@@ -80,14 +97,32 @@ export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
 export const digCooldowns = new Map()
 export const digCooldown = 1000 * 60 * 60 // 1 hour cooldown
 export const digCooldownBypassIDs = ["917146454940844103", "292385626773258240"] // IDs that can bypass cooldown
-export const randomdig2 = ["Burrowed", "Found", "Unearthed", "Discovered", "Excavated", "Uncovered", "Dug up"]
+export const randomdig2 = [
+	"Burrowed",
+	"Found",
+	"Unearthed",
+	"Discovered",
+	"Excavated",
+	"Uncovered",
+	"Dug up",
+	"Dug out",
+	"Exhumed"
+]
 
 export const userLastDaily = new Map<string, number>() // Maps user IDs to the last time they used /daily
 
 // Slash Commands
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
+	new SlashCommandBuilder()
+		.setName("dm")
+		.setDescription("Send a direct message to a user")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to send the message to").setRequired(true)
+		)
+		.addStringOption(option => option.setName("message").setDescription("The message to send").setRequired(true)),
 	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
+	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
 	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
 	new SlashCommandBuilder().setName("summon").setDescription("blahblah"),
 	new SlashCommandBuilder().setName("fight").setDescription("wat"),
@@ -300,6 +335,30 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "fight") {
 		await handleFightCommand(chatInputInteraction)
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "dm") {
+		await handleDmCommand(chatInputInteraction)
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (interaction.isChatInputCommand()) {
+		// Handle chat input commands
+		const chatInputInteraction = interaction as ChatInputCommandInteraction
+		const { commandName } = chatInputInteraction
+
+		if (commandName === "shop") {
+			await handleShopCommand(chatInputInteraction)
+		}
+	} else if (interaction.isStringSelectMenu()) {
+		// Handle select menu interactions
+		await handleSelectMenuInteraction(interaction)
 	}
 })
 
