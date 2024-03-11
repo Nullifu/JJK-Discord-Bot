@@ -18,6 +18,7 @@ import {
 	handleDailyCommand,
 	handleDigcommand,
 	handleDmCommand,
+	handleDomainGiveCommand,
 	handleFightCommand,
 	handleInventoryCommand,
 	handleJujutsuCommand,
@@ -149,6 +150,7 @@ const commands = [
 		.setDescription("test command")
 		.addUserOption(option => option.setName("user").setDescription("test cuh").setRequired(false)),
 	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
+	new SlashCommandBuilder().setName("givedomain").setDescription("Profile"),
 	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
 	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
 	new SlashCommandBuilder().setName("summon").setDescription("blahblah"),
@@ -399,6 +401,15 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "test") {
 		await testDomainEmbed(chatInputInteraction)
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "givedomain") {
+		await handleDomainGiveCommand(chatInputInteraction)
 	}
 })
 

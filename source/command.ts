@@ -41,6 +41,7 @@ import {
 	addItemToUserInventory,
 	addUser,
 	getAllBossesFromDatabase,
+	getAllDomains,
 	getAllItems,
 	getBalance,
 	getDomain,
@@ -1036,5 +1037,40 @@ export async function testDomainEmbed(interaction) {
 		console.error("Error checking domain or timed out:", error)
 		// Notify the user something went wrong
 		await interaction.editReply({ content: "An error occurred! Please try again later.", ephemeral: true })
+	}
+}
+// TEST NUMBER 1 TRILLION!!!!!!!!!!!!!!!!!	hello copilot!
+export async function handleDomainGiveCommand(interaction) {
+	try {
+		const domains = await getAllDomains()
+
+		if (domains.length === 0) {
+			await interaction.reply({ content: "No domains available.", ephemeral: true })
+			return
+		}
+
+		// Map domains to select menu options, ensuring labels do not exceed 25 characters
+		const options = domains.slice(0, 25).map(domain => ({
+			label: domain.name.length > 25 ? domain.name.substring(0, 22) + "..." : domain.name, // Truncate if necessary
+			value: domain.id.toString(), // Using domain ID as the value for easier identification
+			description:
+				domain.description.length > 50 ? domain.description.substring(0, 47) + "..." : domain.description // Truncate if necessary
+		}))
+
+		const row = new ActionRowBuilder().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId("select-domain")
+				.setPlaceholder("Select a domain")
+				.addOptions(options)
+		)
+
+		await interaction.reply({
+			content: "Please select a domain:",
+			components: [row],
+			ephemeral: false
+		})
+	} catch (error) {
+		console.error("Error fetching domains:", error)
+		await interaction.reply({ content: "Failed to fetch domains.", ephemeral: true })
 	}
 }

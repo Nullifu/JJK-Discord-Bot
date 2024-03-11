@@ -779,6 +779,20 @@ export async function getShopItems(): Promise<Item[]> {
 	})
 }
 
+// getalldomains function from database domains
+export async function getAllDomains(): Promise<{ id: number; name: string; description: string; image_url: string }[]> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT id, name, description, image_url FROM domains"
+		connection.query(sql, (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results)
+			}
+		})
+	})
+}
+
 // get domain function
 export async function getDomain(
 	userId: string
@@ -846,6 +860,20 @@ export async function getDomainFight(userId: string): Promise<{ name: string; im
 				} else {
 					resolve(null) // User has no domain_id or not found
 				}
+			}
+		})
+	})
+}
+
+// function to add a domain to a user
+export async function addDomainToUser(userId: string, domainId: number) {
+	return new Promise((resolve, reject) => {
+		const query = "UPDATE users SET domain_id = ? WHERE id = ?"
+		connection.query(query, [domainId, userId], (error, results) => {
+			if (error) {
+				reject(new Error(`Failed to update user domain: ${error.message}`)) // More informative error
+			} else {
+				resolve(true) // Return simple success indicator
 			}
 		})
 	})
