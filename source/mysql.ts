@@ -419,13 +419,26 @@ export async function incrementInventoryItemQuantity(userId: string, itemId: num
 // 3. Removing the item from a user. - DELETE FROM inventories WHERE user_id = 'UserID' AND item_id = ItemID;
 export async function removeItemFromUser(userId: string, itemId: number, quantity: number): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const query = "DELETE FROM inventories WHERE user_id = ? AND item_id = ?"
+		// First, try to decrement the quantity
+		let query = "UPDATE inventories SET quantity = quantity - ? WHERE user_id = ? AND item_id = ? AND quantity >= ?"
 
-		connection.query(query, [userId, itemId, quantity], (error, results) => {
+		connection.query(query, [quantity, userId, itemId, quantity], (error, results) => {
 			if (error) {
 				reject(error)
 			} else {
-				resolve(results)
+				// If the quantity update was successful but the new quantity might be zero or negative, remove the item entirely
+				if (results.affectedRows > 0) {
+					query = "DELETE FROM inventories WHERE user_id = ? AND item_id = ? AND quantity <= 0"
+					connection.query(query, [userId, itemId], (error, deleteResults) => {
+						if (error) {
+							reject(error)
+						} else {
+							resolve(deleteResults)
+						}
+					})
+				} else {
+					resolve(results) // No rows were updated because the quantity condition failed
+				}
 			}
 		})
 	})

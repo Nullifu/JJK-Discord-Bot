@@ -471,7 +471,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 					if (craftedItem) {
 						// Increment the quantity of the crafted item in the user's inventory
-						await incrementInventoryItemQuantity(interaction.user.id, craftedItemId)
+						await addItemToUserInventory(interaction.user.id, craftedItemId)
 					} else {
 						// Add the crafted item to the user's inventory
 						await giveItemToUser(interaction.user.id, craftedItemId) // Assuming the quantity is 1

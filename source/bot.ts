@@ -382,10 +382,8 @@ client.on("interactionCreate", async interaction => {
 
 client.on("interactionCreate", async interaction => {
 	if (interaction.isChatInputCommand()) {
-		// Handle chat input commands
 		const chatInputInteraction = interaction as ChatInputCommandInteraction
 		const { commandName } = chatInputInteraction
-
 		if (commandName === "shop") {
 			await handleShopCommand(chatInputInteraction)
 		}
