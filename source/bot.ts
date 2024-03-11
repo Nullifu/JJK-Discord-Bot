@@ -17,20 +17,16 @@ import {
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigcommand,
-	handleDmCommand,
-	handleDomainGiveCommand,
 	handleFightCommand,
 	handleInventoryCommand,
 	handleJujutsuCommand,
 	handleLookupCommand,
 	handleProfileCommand,
 	handleRegistercommand,
-	handleRulesCommand,
 	handleSelectMenuInteraction,
 	handleShopCommand,
 	handleStatusCommand,
-	handleWorkCommand,
-	testDomainEmbed
+	handleWorkCommand
 } from "./command.js"
 import { handleFiddleCommand, handleKissCommand } from "./commandgifs.js"
 
@@ -138,30 +134,15 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 // Slash Commands
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
-	new SlashCommandBuilder()
-		.setName("dm")
-		.setDescription("Send a direct message to a user")
-		.addUserOption(option =>
-			option.setName("user").setDescription("The user to send the message to").setRequired(true)
-		)
-		.addStringOption(option => option.setName("message").setDescription("The message to send").setRequired(true)),
-	new SlashCommandBuilder()
-		.setName("test")
-		.setDescription("test command")
-		.addUserOption(option => option.setName("user").setDescription("test cuh").setRequired(false)),
 	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
-	new SlashCommandBuilder().setName("givedomain").setDescription("Profile"),
 	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
-	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
-	new SlashCommandBuilder().setName("summon").setDescription("blahblah"),
-	new SlashCommandBuilder().setName("fight").setDescription("wat"),
-	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu!"),
-	new SlashCommandBuilder().setName("rules").setDescription("test"),
-	new SlashCommandBuilder().setName("help").setDescription("HELP ME PLEASE"),
-	new SlashCommandBuilder().setName("status").setDescription("WHO THE FUCK"),
-	new SlashCommandBuilder().setName("balance").setDescription("user balance"),
-	new SlashCommandBuilder().setName("inventory").setDescription("Nothing there"),
-	new SlashCommandBuilder().setName("dig").setDescription("your so poor you NEED to dig in the groun"),
+	new SlashCommandBuilder().setName("fight").setDescription("Fight a random opponent!"),
+	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu Stats"),
+	new SlashCommandBuilder().setName("help").setDescription("Help"),
+	new SlashCommandBuilder().setName("status").setDescription("Bot Status!"),
+	new SlashCommandBuilder().setName("balance").setDescription("Balance"),
+	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory!"),
+	new SlashCommandBuilder().setName("dig").setDescription("Dig for items!"),
 	new SlashCommandBuilder()
 		.setName("sell")
 		.setDescription("Sell an item from your inventory.")
@@ -224,14 +205,14 @@ client.on("interactionCreate", async interaction => {
 				"https://upload.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/220px-SatoruGojomanga.png"
 			)
 			.setTitle("↓↓↓↓ **Commands** ↓↓↓↓")
-			.setDescription("**Register, Dig, Sell, Inventory, Profile, Balance, Work, Lookup, Daily,**")
+			.setDescription("**Register, Dig, Sell, Inventory, Profile, Balance, Work, Daily,**")
 			.addFields({
 				name: "**PREFIX __G__** Image Commands",
 				value: "Kiss, Hug, Snuggle, Fuck, Bite, Lick, Fiddle."
 			})
 			.addFields({
 				name: "**Jujutsu System!**",
-				value: "Fight, Craft, "
+				value: "Fight, Craft, Lookup, [ More Coming Soon! ] "
 			})
 			.setTimestamp()
 
@@ -344,14 +325,6 @@ client.on("interactionCreate", async interaction => {
 		await handleStatusCommand(chatInputInteraction)
 	}
 })
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "rules") {
-		await handleRulesCommand(chatInputInteraction)
-	}
-})
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
@@ -372,15 +345,6 @@ client.on("interactionCreate", async interaction => {
 })
 
 client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "dm") {
-		await handleDmCommand(chatInputInteraction)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
 	if (interaction.isChatInputCommand()) {
 		const chatInputInteraction = interaction as ChatInputCommandInteraction
 		const { commandName } = chatInputInteraction
@@ -390,24 +354,6 @@ client.on("interactionCreate", async interaction => {
 	} else if (interaction.isStringSelectMenu()) {
 		// Handle select menu interactions
 		await handleSelectMenuInteraction(interaction)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "test") {
-		await testDomainEmbed(chatInputInteraction)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "givedomain") {
-		await handleDomainGiveCommand(chatInputInteraction)
 	}
 })
 
