@@ -778,3 +778,75 @@ export async function getShopItems(): Promise<Item[]> {
 		})
 	})
 }
+
+// get domain function
+export async function getDomain(
+	userId: string
+): Promise<{ name: string; description: string; image_url: string } | null> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT domain_id FROM users WHERE id = ?"
+		connection.query(query, [userId], (error, results) => {
+			if (error) {
+				reject(error)
+			} else {
+				if (results.length > 0 && results[0].domain_id !== null) {
+					const domainId = results[0].domain_id
+					// Now also selecting the image_url column
+					const domainQuery = "SELECT name, description, image_url FROM domains WHERE id = ?"
+					connection.query(domainQuery, [domainId], (domainError, domainResults) => {
+						if (domainError) {
+							reject(domainError)
+						} else {
+							if (domainResults.length > 0) {
+								// Now also including the image_url in the resolved object
+								resolve({
+									name: domainResults[0].name,
+									description: domainResults[0].description,
+									image_url: domainResults[0].image_url // Including the image URL
+								})
+							} else {
+								resolve(null) // No matching domain found
+							}
+						}
+					})
+				} else {
+					resolve(null) // User has no domain_id or not found
+				}
+			}
+		})
+	})
+}
+
+export async function getDomainFight(userId: string): Promise<{ name: string; imageFightUrl: string } | null> {
+	return new Promise((resolve, reject) => {
+		const query = "SELECT domain_id FROM users WHERE id = ?"
+		connection.query(query, [userId], (error, results) => {
+			if (error) {
+				reject(error)
+			} else {
+				if (results.length > 0 && results[0].domain_id !== null) {
+					const domainId = results[0].domain_id
+					// Now also selecting the image_fight_url column
+					const domainQuery = "SELECT name, image_fight_url FROM domains WHERE id = ?"
+					connection.query(domainQuery, [domainId], (domainError, domainResults) => {
+						if (domainError) {
+							reject(domainError)
+						} else {
+							if (domainResults.length > 0) {
+								// Now also including the image_fight_url in the resolved object
+								resolve({
+									name: domainResults[0].name,
+									imageFightUrl: domainResults[0].image_fight_url // Including the fight image URL
+								})
+							} else {
+								resolve(null) // No matching domain found
+							}
+						}
+					})
+				} else {
+					resolve(null) // User has no domain_id or not found
+				}
+			}
+		})
+	})
+}

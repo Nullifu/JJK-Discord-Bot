@@ -1,4 +1,4 @@
-export function calculateDamage(playerGrade: number): number {
+export function calculateDamage(playerGrade: number, domainEffectMultiplier: number = 1): number {
 	// Customizable parameters
 	const baseDamage = 1
 	const gradeMultiplier = 1.2
@@ -9,13 +9,13 @@ export function calculateDamage(playerGrade: number): number {
 		return 0 // Handle invalid input
 	}
 
-	// Core Calculation
-	let totalDamage = baseDamage * gradeMultiplier * playerGrade
+	// Core Calculation with domain effect
+	let totalDamage = baseDamage * gradeMultiplier * playerGrade * domainEffectMultiplier
 
 	// Apply randomness
 	const randomVariation = randomVariationPercentage * totalDamage
 	const randomFactor = Math.random() * (2 * randomVariation) - randomVariation
-	totalDamage *= 1 + randomFactor
+	totalDamage += randomFactor
 
 	// Ensure minimum damage
 	return Math.max(1, Math.round(totalDamage))

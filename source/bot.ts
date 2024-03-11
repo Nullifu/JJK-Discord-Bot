@@ -1,10 +1,12 @@
 import { EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
+	ChannelType,
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
 	Partials,
+	PermissionFlagsBits,
 	REST,
 	Routes,
 	SlashCommandBuilder
@@ -26,7 +28,8 @@ import {
 	handleSelectMenuInteraction,
 	handleShopCommand,
 	handleStatusCommand,
-	handleWorkCommand
+	handleWorkCommand,
+	testDomainEmbed
 } from "./command.js"
 import { handleFiddleCommand, handleKissCommand } from "./commandgifs.js"
 
@@ -86,6 +89,26 @@ client.once("ready", () => {
 		status: "online"
 	})
 })
+
+client.on("guildCreate", guild => {
+	// Attempt to find a "general" channel or any suitable channel to send a welcome message
+	let defaultChannel = null
+	guild.channels.cache.forEach(channel => {
+		if (channel.type === ChannelType.GuildText && !defaultChannel) {
+			if (channel.permissionsFor(guild.members.me).has(PermissionFlagsBits.SendMessages)) {
+				defaultChannel = channel
+			}
+		}
+	})
+
+	// If a suitable channel is found, send a message
+	if (defaultChannel) {
+		defaultChannel.send(
+			"This is the discord jujutsu kaisen bot, [ WIP ] Please use /Register to start! then proceed with /help"
+		)
+	}
+})
+
 const clientId = "991443928790335518"
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(20) // Set it to a reasonable value based on your use case
@@ -121,6 +144,10 @@ const commands = [
 			option.setName("user").setDescription("The user to send the message to").setRequired(true)
 		)
 		.addStringOption(option => option.setName("message").setDescription("The message to send").setRequired(true)),
+	new SlashCommandBuilder()
+		.setName("test")
+		.setDescription("test command")
+		.addUserOption(option => option.setName("user").setDescription("test cuh").setRequired(false)),
 	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
 	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
 	new SlashCommandBuilder().setName("domain_training").setDescription("Ryouki Tenkai"),
@@ -363,6 +390,15 @@ client.on("interactionCreate", async interaction => {
 	} else if (interaction.isStringSelectMenu()) {
 		// Handle select menu interactions
 		await handleSelectMenuInteraction(interaction)
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "test") {
+		await testDomainEmbed(chatInputInteraction)
 	}
 })
 

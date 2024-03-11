@@ -1,3 +1,4 @@
+let contextKey: string
 interface Opponent {
 	name: string
 	current_health: number
@@ -42,6 +43,8 @@ import {
 	getAllBossesFromDatabase,
 	getAllItems,
 	getBalance,
+	getDomain,
+	getDomainFight,
 	getItem,
 	getPlayerGradeFromDatabase,
 	getPlayerHealth,
@@ -57,7 +60,7 @@ import {
 	userHasItem
 } from "./mysql.js"
 // Profile Command
-
+const domainActivationState = new Map()
 // Assuming you have types defined for these:
 export interface UserProfile {
 	balance: number
@@ -607,13 +610,7 @@ export async function handleStatusCommand(interaction: ChatInputCommandInteracti
 		.setTimestamp()
 
 	// Add fields for relevant status information (replace with your actual data)
-	embed.addFields(
-		{ name: "✅ Online", value: "The bot is currently online and operational." },
-		{ name: "✅ Currency", value: "The currency system is working" },
-		{ name: "⏳ Uptime", value: "*3*" }, // Replace with actual uptime calculation
-		{ name: " Latency", value: "**faster then guilt!**" } // Replace with actual latency calculation
-		// Add more fields as needed
-	)
+	embed.addFields({ name: "✅ Online", value: "The bot is currently online and operational." })
 
 	// Send the embed
 	await interaction.reply({ embeds: [embed] })
@@ -751,6 +748,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
 				// Is the boss dead?
 				if (randomOpponent.current_health <= 0) {
+					domainActivationState.set(contextKey, false) // Reset domain activation state
 					// Reset health in the database
 					await updateBossHealth(randomOpponent.name, randomOpponent.max_health) // Assuming max_health is the original health
 
@@ -813,6 +811,79 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						primaryEmbed.setDescription(bossAttackMessage)
 						await buttonInteraction.editReply({ embeds: [chosenAttack.embedUpdate(primaryEmbed)] })
 					}
+				}
+			}
+			if (buttonInteraction.customId === "domain") {
+				await buttonInteraction.deferUpdate()
+
+				//domain check if used
+				if (domainActivationState.get(contextKey)) {
+					await buttonInteraction.followUp({
+						content: "You can only activate your domain once per fight.",
+						ephemeral: true
+					})
+					return
+				}
+
+				try {
+					// Fetch domain information and display its activation
+					const domainInfo = await getDomainFight(buttonInteraction.user.id)
+					const domainEmbed = new EmbedBuilder()
+					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
+					if (domainInfo) {
+						domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
+						// Add any specific logic for domain effects on player or opponent
+					}
+
+					if (!domainInfo) {
+						// If the user does not have a domain, send an ephemeral message
+						await buttonInteraction.followUp({
+							content: "You do not have a domain unlocked yet.",
+							ephemeral: true
+						})
+						return // Exit the function if no domain is found
+					}
+
+					domainActivationState.set(contextKey, true)
+					// User has a domain, construct an embed to show its activation and fight image
+					domainEmbed
+						.setColor("Blue")
+						.setTitle(`${buttonInteraction.user.username} has activated their domain!`)
+						.setDescription(`Domain: ${domainInfo.name}`)
+						.setImage(domainInfo.imageFightUrl) // Display the domain's special fight image
+						.addFields(
+							{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: true },
+							{ name: "Your Health", value: playerHealth.toString(), inline: true },
+							{ name: "Domain Effect", value: domainEffectMessage }
+						)
+
+					// Proceed with additional fight logic including extra domain damage
+					const playerGradeData = await getPlayerGradeFromDatabase(buttonInteraction.user.id)
+					const playerGradeString = playerGradeData.grade
+					const playerGrade = parseInt(playerGradeString.replace("Grade ", ""), 10)
+
+					const baseDamage = calculateDamage(playerGrade)
+					const extraDomainDamage = 50 // Fixed extra damage from domain activation; adjust as needed
+					const totalDamage = baseDamage + extraDomainDamage
+
+					randomOpponent.current_health -= totalDamage
+					randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
+
+					const fightResult = await handleFightLogic(
+						buttonInteraction,
+						randomOpponent,
+						playerGrade,
+						totalDamage
+					)
+					domainEmbed.setDescription(fightResult)
+
+					await buttonInteraction.editReply({ embeds: [domainEmbed] })
+				} catch (error) {
+					console.error("Error during domain activation or fight logic:", error)
+					await buttonInteraction.followUp({
+						content: "An error occurred during domain activation or in the fight. Please try again later.",
+						ephemeral: true
+					})
 				}
 			}
 		})
@@ -926,5 +997,44 @@ export async function handleSelectMenuInteraction(interaction) {
 		}
 	} else {
 		// next
+	}
+}
+
+// test getDomain function in embed
+export async function testDomainEmbed(interaction) {
+	// Immediately acknowledge the interaction
+	await interaction.deferReply()
+	try {
+		// Retrieve mentioned user from the command options, fall back to the author if no user is mentioned
+		const targetUser = interaction.options.getUser("mentionedUser") || interaction.user
+
+		// Use the targetUser's ID to get domain information
+		const domainInfo = await getDomain(targetUser.id) // Assuming getDomain now also returns image_url
+
+		// Format domain information
+		let domainFieldValue = "None"
+		if (domainInfo) {
+			domainFieldValue = `Name: ${domainInfo.name}\nDescription: ${domainInfo.description}`
+		}
+
+		// Create the embed with domain information
+		const embed = new EmbedBuilder()
+			.setColor(domainInfo ? "Green" : "Red") // Set color based on domain availability
+			.setTitle("Domain Check")
+			.setDescription(`Domain Unlocked: ${domainInfo ? "Yes" : "No"}`) // Indicate if a domain is unlocked
+			.addFields({ name: "Domain", value: domainFieldValue }) // Use formatted string for value
+
+		// If domainInfo has an image_url, add it as an image or thumbnail to the embed
+		if (domainInfo && domainInfo.image_url) {
+			// Use .setImage() or .setThumbnail() depending on how you want it to display
+			embed.setImage(domainInfo.image_url) // Or .setThumbnail(domainInfo.image_url)
+		}
+
+		// Edit the reply with the embed
+		await interaction.editReply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Error checking domain or timed out:", error)
+		// Notify the user something went wrong
+		await interaction.editReply({ content: "An error occurred! Please try again later.", ephemeral: true })
 	}
 }
