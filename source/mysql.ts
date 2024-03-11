@@ -869,7 +869,7 @@ export async function getDomainFight(userId: string): Promise<{ name: string; im
 export async function addDomainToUser(userId: string, domainId: number) {
 	return new Promise((resolve, reject) => {
 		const query = "UPDATE users SET domain_id = ? WHERE id = ?"
-		connection.query(query, [domainId, userId], (error, results) => {
+		connection.query(query, [domainId, userId], error => {
 			if (error) {
 				reject(new Error(`Failed to update user domain: ${error.message}`)) // More informative error
 			} else {
