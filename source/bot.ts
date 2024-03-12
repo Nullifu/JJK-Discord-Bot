@@ -212,7 +212,7 @@ client.on("interactionCreate", async interaction => {
 			})
 			.addFields({
 				name: "**Jujutsu System!**",
-				value: "Fight, Craft, Lookup, [ More Coming Soon! ] "
+				value: "Fight, Craft, Lookup, Jujutsu Status! [ More Coming Soon! ] "
 			})
 			.setTimestamp()
 

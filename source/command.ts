@@ -42,11 +42,11 @@ import {
 	addUser,
 	getAllBossesFromDatabase,
 	getAllDomains,
-	getAllItems,
 	getBalance,
 	getDomain,
 	getDomainFight,
 	getItem,
+	getItems,
 	getPlayerGradeFromDatabase,
 	getPlayerHealth,
 	getShopItems,
@@ -244,7 +244,7 @@ export async function handleSellCommand(interaction: ChatInputCommandInteraction
 	const authorId = interaction.user.id
 
 	// Fetch all items to get the most up-to-date prices
-	const allItems = await getAllItems()
+	const allItems = await getItems()
 	const itemToSell = allItems.find(item => item.name.toLowerCase() === itemName.toLowerCase())
 
 	// Validate the item
@@ -385,24 +385,26 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		// Fetch the user's inventory
 		const userInventory = await getUserInventory(interaction.user.id)
 
-		let requiredItemName, requiredQuantity, craftedItemId
-
+		let requiredItemName, requiredQuantity, craftedItemId, requiredMaterialId
 		// Determine the crafting requirements based on the selected item
 		switch (selectedItem) {
 			case "prison_realm":
 				requiredItemName = "Prison Realm Fragment"
 				requiredQuantity = 6
 				craftedItemId = 80 // Replace with the actual item ID for the Prison Realm
+				requiredMaterialId = 78 // The actual material ID needed for the operation
 				break
 			case "six_eyes":
 				requiredItemName = "Rikugan Eye"
 				requiredQuantity = 6
 				craftedItemId = 82 // Replace with the actual item ID for the Six Eyes
+				requiredMaterialId = 81 // The actual material ID needed for the operation
 				break
 			case "jogos_balls":
 				requiredItemName = "Jogos left testicle"
 				requiredQuantity = 2
-				craftedItemId = 1 // Replace with the actual item ID for the Six Eyes
+				craftedItemId = 100 // Replace with the actual item ID for the Jogos Balls
+				requiredMaterialId = 99 // The actual material ID needed for the operation
 				break
 			default:
 				await interaction.reply({ content: "Invalid item selected.", ephemeral: true })
@@ -410,9 +412,10 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		}
 
 		// Find the required item in the inventory
-		const item = userInventory.find(invItem => invItem.name === requiredItemName)
-
+		console.log(`Required Material ID: ${requiredMaterialId}, Required Quantity: ${requiredQuantity}`)
+		const item = userInventory.find(invItem => invItem.id === requiredMaterialId)
 		// Check if the user has enough of the required item
+		console.log(`Inventory for Material ID ${requiredMaterialId}:`, item)
 		if (!item || item.quantity < requiredQuantity) {
 			await interaction.reply(
 				`You do not have enough ${requiredItemName} to craft a ${selectedItem.replace("_", " ")}.`
@@ -461,31 +464,31 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 			if (buttonInteraction.customId === "confirmCraft") {
 				try {
-					// Remove the required items from the user's inventory
-					for (let i = 0; i < requiredItemName.length; i++) {
-						await removeItemFromUser(interaction.user.id, requiredItemName[i], requiredQuantity[i])
-					}
+					console.log(`Starting item removal for ${requiredItemName}, Quantity: ${requiredQuantity}`)
+					await removeItemFromUser(interaction.user.id, requiredMaterialId, requiredQuantity)
 
 					// Check if the user already has the crafted item
 					const craftedItem = userInventory.find(invItem => invItem.id === craftedItemId)
-
 					if (craftedItem) {
 						// Increment the quantity of the crafted item in the user's inventory
-						await addItemToUserInventory(interaction.user.id, craftedItemId)
+						await incrementInventoryItemQuantity(interaction.user.id, craftedItemId)
 					} else {
-						// Add the crafted item to the user's inventory
-						await giveItemToUser(interaction.user.id, craftedItemId) // Assuming the quantity is 1
+						// If not present, assume addItemToUserInventory will add the crafted item with quantity = 1
+						await addItemToUserInventory(interaction.user.id, craftedItemId)
 					}
+
+					console.log(`Crafting successful for ${requiredItemName}`)
 
 					// Confirm to the user that the crafting was successful
 					await buttonInteraction.editReply({
-						content: `You have successfully crafted a ${selectedItem.replace("_", " ")}!`,
+						content: `You have successfully crafted ${selectedItem.replace("_", " ")}!`,
 						components: []
 					})
 				} catch (error) {
 					console.error("Error during crafting:", error)
+					// Inform the user about the error in a generic way
 					await buttonInteraction.editReply({
-						content: "There was an error during the crafting process.",
+						content: "There was an error during the crafting process. Please try again.",
 						components: []
 					})
 				}
@@ -494,14 +497,14 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 				await buttonInteraction.editReply({ content: "Crafting canceled.", components: [] })
 			}
 			collector.stop()
-		})
 
-		collector.on("end", () => {
-			// Disable the buttons after interaction
-			confirmButton.setDisabled(true)
-			cancelButton.setDisabled(true)
-			interaction.editReply({
-				components: [new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)]
+			collector.on("end", () => {
+				// Disable the buttons after interaction
+				confirmButton.setDisabled(true)
+				cancelButton.setDisabled(true)
+				interaction.editReply({
+					components: [new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)]
+				})
 			})
 		})
 	} catch (error) {
@@ -509,6 +512,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
 }
+
 //lookup
 // Define information about the items
 const itemDetails = {
@@ -597,9 +601,7 @@ export async function handleLookupCommand(interaction: ChatInputCommandInteracti
 		}
 	})
 
-	collector.on("end", () => {
-		// Optionally handle the end of the interaction, such as disabling the Select Menu
-	})
+	collector.on("end", () => {})
 }
 
 export async function handleStatusCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {

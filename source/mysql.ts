@@ -419,27 +419,43 @@ export async function incrementInventoryItemQuantity(userId: string, itemId: num
 // 3. Removing the item from a user. - DELETE FROM inventories WHERE user_id = 'UserID' AND item_id = ItemID;
 export async function removeItemFromUser(userId: string, itemId: number, quantity: number): Promise<void> {
 	return new Promise((resolve, reject) => {
-		// First, try to decrement the quantity
-		let query = "UPDATE inventories SET quantity = quantity - ? WHERE user_id = ? AND item_id = ? AND quantity >= ?"
+		// First, attempt to decrement the item's quantity in the user's inventory
+		const decrementQuery = `
+            UPDATE inventories 
+            SET quantity = GREATEST(0, quantity - ?) 
+            WHERE user_id = ? AND item_id = ? AND quantity >= ?`
 
-		connection.query(query, [quantity, userId, itemId, quantity], (error, results) => {
-			if (error) {
-				reject(error)
-			} else {
-				// If the quantity update was successful but the new quantity might be zero or negative, remove the item entirely
-				if (results.affectedRows > 0) {
-					query = "DELETE FROM inventories WHERE user_id = ? AND item_id = ? AND quantity <= 0"
-					connection.query(query, [userId, itemId], (error, deleteResults) => {
-						if (error) {
-							reject(error)
-						} else {
-							resolve(deleteResults)
-						}
-					})
-				} else {
-					resolve(results) // No rows were updated because the quantity condition failed
-				}
+		connection.query(decrementQuery, [quantity, userId, itemId, quantity], (decrementError, decrementResults) => {
+			if (decrementError) {
+				console.error("Error decrementing inventory quantity:", decrementError)
+				return reject(decrementError)
 			}
+
+			console.log(`Rows affected by decrement: ${decrementResults.affectedRows}`)
+
+			// If the decrement query did not affect any rows, it means either the item was not found,
+			// or the quantity to remove exceeded the available quantity.
+			if (decrementResults.affectedRows === 0) {
+				console.warn(
+					`No inventory updated. Item ID: ${itemId} for User ID: ${userId} might not exist or quantity insufficient.`
+				)
+				return resolve() // Resolve without error as this is an expected scenario.
+			}
+
+			// After decrementing, remove any inventory entries that now have a quantity of 0
+			const cleanupQuery = `
+                DELETE FROM inventories 
+                WHERE user_id = ? AND item_id = ? AND quantity <= 0`
+
+			connection.query(cleanupQuery, [userId, itemId], (cleanupError, cleanupResults) => {
+				if (cleanupError) {
+					console.error("Error cleaning up inventory:", cleanupError)
+					return reject(cleanupError)
+				}
+
+				console.log(`Rows affected by cleanup: ${cleanupResults.affectedRows}`)
+				resolve()
+			})
 		})
 	})
 }
@@ -489,6 +505,7 @@ export async function getUserInventory(userId: string): Promise<InventoryItem[]>
 					results.map(
 						result =>
 							({
+								id: result.id,
 								name: result.name,
 								description: result.description,
 								quantity: result.quantity
@@ -528,22 +545,40 @@ export async function craftItem(userId: string, itemId: number, quantity: number
 	})
 }
 // 9. faggot
-export async function getAllItems(): Promise<Item[]> {
+export async function getItems(searchParam?: { id?: number; name?: string }): Promise<Item[]> {
 	return new Promise(resolve => {
-		const query = "SELECT * FROM items"
+		let query = "SELECT * FROM items"
+		const queryParams = []
 
-		connection.query(query, (error, results) => {
-			if (error) {
-				resolve([])
-			} else {
-				const items = results.map(row => ({
-					id: row.id,
-					name: row.name,
-					description: row.description,
-					price: row.price
-				}))
-				resolve(items)
+		// Adjust query if a search parameter is provided
+		if (searchParam) {
+			const conditions = []
+			if (searchParam.id) {
+				conditions.push("id = ?")
+				queryParams.push(searchParam.id)
 			}
+			if (searchParam.name) {
+				conditions.push("name = ?")
+				queryParams.push(searchParam.name)
+			}
+			query += " WHERE " + conditions.join(" AND ")
+		}
+
+		connection.query(query, queryParams, (error, results) => {
+			if (error) {
+				console.error("Error fetching items:", error)
+				resolve([])
+				return
+			}
+
+			const items = results.map(row => ({
+				id: row.id,
+				name: row.name,
+				description: row.description,
+				price: row.price
+				// Add any additional fields as necessary
+			}))
+			resolve(items)
 		})
 	})
 }
