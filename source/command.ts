@@ -1090,7 +1090,84 @@ export async function handleDomainGiveCommand(interaction) {
 	}
 }
 
-// xp system skibibi bop bop bop yes yes!
+export async function useCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	console.log("useCommand function initiated.")
+
+	const userId = interaction.user.id
+	const itemName = interaction.options.getString("item")
+
+	if (!itemName) {
+		console.log("Item name not provided in command.")
+		await interaction.reply({ content: "You must specify the name of the item you wish to use.", ephemeral: true })
+		return
+	}
+
+	// Fetch user's inventory to check item existence and quantity
+	const inventoryItems = await getUserInventory(userId)
+	const item = inventoryItems.find(i => i.name === itemName && i.quantity > 0)
+
+	if (!item) {
+		// User lacks the specified item
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Search yields no results...")
+			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	// Adding suspense and thematic depth for the "Sukuna Finger"
+	if (itemName === "Sukuna Finger") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("A Cursed Choice...")
+			.setDescription(
+				"Your fingers close around the Sukuna Finger, its cursed energy pulsing against your skin..."
+			)
+			.setImage(
+				"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
+			) // Add a fitting image URL
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		await setTimeout(4000) // this is milliseconds
+		const embedSecond = new EmbedBuilder()
+			.setColor("#8b0000") // Dark red, for dramatic effect
+			.setTitle("Power or Peril?")
+			.setDescription(
+				"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
+			)
+			.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Add an image URL of the consumption
+		await interaction.editReply({ embeds: [embedSecond] })
+
+		await setTimeout(3000) // this is milliseconds
+		// Assume updateExperience and removeItemFromUser are called here
+		await updateExperience(userId, 125)
+		// This example grants 125 experience
+		await removeItemFromUser(userId, item.id, 1) // Removes one Sukuna Finger from inventory
+
+		const embedFinal = new EmbedBuilder()
+			.setColor("#006400") // Dark green, symbolizing growth
+			.setTitle("Power Unleashed")
+			.setDescription("The deed is done. You've gained 125 experience. What dark powers have you awakened?")
+			.setImage(
+				"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
+			) // An image URL showing the unleashed power
+		await interaction.editReply({ embeds: [embedFinal] })
+	} else {
+		// Handle other items or general case
+		const embed = new EmbedBuilder()
+			.setColor("#FFFF00")
+			.setTitle("No Effect")
+			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+	}
+}
+
+//
+//
+//
+//
 export async function addXP(userId: string, xpAdded: number): Promise<{ newXP: number; newGrade: string }> {
 	const user = await getPlayerGradeFromDatabase(userId)
 	const newXP: number = user.experience + xpAdded
