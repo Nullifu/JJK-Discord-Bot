@@ -1,22 +1,37 @@
-export function calculateDamage(playerGrade: number, domainEffectMultiplier: number = 1): number {
-	// Customizable parameters
-	const baseDamage = 1
-	const gradeMultiplier = 1.2
-	const randomVariationPercentage = 0.2 // 20% random variation
+export function calculateDamage(playerGrade: string, domainEffectMultiplier: number = 1): number {
+	const baseDamage = 10
+	const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+	const randomVariationPercentage = 0.2
 
-	// Ensure playerGrade is valid
-	if (isNaN(playerGrade) || playerGrade <= 0) {
-		return 0 // Handle invalid input
-	}
+	let totalDamage = baseDamage * gradeDamageBonus * domainEffectMultiplier
 
-	// Core Calculation with domain effect
-	let totalDamage = baseDamage * gradeMultiplier * playerGrade * domainEffectMultiplier
-
-	// Apply randomness
-	const randomVariation = randomVariationPercentage * totalDamage
-	const randomFactor = Math.random() * (2 * randomVariation) - randomVariation
+	// Apply random variation
+	const randomVariation = totalDamage * randomVariationPercentage
+	const randomFactor = (Math.random() * 2 - 1) * randomVariation // Between -randomVariation and +randomVariation
 	totalDamage += randomFactor
 
-	// Ensure minimum damage
 	return Math.max(1, Math.round(totalDamage))
+}
+
+function getGradeDamageBonus(grade: string): number {
+	switch (grade) {
+		case "Special Grade":
+			return 2.0
+		case "Grade 1":
+			return 1.7
+		case "Semi-Grade 1":
+			return 1.4
+		case "Grade 2":
+			return 1.2
+		case "Grade 3":
+			return 1.1
+		case "Grade 4":
+		default:
+			return 1.0
+	}
+}
+
+export function getRandomXPGain(min = 10, max = 70) {
+	// The maximum is inclusive and the minimum is inclusive
+	return Math.floor(Math.random() * (max - min + 1)) + min
 }

@@ -32,10 +32,10 @@ import {
 	userLastDaily,
 	workCooldowns
 } from "./bot.js"
-import { calculateDamage } from "./calculate.js"
+import { calculateDamage, getRandomXPGain } from "./calculate.js"
 import { BossData } from "./interface.js"
 import { getRandomItem } from "./items jobs.js"
-import { createHealthBar, getJujutsuFlavorText } from "./jujutsuFlavor.js"
+import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItem,
 	addItemToUserInventory,
@@ -57,7 +57,9 @@ import {
 	removeItemFromUser,
 	updateBalance,
 	updateBossHealth,
+	updateExperience,
 	updatePlayerHealth,
+	updateUserXPandGrade,
 	userHasItem
 } from "./mysql.js"
 // Profile Command
@@ -73,7 +75,6 @@ export interface UserProfile {
 
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
-
 	// Function to create the profile embed
 	const createProfileEmbed = async userId => {
 		const userProfile = await getUserProfile(userId)
@@ -94,7 +95,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 		// Create a button to refresh the profile
 		const refreshButton = new ButtonBuilder()
 			.setCustomId("refreshProfile")
-			.setLabel("Jujutsu")
+			.setLabel("Refresh Profile")
 			.setStyle(ButtonStyle.Primary)
 
 		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshButton)
@@ -178,7 +179,7 @@ export async function handleDigcommand(interaction: ChatInputCommandInteraction)
 	if (timestamp) {
 		const expirationTime = timestamp + digCooldown
 		if (currentTime < expirationTime && !digCooldownBypassIDs.includes(authorId)) {
-			// Send a message with a dynamic timestamp
+			// User is on cooldown, send a message
 			const digCooldownEmbed = new EmbedBuilder()
 				.setColor(0xff0000) // Red color for error
 				.setTitle("Digging Cooldown")
@@ -189,10 +190,11 @@ export async function handleDigcommand(interaction: ChatInputCommandInteraction)
 					)}:R>.`
 				)
 			await interaction.editReply({ embeds: [digCooldownEmbed] })
+			return // Stop further execution to prevent cooldown reset
 		}
 	}
 
-	// Set or update the cooldown
+	// User is not on cooldown, or has bypassed it; update the cooldown
 	digCooldowns.set(authorId, currentTime)
 
 	// The command logic
@@ -676,6 +678,7 @@ export async function handleJujutsuCommand(interaction: ChatInputCommandInteract
 		await interaction.reply("There was an error retrieving your jujutsu stats.")
 	}
 }
+
 // Full fight command for Jujutsu
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	try {
@@ -698,10 +701,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			.addFields({ name: "Health", value: randomOpponent.current_health.toString() })
 			.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
 		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
-		const healthBar = createHealthBar(remainingHealthPercentage)
-
-		primaryEmbed.addFields({ name: "Cursed Energy", value: healthBar })
-
+		if (remainingHealthPercentage < 0.5) {
+			primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
+		}
 		// Add JJK Flavor Text based for this boss
 		const flavorText = getJujutsuFlavorText(randomOpponent.name)
 		if (flavorText) {
@@ -731,12 +733,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const { health: playerHealth } = await getPlayerHealth(interaction.user.id)
 
 				// Get player's grade
+				// Assuming getPlayerGradeFromDatabase correctly retrieves the player's grade as a string like "Grade 4"
 				const playerGradeData = await getPlayerGradeFromDatabase(interaction.user.id)
-				const playerGradeString = playerGradeData.grade
-				const playerGrade = parseInt(playerGradeString.replace("Grade ", ""), 10)
+				const playerGradeString = playerGradeData.grade // This is already in the correct format
 
-				// Calculate damage
-				const damage = calculateDamage(playerGrade)
+				// Calculate damage using the string grade
+				const damage = calculateDamage(playerGradeString) // Use the grade string directly
 
 				// Calculate boss new health after damage dealt
 
@@ -746,7 +748,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
 
 				// Construct result message
-				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGrade, damage)
+				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 				primaryEmbed.setDescription(fightResult)
 				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
 				// Is the boss dead?
@@ -761,6 +763,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						embeds: [primaryEmbed],
 						components: []
 					})
+					// Calculate XP gain
+					const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
+
+					// Update player's experience
+					await updateExperience(buttonInteraction.user.id, xpGain) // Assuming this function updates the XP in your database and accepts the user ID and the XP amount
+
+					// Send a message about the XP gain
+					const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
+					await buttonInteraction.followUp({ content: xpMessage })
 				} else {
 					// Update to new boss health after damage dealt
 					await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
@@ -861,11 +872,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						)
 
 					// Proceed with additional fight logic including extra domain damage
-					const playerGradeData = await getPlayerGradeFromDatabase(buttonInteraction.user.id)
-					const playerGradeString = playerGradeData.grade
-					const playerGrade = parseInt(playerGradeString.replace("Grade ", ""), 10)
+					// Assuming getPlayerGradeFromDatabase correctly retrieves the player's grade as a string like "Grade 4"
+					const playerGradeData = await getPlayerGradeFromDatabase(interaction.user.id)
+					const playerGradeString = playerGradeData.grade // This is already in the correct format
 
-					const baseDamage = calculateDamage(playerGrade)
+					// Calculate damage using the string grade
+					const baseDamage = calculateDamage(playerGradeString) // Use the grade string directly
+
 					const extraDomainDamage = 50 // Fixed extra damage from domain activation; adjust as needed
 					const totalDamage = baseDamage + extraDomainDamage
 
@@ -875,7 +888,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const fightResult = await handleFightLogic(
 						buttonInteraction,
 						randomOpponent,
-						playerGrade,
+						playerGradeString,
 						totalDamage
 					)
 					domainEmbed.setDescription(fightResult)
@@ -900,7 +913,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 async function handleFightLogic(
 	interaction: Interaction,
 	randomOpponent: BossData,
-	playerGrade: number,
+	playerGradeString: string,
 	damage: number
 ): Promise<string> {
 	// ... your fight logic (update boss health, etc.)
@@ -1075,4 +1088,43 @@ export async function handleDomainGiveCommand(interaction) {
 		console.error("Error fetching domains:", error)
 		await interaction.reply({ content: "Failed to fetch domains.", ephemeral: true })
 	}
+}
+
+// xp system skibibi bop bop bop yes yes!
+export async function addXP(userId: string, xpAdded: number): Promise<{ newXP: number; newGrade: string }> {
+	const user = await getPlayerGradeFromDatabase(userId)
+	const newXP: number = user.experience + xpAdded
+
+	let newGrade: string
+
+	// Determine the new grade based on XP
+	if (newXP >= 2500) {
+		// Progress to Special Grade if not already
+		newGrade = "Special Grade"
+	} else if (newXP >= 1000) {
+		// Progress to Grade 1 if below this grade
+		newGrade = !["Special Grade", "Grade 1"].includes(user.grade) ? "Grade 1" : user.grade
+	} else if (newXP >= 750) {
+		// Progress to Semi-Grade 1 if below this grade
+		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1"].includes(user.grade) ? "Semi-Grade 1" : user.grade
+	} else if (newXP >= 500) {
+		// Progress to Grade 2 if below this grade
+		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"].includes(user.grade)
+			? "Grade 2"
+			: user.grade
+	} else if (newXP >= 250) {
+		// Progress to Grade 3 if below this grade
+		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"].includes(user.grade)
+			? "Grade 3"
+			: user.grade
+	} else {
+		// Remain at Grade 4 if below 250 XP
+		newGrade = "Grade 4"
+	}
+
+	// Update the user's grade and XP in the database
+	await updateUserXPandGrade(userId, newXP, newGrade)
+
+	console.log(`User ${userId} updated: New XP is ${newXP}, New Grade is ${newGrade}`)
+	return { newXP, newGrade }
 }

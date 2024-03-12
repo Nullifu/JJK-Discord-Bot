@@ -651,7 +651,7 @@ export async function getBossAttackLine(bossName: string, attackName: string): P
  */
 export async function getPlayerGradeFromDatabase(id: string): Promise<UserProfile> {
 	return new Promise((resolve, reject) => {
-		const query = "SELECT grade FROM users WHERE id = ?"
+		const query = "SELECT grade, experience FROM users WHERE id = ?"
 
 		connection.query(query, [id], (error, results) => {
 			if (error) {
@@ -922,6 +922,21 @@ export async function addDomainToUser(userId: string, domainId: number) {
 				reject(new Error(`Failed to update user domain: ${error.message}`)) // More informative error
 			} else {
 				resolve(true) // Return simple success indicator
+			}
+		})
+	})
+}
+
+export async function updateUserXPandGrade(id: string, newXP: number, newGrade: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		// Assuming the 'users' table has 'experience' and 'grade' columns
+		const query = "UPDATE users SET experience = ?, grade = ? WHERE id = ?"
+
+		connection.query(query, [newXP, newGrade, id], error => {
+			if (error) {
+				reject(error)
+			} else {
+				resolve()
 			}
 		})
 	})
