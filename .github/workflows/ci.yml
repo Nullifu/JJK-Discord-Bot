@@ -40,6 +40,7 @@ jobs:
           name: build
           path: |
             dist/
+            image/
             package.json
             package-lock.json
 
