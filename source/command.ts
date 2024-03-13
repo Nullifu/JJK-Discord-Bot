@@ -321,7 +321,7 @@ export async function handleRegistercommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 		const result = await addUser(discordId)
-		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg" // Replace with your image URL
+		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
 
 		// Create the embed with a concise message
 		const welcomeEmbed = new EmbedBuilder()

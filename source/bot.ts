@@ -155,6 +155,7 @@ const commands = [
 				.addChoices({ name: "Sukuna Finger", value: "Sukuna Finger" })
 		),
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
+	new SlashCommandBuilder().setName("domain_status").setDescription("Domain Status"),
 	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
 	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight a random opponent!"),
@@ -215,7 +216,7 @@ client.on("interactionCreate", async interaction => {
 			.setThumbnail("https://bit.ly/3wWCEEQ")
 			.setTitle("↓↓↓↓ **Cursed Commands** ↓↓↓↓")
 			.setDescription(
-				"Don't worry, you're strong.” Dive into the world of Jujutsu Sorcerers with your very own Cursed Techniques. Each command is a step into the thrilling universe of curses and battles. Ready to unleash your potential?"
+				"Dive into the world of Jujutsu Sorcerers with your very own Cursed Techniques. Each command is a step into the thrilling universe of curses and battles. Ready to unleash your potential?"
 			)
 			.addFields([
 				{
