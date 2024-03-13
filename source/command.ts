@@ -41,7 +41,6 @@ import {
 	addItemToUserInventory,
 	addUser,
 	getAllBossesFromDatabase,
-	getAllDomains,
 	getBalance,
 	getDomain,
 	getDomainFight,
@@ -49,7 +48,6 @@ import {
 	getItems,
 	getPlayerGradeFromDatabase,
 	getPlayerHealth,
-	getShopItems,
 	getUserInventory,
 	getUserProfile,
 	giveItemToUser,
@@ -323,16 +321,18 @@ export async function handleRegistercommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 		const result = await addUser(discordId)
-		const imageURL =
-			"https://64.media.tumblr.com/eb2e5aae7be9d754ac5c7d3bea11e331/980dfb5c4c395e4c-df/s1280x1920/c9f7109eb7ab969bad1de7cb0f9196c53ec122d7.jpg" // Replace with your image URL
+		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg" // Replace with your image URL
 
-		// Create the embed
+		// Create the embed with a concise message
 		const welcomeEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Green color
-			.setTitle("Registered!")
-			.setDescription(`${interaction.user.toString()} **Welcome to Jujutsu!**`) // Mention the user
-			.setImage(imageURL) // Set the image URL
+			.setColor(0x5d2e8c) // A thematic purple, for a mystical vibe
+			.setTitle("Jujutsu Registration Complete!")
+			.setDescription(`Welcome, ${interaction.user.toString()}! Your Jujutsu journey begins.`) // Concise welcome message
+			.setImage(imageURL)
 			.setTimestamp()
+			.setFooter({
+				text: `Are you the strongest because you're ${interaction.user.username}, or are you ${interaction.user.username} because you're the strongest?`
+			})
 
 		// Reply with the embed
 		await interaction.reply({ embeds: [welcomeEmbed] })
@@ -340,7 +340,10 @@ export async function handleRegistercommand(interaction: ChatInputCommandInterac
 		console.log(result)
 	} catch (error) {
 		console.error("Error registering user:", error)
-		await interaction.reply({ content: "There was an error registering the user.", ephemeral: true })
+		await interaction.reply({
+			content: "There was an error registering you, or you are already registered",
+			ephemeral: true
+		})
 	}
 }
 //daily
@@ -929,95 +932,7 @@ async function handleFightLogic(
 	return resultMessage
 }
 
-// command to dm a user
-export async function handleDmCommand(interaction: ChatInputCommandInteraction) {
-	const user = interaction.options.getUser("user")
-	const message = interaction.options.getString("message")
-
-	try {
-		await user.send(message)
-		await interaction.reply({ content: `Message sent to ${user.tag}.` })
-	} catch (error) {
-		console.error("Failed to send message:", error)
-		await interaction.reply({ content: "Failed to send the message.", ephemeral: true })
-	}
-}
-
-// test
-
-export async function handleShopCommand(interaction) {
-	const items = await getShopItems()
-
-	// Create a simple embed
-	const shopEmbed = new EmbedBuilder()
-		.setTitle("Welcome to the Shop")
-		.setDescription("Select an item from the dropdown to view details and purchase.")
-
-	const options = items.map(item => ({
-		label: `${item.name} - ${item.price}`,
-		description: item.description.substring(0, 50) + "...",
-		value: item.id.toString()
-	}))
-
-	const selectMenu = new ActionRowBuilder().addComponents(
-		new StringSelectMenuBuilder()
-			.setCustomId("select-item")
-			.setPlaceholder("Select an item to buy")
-			.addOptions(options)
-	)
-
-	await interaction.reply({
-		embeds: [shopEmbed],
-		components: [selectMenu]
-	})
-}
-export async function handleSelectMenuInteraction(interaction) {
-	console.log("Select menu interaction is happening.")
-	if (!interaction.isSelectMenu()) return
-
-	if (interaction.customId === "select-item") {
-		const itemId = interaction.values[0]
-		const userId = interaction.user.id
-
-		console.log(`User ${userId} has selected item ${itemId}`)
-
-		try {
-			// faggot
-			const items = await getShopItems()
-			const item = items.find(item => item.id.toString() === itemId)
-			const itemPrice = item.price
-			const userBalance = await getBalance(userId)
-
-			console.log(`${userBalance} ${itemPrice}`)
-
-			if (userBalance >= itemPrice) {
-				await addItemToUserInventory(userId, itemId)
-				console.log(`User ${userId} has purchased item ${itemId}`)
-				await updateBalance(userId, -itemPrice)
-				console.log(`User ${userId} has been charged ${itemPrice} coins`)
-			}
-
-			const shopEmbed = new EmbedBuilder()
-				.setTitle("Welcome to the Shop")
-				.setDescription("You have successfully purchased the item!")
-			await interaction.update({
-				embeds: [shopEmbed.setDescription("You have successfully purchased the item!")],
-				components: []
-			})
-		} catch (error) {
-			console.error("Error during purchase process:", error)
-			await interaction.update({
-				content: "An error occurred during purchase. Please try again later.",
-				ephemeral: true
-			})
-		}
-	} else {
-		// next
-	}
-}
-
-// test getDomain function in embed
-export async function testDomainEmbed(interaction) {
+export async function HandleCheckDomainCommand(interaction) {
 	// Immediately acknowledge the interaction
 	await interaction.deferReply()
 	try {
@@ -1052,41 +967,6 @@ export async function testDomainEmbed(interaction) {
 		console.error("Error checking domain or timed out:", error)
 		// Notify the user something went wrong
 		await interaction.editReply({ content: "An error occurred! Please try again later.", ephemeral: true })
-	}
-}
-// TEST NUMBER 1 TRILLION!!!!!!!!!!!!!!!!!	hello copilot!
-export async function handleDomainGiveCommand(interaction) {
-	try {
-		const domains = await getAllDomains()
-
-		if (domains.length === 0) {
-			await interaction.reply({ content: "No domains available.", ephemeral: true })
-			return
-		}
-
-		// Map domains to select menu options, ensuring labels do not exceed 25 characters
-		const options = domains.slice(0, 25).map(domain => ({
-			label: domain.name.length > 25 ? domain.name.substring(0, 22) + "..." : domain.name, // Truncate if necessary
-			value: domain.id.toString(), // Using domain ID as the value for easier identification
-			description:
-				domain.description.length > 50 ? domain.description.substring(0, 47) + "..." : domain.description // Truncate if necessary
-		}))
-
-		const row = new ActionRowBuilder().addComponents(
-			new StringSelectMenuBuilder()
-				.setCustomId("select-domain")
-				.setPlaceholder("Select a domain")
-				.addOptions(options)
-		)
-
-		await interaction.reply({
-			content: "Please select a domain:",
-			components: [row],
-			ephemeral: false
-		})
-	} catch (error) {
-		console.error("Error fetching domains:", error)
-		await interaction.reply({ content: "Failed to fetch domains.", ephemeral: true })
 	}
 }
 

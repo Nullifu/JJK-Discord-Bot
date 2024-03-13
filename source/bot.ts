@@ -13,6 +13,7 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 import {
+	HandleCheckDomainCommand,
 	handleBalanceCommand,
 	handleCraftCommand,
 	handleDailyCommand,
@@ -23,13 +24,11 @@ import {
 	handleLookupCommand,
 	handleProfileCommand,
 	handleRegistercommand,
-	handleSelectMenuInteraction,
-	handleShopCommand,
 	handleStatusCommand,
 	handleWorkCommand,
 	useCommand
 } from "./command.js"
-import { handleFiddleCommand, handleKissCommand } from "./commandgifs.js"
+import { handleKissCommand } from "./commandgifs.js"
 
 // interface Item {
 // 	id: string
@@ -74,18 +73,29 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 })
 
+const activities = [
+	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
+	{ name: "Gojo’s explanations", type: ActivityType.Listening },
+	{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
+	{ name: "Domain Expansion theories", type: ActivityType.Watching },
+	{ name: "The Shibuya Incident", type: ActivityType.Playing },
+	{ name: "Exchange Event", type: ActivityType.Competing }
+]
+let index = 0
+
 // status update when bot turns on or refreshes
-client.once("ready", () => {
-	console.log("Ready!")
-	client.user.setPresence({
-		activities: [
-			{
-				name: "Jujutsu Kaisen!",
-				type: ActivityType.Watching
-			}
-		],
-		status: "online"
-	})
+client.on("ready", () => {
+	console.log(`Logged in as ${client.user.tag}!`)
+	setInterval(() => {
+		// Update the bot's status with a different activity type
+		if (index === activities.length) index = 0 // Reset index if it's at the end of the array
+		const activity = activities[index]
+		client.user.setPresence({
+			activities: [{ name: activity.name, type: activity.type }],
+			status: "online"
+		})
+		index++
+	}, 25000) // Change status every 10000 milliseconds (10 seconds)
 })
 
 client.on("guildCreate", guild => {
@@ -116,7 +126,7 @@ const prefix = "g"
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
 export const digCooldowns = new Map()
-export const digCooldown = 1000 * 60 * 60 // 1 hour cooldown
+export const digCooldown = 15 * 60 * 1000 // 15 minutes in milliseconds
 export const digCooldownBypassIDs = ["917146454940844103", "292385626773258240"] // IDs that can bypass cooldown
 export const randomdig2 = [
 	"Burrowed",
@@ -154,18 +164,9 @@ const commands = [
 	new SlashCommandBuilder().setName("balance").setDescription("Balance"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig for items!"),
-	new SlashCommandBuilder()
-		.setName("sell")
-		.setDescription("Sell an item from your inventory.")
-		.addStringOption(option =>
-			option.setName("item").setDescription("The name of the item you want to sell.").setRequired(true)
-		)
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item you want to sell.").setRequired(false)
-		),
-	new SlashCommandBuilder().setName("work").setDescription("work"),
-	new SlashCommandBuilder().setName("register").setDescription("join jujutsu"),
-	new SlashCommandBuilder().setName("daily").setDescription("sthu"),
+	new SlashCommandBuilder().setName("work").setDescription("Work for money!"),
+	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
+	new SlashCommandBuilder().setName("daily").setDescription("Daily Cash!"),
 	new SlashCommandBuilder()
 		.setName("craft")
 		.setDescription("Craft an item using components in your inventory.")
@@ -202,30 +203,38 @@ doApplicationCommands()
 //
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const chatInputInteraction = interaction
 	const { commandName } = chatInputInteraction
 	if (commandName === "help") {
 		const helpEmbed = new EmbedBuilder()
 			.setAuthor({
-				name: "Satoru Gojo",
-				iconURL:
-					"https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7040e917-2676-4436-838b-34c95352f75f/dejti5s-bfa1c2ab-a198-4b74-9e25-93f9fa09122d.png/v1/fill/w_745,h_1073/jujutsu_kaisen___satoru_gojo_render_by_stormydayze_dejti5s-pre.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTMwMCIsInBhdGgiOiJcL2ZcLzcwNDBlOTE3LTI2NzYtNDQzNi04MzhiLTM0Yzk1MzUyZjc1ZlwvZGVqdGk1cy1iZmExYzJhYi1hMTk4LTRiNzQtOWUyNS05M2Y5ZmEwOTEyMmQucG5nIiwid2lkdGgiOiI8PTkwMiJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.r0XKb_AjUzUSDqa6P6kk1velHomh299mrxA5QVqdvJE"
+				name: "Jujutsu Kaisen Bot",
+				iconURL: "https://bit.ly/4cfWISM"
 			})
 			.setColor(0x000000)
-			.setThumbnail(
-				"https://upload.wikimedia.org/wikipedia/en/thumb/9/96/SatoruGojomanga.png/220px-SatoruGojomanga.png"
+			.setThumbnail("https://bit.ly/3wWCEEQ")
+			.setTitle("↓↓↓↓ **Cursed Commands** ↓↓↓↓")
+			.setDescription(
+				"Don't worry, you're strong.” Dive into the world of Jujutsu Sorcerers with your very own Cursed Techniques. Each command is a step into the thrilling universe of curses and battles. Ready to unleash your potential?"
 			)
-			.setTitle("↓↓↓↓ **Commands** ↓↓↓↓")
-			.setDescription("**Register, Dig, Sell, Inventory, Profile, Balance, Work, Daily,**")
-			.addFields({
-				name: "**PREFIX __G__** Image Commands",
-				value: "Kiss, Hug, Snuggle, Fuck, Bite, Lick, Fiddle."
-			})
-			.addFields({
-				name: "**Jujutsu System!**",
-				value: "Fight, Craft, Lookup, Jujutsu Status! [ More Coming Soon! ] "
-			})
+			.addFields([
+				{
+					name: "**General Commands**",
+					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nLookup - Discover details about objects\nDaily - Claim your daily curse"
+				},
+				{
+					name: "**Cursed Technique Commands**",
+					value: "Kiss, Hug,"
+				},
+				{
+					name: "**Jujutsu System!**",
+					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomain_Status - Check If you have domain expansion!\nJujutsu_Status - View your cursed energy and Grade!"
+				}
+			])
 			.setTimestamp()
+			.setFooter({
+				text: "Explore and enjoy the world of curses!"
+			})
 
 		await interaction.reply({ embeds: [helpEmbed] })
 	}
@@ -316,17 +325,6 @@ client.on("messageCreate", async message => {
 		handleKissCommand(message)
 	}
 })
-client.on("messageCreate", async message => {
-	if (!message.content.startsWith(prefix) || message.author.bot) return
-
-	const args = message.content.slice(prefix.length).trim().split(/ +/)
-	const command = args.shift().toLowerCase()
-
-	// Handle the 'fiddle' command
-	if (command === "fiddle") {
-		handleFiddleCommand(message)
-	}
-})
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
@@ -362,17 +360,12 @@ client.on("interactionCreate", async interaction => {
 		await useCommand(chatInputInteraction)
 	}
 })
-
 client.on("interactionCreate", async interaction => {
-	if (interaction.isChatInputCommand()) {
-		const chatInputInteraction = interaction as ChatInputCommandInteraction
-		const { commandName } = chatInputInteraction
-		if (commandName === "shop") {
-			await handleShopCommand(chatInputInteraction)
-		}
-	} else if (interaction.isStringSelectMenu()) {
-		// Handle select menu interactions
-		await handleSelectMenuInteraction(interaction)
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "domain_status") {
+		await HandleCheckDomainCommand(chatInputInteraction)
 	}
 })
 
