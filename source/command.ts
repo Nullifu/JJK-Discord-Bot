@@ -32,7 +32,7 @@ import {
 	userLastDaily,
 	workCooldowns
 } from "./bot.js"
-import { calculateDamage, getRandomXPGain } from "./calculate.js"
+import { calculateDamage, calculateGradeFromExperience, getRandomXPGain } from "./calculate.js"
 import { BossData } from "./interface.js"
 import { getRandomItem } from "./items jobs.js"
 import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
@@ -1021,10 +1021,13 @@ export async function useCommand(interaction: ChatInputCommandInteraction): Prom
 		await interaction.editReply({ embeds: [embedSecond] })
 
 		await setTimeout(3000) // this is milliseconds
-		// Assume updateExperience and removeItemFromUser are called here
-		await updateExperience(userId, 125)
-		// This example grants 125 experience
-		await removeItemFromUser(userId, item.id, 1) // Removes one Sukuna Finger from inventory
+		const user = await getPlayerGradeFromDatabase(userId) // Fetch current user data
+		const xpGained = 125 // Fixed XP gain for consuming the Sukuna Finger
+		const newXP = user.experience + xpGained
+		const newGrade = calculateGradeFromExperience(newXP) // Calculate the new grade
+		await updateUserXPandGrade(userId, newXP, newGrade) // Update user's XP and grade in the database
+
+		await removeItemFromUser(userId, item.id, 1)
 
 		const embedFinal = new EmbedBuilder()
 			.setColor("#006400") // Dark green, symbolizing growth

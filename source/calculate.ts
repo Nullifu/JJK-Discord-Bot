@@ -35,3 +35,21 @@ export function getRandomXPGain(min = 10, max = 70) {
 	// The maximum is inclusive and the minimum is inclusive
 	return Math.floor(Math.random() * (max - min + 1)) + min
 }
+
+export function calculateGradeFromExperience(newXP: number): string {
+	// Define XP thresholds for each grade. Adjust values as needed.
+	const gradeThresholds = [
+		{ grade: "Special Grade", xp: 2500 },
+		{ grade: "Grade 1", xp: 1000 },
+		{ grade: "Semi-Grade 1", xp: 750 },
+		{ grade: "Grade 2", xp: 500 },
+		{ grade: "Grade 3", xp: 250 },
+		{ grade: "Grade 4", xp: 0 } // Assuming Grade 4 is the starting/lowest grade
+	]
+
+	// Find the highest grade the user qualifies for based on their XP
+	const newGrade = gradeThresholds.find(gradeThreshold => newXP >= gradeThreshold.xp)?.grade
+
+	// Return the calculated grade; default to "Grade 4" if something goes wrong
+	return newGrade || "Grade 4"
+}
