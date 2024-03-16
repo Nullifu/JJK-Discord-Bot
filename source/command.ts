@@ -23,16 +23,14 @@ import {
 	StringSelectMenuBuilder
 } from "discord.js"
 import { attacks, chooseRandomAttackForBossBasedOnProbability } from "./attacks.js"
+import { COOLDOWN_TIME, digCooldown, digCooldownBypassIDs, digCooldowns, userLastDaily, workCooldowns } from "./bot.js"
 import {
-	COOLDOWN_TIME,
-	digCooldown,
-	digCooldownBypassIDs,
-	digCooldowns,
-	randomdig2,
-	userLastDaily,
-	workCooldowns
-} from "./bot.js"
-import { calculateDamage, calculateGradeFromExperience, getRandomXPGain } from "./calculate.js"
+	calculateDamage,
+	calculateGradeFromExperience,
+	createInventoryPage,
+	getRandomLocation,
+	getRandomXPGain
+} from "./calculate.js"
 import { BossData } from "./interface.js"
 import { getRandomItem } from "./items jobs.js"
 import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
@@ -48,6 +46,7 @@ import {
 	getItems,
 	getPlayerGradeFromDatabase,
 	getPlayerHealth,
+	getShopItems,
 	getUserInventory,
 	getUserProfile,
 	giveItemToUser,
@@ -140,50 +139,84 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 }
 // Inventory
 
-export async function handleInventoryCommand(interaction: ChatInputCommandInteraction) {
+export async function handleInventoryCommand(interaction) {
 	await interaction.deferReply()
 
-	const user = interaction.user
-	const inventoryItems = await getUserInventory(user.id)
+	// Check for mentioned user in the command, use command issuer if no user is mentioned
+	const mentionedUser = interaction.options.getUser("user") || interaction.user
+	const inventoryItems = await getUserInventory(mentionedUser.id)
+	const itemsPerPage = 5 // Number of items to show per page
+	let pageIndex = 0
 
-	// Start building the embed
-	const inventoryEmbed = new EmbedBuilder()
-		.setColor(0x0099ff)
-		.setTitle(`${user.username}'s Inventory`)
-		.setThumbnail(user.displayAvatarURL())
+	// Send the initial page
+	const embed = createInventoryPage(inventoryItems, pageIndex * itemsPerPage, itemsPerPage, mentionedUser)
+	const row = new ActionRowBuilder().addComponents(
+		new ButtonBuilder()
+			.setCustomId("previous")
+			.setLabel("Previous")
+			.setStyle(ButtonStyle.Secondary)
+			.setDisabled(true),
+		new ButtonBuilder()
+			.setCustomId("next")
+			.setLabel("Next")
+			.setStyle(ButtonStyle.Secondary)
+			.setDisabled(inventoryItems.length <= itemsPerPage)
+	)
 
-	// Add each inventory item to the embed
-	inventoryItems.forEach(item => {
-		inventoryEmbed.addFields({ name: `${item.name} (x${item.quantity})`, value: item.description, inline: true })
+	const message = await interaction.editReply({ embeds: [embed], components: [row] })
+
+	// Button collector for page navigation
+	const collector = message.createMessageComponentCollector({ time: 60000 })
+	collector.on("collect", async i => {
+		// Check if the interaction user is the command issuer or the mentioned user's inventory they are viewing
+		if (i.user.id === interaction.user.id || (mentionedUser && i.user.id === mentionedUser.id)) {
+			if (i.customId === "next" && (pageIndex + 1) * itemsPerPage < inventoryItems.length) {
+				pageIndex++
+			} else if (i.customId === "previous" && pageIndex > 0) {
+				pageIndex--
+			}
+
+			const newEmbed = createInventoryPage(inventoryItems, pageIndex * itemsPerPage, itemsPerPage, mentionedUser)
+			const newRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId("previous")
+					.setLabel("Previous")
+					.setStyle(ButtonStyle.Secondary)
+					.setDisabled(pageIndex === 0),
+				new ButtonBuilder()
+					.setCustomId("next")
+					.setLabel("Next")
+					.setStyle(ButtonStyle.Secondary)
+					.setDisabled((pageIndex + 1) * itemsPerPage >= inventoryItems.length)
+			)
+
+			await i.update({ embeds: [newEmbed], components: [newRow] })
+		} else {
+			// If someone else tries to interact who is not the command issuer or the mentioned user, inform them.
+			await i.reply({ content: "You cannot control this inventory navigation.", ephemeral: true })
+		}
 	})
-
-	// Check if the inventory is empty
-	if (inventoryItems.length === 0) {
-		inventoryEmbed.setDescription("Your inventory is empty.")
-	}
-
-	// Send the embed as the interaction response
-	await interaction.editReply({ embeds: [inventoryEmbed] })
 }
+
 // Dig Command
-export async function handleDigcommand(interaction: ChatInputCommandInteraction) {
+export async function handleDigCommand(interaction) {
 	await interaction.deferReply()
 
 	const currentTime = Date.now()
 	const authorId = interaction.user.id
 	const timestamp = digCooldowns.get(authorId)
 
-	// Check cooldown
+	// Check cooldown, incorporating a themed message
 	if (timestamp) {
 		const expirationTime = timestamp + digCooldown
 		if (currentTime < expirationTime && !digCooldownBypassIDs.includes(authorId)) {
-			// User is on cooldown, send a message
+			// User is on cooldown, send a themed message
 			const digCooldownEmbed = new EmbedBuilder()
-				.setColor(0xff0000) // Red color for error
-				.setTitle("Digging Cooldown")
+				.setColor(0x4b0082) // Red color for alert
+				.setTitle("Energy Recharge Needed")
 				.setTimestamp()
 				.setDescription(
-					`You need to wait before using the \`.dig\` command again. You can dig again <t:${Math.floor(
+					`You've recently tapped into your energy. Please wait a bit before your next dig <t:${Math.floor(
 						expirationTime / 1000
 					)}:R>.`
 				)
@@ -195,39 +228,46 @@ export async function handleDigcommand(interaction: ChatInputCommandInteraction)
 	// User is not on cooldown, or has bypassed it; update the cooldown
 	digCooldowns.set(authorId, currentTime)
 
-	// The command logic
+	// Determine if an item is found based on a chance
+	const itemDiscoveryChance = 0.5 // 30% chance to discover an item
+	const doesDiscoverItem = Math.random() < itemDiscoveryChance
+
+	// The command logic for finding coins
 	const coinsFound = Math.floor(Math.random() * 20000) + 1
 	await updateBalance(interaction.user.id, coinsFound)
 
-	// The logic for finding an item
-	const itemFound = getRandomItem()
-	if (itemFound) {
-		// Create item
-		let fkingItem = await getItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`)
-		if (!fkingItem) {
-			fkingItem = await addItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`, itemFound.price)
+	if (doesDiscoverItem) {
+		// Logic for finding an item
+		const itemFound = getRandomItem() // Simulate finding a random item
+		let item = await getItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`)
+
+		if (!item) {
+			item = await addItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`, itemFound.price)
 		}
 
-		// do they already have this item
-		const hasFkingItem = await userHasItem(authorId, fkingItem.id)
-		if (hasFkingItem) {
-			await incrementInventoryItemQuantity(authorId, fkingItem.id)
+		const hasItem = await userHasItem(authorId, item.id)
+		if (hasItem) {
+			await incrementInventoryItemQuantity(authorId, item.id)
 		} else {
-			// Give item to user
-			await giveItemToUser(authorId, fkingItem.id)
+			await giveItemToUser(authorId, item.id)
 		}
 
-		// Give item to user
-
-		const randomdigs = randomdig2[Math.floor(Math.random() * randomdig2.length)]
-		// Create the response embed
+		// Create the response embed for finding an item
 		const digEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Gold color
+			.setColor(0x00ff00) // Green color for success
 			.setTitle("Digging Results")
-			.setDescription(`You ${randomdigs} \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`)
+			.setDescription(`You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`)
 			.setTimestamp()
 
-		// Send the embed response
+		await interaction.editReply({ embeds: [digEmbed] })
+	} else {
+		// Create the response embed for not finding an item
+		const digEmbed = new EmbedBuilder()
+			.setColor(0x00ff00) // Green color for success
+			.setTitle("Digging Results")
+			.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
+			.setTimestamp()
+
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
 }
@@ -321,7 +361,7 @@ export async function handleRegistercommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 		const result = await addUser(discordId)
-		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
+		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg" // Replace with your image URL
 
 		// Create the embed with a concise message
 		const welcomeEmbed = new EmbedBuilder()
@@ -341,7 +381,7 @@ export async function handleRegistercommand(interaction: ChatInputCommandInterac
 	} catch (error) {
 		console.error("Error registering user:", error)
 		await interaction.reply({
-			content: "There was an error registering you, or you are already registered",
+			content: "There was an error registering you, Or you are already registered!",
 			ephemeral: true
 		})
 	}
@@ -932,6 +972,94 @@ async function handleFightLogic(
 	return resultMessage
 }
 
+// command to dm a user
+export async function handleDmCommand(interaction: ChatInputCommandInteraction) {
+	const user = interaction.options.getUser("user")
+	const message = interaction.options.getString("message")
+
+	try {
+		await user.send(message)
+		await interaction.reply({ content: `Message sent to ${user.tag}.` })
+	} catch (error) {
+		console.error("Failed to send message:", error)
+		await interaction.reply({ content: "Failed to send the message.", ephemeral: true })
+	}
+}
+
+// test
+
+export async function handleShopCommand(interaction) {
+	const items = await getShopItems()
+
+	// Create a simple embed
+	const shopEmbed = new EmbedBuilder()
+		.setTitle("Welcome to the Shop")
+		.setDescription("Select an item from the dropdown to view details and purchase.")
+
+	const options = items.map(item => ({
+		label: `${item.name} - ${item.price}`,
+		description: item.description.substring(0, 50) + "...",
+		value: item.id.toString()
+	}))
+
+	const selectMenu = new ActionRowBuilder().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("select-item")
+			.setPlaceholder("Select an item to buy")
+			.addOptions(options)
+	)
+
+	await interaction.reply({
+		embeds: [shopEmbed],
+		components: [selectMenu]
+	})
+}
+export async function handleSelectMenuInteraction(interaction) {
+	console.log("Select menu interaction is happening.")
+	if (!interaction.isSelectMenu()) return
+
+	if (interaction.customId === "select-item") {
+		const itemId = interaction.values[0]
+		const userId = interaction.user.id
+
+		console.log(`User ${userId} has selected item ${itemId}`)
+
+		try {
+			// faggot
+			const items = await getShopItems()
+			const item = items.find(item => item.id.toString() === itemId)
+			const itemPrice = item.price
+			const userBalance = await getBalance(userId)
+
+			console.log(`${userBalance} ${itemPrice}`)
+
+			if (userBalance >= itemPrice) {
+				await addItemToUserInventory(userId, itemId)
+				console.log(`User ${userId} has purchased item ${itemId}`)
+				await updateBalance(userId, -itemPrice)
+				console.log(`User ${userId} has been charged ${itemPrice} coins`)
+			}
+
+			const shopEmbed = new EmbedBuilder()
+				.setTitle("Welcome to the Shop")
+				.setDescription("You have successfully purchased the item!")
+			await interaction.update({
+				embeds: [shopEmbed.setDescription("You have successfully purchased the item!")],
+				components: []
+			})
+		} catch (error) {
+			console.error("Error during purchase process:", error)
+			await interaction.update({
+				content: "An error occurred during purchase. Please try again later.",
+				ephemeral: true
+			})
+		}
+	} else {
+		// next
+	}
+}
+
+// test getDomain function in embed
 export async function HandleCheckDomainCommand(interaction) {
 	// Immediately acknowledge the interaction
 	await interaction.deferReply()
@@ -1066,7 +1194,7 @@ export async function addXP(userId: string, xpAdded: number): Promise<{ newXP: n
 		newGrade = !["Special Grade", "Grade 1"].includes(user.grade) ? "Grade 1" : user.grade
 	} else if (newXP >= 750) {
 		// Progress to Semi-Grade 1 if below this grade
-		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1"].includes(user.grade) ? "Semi-Grade 1" : user.grade
+		newGrade = !["Special Grade", "1", "Semi-Grade 1"].includes(user.grade) ? "Semi-Grade 1" : user.grade
 	} else if (newXP >= 500) {
 		// Progress to Grade 2 if below this grade
 		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"].includes(user.grade)
@@ -1087,4 +1215,139 @@ export async function addXP(userId: string, xpAdded: number): Promise<{ newXP: n
 
 	console.log(`User ${userId} updated: New XP is ${newXP}, New Grade is ${newGrade}`)
 	return { newXP, newGrade }
+}
+
+// Initialize the search counter
+const userSearching = new Map<
+	string,
+	{
+		searchCount: number
+		riskFactor: number
+		coinsFound: number
+	}
+>()
+
+export async function handleSearchCommand(interaction: ChatInputCommandInteraction<CacheType>) {
+	console.log(`Received search command from ${interaction.user.tag}.`)
+	await interaction.deferReply()
+
+	// Reset risk at the start of each new search session
+	userSearching.set(interaction.user.id, {
+		searchCount: 0,
+		riskFactor: 0,
+		coinsFound: 0
+	})
+
+	const searchLocation = getRandomLocation() // Assuming this function returns a string describing the location
+
+	const searchEmbed = new EmbedBuilder()
+		.setColor(0x00ff00)
+		.setTitle("Search Begins")
+		.setDescription(`Beginning your search in ${searchLocation}. The air grows heavier...`)
+		.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
+
+	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("continue_search").setLabel("Continue Searching").setStyle(ButtonStyle.Success),
+		new ButtonBuilder().setCustomId("end_search").setLabel("End Search").setStyle(ButtonStyle.Danger)
+	)
+
+	await interaction.editReply({ embeds: [searchEmbed], components: [row] })
+
+	const collector = interaction.channel.createMessageComponentCollector({
+		filter: inter => inter.user.id === interaction.user.id,
+		time: 60000
+	})
+
+	collector.on("collect", async inter => {
+		console.log(`Button clicked by ${inter.user.tag}: ${inter.customId}`)
+		await inter.deferUpdate()
+
+		if (inter.customId === "continue_search") {
+			const coinsFoundThisSearch = Math.floor(Math.random() * 20000) + 1 // Coins found in this specific search
+
+			userSearching.set(inter.user.id, {
+				...userSearching.get(inter.user.id),
+				coinsFound: userSearching.get(inter.user.id).coinsFound + coinsFoundThisSearch
+			})
+
+			// Calculate the chance of finding a cursed spirit
+			const encounterChance = Math.random() < userSearching.get(interaction.user.id).riskFactor
+			if (encounterChance) {
+				console.log(`Cursed spirit encountered. Attempting to respond to ${interaction.user.tag}.`)
+
+				await interaction.followUp({
+					content: "zzzz",
+					ephemeral: true
+				})
+
+				userSearching.delete(interaction.user.id) // Remove the user from the search map
+
+				return
+			}
+
+			const theirSearchCount = userSearching.get(inter.user.id).searchCount
+			console.log(`Search count for ${inter.user.tag}: ${theirSearchCount}`)
+
+			if (theirSearchCount < 2) {
+				userSearching.set(inter.user.id, {
+					...userSearching.get(inter.user.id),
+					searchCount: theirSearchCount + 1,
+					riskFactor: userSearching.get(inter.user.id).riskFactor + 0.6
+				})
+
+				// Embed for search results
+				const searchEmbed = new EmbedBuilder()
+					.setColor(0x00ff00)
+					.setTitle("Search Continues")
+					.setDescription(
+						`Continuing your search in ${searchLocation}, you find \`⌬${coinsFoundThisSearch}\` coins. The air grows heavier...`
+					)
+					.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
+
+				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
+
+				//await continueSearch(inter, riskFactor)
+			} else {
+				const coinsFound = userSearching.get(inter.user.id).coinsFound
+
+				// final embed but not so final
+				const finalEmbed = new EmbedBuilder()
+					.setColor("#0099ff")
+					.setTitle("Search Completed")
+					.setDescription(`You've finished your searching. You gathered a total of ${coinsFound} coins.`)
+					.setTimestamp()
+
+				await inter.editReply({
+					content: "Your search has concluded.",
+					embeds: [finalEmbed],
+					components: []
+				})
+
+				collector.stop()
+			}
+		} else if (inter.customId === "end_search") {
+			console.log(`End search button clicked by ${inter.user.tag}`)
+
+			const coinsFoundInTheEnd = userSearching.get(inter.user.id).coinsFound
+			updateBalance(inter.user.id, coinsFoundInTheEnd)
+
+			// embed 2
+			const finalEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Search Ended")
+				.setDescription("You end your search, returning with your findings. Wise choice.")
+				.setFooter({ text: `Total coins found: **${coinsFoundInTheEnd}**` }) // Reflect the total coins found
+				.setTimestamp()
+
+			await inter.editReply({
+				content: null,
+				embeds: [finalEmbed],
+				components: []
+			})
+
+			userSearching.delete(inter.user.id) // Remove the user from the search map
+
+			collector.stop()
+		}
+	})
 }

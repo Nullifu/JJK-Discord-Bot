@@ -17,13 +17,14 @@ import {
 	handleBalanceCommand,
 	handleCraftCommand,
 	handleDailyCommand,
-	handleDigcommand,
+	handleDigCommand,
 	handleFightCommand,
 	handleInventoryCommand,
 	handleJujutsuCommand,
 	handleLookupCommand,
 	handleProfileCommand,
 	handleRegistercommand,
+	handleSearchCommand,
 	handleStatusCommand,
 	handleWorkCommand,
 	useCommand
@@ -272,7 +273,7 @@ client.on("interactionCreate", async interaction => {
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
 	if (commandName === "dig") {
-		await handleDigcommand(chatInputInteraction)
+		await handleDigCommand(chatInputInteraction)
 	}
 })
 client.on("interactionCreate", async interaction => {
@@ -367,6 +368,15 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "domain_status") {
 		await HandleCheckDomainCommand(chatInputInteraction)
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "search") {
+		await handleSearchCommand(chatInputInteraction)
 	}
 })
 

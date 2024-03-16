@@ -941,3 +941,17 @@ export async function updateUserXPandGrade(id: string, newXP: number, newGrade: 
 		})
 	})
 }
+
+// get skills from database
+export async function getSkills(): Promise<{ id: number; name: string; description: string; image_url: string }[]> {
+	return new Promise((resolve, reject) => {
+		const sql = "SELECT technique FROM users WHERE id = ?"
+		connection.query(sql, (err, results) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve(results)
+			}
+		})
+	})
+}
