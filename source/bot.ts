@@ -126,9 +126,15 @@ const prefix = "g"
 // Cooldown management
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
+//
 export const digCooldowns = new Map()
 export const digCooldown = 60 * 1000 // 60 seconds in milliseconds
 export const digCooldownBypassIDs = [""] // IDs that can bypass cooldown
+//
+export const searchCooldowns = new Map()
+export const searchCooldown = 60 * 1000 // 60 seconds in milliseconds
+export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
+//
 export const randomdig2 = [
 	"Burrowed",
 	"Found",

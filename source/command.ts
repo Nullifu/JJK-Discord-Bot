@@ -23,7 +23,17 @@ import {
 	StringSelectMenuBuilder
 } from "discord.js"
 import { attacks, chooseRandomAttackForBossBasedOnProbability } from "./attacks.js"
-import { COOLDOWN_TIME, digCooldown, digCooldownBypassIDs, digCooldowns, userLastDaily, workCooldowns } from "./bot.js"
+import {
+	COOLDOWN_TIME,
+	digCooldown,
+	digCooldownBypassIDs,
+	digCooldowns,
+	searchCooldown,
+	searchCooldownBypassIDs,
+	searchCooldowns,
+	userLastDaily,
+	workCooldowns
+} from "./bot.js"
 import {
 	calculateDamage,
 	calculateGradeFromExperience,
@@ -1230,6 +1240,31 @@ const userSearching = new Map<
 export async function handleSearchCommand(interaction: ChatInputCommandInteraction<CacheType>) {
 	console.log(`Received search command from ${interaction.user.tag}.`)
 	await interaction.deferReply()
+	const currentTime = Date.now()
+	const authorId = interaction.user.id
+	const timestamp = searchCooldowns.get(authorId)
+
+	// Check cooldown, incorporating a themed message
+	if (timestamp) {
+		const expirationTime = timestamp + searchCooldown
+		if (currentTime < expirationTime && !searchCooldownBypassIDs.includes(authorId)) {
+			// User is on cooldown, send a themed message
+			const searchCooldownEmbed = new EmbedBuilder()
+				.setColor(0x4b0082) // Red color for alert
+				.setTitle("Energy Recharge Needed")
+				.setTimestamp()
+				.setDescription(
+					`You've recently tapped into your energy. Please wait a bit before your next search <t:${Math.floor(
+						expirationTime / 1000
+					)}:R>.`
+				)
+			await interaction.editReply({ embeds: [searchCooldownEmbed] })
+			return // Stop further execution to prevent cooldown reset
+		}
+	}
+
+	// User is not on cooldown, or has bypassed it; update the cooldown
+	searchCooldowns.set(authorId, currentTime)
 
 	// Reset risk at the start of each new search session
 	userSearching.set(interaction.user.id, {
