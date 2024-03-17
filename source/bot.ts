@@ -165,6 +165,7 @@ const commands = [
 	new SlashCommandBuilder().setName("domain_status").setDescription("Domain Status"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight a random opponent!"),
 	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu Stats"),
+	new SlashCommandBuilder().setName("search").setDescription("Search for items or money!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("status").setDescription("Bot Status!"),
 	new SlashCommandBuilder().setName("balance").setDescription("Balance"),
