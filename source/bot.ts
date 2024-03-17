@@ -163,8 +163,6 @@ const commands = [
 		),
 	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
 	new SlashCommandBuilder().setName("domain_status").setDescription("Domain Status"),
-	new SlashCommandBuilder().setName("quest").setDescription("Profile"),
-	new SlashCommandBuilder().setName("shop").setDescription("Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight a random opponent!"),
 	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu Stats"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),

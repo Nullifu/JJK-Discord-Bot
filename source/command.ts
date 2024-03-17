@@ -1279,7 +1279,7 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 		.setColor(0x00ff00)
 		.setTitle("Search Begins")
 		.setDescription(`Beginning your search in ${searchLocation}. The air grows heavier...`)
-		.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
+		.setFooter({ text: "Risk of encountering a cursed spirit increases with each search.  +20%" })
 
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setCustomId("continue_search").setLabel("Continue Searching").setStyle(ButtonStyle.Success),
@@ -1310,13 +1310,18 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 			if (encounterChance) {
 				console.log(`Cursed spirit encountered. Attempting to respond to ${interaction.user.tag}.`)
 
-				await interaction.followUp({
-					content: "zzzz",
-					ephemeral: true
+				const spiritEmbed = new EmbedBuilder()
+					.setColor("DarkRed")
+					.setTitle("You have perished!")
+					.setDescription("While searching, you encounter a powerful cursed spirit and meet a grim fate...")
+					.setFooter({ text: "You've lost everything you found! Better luck next time." })
+
+				await interaction.editReply({
+					embeds: [spiritEmbed],
+					components: [] // Remove buttons
 				})
 
 				userSearching.delete(interaction.user.id) // Remove the user from the search map
-
 				return
 			}
 
@@ -1327,7 +1332,7 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 				userSearching.set(inter.user.id, {
 					...userSearching.get(inter.user.id),
 					searchCount: theirSearchCount + 1,
-					riskFactor: userSearching.get(inter.user.id).riskFactor + 0.6
+					riskFactor: userSearching.get(inter.user.id).riskFactor + 0.2
 				})
 
 				// Embed for search results
