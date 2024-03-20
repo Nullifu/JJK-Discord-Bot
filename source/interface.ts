@@ -1,36 +1,25 @@
-export interface UserSlapCount {
-	userId: string
-	count: number
-}
-
-export interface BossData {
-	id: number
-	name: string
-	max_health: number
-	current_health: number
-	image_url: string
-	difficulty_tier: number
-	drops: {
-		itemName: string
-		dropChance: number // percentage
-	}[]
-}
-
-export interface QuestData {
+export interface Item {
 	id: number
 	name: string
 	description: string
-	curse_name: string
-	grade_xp_reward: number
-	difficulty?: string // If difficulty is optional
+	price: number
 }
 
-export interface CurseData {
-	id: number
+export interface UserProfile {
+	balance: number
+	experience: number
+	grade: string
+	domain?: string | null
+	job: string
+	activeTitle: string
+}
+
+export interface BossData {
+	id?: string // Making `id` optional if it's not always available
 	name: string
-	health: number
-	strength: number
-	// ... add other properties as needed
+	max_health: number
+	current_health: number // Note the underscore and lowercase
+	image_url: string // Note the underscore and lowercase
 }
 
 export interface Item {
@@ -40,30 +29,52 @@ export interface Item {
 	price: number
 }
 
-// Define information about the items
-export const domain1Details = {
-	six_eyes: {
-		title: "Idle Deaths Gamble",
-		description: "In the 4 minutes and 11 seconds..",
-		footer: "Let's gamble!",
-		imagePath: "./image/sixeyes.png"
-	},
-	prison_realm: {
-		title: "Unlimited Void ",
-		description: " Considered the strongest Domain Expansion,",
-		footer: "You've already lost",
-		imagePath: "./image/prisonrealm.png"
-	},
-	sukuna_finger: {
-		title: "Chimera Shadow Garden",
-		description: "Amplifies the ten shadows technique.",
-		footer: "You cannot stop my technique now",
-		imagePath: "./image/sukunafinger.png"
-	},
-	distorted_soul: {
-		title: "Malevolent Shrine",
-		description: "The Malevolent Shrine is an embodiment of the users overwhealming power",
-		footer: "I'll show you real jujutsu",
-		imagePath: "./image/soul.png"
+export interface InventoryItem {
+	name: string
+	quantity: number
+}
+
+export interface User {
+	id: string // Assuming 'id' is the field you use to identify users.
+	inventory: InventoryItem[]
+	balance: number
+	experience: number
+	grade: string
+	domain?: string | null
+	job: string
+	activeTitle: string
+}
+
+export interface Item {
+	id: number
+	name: string
+	description: string
+	price: number
+}
+
+export const formatDomainExpansion = domain => {
+	if (domain && typeof domain === "object" && domain.name) {
+		return `Name: ${domain.name}`
+	}
+	return "Not unlocked 🔒"
+}
+
+export interface Achievement {
+	name: string
+	description: string
+	reward: string
+}
+
+export function determineDomainAchievements(domainName) {
+	// Example - hardcoded for simplicity, you'll need your real logic here
+	switch (domainName) {
+		case "Idle Deaths Gamble":
+			return ["unlockIdleDeathsGamble"]
+		case "Unlimited Void":
+			return ["unlockUnlimitedVoid"]
+		case "Malevolent Shrine":
+			return ["unlockMalevolentShrine"]
+		default:
+			return []
 	}
 }

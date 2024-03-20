@@ -1,153 +1,161 @@
 let contextKey: string
-interface Opponent {
-	name: string
-	current_health: number
-	max_health: number
-}
-import { setTimeout } from "node:timers/promises"
 
+import { SelectMenuBuilder } from "@discordjs/builders"
 import {
 	ActionRowBuilder,
-	AttachmentBuilder,
 	ButtonBuilder,
 	ButtonInteraction,
 	ButtonStyle,
 	CacheType,
 	ChatInputCommandInteraction,
-	Colors,
+	CommandInteraction,
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
-	SelectMenuBuilder,
-	SelectMenuInteraction,
-	StringSelectMenuBuilder
+	SelectMenuInteraction
 } from "discord.js"
-import { attacks, chooseRandomAttackForBossBasedOnProbability } from "./attacks.js"
-import {
-	COOLDOWN_TIME,
-	digCooldown,
-	digCooldownBypassIDs,
-	digCooldowns,
-	searchCooldown,
-	searchCooldownBypassIDs,
-	searchCooldowns,
-	userLastDaily,
-	workCooldowns
-} from "./bot.js"
+import { attacks } from "./attacks.js"
+import { digCooldown, digCooldownBypassIDs, digCooldowns, userLastDaily } from "./bot.js"
 import {
 	calculateDamage,
-	calculateGradeFromExperience,
+	calculateEarnings,
 	createInventoryPage,
+	getBossDrop,
+	getRandomAmount,
 	getRandomLocation,
 	getRandomXPGain
 } from "./calculate.js"
-import { BossData } from "./interface.js"
-import { getRandomItem } from "./items jobs.js"
+import { BossData, determineDomainAchievements, formatDomainExpansion } from "./interface.js"
+import { DOMAIN_EXPANSIONS, allAchievements, craftingRecipes, dailyitems, getRandomItem, jobs } from "./items jobs.js"
 import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
-	addItem,
 	addItemToUserInventory,
 	addUser,
-	getAllBossesFromDatabase,
+	awardTitlesForAchievements,
 	getBalance,
-	getDomain,
-	getDomainFight,
-	getItem,
-	getItems,
-	getPlayerGradeFromDatabase,
-	getPlayerHealth,
-	getShopItems,
+	getBosses,
+	getUserAchievements,
+	getUserDomain,
+	getUserGrade,
+	getUserHealth,
 	getUserInventory,
 	getUserProfile,
-	giveItemToUser,
-	incrementInventoryItemQuantity,
-	removeItemFromUser,
+	getUserUnlockedTitles,
+	removeItemFromUserInventory,
 	updateBalance,
-	updateBossHealth,
-	updateExperience,
-	updatePlayerHealth,
-	updateUserXPandGrade,
-	userHasItem
-} from "./mysql.js"
-// Profile Command
+	updatePlayerGrade,
+	updateUserAchievements,
+	updateUserDomainExpansion,
+	updateUserExperience,
+	updateUserHealth,
+	updateUserJob,
+	updateUserTitle
+} from "./mongodb.js"
+
 const domainActivationState = new Map()
-// Assuming you have types defined for these:
-export interface UserProfile {
-	balance: number
-	experience: number
-	jujutsu: number
-	grade: string
-	health: number
+const userJobCooldowns = new Map()
+const userDailyStreak = new Map() // Tracks the number of consecutive daily claims
+const bossHealthMap = new Map() // Create a Map to store boss health per user
+
+export const searchCooldowns = new Map()
+export const searchCooldown = 60 * 1000 // 60 seconds in milliseconds
+export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
+//
+
+export async function handleRegisterCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	try {
+		const discordId = interaction.user.id
+		const result = await addUser(discordId)
+
+		// 'addUser' will return an object with 'insertedId' if insertion was successful,
+		// or an object with 'error' if the user already exists.
+		if (result && "insertedId" in result) {
+			// User was successfully added, create and send the welcome embed
+			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
+			const welcomeEmbed = new EmbedBuilder()
+				.setColor(0x5d2e8c)
+				.setTitle("Jujutsu Registration Complete!")
+				.setDescription(`Welcome, ${interaction.user.toString()}! Your Jujutsu journey begins.`)
+				.setImage(imageURL)
+				.setTimestamp()
+				.setFooter({
+					text: `Are you the strongest because you're ${interaction.user.username}, or are you ${interaction.user.username} because you're the strongest?`
+				})
+
+			await interaction.reply({ embeds: [welcomeEmbed] })
+		} else if (result && "error" in result) {
+			// User already exists in the database, send an already registered message
+			await interaction.reply({
+				content: "It looks like you're already registered!",
+				ephemeral: true
+			})
+		} else {
+			// Some other issue occurred, send an error message
+			await interaction.reply({
+				content: "There was an unexpected issue with your registration.",
+				ephemeral: true
+			})
+		}
+	} catch (error) {
+		console.error("Error registering user:", error)
+		await interaction.reply({
+			content: "There was an error while trying to register you.",
+			ephemeral: true
+		})
+	}
+}
+
+export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
+	await interaction.deferReply()
+	const user = interaction.user
+	const balance = await getBalance(user.id)
+	const cursedCoins = balance.toString() // Consider formatting for readability
+
+	const balanceEmbed = new EmbedBuilder()
+		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
+		.setTitle(`${user.username}'s Cursed Energy`)
+		.setThumbnail(user.displayAvatarURL()) // Ideally, a thematic image here
+		.addFields({ name: "Cursed Coins", value: `${cursedCoins} `, inline: false })
+		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
+		.setTimestamp()
+	await interaction.editReply({ embeds: [balanceEmbed] })
 }
 
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
+
 	// Function to create the profile embed
 	const createProfileEmbed = async userId => {
 		const userProfile = await getUserProfile(userId)
 		if (!userProfile) throw new Error("Profile not found.")
 
+		const domainExpansionValue = formatDomainExpansion(userProfile.domain)
+
 		return new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle(`${interaction.user.username}'s Profile`)
+			.setColor(0x1f6b4e) // Changed to a dark green for thematic consistency
+			.setTitle(`Jujutsu Profile: ${interaction.user.username} 🌀`)
+			.setThumbnail(interaction.user.displayAvatarURL())
 			.addFields(
-				{ name: "**Balance**", value: `\`${userProfile.balance.toString()}\``, inline: true },
-				{ name: "**Experience**", value: userProfile.experience.toString(), inline: true }
+				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: false },
+				{ name: "**Balance** 💰", value: `\`${userProfile.balance.toLocaleString()}\``, inline: false },
+				{ name: "**Experience** ✨", value: userProfile.experience.toLocaleString(), inline: false },
+				{ name: "**Sorcerer Rank** 🏅", value: userProfile.grade || "Unranked", inline: false },
+				{ name: "**Job** 💼", value: userProfile.job || "None", inline: false },
+				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false }
 			)
+			.setFooter({
+				text: "Harness your cursed energy. Update your profile to reflect your growth in the Jujutsu world."
+			})
 	}
 
 	try {
 		const profileEmbed = await createProfileEmbed(userId)
-
-		// Create a button to refresh the profile
-		const refreshButton = new ButtonBuilder()
-			.setCustomId("refreshProfile")
-			.setLabel("Refresh Profile")
-			.setStyle(ButtonStyle.Primary)
-
-		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshButton)
-
-		await interaction.reply({ embeds: [profileEmbed], components: [row] })
-
-		// Create an event listener for button interactions
-		const filter = i => i.customId === "refreshProfile" && i.user.id === userId
-		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 })
-
-		collector.on("collect", async btnInteraction => {
-			if (btnInteraction.customId === "refreshProfile") {
-				try {
-					const newProfileEmbed = await createProfileEmbed(userId)
-					await btnInteraction.update({ embeds: [newProfileEmbed], components: [row] })
-				} catch (error) {
-					console.error("Failed to update user profile:", error)
-					await btnInteraction.reply({
-						content: "There was an error updating your profile.",
-						ephemeral: true
-					})
-				}
-			}
-		})
+		await interaction.reply({ embeds: [profileEmbed] })
 	} catch (error) {
-		console.error("Failed to retrieve user profile:", error)
-		await interaction.reply("There was an error retrieving your profile.")
+		console.error("Error handling profile command:", error)
+		await interaction.reply({ content: "There was an error retrieving your profile.", ephemeral: true })
 	}
 }
-
-// Balance Command
-export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
-	await interaction.deferReply()
-	const user = interaction.user
-	const balance = await getBalance(user.id)
-	const balanceEmbed = new EmbedBuilder()
-		.setColor(0x0099ff)
-		.setTitle(`${user.username}'s Balance`)
-		.setThumbnail(user.displayAvatarURL())
-		.addFields({ name: "Balance", value: balance.toString(), inline: true })
-
-	// Edit the deferred reply with the embed
-	await interaction.editReply({ embeds: [balanceEmbed] })
-}
-// Inventory
 
 export async function handleInventoryCommand(interaction) {
 	await interaction.deferReply()
@@ -155,7 +163,7 @@ export async function handleInventoryCommand(interaction) {
 	// Check for mentioned user in the command, use command issuer if no user is mentioned
 	const mentionedUser = interaction.options.getUser("user") || interaction.user
 	const inventoryItems = await getUserInventory(mentionedUser.id)
-	const itemsPerPage = 5 // Number of items to show per page
+	const itemsPerPage = 10 // Number of items to show per page
 	let pageIndex = 0
 
 	// Send the initial page
@@ -208,7 +216,6 @@ export async function handleInventoryCommand(interaction) {
 	})
 }
 
-// Dig Command
 export async function handleDigCommand(interaction) {
 	await interaction.deferReply()
 
@@ -239,7 +246,7 @@ export async function handleDigCommand(interaction) {
 	digCooldowns.set(authorId, currentTime)
 
 	// Determine if an item is found based on a chance
-	const itemDiscoveryChance = 0.5 // 30% chance to discover an item
+	const itemDiscoveryChance = 0.7 // 50% chance to discover an item
 	const doesDiscoverItem = Math.random() < itemDiscoveryChance
 
 	// The command logic for finding coins
@@ -249,19 +256,9 @@ export async function handleDigCommand(interaction) {
 	if (doesDiscoverItem) {
 		// Logic for finding an item
 		const itemFound = getRandomItem() // Simulate finding a random item
-		let item = await getItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`)
-
-		if (!item) {
-			item = await addItem(itemFound.name, `A \`${itemFound.rarity}\` Item.`, itemFound.price)
+		if (itemFound) {
+			await addItemToUserInventory(authorId, itemFound.name, 1)
 		}
-
-		const hasItem = await userHasItem(authorId, item.id)
-		if (hasItem) {
-			await incrementInventoryItemQuantity(authorId, item.id)
-		} else {
-			await giveItemToUser(authorId, item.id)
-		}
-
 		// Create the response embed for finding an item
 		const digEmbed = new EmbedBuilder()
 			.setColor(0x00ff00) // Green color for success
@@ -281,214 +278,232 @@ export async function handleDigCommand(interaction) {
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
 }
-// uh ima uh ima think ngl
-export async function handleSellCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-	const itemName = interaction.options.getString("item")
-	const quantityToSell = interaction.options.getInteger("quantity") || 1
 
-	if (!itemName) {
-		await interaction.reply({ content: "Please specify an item to sell.", ephemeral: true })
-		return
-	}
+export async function handleJobSelection(interaction: CommandInteraction) {
+	if (!interaction.isChatInputCommand()) return
 
-	const authorId = interaction.user.id
+	const jobOptions = jobs.map(job => ({
+		label: job.name,
+		value: job.name,
+		description: `Experience: ${job.requiredExperience}, Cost: ${job.cost}`
+	}))
 
-	// Fetch all items to get the most up-to-date prices
-	const allItems = await getItems()
-	const itemToSell = allItems.find(item => item.name.toLowerCase() === itemName.toLowerCase())
+	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(
+		new SelectMenuBuilder().setCustomId("select-job").setPlaceholder("No job selected").addOptions(jobOptions)
+	)
 
-	// Validate the item
-	if (!itemToSell) {
-		await interaction.reply({ content: `The item ${itemName} does not exist.`, ephemeral: true })
-		return
-	}
+	await interaction.reply({
+		embeds: [
+			new EmbedBuilder()
+				.setTitle(`${interaction.user.username}, Become a Jujutsu Sorcerer`)
+				.setDescription("Embark on your cursed path. Choose wisely, for your fate hangs in the balance.")
+				.setColor(0x842995)
+		],
+		components: [row],
+		ephemeral: false
+	})
 
-	// Fetch the user's inventory and validate quantity
-	const userInventory = await getUserInventory(authorId)
-	const userItem = userInventory.find(item => item.name.toLowerCase() === itemName.toLowerCase())
-	if (!userItem || userItem.quantity < quantityToSell) {
-		await interaction.reply({ content: `You do not have enough of ${itemName} to sell.`, ephemeral: true })
-		return
-	}
+	// Set up the collector within handleJobSelection
+	const filter = i => i.customId === "select-job" && i.user.id === interaction.user.id
 
-	// Calculate the total sell price using the price from the allItems list
-	const totalSellPrice = itemToSell.price * quantityToSell
+	const collector = interaction.channel.createMessageComponentCollector({
+		filter,
+		componentType: ComponentType.StringSelect
+	})
 
-	// Update the user's balance
-	await updateBalance(authorId, totalSellPrice)
+	collector.on("collect", async (collectedInteraction: SelectMenuInteraction) => {
+		if (collectedInteraction.componentType !== ComponentType.StringSelect) return
+		const selectedJobName = collectedInteraction.values[0]
+		const selectedJob = jobs.find(job => job.name === selectedJobName)
+		const userProfile = await getUserProfile(interaction.user.id)
 
-	// Remove the item from the user's inventory
-	await removeItemFromUser(authorId, userItem.id, quantityToSell)
-	await interaction.deferReply()
+		if (!userProfile || !selectedJob) {
+			await interaction.reply({
+				content: "Error: Your user profile could not be found or job is invalid.",
+				ephemeral: false
+			})
+			return
+		}
 
-	// Construct and send the confirmation embed
-	const sellEmbed = new EmbedBuilder()
-		.setColor(0x00ff00) // Green color for success
-		.setTitle("Item Sold!")
-		.setDescription(`You've sold ${quantityToSell} x ${itemName} for ${totalSellPrice} coins.`)
-		.setTimestamp()
+		if (userProfile.experience < selectedJob.requiredExperience || userProfile.balance < selectedJob.cost) {
+			await interaction.editReply({
+				content: `You do not meet the requirements for the ${selectedJobName} job. Required experience: ${selectedJob.requiredExperience}, Cost: ${selectedJob.cost}`,
+				components: []
+			})
+			return
+		}
 
-	await interaction.editReply({ embeds: [sellEmbed] })
+		const updateSuccess = await updateUserJob(interaction.user.id, selectedJobName)
+		await updateBalance(interaction.user.id, selectedJob.cost * -1)
+		if (!updateSuccess) {
+			await interaction.editReply({
+				content: "Error: Could not update your job. Please try again later.",
+				components: []
+			})
+			return
+		}
+
+		await interaction.editReply({
+			content: `Congratulations! You're now a ${selectedJobName}.`,
+			components: []
+		})
+	})
 }
-// handle work command
+
 export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id
 
-	// Check cooldown
+	const userProfile = await getUserProfile(userId)
+	const currentJobName = userProfile.job || "Student"
+
+	// Find the job object based on the user's current job
+	const currentJob = jobs.find(job => job.name === currentJobName)
+
+	// Ensure we have a valid job object before proceeding
+	if (!currentJob) {
+		await interaction.reply({ content: "Error: Invalid job specified.", ephemeral: true })
+		return
+	}
+
 	const currentTime = Date.now()
-	const lastWorkTime = workCooldowns.get(userId) || 0
-	if (currentTime - lastWorkTime < COOLDOWN_TIME) {
-		// User is still on cooldown
-		const timeLeft = (lastWorkTime + COOLDOWN_TIME - currentTime) / 1000 // Time left in seconds
+
+	// Initialize cooldown tracking for the user if it doesn't exist
+	if (!userJobCooldowns.has(userId)) {
+		userJobCooldowns.set(userId, {})
+	}
+
+	const userCooldowns = userJobCooldowns.get(userId)
+
+	// Get the last work time for the current job, or 0 if it's the first time
+	const lastWorkTime = userCooldowns[currentJobName] || 0
+
+	if (currentTime - lastWorkTime < currentJob.cooldown) {
+		// Calculate the end of the cooldown period for messaging
+		const endCooldownTime = Math.floor((lastWorkTime + currentJob.cooldown) / 1000)
 		await interaction.reply({
-			content: `You must wait ${timeLeft.toFixed(0)} more seconds before you can work again.`,
+			content: `You're too tired to work as a ${currentJobName} right now. You can work again <t:${endCooldownTime}:R>.`,
 			ephemeral: true
 		})
 		return
 	}
 
-	// Update cooldown
-	workCooldowns.set(userId, currentTime)
-
-	// Calculate earnings (example: random amount between 10 and 100)
-	const earnings = Math.floor(Math.random() * (50000 - 1000 + 1)) + 10
+	// fag
+	const earnings = calculateEarnings(userProfile)
+	const experienceGain = getRandomAmount(20, 50) // Random experience gain between 20 and 50
 
 	// Update user balance
 	await updateBalance(userId, earnings)
+	await updateUserExperience(userId, experienceGain)
+	await updatePlayerGrade(interaction.user.id) // Update the player's grade based on new XP
 
-	// Create and send an embed
-	const workEmbed = new EmbedBuilder()
+	// Set new cooldown
+	userCooldowns[currentJobName] = currentTime
+	userJobCooldowns.set(userId, userCooldowns)
+
+	// Reply with the earnings
+	const embed = new EmbedBuilder()
 		.setColor(0x00ff00)
 		.setTitle("Work Completed")
-		.setDescription(`You worked hard and earned **${earnings}** coins!`)
+		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings}** coins!`)
 		.setTimestamp()
-		.setFooter({ text: "more you slave away the more prone you are to death" })
 
-	await interaction.reply({ embeds: [workEmbed] })
+	await interaction.reply({ embeds: [embed] })
 }
-// register
-export async function handleRegistercommand(interaction: ChatInputCommandInteraction): Promise<void> {
-	try {
-		const discordId = interaction.user.id
-		const result = await addUser(discordId)
-		const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg" // Replace with your image URL
 
-		// Create the embed with a concise message
-		const welcomeEmbed = new EmbedBuilder()
-			.setColor(0x5d2e8c) // A thematic purple, for a mystical vibe
-			.setTitle("Jujutsu Registration Complete!")
-			.setDescription(`Welcome, ${interaction.user.toString()}! Your Jujutsu journey begins.`) // Concise welcome message
-			.setImage(imageURL)
-			.setTimestamp()
-			.setFooter({
-				text: `Are you the strongest because you're ${interaction.user.username}, or are you ${interaction.user.username} because you're the strongest?`
-			})
-
-		// Reply with the embed
-		await interaction.reply({ embeds: [welcomeEmbed] })
-
-		console.log(result)
-	} catch (error) {
-		console.error("Error registering user:", error)
-		await interaction.reply({
-			content: "There was an error registering you, Or you are already registered!",
-			ephemeral: true
-		})
-	}
-}
-//daily
 export async function handleDailyCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id
 	const currentTime = Date.now()
-	const oneDayMs = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+	const oneDayMs = 24 * 60 * 60 * 1000
+	const baseReward = 100000
+	const streakBonus = 2500
 
 	// Check if the user is on cooldown
 	const lastDailyTime = userLastDaily.get(userId) || 0
 	if (currentTime - lastDailyTime < oneDayMs) {
-		// User is still on cooldown
-		const timeLeft = (lastDailyTime + oneDayMs - currentTime) / 1000 // Time left in seconds
+		// Calculate when the user can next claim their daily reward, in seconds, rounded down
+		const nextAvailableTime = Math.floor((lastDailyTime + oneDayMs) / 1000) // Convert to seconds for the Discord timestamp
+
 		await interaction.reply({
-			content: `You must wait ${timeLeft.toFixed(0)} more seconds before you can claim your daily reward again.`,
+			content: `You must wait before you can claim your daily reward again. You can claim it again <t:${nextAvailableTime}:R>.`,
 			ephemeral: true
 		})
 		return
 	}
 
-	// Update cooldown
+	// Calculate streak
+	const lastStreak = userDailyStreak.get(userId) || 0
+	const streak = currentTime - lastDailyTime < oneDayMs * 2 ? lastStreak + 1 : 1
+
+	// Calculate coins reward based on streak
+	const coinsReward = baseReward + streakBonus * (streak - 1)
+
+	// Update cooldown and streak
 	userLastDaily.set(userId, currentTime)
+	userDailyStreak.set(userId, streak)
 
-	// Calculate daily reward (you can adjust this as needed)
-	const coinsReward = 125000 // For example, 100 coins
+	// Update user balance and possibly inventory for the item
 	await updateBalance(userId, coinsReward)
+	// Assuming you have a function like this to add items to the user's inventory
+	const randomItemIndex = Math.floor(Math.random() * dailyitems.length)
+	const dailyItem = dailyitems[randomItemIndex]
+	await addItemToUserInventory(userId, dailyItem.name, 1)
 
-	// Create and send the confirmation embed
+	// Create and send the confirmation embed, including the item reward
 	const dailyEmbed = new EmbedBuilder()
-		.setColor(0x00ff00) // Green color for success
-		.setTitle("Daily Reward Claimed!")
-		.setThumbnail("https://i.pinimg.com/736x/8f/90/56/8f9056043d8ea491aab138f1a005599d.jpg")
-		.setDescription(`You've claimed your daily reward of **${coinsReward}!**`)
+		.setColor(0x1f8b4c) // A more distinct green color
+		.setTitle("🎁 Daily Reward Claimed! 🎁")
+		.setThumbnail("https://i.pinimg.com/736x/8f/90/56/8f9056043d8ea491aab138f1a005599d.jpg") // Make sure this URL points to a relevant, visually appealing image
+		.addFields(
+			{ name: "Coins Awarded", value: `**${coinsReward.toLocaleString()} coins** 💰`, inline: true },
+			{ name: "Special Item", value: `**${dailyItem.name}** 🗝️`, inline: true },
+			{ name: "Streak", value: `**${streak}** day(s) 🔥`, inline: false }
+		)
+		.setDescription(
+			"Congratulations on claiming your daily reward! Keep coming back every day for even bigger rewards."
+		)
+		.setFooter({ text: "Pro tip: Daily streaks increase your rewards!" })
 		.setTimestamp()
-		.setFooter({ text: "I LOVE MONEY" })
 
 	await interaction.reply({ embeds: [dailyEmbed] })
 }
-// craft
+
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
 	const selectedItem = interaction.options.getString("item")
 
 	try {
-		// Fetch the user's inventory
 		const userInventory = await getUserInventory(interaction.user.id)
+		const selectedItemRecipe = craftingRecipes[selectedItem.replace(" ", "_").toLowerCase()] // Adjust as necessary for key naming conventions
 
-		let requiredItemName, requiredQuantity, craftedItemId, requiredMaterialId
-		// Determine the crafting requirements based on the selected item
-		switch (selectedItem) {
-			case "prison_realm":
-				requiredItemName = "Prison Realm Fragment"
-				requiredQuantity = 6
-				craftedItemId = 80 // Replace with the actual item ID for the Prison Realm
-				requiredMaterialId = 78 // The actual material ID needed for the operation
-				break
-			case "six_eyes":
-				requiredItemName = "Rikugan Eye"
-				requiredQuantity = 6
-				craftedItemId = 82 // Replace with the actual item ID for the Six Eyes
-				requiredMaterialId = 81 // The actual material ID needed for the operation
-				break
-			case "jogos_balls":
-				requiredItemName = "Jogos left testicle"
-				requiredQuantity = 2
-				craftedItemId = 100 // Replace with the actual item ID for the Jogos Balls
-				requiredMaterialId = 99 // The actual material ID needed for the operation
-				break
-			default:
-				await interaction.reply({ content: "Invalid item selected.", ephemeral: true })
-				return
-		}
-
-		// Find the required item in the inventory
-		console.log(`Required Material ID: ${requiredMaterialId}, Required Quantity: ${requiredQuantity}`)
-		const item = userInventory.find(invItem => invItem.id === requiredMaterialId)
-		// Check if the user has enough of the required item
-		console.log(`Inventory for Material ID ${requiredMaterialId}:`, item)
-		if (!item || item.quantity < requiredQuantity) {
-			await interaction.reply(
-				`You do not have enough ${requiredItemName} to craft a ${selectedItem.replace("_", " ")}.`
-			)
+		if (!selectedItemRecipe) {
+			await interaction.reply({ content: "Invalid item selected.", ephemeral: true })
 			return
 		}
 
-		// Create the embed with craft confirmation buttons
+		const missingItems = selectedItemRecipe.requiredItems.filter(requiredItem => {
+			const inventoryItem = userInventory.find(invItem => invItem.name === requiredItem.name)
+			return !inventoryItem || inventoryItem.quantity < requiredItem.quantity
+		})
+
+		if (missingItems.length > 0) {
+			// Construct a message listing all missing items
+			const missingItemsMessage = missingItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
+			await interaction.reply(`You do not have enough of the following items: ${missingItemsMessage}`)
+			return
+		}
+
 		const craftEmbed = new EmbedBuilder()
 			.setColor(0x00ff00) // Green color
-			.setTitle(`Crafting **${selectedItem.replace("_", "**")}`)
-			.setDescription(
-				`Do you want to craft a ${selectedItem.replace(
-					"_",
-					" "
-				)} using __${requiredQuantity}__ ${requiredItemName}?`
+			.setTitle(`Crafting ${selectedItem.replace("_", " ")}`)
+			.setDescription(`Do you want to craft **${selectedItem.replace("_", " ")}**?`)
+			.addFields(
+				selectedItemRecipe.requiredItems.map(item => ({
+					name: item.name,
+					value: `Quantity: ${item.quantity}`,
+					inline: true
+				}))
 			)
 			.setTimestamp()
+			.setFooter({ text: "Make sure you have all the required items before crafting!" })
 
 		const confirmButton = new ButtonBuilder()
 			.setCustomId("confirmCraft")
@@ -514,25 +529,19 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 }) // Adjust time as needed (60000ms = 60s)
 
 		collector.on("collect", async buttonInteraction => {
-			// Ensure the interaction is deferred if not yet replied to (prevents API errors)
 			if (!buttonInteraction.deferred) await buttonInteraction.deferUpdate()
 
 			if (buttonInteraction.customId === "confirmCraft") {
 				try {
-					console.log(`Starting item removal for ${requiredItemName}, Quantity: ${requiredQuantity}`)
-					await removeItemFromUser(interaction.user.id, requiredMaterialId, requiredQuantity)
+					console.log("Starting item removal for ITEM!")
 
-					// Check if the user already has the crafted item
-					const craftedItem = userInventory.find(invItem => invItem.id === craftedItemId)
-					if (craftedItem) {
-						// Increment the quantity of the crafted item in the user's inventory
-						await incrementInventoryItemQuantity(interaction.user.id, craftedItemId)
-					} else {
-						// If not present, assume addItemToUserInventory will add the crafted item with quantity = 1
-						await addItemToUserInventory(interaction.user.id, craftedItemId)
+					for (const requiredItem of selectedItemRecipe.requiredItems) {
+						console.log("Removing item:", requiredItem)
+						await removeItemFromUserInventory(interaction.user.id, requiredItem.name, requiredItem.quantity)
+						console.log("Item removed!")
 					}
-
-					console.log(`Crafting successful for ${requiredItemName}`)
+					await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
+					console.log("Item added! ", selectedItemRecipe.craftedItemName)
 
 					// Confirm to the user that the crafting was successful
 					await buttonInteraction.editReply({
@@ -568,182 +577,26 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 	}
 }
 
-//lookup
-// Define information about the items
-const itemDetails = {
-	six_eyes: {
-		title: "Six Eyes <:sixeye:1193159757515726919>",
-		description: "A rare and powerful ability that grants immense clarity and control over Cursed Energy.",
-		footer: "Who know's what techniques you may get if you have one of these eyes!",
-		imagePath: "./image/sixeyes.png"
-	},
-	prison_realm: {
-		title: "Prison Realm <:prison_realm:1193160559009484830>",
-		description: "A special grade cursed tool used to seal away powerful beings.",
-		footer: "Could be used to plan a certain sealing technique?..",
-		imagePath: "./image/prisonrealm.png"
-	},
-	sukuna_finger: {
-		title: "Sukuna Finger <:sukuna_finger:1193318005015330936>",
-		description: "One of the twenty fingers of the undisputed King of Curses, **Ryomen Sukuna.**",
-		footer: "If you were to eat it, Who know's what might happen?",
-		imagePath: "./image/sukunafinger.png"
-	},
-	distorted_soul: {
-		title: "Distorted Soul",
-		description: "A mysterious and highly dangerous cursed object with unknown origins.",
-		footer: "The true essence of JUJUTSU!",
-		imagePath: "./image/soul.png"
-	}
+async function delay(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function handleLookupCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
-	// Create the initial embed
-	const initialEmbed = new EmbedBuilder()
-		.setColor(0x0099ff) // Blue color
-		.setTitle("Item Lookup")
-		.setDescription("Select an item to look up its details.")
-		.setTimestamp()
-
-	// Create a Select Menu with options for each item
-	const selectMenu = new StringSelectMenuBuilder()
-		.setCustomId("selectItem")
-		.setPlaceholder("Select an item")
-		.addOptions(
-			Object.entries(itemDetails).map(([value, details]) => ({
-				label: details.title.replace(/<:.+?:\d+>/g, ""), // Remove emoji from title for the label
-				description: details.description.slice(0, 40), // Trim description to fit
-				value: value
-			}))
-		)
-
-	// Send the initial embed with the Select Menu
-	await interaction.reply({
-		embeds: [initialEmbed],
-		components: [new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)]
-	})
-
-	// Create a collector to handle selection
-	const filter = (i: SelectMenuInteraction) => i.customId === "selectItem" && i.user.id === interaction.user.id
-	const collector = interaction.channel.createMessageComponentCollector({
-		filter,
-		componentType: ComponentType.SelectMenu,
-		time: 60000
-	}) // Adjust time as needed
-
-	collector.on("collect", async (menuInteraction: SelectMenuInteraction) => {
-		if (!menuInteraction.isStringSelectMenu()) return
-
-		// Get the selected item's details
-		const selectedItem = menuInteraction.values[0]
-		const details = itemDetails[selectedItem]
-
-		// Create an updated embed based on the selection
-		const updatedEmbed = new EmbedBuilder()
-			.setColor(0x0099ff) // Blue color
-			.setTitle(details.title)
-			.setDescription(details.description)
-			.setFooter({ text: details.footer }) // Add footer text
-			.setTimestamp()
-
-		// If an image is provided, set it
-		if (details.imagePath) {
-			const imageAttachment = new AttachmentBuilder(details.imagePath)
-			updatedEmbed.setImage(`attachment://${details.imagePath.split("/").pop()}`)
-			await menuInteraction.update({ embeds: [updatedEmbed], files: [imageAttachment], components: [] })
-		} else {
-			await menuInteraction.update({ embeds: [updatedEmbed], components: [] })
-		}
-	})
-
-	collector.on("end", () => {})
-}
-
-export async function handleStatusCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
-	// Create the embed
-	const embed = new EmbedBuilder()
-		.setColor(0x0099ff) // Blue color
-		.setTitle("Bot Status")
-		.setDescription("Here's a quick overview of the bot's current status:")
-		.setTimestamp()
-
-	// Add fields for relevant status information (replace with your actual data)
-	embed.addFields({ name: "✅ Online", value: "The bot is currently online and operational." })
-
-	// Send the embed
-	await interaction.reply({ embeds: [embed] })
-}
-
-export async function handleRulesCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
-	// Create the embed
-	const embed = new EmbedBuilder()
-		.setColor(0x0099ff) // Blue color
-		.setTitle("RULES")
-		.setDescription("Here's a quick overview the rules in this server")
-		.setTimestamp()
-
-	// Add fields for relevant status information (replace with your actual data)
-	embed.addFields(
-		{
-			name: "1. **Basic respect**",
-			value: "Disrespectful behaviour, hate speech and hateful behaviour will not be tolerated. (Reclaiming slurs is allowed)"
-		},
-		{ name: "2. **Pings**", value: "Pinging staff members (unless for a valid reason) is not permitted." },
-		{ name: "3. **Promotion**", value: "No self promotion unless authorised by a Mod." }, // Replace with actual uptime calculation
-		{
-			name: "4. **Personal Information** ",
-			value: "Leaking server members’ personal information is not condoned in this server. (This entails doxxing etc.)"
-		} // Replace with actual latency calculation
-		// Add more fields as needed
-	)
-
-	// Send the embed
-	await interaction.reply({ embeds: [embed] })
-}
-
-// jujutsu command
-export async function handleJujutsuCommand(interaction: ChatInputCommandInteraction) {
-	const userId = interaction.user.id
-
-	// Function to create the profile embed
-	const createProfileEmbed = async userId => {
-		const userProfile = await getUserProfile(userId)
-		if (!userProfile) throw new Error("Profile not found.")
-
-		return new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle(`${interaction.user.username}'s Jujutsu Stats!`)
-			.addFields(
-				{
-					name: "**Cursed Energy**",
-					value: `\`${userProfile.experience.toString()}\``,
-					inline: true
-				},
-				{ name: "**Grade**", value: userProfile.grade.toString(), inline: false }
-			)
-	}
-
-	try {
-		const profileEmbed = await createProfileEmbed(userId)
-		await interaction.reply({ embeds: [profileEmbed] })
-	} catch (error) {
-		console.error("Failed to retrieve user profile:", error)
-		await interaction.reply("There was an error retrieving your jujutsu stats.")
-	}
-}
-
-// Full fight command for Jujutsu
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	try {
 		// Fetch boss data from database
-		const allBosses = await getAllBossesFromDatabase()
+		const allBosses = await getBosses()
+
+		if (allBosses.length === 0) {
+			console.error("No bosses found in the database.")
+			return // Or handle this situation appropriately
+		}
 
 		// Select random opponent
 		const randomIndex = Math.floor(Math.random() * allBosses.length)
 		const randomOpponent = allBosses[randomIndex]
 
 		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
-		const { health: playerHealth } = await getPlayerHealth(interaction.user.id)
+		const playerHealth = await getUserHealth(interaction.user.id)
 
 		// Create embed
 		const primaryEmbed = new EmbedBuilder()
@@ -783,22 +636,21 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				await buttonInteraction.deferUpdate()
 
 				// Get player's health
-				const { health: playerHealth } = await getPlayerHealth(interaction.user.id)
+				const playerHealth = await getUserHealth(interaction.user.id)
+
+				// get boss health
+				const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
 
 				// Get player's grade
-				// Assuming getPlayerGradeFromDatabase correctly retrieves the player's grade as a string like "Grade 4"
-				const playerGradeData = await getPlayerGradeFromDatabase(interaction.user.id)
-				const playerGradeString = playerGradeData.grade // This is already in the correct format
+				const playerGradeData = await getUserGrade(interaction.user.id)
+				const playerGradeString = playerGradeData // This is already in the correct format
 
 				// Calculate damage using the string grade
 				const damage = calculateDamage(playerGradeString) // Use the grade string directly
 
 				// Calculate boss new health after damage dealt
-
-				randomOpponent.current_health -= damage
-
-				// Ensure boss health is never below 0
-				randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
+				bossHealthMap.set(interaction.user.id, currentBossHealth - damage)
+				randomOpponent.current_health = Math.max(0, currentBossHealth - damage) // Keep in sync
 
 				// Construct result message
 				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
@@ -808,8 +660,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				if (randomOpponent.current_health <= 0) {
 					domainActivationState.set(contextKey, false) // Reset domain activation state
 					// Reset health in the database
-					await updateBossHealth(randomOpponent.name, randomOpponent.max_health) // Assuming max_health is the original health
-
+					bossHealthMap.delete(interaction.user.id)
 					const victoryMessage = "You won the fight!"
 					primaryEmbed.setDescription(victoryMessage)
 					await buttonInteraction.editReply({
@@ -818,25 +669,37 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					})
 					// Calculate XP gain
 					const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
+					await updateUserHealth(interaction.user.id, 100)
+					await updateUserExperience(buttonInteraction.user.id, xpGain)
+					await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
 
-					// Update player's experience
-					await updateExperience(buttonInteraction.user.id, xpGain) // Assuming this function updates the XP in your database and accepts the user ID and the XP amount
+					const drop = getBossDrop(randomOpponent.name)
+					if (drop) {
+						console.log("Drop found:", drop)
 
-					// Send a message about the XP gain
-					const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
-					await buttonInteraction.followUp({ content: xpMessage })
+						// Pass drop.name instead of the entire drop object
+						await addItemToUserInventory(interaction.user.id, drop.name, 1)
+					}
+
+					const privateEmbed = new EmbedBuilder()
+						.setColor("#0099ff") // Set the color of the embed
+						.setTitle("Battle Rewards") // Set a title for the embed
+						.addFields(
+							{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
+							{ name: "Experience Gained", value: `You've gained ${xpGain} XP for defeating the boss!` }
+						)
+
+					// Send the embed as an ephemeral follow-up to the button interaction
+					await buttonInteraction.followUp({ embeds: [privateEmbed], ephemeral: true })
 				} else {
 					// Update to new boss health after damage dealt
-					await updateBossHealth(randomOpponent.name, randomOpponent.current_health)
+					bossHealthMap.set(randomOpponent.name, randomOpponent.current_health)
 
-					// Delay 1 second for a bit until the boss attack
-					await setTimeout(2000) // this is milliseconds
-
+					await delay(700) // Wait for 2 seconds
 					// *** Boss Attack ***
 					const possibleAttacks = attacks[randomOpponent.name]
-					const chosenAttack = chooseRandomAttackForBossBasedOnProbability(possibleAttacks)
+					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 
-					// Calculate damage done to player
 					//const damageToPlayer = Math.floor(chosenAttack.baseDamage * Math.random())
 					const damageToPlayer = chosenAttack.baseDamage
 
@@ -848,34 +711,23 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 					// Did the player die?
 					if (clampedPlayerHealth <= 0) {
-						if ((randomOpponent as Opponent).name === "Sukuna") {
-							primaryEmbed
-								.setDescription("Sukuna has killed you!")
-								.setFields({
-									name: "Heh, Guess you weren't strong enough after all..",
-									value: `Stand Proud. ${interaction.user.username}, You are strong.`
-								})
+						// Generic defeat message for other bosses
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
 
-								.setColor(Colors.DarkRed) // Ominous color change
-								.setImage(
-									"https://i.ytimg.com/vi/DDOQKfnS17U/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQMa8AEB-AHUBoAC4AOKAgwIABABGCIgVihyMA8=&rs=AOn4CLDAgsnklMsuzmmglFHWIDdhs9IwMA"
-								)
-						} else {
-							// Generic defeat message for other bosses
-							const bossAttackMessage = `${randomOpponent.name} killed you!`
-							primaryEmbed.setDescription(bossAttackMessage)
-						}
-
-						// Reset player health in the database
-						await updatePlayerHealth(interaction.user.id, 100)
+						// Reset player health in the database.
+						bossHealthMap.delete(interaction.user.id)
+						await updateUserHealth(interaction.user.id, 100)
 						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 					} else {
 						// Update to new player health after damage dealt
-						await updatePlayerHealth(interaction.user.id, clampedPlayerHealth)
+						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
 
 						// Update embed with attack message from boss
+
 						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
-						primaryEmbed.setDescription(bossAttackMessage)
+						primaryEmbed.setFooter({ text: bossAttackMessage })
+
 						await buttonInteraction.editReply({ embeds: [chosenAttack.embedUpdate(primaryEmbed)] })
 					}
 				}
@@ -894,7 +746,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				try {
 					// Fetch domain information and display its activation
-					const domainInfo = await getDomainFight(buttonInteraction.user.id)
+					const domainInfo = await getUserDomain(buttonInteraction.user.id)
 					const domainEmbed = new EmbedBuilder()
 					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
 					if (domainInfo) {
@@ -903,48 +755,97 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					}
 
 					if (!domainInfo) {
-						// If the user does not have a domain, send an ephemeral message
 						await buttonInteraction.followUp({
 							content: "You do not have a domain unlocked yet.",
 							ephemeral: true
 						})
-						return // Exit the function if no domain is found
+						return
 					}
-
+					const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+					if (!domainObject) {
+						console.error("Domain not found:", domainInfo)
+						return
+					}
 					domainActivationState.set(contextKey, true)
 					// User has a domain, construct an embed to show its activation and fight image
 					domainEmbed
 						.setColor("Blue")
 						.setTitle(`${buttonInteraction.user.username} has activated their domain!`)
-						.setDescription(`Domain: ${domainInfo.name}`)
-						.setImage(domainInfo.imageFightUrl) // Display the domain's special fight image
+						.setDescription(`Domain: ${domainInfo}`)
 						.addFields(
 							{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: true },
 							{ name: "Your Health", value: playerHealth.toString(), inline: true },
 							{ name: "Domain Effect", value: domainEffectMessage }
 						)
 
+					// Add image if domainObject has an imageURL
+					if (domainObject.image_URL) {
+						domainEmbed.setImage(domainObject.image_URL)
+					} else {
+						console.log("No image URL found for domain:", domainInfo)
+					}
+
 					// Proceed with additional fight logic including extra domain damage
 					// Assuming getPlayerGradeFromDatabase correctly retrieves the player's grade as a string like "Grade 4"
-					const playerGradeData = await getPlayerGradeFromDatabase(interaction.user.id)
-					const playerGradeString = playerGradeData.grade // This is already in the correct format
+					const playerGradeData = await getUserGrade(interaction.user.id)
+					const playerGradeString = playerGradeData // This is already in the correct format
 
 					// Calculate damage using the string grade
 					const baseDamage = calculateDamage(playerGradeString) // Use the grade string directly
-
 					const extraDomainDamage = 50 // Fixed extra damage from domain activation; adjust as needed
 					const totalDamage = baseDamage + extraDomainDamage
 
-					randomOpponent.current_health -= totalDamage
-					randomOpponent.current_health = Math.max(0, randomOpponent.current_health)
+					// Update boss health in the Map
+					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+					bossHealthMap.set(interaction.user.id, currentBossHealth)
 
+					// Construct result message
 					const fightResult = await handleFightLogic(
-						buttonInteraction,
+						interaction,
 						randomOpponent,
 						playerGradeString,
 						totalDamage
 					)
-					domainEmbed.setDescription(fightResult)
+					primaryEmbed.setDescription(fightResult)
+					await buttonInteraction.editReply({ embeds: [primaryEmbed] })
+					// Is the boss dead?
+					if (randomOpponent.current_health <= 0) {
+						domainActivationState.set(contextKey, false) // Reset domain activation state
+						// Reset health in the database
+						bossHealthMap.delete(interaction.user.id)
+						const victoryMessage = "You won the fight!"
+						primaryEmbed.setDescription(victoryMessage)
+						await buttonInteraction.editReply({
+							embeds: [primaryEmbed],
+							components: []
+						})
+						// Calculate XP gain
+						const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
+						// Update player's experience
+						await updateUserHealth(interaction.user.id, 100)
+						await updateUserExperience(buttonInteraction.user.id, xpGain)
+						await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
+
+						const drop = getBossDrop(randomOpponent.name)
+						if (drop) {
+							console.log("Drop found:", drop)
+							const dropMessage = `You've also found a ${drop} among the remains!`
+							await buttonInteraction.followUp({ content: dropMessage })
+							await addItemToUserInventory(interaction.user.id, drop, 1)
+						}
+
+						// Send a message about the XP gain
+						const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
+						await buttonInteraction.followUp({ content: xpMessage })
+					} else {
+						// Generic defeat message for other bosses
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
+					}
+
+					// Update in-memory opponent object
+					randomOpponent.current_health = currentBossHealth
 
 					await buttonInteraction.editReply({ embeds: [domainEmbed] })
 				} catch (error) {
@@ -962,16 +863,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	}
 }
 
-// Helper Functions
 async function handleFightLogic(
 	interaction: Interaction,
 	randomOpponent: BossData,
 	playerGradeString: string,
 	damage: number
 ): Promise<string> {
-	// ... your fight logic (update boss health, etc.)
-
-	// Construct result message
 	let resultMessage = `You dealt ${damage} damage to ${randomOpponent.name}!`
 	if (randomOpponent.current_health <= 0) {
 		resultMessage += " You won the fight!"
@@ -982,252 +879,165 @@ async function handleFightLogic(
 	return resultMessage
 }
 
-// command to dm a user
-export async function handleDmCommand(interaction: ChatInputCommandInteraction) {
-	const user = interaction.options.getUser("user")
-	const message = interaction.options.getString("message")
+export async function handleTitleSelectCommand(interaction: ChatInputCommandInteraction) {
+	console.log("Title selection command received.")
 
-	try {
-		await user.send(message)
-		await interaction.reply({ content: `Message sent to ${user.tag}.` })
-	} catch (error) {
-		console.error("Failed to send message:", error)
-		await interaction.reply({ content: "Failed to send the message.", ephemeral: true })
-	}
-}
+	const unlockedTitles = await getUserUnlockedTitles(interaction.user.id)
 
-// test
+	const embed = new EmbedBuilder()
+		.setTitle("Select Your Title")
+		.setDescription("Choose a title from the dropdown menu below.")
 
-export async function handleShopCommand(interaction) {
-	const items = await getShopItems()
+	// Create the dropdown menu
+	const selectMenu = new SelectMenuBuilder()
+		.setCustomId("title_selection")
+		.setPlaceholder("No title selected")
+		.addOptions(
+			unlockedTitles.map(titleName => ({
+				label: titleName, // Assuming titles is an array of title names
+				description: titleName, // You'll need this
+				value: titleName
+			}))
+		)
 
-	// Create a simple embed
-	const shopEmbed = new EmbedBuilder()
-		.setTitle("Welcome to the Shop")
-		.setDescription("Select an item from the dropdown to view details and purchase.")
+	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+	await interaction.reply({ embeds: [embed], components: [row] })
 
-	const options = items.map(item => ({
-		label: `${item.name} - ${item.price}`,
-		description: item.description.substring(0, 50) + "...",
-		value: item.id.toString()
-	}))
+	// Handle title selection
+	const filter = i => i.customId === "title_selection"
 
-	const selectMenu = new ActionRowBuilder().addComponents(
-		new StringSelectMenuBuilder()
-			.setCustomId("select-item")
-			.setPlaceholder("Select an item to buy")
-			.addOptions(options)
-	)
-
-	await interaction.reply({
-		embeds: [shopEmbed],
-		components: [selectMenu]
+	const collector = interaction.channel.createMessageComponentCollector({
+		filter,
+		componentType: ComponentType.StringSelect,
+		time: 20000 // 20 seconds
 	})
-}
-export async function handleSelectMenuInteraction(interaction) {
-	console.log("Select menu interaction is happening.")
-	if (!interaction.isSelectMenu()) return
 
-	if (interaction.customId === "select-item") {
-		const itemId = interaction.values[0]
-		const userId = interaction.user.id
-
-		console.log(`User ${userId} has selected item ${itemId}`)
+	collector.on("collect", async collectedInteraction => {
+		const selectedTitle = collectedInteraction.values[0]
 
 		try {
-			// faggot
-			const items = await getShopItems()
-			const item = items.find(item => item.id.toString() === itemId)
-			const itemPrice = item.price
-			const userBalance = await getBalance(userId)
-
-			console.log(`${userBalance} ${itemPrice}`)
-
-			if (userBalance >= itemPrice) {
-				await addItemToUserInventory(userId, itemId)
-				console.log(`User ${userId} has purchased item ${itemId}`)
-				await updateBalance(userId, -itemPrice)
-				console.log(`User ${userId} has been charged ${itemPrice} coins`)
-			}
-
-			const shopEmbed = new EmbedBuilder()
-				.setTitle("Welcome to the Shop")
-				.setDescription("You have successfully purchased the item!")
-			await interaction.update({
-				embeds: [shopEmbed.setDescription("You have successfully purchased the item!")],
+			await updateUserTitle(interaction.user.id, selectedTitle)
+			await collectedInteraction.update({
+				content: `Your title has been updated to ${selectedTitle}`,
+				embeds: [],
 				components: []
 			})
 		} catch (error) {
-			console.error("Error during purchase process:", error)
-			await interaction.update({
-				content: "An error occurred during purchase. Please try again later.",
-				ephemeral: true
+			await collectedInteraction.followUp({
+				content:
+					"There was an error updating your title. [ THIS ERROR IS BEING FIXED OR DOES NOT ACTUALLY ERROR]",
+				embeds: [],
+				components: []
+			})
+			console.error(error)
+		}
+		collector.on("end", collected => {
+			if (collected.size === 0) {
+				interaction.followUp({ content: "You did not select a title.", components: [] }).catch(console.error)
+			}
+		})
+	})
+}
+
+// command to get your domain expansion!
+export async function handleDomainSelection(interaction) {
+	const domainOptions = DOMAIN_EXPANSIONS.map(domain => ({
+		label: domain.name,
+		description: domain.description,
+		value: domain.name
+	}))
+
+	const row = new ActionRowBuilder().addComponents(
+		new SelectMenuBuilder()
+			.setCustomId("select-domain")
+			.setPlaceholder("No domain selected")
+			.addOptions(domainOptions)
+	)
+
+	const embed = new EmbedBuilder()
+		.setTitle("Domain Expansion Selection")
+		.setDescription("Choose your domain technique wisely.")
+
+	await interaction.reply({ embeds: [embed], components: [row], ephemeral: false })
+
+	const filter = i => i.customId === "select-domain" && i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({
+		filter,
+		componentType: ComponentType.StringSelect
+	})
+
+	collector.on("collect", async collectedInteraction => {
+		await collectedInteraction.deferUpdate()
+		const selectedDomainName = collectedInteraction.values[0]
+
+		// 1. Get User Data (using your getUserInventory function)
+		const userInventory = await getUserInventory(interaction.user.id)
+
+		// Domain Token Check
+		const domainToken = userInventory.find(item => item.name === "Domain Token")
+		if (!domainToken) {
+			// Handle the case where the user doesn't have a Domain Token (update with error embed)
+			await collectedInteraction.followUp({
+				embeds: [
+					new EmbedBuilder()
+						.setTitle("Requirements Not Met")
+						.setDescription("You do not have a Domain Token.")
+				],
+				components: []
+			})
+			return // Stop further execution if the user doesn't have the token
+		}
+
+		// Continue with existing logic
+		const userGrade = await getUserGrade(interaction.user.id)
+		const gradeNumber = parseInt(userGrade.replace("Grade ", "")) // Remove "Grade " and convert to a number
+		console.log("User Grade:", userGrade)
+
+		// 2. Check Requirements
+		console.log("User has a Domain Token and is Grade 3 or higher.")
+		if (gradeNumber <= 3) {
+			await updateUserAchievements(interaction.user.id, "unlockedDomain")
+			await removeItemFromUserInventory(interaction.user.id, "Domain Token", 1)
+
+			await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
+
+			console.log(`User ${interaction.user.id} has unlocked the domain: ${selectedDomainName}`)
+			// 3. Update Achievements and Titles
+			const domainAchievements = determineDomainAchievements(selectedDomainName)
+			const newlyUnlockedAchievements = domainAchievements.filter(achievement => {
+				return !userInventory.some(item => item.name === achievement)
+			})
+			// Update user's achievement data
+			for (const achievement of newlyUnlockedAchievements) {
+				await updateUserAchievements(interaction.user.id, achievement /* or name */)
+			}
+
+			await awardTitlesForAchievements(interaction.user.id)
+
+			// 4. Send Success Embed
+			await collectedInteraction.followUp({
+				embeds: [
+					new EmbedBuilder()
+						.setTitle("Cursed Energy Manifested!")
+						.setDescription("You have unlocked the " + selectedDomainName + " Domain Expansion!")
+						.setColor("#552288")
+				],
+				components: []
+			})
+		} else {
+			await collectedInteraction.followUp({
+				embeds: [
+					new EmbedBuilder()
+						.setTitle("Requirements Not Met")
+						.setDescription("You do not have a Domain Token or are not a high enough grade.")
+				],
+				components: []
 			})
 		}
-	} else {
-		// next
-	}
+		collector.stop()
+	})
 }
 
-// test getDomain function in embed
-export async function HandleCheckDomainCommand(interaction) {
-	// Immediately acknowledge the interaction
-	await interaction.deferReply()
-	try {
-		// Retrieve mentioned user from the command options, fall back to the author if no user is mentioned
-		const targetUser = interaction.options.getUser("mentionedUser") || interaction.user
-
-		// Use the targetUser's ID to get domain information
-		const domainInfo = await getDomain(targetUser.id) // Assuming getDomain now also returns image_url
-
-		// Format domain information
-		let domainFieldValue = "None"
-		if (domainInfo) {
-			domainFieldValue = `Name: ${domainInfo.name}\nDescription: ${domainInfo.description}`
-		}
-
-		// Create the embed with domain information
-		const embed = new EmbedBuilder()
-			.setColor(domainInfo ? "Green" : "Red") // Set color based on domain availability
-			.setTitle("Domain Check")
-			.setDescription(`Domain Unlocked: ${domainInfo ? "Yes" : "No"}`) // Indicate if a domain is unlocked
-			.addFields({ name: "Domain", value: domainFieldValue }) // Use formatted string for value
-
-		// If domainInfo has an image_url, add it as an image or thumbnail to the embed
-		if (domainInfo && domainInfo.image_url) {
-			// Use .setImage() or .setThumbnail() depending on how you want it to display
-			embed.setImage(domainInfo.image_url) // Or .setThumbnail(domainInfo.image_url)
-		}
-
-		// Edit the reply with the embed
-		await interaction.editReply({ embeds: [embed] })
-	} catch (error) {
-		console.error("Error checking domain or timed out:", error)
-		// Notify the user something went wrong
-		await interaction.editReply({ content: "An error occurred! Please try again later.", ephemeral: true })
-	}
-}
-
-export async function useCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-	console.log("useCommand function initiated.")
-
-	const userId = interaction.user.id
-	const itemName = interaction.options.getString("item")
-
-	if (!itemName) {
-		console.log("Item name not provided in command.")
-		await interaction.reply({ content: "You must specify the name of the item you wish to use.", ephemeral: true })
-		return
-	}
-
-	// Fetch user's inventory to check item existence and quantity
-	const inventoryItems = await getUserInventory(userId)
-	const item = inventoryItems.find(i => i.name === itemName && i.quantity > 0)
-
-	if (!item) {
-		// User lacks the specified item
-		const embed = new EmbedBuilder()
-			.setColor("#FF0000")
-			.setTitle("Search yields no results...")
-			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
-		await interaction.reply({ embeds: [embed], ephemeral: true })
-		return
-	}
-
-	// Adding suspense and thematic depth for the "Sukuna Finger"
-	if (itemName === "Sukuna Finger") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("A Cursed Choice...")
-			.setDescription(
-				"Your fingers close around the Sukuna Finger, its cursed energy pulsing against your skin..."
-			)
-			.setImage(
-				"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
-			) // Add a fitting image URL
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		await setTimeout(4000) // this is milliseconds
-		const embedSecond = new EmbedBuilder()
-			.setColor("#8b0000") // Dark red, for dramatic effect
-			.setTitle("Power or Peril?")
-			.setDescription(
-				"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
-			)
-			.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Add an image URL of the consumption
-		await interaction.editReply({ embeds: [embedSecond] })
-
-		await setTimeout(3000) // this is milliseconds
-		const user = await getPlayerGradeFromDatabase(userId) // Fetch current user data
-		const xpGained = 125 // Fixed XP gain for consuming the Sukuna Finger
-		const newXP = user.experience + xpGained
-		const newGrade = calculateGradeFromExperience(newXP) // Calculate the new grade
-		await updateUserXPandGrade(userId, newXP, newGrade) // Update user's XP and grade in the database
-
-		await removeItemFromUser(userId, item.id, 1)
-
-		const embedFinal = new EmbedBuilder()
-			.setColor("#006400") // Dark green, symbolizing growth
-			.setTitle("Power Unleashed")
-			.setDescription("The deed is done. You've gained 125 experience. What dark powers have you awakened?")
-			.setImage(
-				"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
-			) // An image URL showing the unleashed power
-		await interaction.editReply({ embeds: [embedFinal] })
-	} else {
-		// Handle other items or general case
-		const embed = new EmbedBuilder()
-			.setColor("#FFFF00")
-			.setTitle("No Effect")
-			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
-		await interaction.reply({ embeds: [embed], ephemeral: true })
-	}
-}
-
-//
-//
-//
-//
-export async function addXP(userId: string, xpAdded: number): Promise<{ newXP: number; newGrade: string }> {
-	const user = await getPlayerGradeFromDatabase(userId)
-	const newXP: number = user.experience + xpAdded
-
-	let newGrade: string
-
-	// Determine the new grade based on XP
-	if (newXP >= 2500) {
-		// Progress to Special Grade if not already
-		newGrade = "Special Grade"
-	} else if (newXP >= 1000) {
-		// Progress to Grade 1 if below this grade
-		newGrade = !["Special Grade", "Grade 1"].includes(user.grade) ? "Grade 1" : user.grade
-	} else if (newXP >= 750) {
-		// Progress to Semi-Grade 1 if below this grade
-		newGrade = !["Special Grade", "1", "Semi-Grade 1"].includes(user.grade) ? "Semi-Grade 1" : user.grade
-	} else if (newXP >= 500) {
-		// Progress to Grade 2 if below this grade
-		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"].includes(user.grade)
-			? "Grade 2"
-			: user.grade
-	} else if (newXP >= 250) {
-		// Progress to Grade 3 if below this grade
-		newGrade = !["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"].includes(user.grade)
-			? "Grade 3"
-			: user.grade
-	} else {
-		// Remain at Grade 4 if below 250 XP
-		newGrade = "Grade 4"
-	}
-
-	// Update the user's grade and XP in the database
-	await updateUserXPandGrade(userId, newXP, newGrade)
-
-	console.log(`User ${userId} updated: New XP is ${newXP}, New Grade is ${newGrade}`)
-	return { newXP, newGrade }
-}
-
-// Initialize the search counter
 const userSearching = new Map<
 	string,
 	{
@@ -1345,8 +1155,6 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 					.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
 
 				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
-
-				//await continueSearch(inter, riskFactor)
 			} else {
 				const coinsFound = userSearching.get(inter.user.id).coinsFound
 
@@ -1356,6 +1164,8 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 					.setTitle("Search Completed")
 					.setDescription(`You've finished your searching. You gathered a total of ${coinsFound} coins.`)
 					.setTimestamp()
+
+				updateBalance(inter.user.id, coinsFound)
 
 				await inter.editReply({
 					content: "Your search has concluded.",
@@ -1389,5 +1199,179 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 
 			collector.stop()
 		}
+	})
+}
+
+export async function handleUseItemCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	console.log("useCommand function initiated.")
+
+	const userId = interaction.user.id
+	const itemName = interaction.options.getString("item")
+
+	if (!itemName) {
+		console.log("Item name not provided in command.")
+		await interaction.reply({ content: "You must specify the name of the item you wish to use.", ephemeral: true })
+		return
+	}
+
+	// Fetch user's inventory to check item existence and quantity
+	const inventoryItems = await getUserInventory(userId)
+	const item = inventoryItems.find(i => i.name === itemName && i.quantity > 0)
+
+	if (!item) {
+		// User lacks the specified item
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Search yields no results...")
+			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	// Adding suspense and thematic depth for the "Sukuna Finger"
+	if (itemName === "Sukuna Finger") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("A Cursed Choice...")
+			.setDescription(
+				"Your fingers close around the Sukuna Finger, its cursed energy pulsing against your skin..."
+			)
+			.setImage(
+				"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
+			) // Add a fitting image URL
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		setTimeout(async () => {
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
+				)
+				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
+
+			// This operation to edit the reply is placed inside the setTimeout callback to ensure the delay
+			await interaction.editReply({ embeds: [embedSecond] })
+		}, 4000)
+
+		const xpGained = 125
+		await updateUserExperience(userId, xpGained)
+		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		await removeItemFromUserInventory(userId, item.name, 1)
+
+		setTimeout(async () => {
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
+				)
+				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
+
+			// Now, edit the reply with the new embed after the delay
+			await interaction.editReply({ embeds: [embedSecond] })
+		}, 2000) // 40000 milliseconds delay
+
+		setTimeout(() => {
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400") // Dark green, symbolizing growth
+				.setTitle("Power Unleashed")
+				.setDescription("The deed is done. You've gained 125 experience. What dark powers have you awakened?")
+				.setImage(
+					"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
+				) // An image URL showing the unleashed power
+
+			// Edit the reply with the new embed after a delay
+			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}, 4000)
+	} else {
+		// Handle other items or general case
+		const embed = new EmbedBuilder()
+			.setColor("#FFFF00")
+			.setTitle("No Effect")
+			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+	}
+}
+
+const checkmarkEmoji = "✅" // Use custom emojis if you have them
+const crossEmoji = "❌" // Use custom emojis if you have them
+
+export const handleAchievementsCommand = async (interaction: ChatInputCommandInteraction) => {
+	await interaction.deferReply()
+	const userId = interaction.user.id
+	const userAchievements = await getUserAchievements(userId) // This should be an array of achievement IDs
+	let currentPage = 0
+
+	const itemsPerPage = 10 // Set the number of items per page
+
+	const sendAchievementsEmbed = async (page: number) => {
+		const pageStart = page * itemsPerPage
+		const pageEnd = pageStart + itemsPerPage
+
+		const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Achievements`).setColor("#0099ff")
+
+		// Sort achievements by whether they've been unlocked and their name
+		const sortedAchievements = Object.entries(allAchievements).sort(([id1, ach1], [id2, ach2]) => {
+			const hasFirst = userAchievements.includes(id1)
+			const hasSecond = userAchievements.includes(id2)
+			if (hasFirst === hasSecond) {
+				return ach1.name.localeCompare(ach2.name)
+			}
+			return hasFirst ? -1 : 1
+		})
+
+		// Generate fields for the paginated achievements
+		sortedAchievements.slice(pageStart, pageEnd).forEach(([achievementId, { name, description, reward }]) => {
+			const hasAchievement = userAchievements.includes(achievementId)
+			embed.addFields({
+				name: `${hasAchievement ? checkmarkEmoji : crossEmoji} ${name}`,
+				value: `${description}\nReward: ${reward || "No reward."}`,
+				inline: false
+			})
+		})
+
+		// Check if there are no achievements to display
+		if (sortedAchievements.length === 0) {
+			embed.setDescription("No achievements found.")
+		}
+
+		const components = [
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder()
+					.setCustomId("previous_page")
+					.setLabel("Previous")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(page === 0),
+				new ButtonBuilder()
+					.setCustomId("next_page")
+					.setLabel("Next")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(pageEnd >= Object.keys(allAchievements).length)
+			)
+		]
+
+		await interaction.editReply({ embeds: [embed], components })
+	}
+
+	// Initial call to send the first page of achievements
+	await sendAchievementsEmbed(currentPage)
+
+	const filter = (i: { user: { id: string }; customId: string }) => i.user.id === userId
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 120000 }) // Collector for 2 minutes
+
+	collector.on("collect", async i => {
+		if (i.customId === "previous_page" && currentPage > 0) {
+			currentPage -= 1 // Decrement currentPage if not the first page
+		} else if (
+			i.customId === "next_page" &&
+			(currentPage + 1) * itemsPerPage < Object.keys(allAchievements).length
+		) {
+			currentPage += 1 // Increment currentPage if not the last page
+		}
+
+		await sendAchievementsEmbed(currentPage)
+		await i.update({ embeds: [i.message.embeds[0]], components: i.message.components })
 	})
 }

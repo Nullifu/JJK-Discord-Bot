@@ -1,4 +1,4 @@
-import { Item } from "./item"
+import { Item } from "./interface.js"
 
 export interface InventoryItem extends Item {
 	quantity: number

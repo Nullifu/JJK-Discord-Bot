@@ -134,9 +134,7 @@ export const attacks: Record<string, Attack[]> = {
 			probability: 20,
 			baseDamage: 10,
 			embedUpdate: embed => {
-				embed.setImage(
-					"https://steamuserimages-a.akamaihd.net/ugc/2062139566417589090/95CBCD4D225D5511D70FC68FB8879CB208BA6A20/?imw=5000&imh=5000&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false"
-				)
+				embed.setImage("https://www.icegif.com/wp-content/uploads/2023/12/icegif-997.gif")
 				embed.setDescription("I'm going to lose huh?")
 				return embed
 			}
@@ -168,8 +166,74 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 10,
 			embedUpdate: embed => embed.setDescription("This fight's not over.")
 		}
+	],
+	// geto
+	"Suguru Geto": [
+		{
+			name: "Cursed Spirit Manipulation",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Cursed Spirit Manipulation!")
+		},
+		{
+			name: "Cursed Energy Blast",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Cursed Energy Blast!")
+		},
+		{
+			name: "Cursed Energy Barrier",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Cursed Energy Barrier!")
+		}
+	],
+	// Jogo
+	"Jogo": [
+		{
+			name: "Fire Manipulation",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Fire Manipulation!")
+		},
+		{
+			name: "Fireball",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Fireball!")
+		},
+		{
+			name: "MAXIMUM TECHNIQUE: METEOR!!!!",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => {
+				embed.setImage("https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif")
+				embed.setDescription("I'LL BURN YOU TO A CRISP! ")
+				return embed
+			}
+		}
+	],
+	// Mahito
+	"Mahito (Transfigured)": [
+		{
+			name: "Transfiguration",
+			probability: 50,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("Transfiguration!")
+		},
+		{
+			name: "Polymorphic Soul Isomer",
+			probability: 20,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+		},
+		{
+			name: "Instant Spirit Body of Distorted Killing...",
+			probability: 30,
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
+		}
 	]
-	// Kashimo
 
 	// ... Add the other attacks for Gojo, Todo, and Megumi ...
 }

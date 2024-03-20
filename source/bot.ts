@@ -13,23 +13,23 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 import {
-	HandleCheckDomainCommand,
+	handleAchievementsCommand,
 	handleBalanceCommand,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
+	handleDomainSelection,
 	handleFightCommand,
 	handleInventoryCommand,
-	handleJujutsuCommand,
-	handleLookupCommand,
+	handleJobSelection,
 	handleProfileCommand,
-	handleRegistercommand,
+	handleRegisterCommand,
 	handleSearchCommand,
-	handleStatusCommand,
-	handleWorkCommand,
-	useCommand
+	handleTitleSelectCommand,
+	handleUseItemCommand,
+	handleWorkCommand
 } from "./command.js"
-import { handleKissCommand } from "./commandgifs.js"
+import { checkRegistrationMiddleware } from "./middleware.js"
 
 // interface Item {
 // 	id: string
@@ -96,7 +96,7 @@ client.on("ready", () => {
 			status: "online"
 		})
 		index++
-	}, 25000) // Change status every 10000 milliseconds (10 seconds)
+	}, 25000)
 })
 
 client.on("guildCreate", guild => {
@@ -118,23 +118,16 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 // Increase the listener limit for the interactionCreate event
-client.setMaxListeners(20) // Set it to a reasonable value based on your use case
+client.setMaxListeners(30) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
-const prefix = "g"
 // Cooldown management
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
-//
-export const digCooldowns = new Map()
-export const digCooldown = 60 * 1000 // 60 seconds in milliseconds
-export const digCooldownBypassIDs = [""] // IDs that can bypass cooldown
-//
-export const searchCooldowns = new Map()
-export const searchCooldown = 60 * 1000 // 60 seconds in milliseconds
-export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
-//
+export const digCooldowns = new Map<string, number>()
+export const digCooldown = 15 * 1000 // 30 seconds in milliseconds
+export const digCooldownBypassIDs = ["917146454940844103"] // IDs that can bypass cooldown
 export const randomdig2 = [
 	"Burrowed",
 	"Found",
@@ -151,29 +144,21 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 
 // Slash Commands
 const commands = [
-	new SlashCommandBuilder()
-		.setName("useitem") // Command name as it will appear in Discord
-		.setDescription("Use an item from your inventory")
-		.addStringOption(option =>
-			option
-				.setName("item")
-				.setDescription("The name of the item to use")
-				.setRequired(true)
-				.addChoices({ name: "Sukuna Finger", value: "Sukuna Finger" })
-		),
-	new SlashCommandBuilder().setName("profile").setDescription("Profile"),
-	new SlashCommandBuilder().setName("domain_status").setDescription("Domain Status"),
-	new SlashCommandBuilder().setName("fight").setDescription("Fight a random opponent!"),
-	new SlashCommandBuilder().setName("jujutsu_status").setDescription("Jujutsu Stats"),
-	new SlashCommandBuilder().setName("search").setDescription("Search for items or money!"),
+	new SlashCommandBuilder().setName("profile").setDescription("User Profile"),
+	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
+	new SlashCommandBuilder().setName("ping").setDescription("Replies with Pong!"),
+	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
+	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
+	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
+	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
+	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
+	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
+	new SlashCommandBuilder().setName("fight").setDescription("Fight"),
+	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
+	new SlashCommandBuilder().setName("domainselection").setDescription("Get Domain Expansion"),
+	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
+	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
-	new SlashCommandBuilder().setName("status").setDescription("Bot Status!"),
-	new SlashCommandBuilder().setName("balance").setDescription("Balance"),
-	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory!"),
-	new SlashCommandBuilder().setName("dig").setDescription("Dig for items!"),
-	new SlashCommandBuilder().setName("work").setDescription("Work for money!"),
-	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
-	new SlashCommandBuilder().setName("daily").setDescription("Daily Cash!"),
 	new SlashCommandBuilder()
 		.setName("craft")
 		.setDescription("Craft an item using components in your inventory.")
@@ -185,10 +170,20 @@ const commands = [
 				.addChoices(
 					{ name: "Prison Realm", value: "prison_realm" },
 					{ name: "Six Eyes", value: "six_eyes" },
-					{ name: "Jogos Balls", value: "jogos_balls" }
+					{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
+					{ name: "Domain Token", value: "domain_token" }
 				)
 		),
-	new SlashCommandBuilder().setName("lookup").setDescription("Look up information about a specific item.")
+	new SlashCommandBuilder()
+		.setName("useitem") // Command name as it will appear in Discord
+		.setDescription("Use an item from your inventory")
+		.addStringOption(option =>
+			option
+				.setName("item")
+				.setDescription("The name of the item to use")
+				.setRequired(true)
+				.addChoices({ name: "Sukuna Finger", value: "Sukuna Finger" })
+		)
 ].map(command => command.toJSON())
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
@@ -227,7 +222,7 @@ client.on("interactionCreate", async interaction => {
 			.addFields([
 				{
 					name: "**General Commands**",
-					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nLookup - Discover details about objects\nDaily - Claim your daily curse"
+					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nSell - Trade objects for currency\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nLookup - Discover details about objects\nDaily - Claim your daily curse"
 				},
 				{
 					name: "**Cursed Technique Commands**",
@@ -235,7 +230,7 @@ client.on("interactionCreate", async interaction => {
 				},
 				{
 					name: "**Jujutsu System!**",
-					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomain_Status - Check If you have domain expansion!\nJujutsu_Status - View your cursed energy and Grade!"
+					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nShop - Purchase items from the store\nUseItem - Activate a cursed object\nDomain_Training - Train your cursed energy\nJujutsu_Status - View your cursed energy"
 				}
 			])
 			.setTimestamp()
@@ -249,139 +244,78 @@ client.on("interactionCreate", async interaction => {
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "profile") {
-		await handleProfileCommand(chatInputInteraction)
+	const { commandName } = interaction
+	if (commandName === "ping") {
+		const before = Date.now()
+		await interaction.deferReply()
+		const latency = Date.now() - before
+		await interaction.editReply(`Pong! Latency is ${latency}ms. API Latency is ${Math.round(client.ws.ping)}ms.`)
 	}
 })
 
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "balance") {
-		await handleBalanceCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "inventory") {
-		await handleInventoryCommand(chatInputInteraction)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "dig") {
-		await handleDigCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "work") {
-		await handleWorkCommand(chatInputInteraction)
-	}
-})
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
 	if (commandName === "register") {
-		await handleRegistercommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "craft") {
-		await handleCraftCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "lookup") {
-		await handleLookupCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "daily") {
-		await handleDailyCommand(chatInputInteraction)
-	}
-})
-client.on("messageCreate", async message => {
-	if (!message.content.startsWith(prefix) || message.author.bot) return
-
-	const args = message.content.slice(prefix.length).trim().split(/ +/)
-	const command = args.shift().toLowerCase()
-
-	// Handle the 'kiss' command
-	if (command === "kiss") {
-		handleKissCommand(message)
+		await handleRegisterCommand(chatInputInteraction)
 	}
 })
 
 client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "status") {
-		await handleStatusCommand(chatInputInteraction)
-	}
-})
+	if (!interaction.isChatInputCommand()) return
 
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "jujutsu_status") {
-		await handleJujutsuCommand(chatInputInteraction)
-	}
-})
+	const shouldProceed = await checkRegistrationMiddleware(interaction)
+	if (!shouldProceed) return
 
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
-	if (commandName === "fight") {
-		await handleFightCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "useitem") {
-		await useCommand(chatInputInteraction)
-	}
-})
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "domain_status") {
-		await HandleCheckDomainCommand(chatInputInteraction)
-	}
-})
 
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "search") {
-		await handleSearchCommand(chatInputInteraction)
+	switch (commandName) {
+		case "balance":
+			await handleBalanceCommand(chatInputInteraction)
+			break
+		case "profile":
+			await handleProfileCommand(chatInputInteraction)
+			break
+		case "inventory":
+			await handleInventoryCommand(chatInputInteraction)
+			break
+		case "dig":
+			await handleDigCommand(chatInputInteraction)
+			break
+		case "work":
+			await handleWorkCommand(chatInputInteraction)
+			break
+		case "daily":
+			await handleDailyCommand(chatInputInteraction)
+			break
+		case "craft":
+			await handleCraftCommand(chatInputInteraction)
+			break
+		case "domainselection":
+			await handleDomainSelection(chatInputInteraction)
+			break
+		case "fight":
+			await handleFightCommand(chatInputInteraction)
+			break
+		case "selectjob":
+			await handleJobSelection(chatInputInteraction)
+			break
+		case "selectitle":
+			await handleTitleSelectCommand(chatInputInteraction)
+			break
+		case "search":
+			await handleSearchCommand(chatInputInteraction)
+			break
+		case "useitem":
+			await handleUseItemCommand(chatInputInteraction)
+			break
+		case "achievements":
+			await handleAchievementsCommand(chatInputInteraction)
+			break
+		default:
+		// Handle unknown commands if needed
 	}
 })
 

@@ -18,6 +18,12 @@ function getJujutsuFlavorText(bossName: string): FlavorText | null {
 		return { name: "Heavenly Restriction", value: "Cursed since birth." }
 	} else if (bossName === "Sukuna (Suppressed)") {
 		return { name: "King of curses", value: "This will be over quickly." }
+	} else if (bossName === "Jogo") {
+		return { name: "Jogo's Challenge", value: "I'll burn you to a crisp." }
+	} else if (bossName === "Mahito (Transfigured)") {
+		return { name: "Mahito's Challenge", value: "I'll show you the true nature of the soul." }
+	} else if (bossName === "Suguru Geto") {
+		return { name: "Geto's Challenge", value: "Filthy Monkey" }
 	}
 
 	// Add a default case if you'd like
@@ -41,19 +47,3 @@ function createHealthBar(percentage: number): string {
 }
 
 export { createHealthBar }
-
-export async function triggerSukunaTransformation(interaction, primaryEmbed) {
-	primaryEmbed
-		.setTitle("Sukuna Unleashed (Suppressed)")
-		.setDescription("Malevolent Shrine engulfs the area. Sukuna's overwhelming power distorts reality.")
-		.setImage(
-			"https://64.media.tumblr.com/9daf6953407d0fe2f33090e8b66e78fe/9f03ce8993a9b44f-cc/s500x750/4a967912acdffef41db3beaba4055eccafe94e1b.gif"
-		)
-		.setColor("DarkRed")
-		.addFields([
-			{ name: "Sukuna:", value: "How pathetic. Is this all you can muster?" },
-			{ name: "Domain Effect:", value: "The shadows writhe and twist, echoing Sukuna's hunger." }
-		])
-
-	await interaction.editReply({ embeds: [primaryEmbed] })
-}

@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "discord.js"
+import { bossDrops } from "./items jobs.js"
 
 export function calculateDamage(playerGrade: string, domainEffectMultiplier: number = 1): number {
 	const baseDamage = 10
@@ -74,8 +75,8 @@ export function createInventoryPage(items, startIndex, itemsPerPage, user) {
 	// Add each inventory item to the embed with Jujutsu Kaisen flavor
 	pageItems.forEach(item => {
 		inventoryEmbed.addFields({
-			name: `🔮 ${item.name} (x${item.quantity})`,
-			value: item.description,
+			name: `🔮 ${item.name}`,
+			value: `(x${item.quantity})`,
 			inline: false
 		})
 	})
@@ -88,7 +89,54 @@ export function getRandomLocation() {
 		"a desolate alleyway shrouded in cursed energy",
 		"the Tokyo Metropolitan Magic Technical College",
 		"an ancient and cursed forest",
-		"the remnants of a fierce domain expansion"
+		"the remnants of a fierce domain expansion",
+		"the Shibuya Incident aftermath",
+		"the eerie corridors of a cursed shrine",
+		"a cursed spirit's lair",
+		"the heart of a domain",
+		"shibuya"
 	]
 	return locations[Math.floor(Math.random() * locations.length)]
+}
+
+export function getRandomEarnings(min: number, max: number): number {
+	return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+export function getRandomAmount(min: number, max: number): number {
+	return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+export function calculateEarnings(userProfile) {
+	let earnings = 0
+	switch (userProfile.job) {
+		case "Student":
+			earnings = getRandomAmount(250, 750)
+			break
+		case "Janitor":
+			earnings = getRandomAmount(2500, 7500)
+			break
+		case "Mechanic":
+			earnings = getRandomAmount(9500, 17000)
+			break
+		case "Jujutsu Janitor":
+			earnings = getRandomAmount(25000, 37500)
+			break
+		case "Jujutsu Sorcerer":
+			earnings = getRandomAmount(40000, 56000)
+			break
+		case "Satoru Gojo's Assistant":
+			earnings = getRandomAmount(125000, 235000)
+			break
+		default: // Non-Sorcerer and any other jobs
+			earnings = getRandomAmount(100, 1000)
+	}
+	return earnings
+}
+
+export function getBossDrop(bossName) {
+	const drops = bossDrops[bossName]
+	if (!drops || drops.length === 0) return null
+	const dropIndex = Math.floor(Math.random() * drops.length)
+	return drops[dropIndex]
 }
