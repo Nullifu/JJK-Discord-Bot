@@ -34,7 +34,7 @@
 		"mongodb": "^6.5.0",
 		"mongoose": "^8.2.2",
 		"mysql": "^2.18.1",
-		"openai": "^3.3.0",
+		"openai": "^4.29.1",
 		"snoowrap": "^1.23.0"
 	},
 	"devDependencies": {
