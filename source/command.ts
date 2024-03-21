@@ -15,7 +15,7 @@ import {
 	SelectMenuInteraction
 } from "discord.js"
 import { attacks } from "./attacks.js"
-import { digCooldown, digCooldownBypassIDs, digCooldowns, userLastDaily } from "./bot.js"
+import { digCooldown, digCooldownBypassIDs, digCooldowns } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -36,6 +36,7 @@ import {
 	getBosses,
 	getUserAchievements,
 	getUserBankBalance,
+	getUserDailyData,
 	getUserDomain,
 	getUserGrade,
 	getUserHealth,
@@ -46,6 +47,7 @@ import {
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
+	updateUserDailyData,
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserHealth,
@@ -56,7 +58,6 @@ import {
 
 const domainActivationState = new Map()
 const userJobCooldowns = new Map()
-const userDailyStreak = new Map() // Tracks the number of consecutive daily claims
 const bossHealthMap = new Map() // Create a Map to store boss health per user
 
 export const searchCooldowns = new Map()
@@ -426,11 +427,12 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	const baseReward = 100000
 	const streakBonus = 2500
 
+	// Fetch the user's last daily claim time and streak from the database
+	const { lastDaily, streak: lastStreak } = await getUserDailyData(userId)
+
 	// Check if the user is on cooldown
-	const lastDailyTime = userLastDaily.get(userId) || 0
-	if (currentTime - lastDailyTime < oneDayMs) {
-		// Calculate when the user can next claim their daily reward, in seconds, rounded down
-		const nextAvailableTime = Math.floor((lastDailyTime + oneDayMs) / 1000) // Convert to seconds for the Discord timestamp
+	if (currentTime - lastDaily < oneDayMs) {
+		const nextAvailableTime = Math.floor((lastDaily + oneDayMs) / 1000) // Convert to seconds for the Discord timestamp
 
 		await interaction.reply({
 			content: `You must wait before you can claim your daily reward again. You can claim it again <t:${nextAvailableTime}:R>.`,
@@ -440,19 +442,14 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	}
 
 	// Calculate streak
-	const lastStreak = userDailyStreak.get(userId) || 0
-	const streak = currentTime - lastDailyTime < oneDayMs * 2 ? lastStreak + 1 : 1
+	const streak = currentTime - lastDaily < oneDayMs * 2 ? lastStreak + 1 : 1
 
 	// Calculate coins reward based on streak
 	const coinsReward = baseReward + streakBonus * (streak - 1)
 
-	// Update cooldown and streak
-	userLastDaily.set(userId, currentTime)
-	userDailyStreak.set(userId, streak)
+	await updateUserDailyData(userId, currentTime, streak)
 
-	// Update user balance and possibly inventory for the item
 	await updateBalance(userId, coinsReward)
-	// Assuming you have a function like this to add items to the user's inventory
 	const randomItemIndex = Math.floor(Math.random() * dailyitems.length)
 	const dailyItem = dailyitems[randomItemIndex]
 	await addItemToUserInventory(userId, dailyItem.name, 1)
@@ -1390,8 +1387,7 @@ export async function handleUpdateCommand(interaction: ChatInputCommandInteracti
 		{
 			title: "Update 1.2",
 			description: "Bug fixes, alert system + update system, fixed bug with duplication of registration."
-		},
-		{ title: "Support Server", description: "https://discord.gg/t8dkQdbUNZ" }
+		}
 	]
 
 	const updatesEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Recent Updates")
@@ -1401,4 +1397,9 @@ export async function handleUpdateCommand(interaction: ChatInputCommandInteracti
 	})
 
 	await interaction.reply({ embeds: [updatesEmbed], ephemeral: true })
+}
+
+// quick reply command with support server no embed needed ephemeral
+export async function handleSupportCommand(interaction: ChatInputCommandInteraction) {
+	await interaction.reply({ content: "https://discord.gg/wmVyBpqWgs", ephemeral: true })
 }

@@ -75,10 +75,7 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm"
 	},
 	six_eyes: {
-		requiredItems: [
-			{ name: "Rikugan Eye", quantity: 6 }
-			// uhh
-		],
+		requiredItems: [{ name: "Rikugan Eye", quantity: 6 }],
 		craftedItemName: "Six Eyes"
 	},
 	jogos_fixed_balls: {
@@ -116,6 +113,16 @@ export const DOMAIN_EXPANSIONS = [
 		name: "Malevolent Shrine",
 		description: "Embodiment of true fear and terror",
 		image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif"
+	},
+	{
+		name: "Coffin of the Iron Mountain",
+		description: "This domain resembles the inside of an active volcano.",
+		image_URL: "https://media1.tenor.com/m/dNMYzPN4wF0AAAAC/jogo-jjk-jogoat.gif"
+	},
+	{
+		name: "Self-Embodiment of Perfection",
+		description: "The true nature of the soul.",
+		image_URL: "https://media1.tenor.com/m/419YEH3WEwIAAAAC/jujutsu-kaisen-mahito.gif"
 	}
 ]
 

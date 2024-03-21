@@ -1,6 +1,8 @@
-import { EmbedBuilder } from "@discordjs/builders"
+import { ActionRowBuilder, EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
+	ButtonBuilder,
+	ButtonStyle,
 	ChannelType,
 	ChatInputCommandInteraction,
 	Client,
@@ -25,6 +27,7 @@ import {
 	handleProfileCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
+	handleSupportCommand,
 	handleTitleSelectCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
@@ -44,7 +47,7 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 })
 
-const activities = [
+let activities = [
 	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 	{ name: "Gojo’s explanations", type: ActivityType.Listening },
 	{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
@@ -55,12 +58,14 @@ const activities = [
 ]
 let index = 0
 
-// status update when bot turns on or refreshes
 client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`)
 
-	setInterval(() => {
-		// Update the bot's status with a different activity type
+	setInterval(async () => {
+		// Dynamically update the activities list with current member and server counts
+		await updateDynamicActivities()
+
+		// Cycle through the updated activities array
 		if (index === activities.length) index = 0 // Reset index if it's at the end of the array
 		const activity = activities[index]
 		client.user.setPresence({
@@ -68,8 +73,28 @@ client.on("ready", () => {
 			status: "online"
 		})
 		index++
-	}, 25000)
+	}, 25000) // Update every 25 seconds
 })
+
+async function updateDynamicActivities() {
+	let totalMembers = 0
+	client.guilds.cache.forEach(guild => {
+		totalMembers += guild.memberCount
+	})
+
+	// Update or add dynamic activities based on the current member and server count
+	activities = [
+		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
+		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
+		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
+		{ name: "Gojo’s explanations", type: ActivityType.Listening },
+		{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
+		{ name: "Domain Expansion theories", type: ActivityType.Watching },
+		{ name: "The Shibuya Incident", type: ActivityType.Playing },
+		{ name: "Exchange Event", type: ActivityType.Competing },
+		{ name: "/register", type: ActivityType.Listening }
+	]
+}
 
 client.on("guildCreate", guild => {
 	// Attempt to find a "general" channel or any suitable channel to send a welcome message
@@ -82,23 +107,34 @@ client.on("guildCreate", guild => {
 		}
 	})
 
-	// If a suitable channel is found, send a message
 	if (defaultChannel) {
-		defaultChannel.send(
-			"This is the discord jujutsu kaisen bot, [ WIP ] Please use /Register to start! then proceed with /help"
+		// Create an embed with EmbedBuilder in v14
+		const welcomeEmbed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Welcome to the Jujutsu Kaisen Discord Bot!")
+			.setDescription("This is the Discord Jujutsu Kaisen bot, currently a work in progress (WIP).")
+			.addFields(
+				{ name: "Getting Started", value: "Please use `/register` to start!" },
+				{ name: "Need Help?", value: "Proceed with `/help` to explore all the features." }
+			)
+			.setFooter({ text: "Enjoy your journey into the world of Jujutsu Kaisen with us!" })
+			.setTimestamp()
+
+		const row = new ActionRowBuilder().addComponents(
+			new ButtonBuilder()
+				.setStyle(ButtonStyle.Link)
+				.setURL("https://discord.gg/wmVyBpqWgs")
+				.setLabel("Join Our Support//Community Server!")
 		)
+
+		// Send the embed with the button
+		defaultChannel.send({ embeds: [welcomeEmbed], components: [row] })
 	}
 })
 
 export const latestVersion = "1.1" // Update this with each new version
-
-// If your image is hosted online, replace `dataUri` with the direct URL of the image
-
-const clientId = "991443928790335518"
-// Increase the listener limit for the interactionCreate event
+const clientId = "1216889497980112958"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
-//client.on("interactionCreate", async interaction => {})
-// Cooldown management
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
 export const digCooldowns = new Map<string, number>()
@@ -122,10 +158,11 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("User Profile"),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
-	new SlashCommandBuilder().setName("ping").setDescription("LATENCY TEST"),
+	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
+	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
@@ -134,7 +171,7 @@ const commands = [
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
 	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
 	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
-	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu"),
+	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder()
 		.setName("deposit")
@@ -204,11 +241,7 @@ client.on("interactionCreate", async interaction => {
 			.addFields([
 				{
 					name: "**General Commands**",
-					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
-				},
-				{
-					name: "**Cursed Technique Commands**",
-					value: "Kiss, Hug,"
+					value: "Update -  View recent updates!\nRegister - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
 				},
 				{
 					name: "**Jujutsu System!**",
@@ -294,6 +327,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "achievements":
 			await handleAchievementsCommand(chatInputInteraction)
+			break
+		case "support":
+			await handleSupportCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

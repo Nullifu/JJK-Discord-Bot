@@ -726,3 +726,42 @@ export async function updateUser(discordId, updates) {
 		throw error // Rethrow the error so the caller can decide how to handle it
 	}
 }
+
+// getUserDailyData function
+export async function getUserDailyData(userId: string): Promise<{ lastDaily: number; streak: number }> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return {
+			lastDaily: user?.lastDaily || 0,
+			streak: user?.streak || 0
+		}
+	} catch (error) {
+		console.error(`Error when retrieving daily data for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// Consider whether you really want to close the client here
+		// await client.close();
+	}
+}
+
+export async function updateUserDailyData(userId: string, lastDaily: number, streak: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's last daily claim time and streak
+		await usersCollection.updateOne({ id: userId }, { $set: { lastDaily, streak } }, { upsert: true })
+	} catch (error) {
+		console.error(`Error when updating daily data for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// Consider whether you really want to close the client here
+		// await client.close();
+	}
+}
