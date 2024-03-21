@@ -46,7 +46,6 @@ import {
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
-	updateUserBankBalance,
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserHealth,
@@ -117,15 +116,15 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 	const user = interaction.user
 	const bankBalance = await getUserBankBalance(user.id)
 	const balance = await getBalance(user.id)
-	const cursedCoins = balance.toString() // Consider formatting for readability
-	const cursedBalance = bankBalance.toString() // Consider formatting for readability
+	const cursedCoins = balance ? balance.toString() : "0" // Consider formatting for readability
+	const cursedBalance = bankBalance ? bankBalance.toString() : "0" // Consider formatting for readability
 
 	const balanceEmbed = new EmbedBuilder()
 		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
 		.setTitle(`${user.username}'s Cursed Energy`)
 		.setThumbnail(user.displayAvatarURL()) // Ideally, a thematic image here
-		.addFields({ name: "Cursed Balance", value: `${cursedBalance} `, inline: false })
-		.addFields({ name: "Cursed Coins", value: `${cursedCoins} `, inline: false })
+		.addFields({ name: "Cursed Bank Balance", value: `${cursedBalance} `, inline: false })
+		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
 		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
 		.setTimestamp()
 	await interaction.editReply({ embeds: [balanceEmbed] })
@@ -1386,34 +1385,12 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 	})
 }
 
-// export async function handledepositcommand
-export async function handleDepositCommand(interaction: ChatInputCommandInteraction) {
-	const userId = interaction.user.id
-	const coins = interaction.options.getInteger("coins")
-
-	if (!coins || coins <= 0) {
-		await interaction.reply({ content: "Please enter a valid amount of coins to deposit.", ephemeral: true })
-		return
-	}
-
-	const userBalance = await getBalance(userId)
-
-	if (coins > userBalance) {
-		await interaction.reply({ content: "You do not have enough coins to deposit.", ephemeral: true })
-		return
-	}
-
-	await updateBalance(userId, -coins)
-	await updateUserBankBalance(userId, coins)
-
-	await interaction.reply({ content: `You have successfully deposited ${coins} coins into your bank!` })
-}
-
 export async function handleUpdateCommand(interaction: ChatInputCommandInteraction) {
 	const recentUpdates = [
-		{ title: "Update 1.1.1", description: "more bug fixes i hate bugs grrr" },
-		{ title: "Update 1.1.0", description: "fixed bugs, fixed duplicate register bug also added new alert system" },
-		{ title: "Update 1.0.0", description: "Initial release of the bot" },
+		{
+			title: "Update 1.2",
+			description: "Bug fixes, alert system + update system, fixed bug with duplication of registration."
+		},
 		{ title: "Support Server", description: "https://discord.gg/t8dkQdbUNZ" }
 	]
 

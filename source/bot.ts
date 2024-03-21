@@ -17,7 +17,6 @@ import {
 	handleBalanceCommand,
 	handleCraftCommand,
 	handleDailyCommand,
-	handleDepositCommand,
 	handleDigCommand,
 	handleDomainSelection,
 	handleFightCommand,
@@ -295,9 +294,6 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "achievements":
 			await handleAchievementsCommand(chatInputInteraction)
-			break
-		case "deposit":
-			await handleDepositCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

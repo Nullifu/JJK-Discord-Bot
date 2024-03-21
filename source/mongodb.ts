@@ -675,7 +675,7 @@ export async function updateUserBankBalance(userId: string, newBalance: number):
 	}
 }
 
-// get user bank balance
+// get user bank balance if they dont have a bankbalance then create it
 export async function getUserBankBalance(userId: string): Promise<number> {
 	try {
 		await client.connect()
