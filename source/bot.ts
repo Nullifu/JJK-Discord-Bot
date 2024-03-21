@@ -95,7 +95,7 @@ export const latestVersion = "1.1" // Update this with each new version
 
 // If your image is hosted online, replace `dataUri` with the direct URL of the image
 
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 // Increase the listener limit for the interactionCreate event
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
