@@ -43,6 +43,7 @@ export interface User {
 	domain?: string | null
 	job: string
 	activeTitle: string
+	lastAlertedVersion: string
 }
 
 export interface Item {

@@ -17,6 +17,7 @@ import {
 	handleBalanceCommand,
 	handleCraftCommand,
 	handleDailyCommand,
+	handleDepositCommand,
 	handleDigCommand,
 	handleDomainSelection,
 	handleFightCommand,
@@ -26,42 +27,12 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleTitleSelectCommand,
+	handleUpdateCommand,
 	handleUseItemCommand,
 	handleWorkCommand
 } from "./command.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 
-// interface Item {
-// 	id: string
-// 	name: string
-// 	description: string
-// 	quantity: number
-// }
-// Define the structure for an inventory item
-// interface InventoryItem {
-// 	name: string
-// 	quantity: number
-// 	price: number
-// }
-
-// Function to add an item to the inventory
-// async function addItemToInventory(userId: string, item: Item) {
-// 	// Ensure there's an inventory array for the user
-// 	inventoryDb.data.inventories[userId] = inventoryDb.data.inventories[userId] || []
-// 	// Check if the item already exists in the inventory
-// 	const existingItemIndex = inventoryDb.data.inventories[userId].findIndex(i => i.name === item.name)
-// 	if (existingItemIndex > -1) {
-// 		// If the item exists, just update the quantity
-// 		inventoryDb.data.inventories[userId][existingItemIndex].quantity += item.quantity
-// 	} else {
-// 		// If the item does not exist, add it to the inventory
-// 		inventoryDb.data.inventories[userId].push(item)
-// 	}
-// 	// Write the updated inventory to the database
-// 	await inventoryDb.write()
-// }
-
-// Load secrets from the .env file
 dotenv()
 
 const client = new Client({
@@ -80,13 +51,15 @@ const activities = [
 	{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
 	{ name: "Domain Expansion theories", type: ActivityType.Watching },
 	{ name: "The Shibuya Incident", type: ActivityType.Playing },
-	{ name: "Exchange Event", type: ActivityType.Competing }
+	{ name: "Exchange Event", type: ActivityType.Competing },
+	{ name: "/register", type: ActivityType.Listening }
 ]
 let index = 0
 
 // status update when bot turns on or refreshes
 client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`)
+
 	setInterval(() => {
 		// Update the bot's status with a different activity type
 		if (index === activities.length) index = 0 // Reset index if it's at the end of the array
@@ -118,9 +91,13 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const clientId = "991443928790335518"
+export const latestVersion = "1.1" // Update this with each new version
+
+// If your image is hosted online, replace `dataUri` with the direct URL of the image
+
+const clientId = "1216889497980112958"
 // Increase the listener limit for the interactionCreate event
-client.setMaxListeners(30) // Set it to a reasonable value based on your use case
+client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 //client.on("interactionCreate", async interaction => {})
 // Cooldown management
 export const workCooldowns = new Map<string, number>()
@@ -146,19 +123,24 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 const commands = [
 	new SlashCommandBuilder().setName("profile").setDescription("User Profile"),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
-	new SlashCommandBuilder().setName("ping").setDescription("Replies with Pong!"),
+	new SlashCommandBuilder().setName("ping").setDescription("LATENCY TEST"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
+	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
-	new SlashCommandBuilder().setName("fight").setDescription("Fight"),
+	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
-	new SlashCommandBuilder().setName("domainselection").setDescription("Get Domain Expansion"),
+	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
 	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
+	new SlashCommandBuilder()
+		.setName("deposit")
+		.setDescription("Deposit money into your bank account.")
+		.addNumberOption(option => option.setName("amount").setDescription("The amount to deposit").setRequired(true)),
 	new SlashCommandBuilder()
 		.setName("craft")
 		.setDescription("Craft an item using components in your inventory.")
@@ -209,6 +191,7 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "help") {
 		const helpEmbed = new EmbedBuilder()
+
 			.setAuthor({
 				name: "Jujutsu Kaisen Bot",
 				iconURL: "https://bit.ly/4cfWISM"
@@ -222,7 +205,7 @@ client.on("interactionCreate", async interaction => {
 			.addFields([
 				{
 					name: "**General Commands**",
-					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nSell - Trade objects for currency\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nLookup - Discover details about objects\nDaily - Claim your daily curse"
+					value: "Register - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
 				},
 				{
 					name: "**Cursed Technique Commands**",
@@ -230,7 +213,7 @@ client.on("interactionCreate", async interaction => {
 				},
 				{
 					name: "**Jujutsu System!**",
-					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nShop - Purchase items from the store\nUseItem - Activate a cursed object\nDomain_Training - Train your cursed energy\nJujutsu_Status - View your cursed energy"
+					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomainSelection - Manifest your domain expansion!"
 				}
 			])
 			.setTimestamp()
@@ -238,27 +221,20 @@ client.on("interactionCreate", async interaction => {
 				text: "Explore and enjoy the world of curses!"
 			})
 
-		await interaction.reply({ embeds: [helpEmbed] })
+		await interaction.reply({ embeds: [helpEmbed], ephemeral: true })
 	}
 })
 
 client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const { commandName } = interaction
-	if (commandName === "ping") {
+	if (!interaction.isChatInputCommand()) return
+
+	// Check for ping command directly for special handling
+	if (interaction.commandName === "ping") {
 		const before = Date.now()
 		await interaction.deferReply()
 		const latency = Date.now() - before
 		await interaction.editReply(`Pong! Latency is ${latency}ms. API Latency is ${Math.round(client.ws.ping)}ms.`)
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "register") {
-		await handleRegisterCommand(chatInputInteraction)
+		return // Important: Exit early after handling the ping command
 	}
 })
 
@@ -272,6 +248,12 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 
 	switch (commandName) {
+		case "update":
+			await handleUpdateCommand(chatInputInteraction)
+			break
+		case "register":
+			await handleRegisterCommand(chatInputInteraction)
+			break
 		case "balance":
 			await handleBalanceCommand(chatInputInteraction)
 			break
@@ -313,6 +295,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "achievements":
 			await handleAchievementsCommand(chatInputInteraction)
+			break
+		case "deposit":
+			await handleDepositCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

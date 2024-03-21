@@ -35,6 +35,7 @@ import {
 	getBalance,
 	getBosses,
 	getUserAchievements,
+	getUserBankBalance,
 	getUserDomain,
 	getUserGrade,
 	getUserHealth,
@@ -45,11 +46,13 @@ import {
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
+	updateUserBankBalance,
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserHealth,
 	updateUserJob,
-	updateUserTitle
+	updateUserTitle,
+	userExists
 } from "./mongodb.js"
 
 const domainActivationState = new Map()
@@ -65,10 +68,20 @@ export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
 export async function handleRegisterCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	try {
 		const discordId = interaction.user.id
+
+		// Check if the user already exists before trying to register them
+		if (await userExists(discordId)) {
+			await interaction.reply({
+				content: "It looks like you're already registered!",
+				ephemeral: true
+			})
+			return
+		}
+
+		// Since user does not exist, try to add the new user
 		const result = await addUser(discordId)
 
-		// 'addUser' will return an object with 'insertedId' if insertion was successful,
-		// or an object with 'error' if the user already exists.
+		// 'addUser' will return an object with 'insertedId' if insertion was successful
 		if (result && "insertedId" in result) {
 			// User was successfully added, create and send the welcome embed
 			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
@@ -83,12 +96,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 				})
 
 			await interaction.reply({ embeds: [welcomeEmbed] })
-		} else if (result && "error" in result) {
-			// User already exists in the database, send an already registered message
-			await interaction.reply({
-				content: "It looks like you're already registered!",
-				ephemeral: true
-			})
 		} else {
 			// Some other issue occurred, send an error message
 			await interaction.reply({
@@ -108,13 +115,16 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
 	await interaction.deferReply()
 	const user = interaction.user
+	const bankBalance = await getUserBankBalance(user.id)
 	const balance = await getBalance(user.id)
 	const cursedCoins = balance.toString() // Consider formatting for readability
+	const cursedBalance = bankBalance.toString() // Consider formatting for readability
 
 	const balanceEmbed = new EmbedBuilder()
 		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
 		.setTitle(`${user.username}'s Cursed Energy`)
 		.setThumbnail(user.displayAvatarURL()) // Ideally, a thematic image here
+		.addFields({ name: "Cursed Balance", value: `${cursedBalance} `, inline: false })
 		.addFields({ name: "Cursed Coins", value: `${cursedCoins} `, inline: false })
 		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
 		.setTimestamp()
@@ -1374,4 +1384,44 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 		await sendAchievementsEmbed(currentPage)
 		await i.update({ embeds: [i.message.embeds[0]], components: i.message.components })
 	})
+}
+
+// export async function handledepositcommand
+export async function handleDepositCommand(interaction: ChatInputCommandInteraction) {
+	const userId = interaction.user.id
+	const coins = interaction.options.getInteger("coins")
+
+	if (!coins || coins <= 0) {
+		await interaction.reply({ content: "Please enter a valid amount of coins to deposit.", ephemeral: true })
+		return
+	}
+
+	const userBalance = await getBalance(userId)
+
+	if (coins > userBalance) {
+		await interaction.reply({ content: "You do not have enough coins to deposit.", ephemeral: true })
+		return
+	}
+
+	await updateBalance(userId, -coins)
+	await updateUserBankBalance(userId, coins)
+
+	await interaction.reply({ content: `You have successfully deposited ${coins} coins into your bank!` })
+}
+
+export async function handleUpdateCommand(interaction: ChatInputCommandInteraction) {
+	const recentUpdates = [
+		{ title: "Update 1.1.1", description: "more bug fixes i hate bugs grrr" },
+		{ title: "Update 1.1.0", description: "fixed bugs, fixed duplicate register bug also added new alert system" },
+		{ title: "Update 1.0.0", description: "Initial release of the bot" },
+		{ title: "Support Server", description: "https://discord.gg/t8dkQdbUNZ" }
+	]
+
+	const updatesEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Recent Updates")
+
+	recentUpdates.forEach(update => {
+		updatesEmbed.addFields({ name: update.title, value: update.description })
+	})
+
+	await interaction.reply({ embeds: [updatesEmbed], ephemeral: true })
 }

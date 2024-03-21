@@ -40,13 +40,27 @@ client.on("close", () => {
 // LINK START! ---------------------------------------------------------------
 // Functions for interfacing with the 'users' table
 // ----------------------------------------------------------------------------
+
+export async function userExists(discordId: string): Promise<boolean> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const usersCollection = database.collection(usersCollectionName)
+
+	const user = await usersCollection.findOne({ id: discordId })
+	await client.close() // Close the connection after the operation
+	return user !== null // Returns true if the user exists, false otherwise
+}
+
+const currentBotVersion = "1.0.0" // Replace with your current bot version
+
 export async function addUser(
 	id: string,
 	initialBalance: number = 100,
 	initialGrade: string = "Grade 4",
 	initialExperience: number = 0,
 	initialHealth: number = 100,
-	initialJob: string = "Student"
+	initialJob: string = "Student",
+	initialBankBalance: number = 0
 ): Promise<{ insertedId?: unknown; error?: string }> {
 	try {
 		await client.connect()
@@ -57,6 +71,7 @@ export async function addUser(
 		const insertResult: InsertOneResult<Document> = await usersCollection.insertOne({
 			id: id,
 			balance: initialBalance,
+			bankBalance: initialBankBalance,
 			job: initialJob,
 			grade: initialGrade,
 			experience: initialExperience,
@@ -65,7 +80,8 @@ export async function addUser(
 			activeTitle: null,
 			unlockedTitles: [],
 			inventory: [],
-			achievements: []
+			achievements: [],
+			lastAlertedVersion: []
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -636,5 +652,77 @@ export async function getUserUnlockedTitles(userId: string): Promise<string[]> {
 	} finally {
 		// Consider whether you really want to close the client here
 		// await client.close();
+	}
+}
+
+// update user bankbalance
+export async function updateUserBankBalance(userId: string, newBalance: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { bankBalance: newBalance } })
+
+		if (updateResult.matchedCount === 0) {
+			console.log("No user found with the specified ID")
+		}
+	} catch (error) {
+		console.error("Error updating user bank balance:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// get user bank balance
+export async function getUserBankBalance(userId: string): Promise<number> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.bankBalance : 0
+	} catch (error) {
+		console.error(`Error when retrieving bank balance for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+export async function getUser(discordId: string): Promise<unknown> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Find the user by Discord ID
+		const userDocument = await usersCollection.findOne({ id: discordId })
+		return userDocument // This will be 'null' if no user is found
+	} catch (error) {
+		console.error(`An error occurred while getting user with ID ${discordId}:`, error)
+		throw error // Rethrow the error so that the caller can handle it
+	}
+}
+
+export async function updateUser(discordId, updates) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// The '$set' operator replaces the value of a field with the specified value
+		const result = await usersCollection.updateOne({ id: discordId }, { $set: updates })
+
+		console.log(
+			`Updated user with ID ${discordId}. Matched Count: ${result.matchedCount}. Modified Count: ${result.modifiedCount}`
+		)
+		return result
+	} catch (error) {
+		console.error(`An error occurred while updating user with ID ${discordId}:`, error)
+		throw error // Rethrow the error so the caller can decide how to handle it
 	}
 }
