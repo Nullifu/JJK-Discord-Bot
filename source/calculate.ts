@@ -1,12 +1,27 @@
 import { EmbedBuilder } from "discord.js"
 import { bossDrops } from "./items jobs.js"
+import { checkUserHasHeavenlyRestriction } from "./mongodb.js"
 
-export function calculateDamage(playerGrade: string, domainEffectMultiplier: number = 1): number {
+export function calculateDamage(
+	playerGrade: string,
+	userId: string,
+	ignoreHeavenlyRestriction: boolean = false
+): number {
 	const baseDamage = 10
 	const gradeDamageBonus = getGradeDamageBonus(playerGrade)
 	const randomVariationPercentage = 0.2
+	const heavenlyRestrictionMultiplier = 1.5 // For example, 50% damage increase
 
-	let totalDamage = baseDamage * gradeDamageBonus * domainEffectMultiplier
+	// Check if the user has Heavenly Restriction
+
+	let totalDamage = baseDamage * gradeDamageBonus
+
+	if (!ignoreHeavenlyRestriction) {
+		const hasHeavenlyRestriction = checkUserHasHeavenlyRestriction(userId)
+		if (hasHeavenlyRestriction) {
+			totalDamage *= heavenlyRestrictionMultiplier
+		}
+	}
 
 	// Apply random variation
 	const randomVariation = totalDamage * randomVariationPercentage
@@ -37,24 +52,6 @@ function getGradeDamageBonus(grade: string): number {
 export function getRandomXPGain(min = 10, max = 70) {
 	// The maximum is inclusive and the minimum is inclusive
 	return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-export function calculateGradeFromExperience(newXP: number): string {
-	// Define XP thresholds for each grade. Adjust values as needed.
-	const gradeThresholds = [
-		{ grade: "Special Grade", xp: 2500 },
-		{ grade: "Grade 1", xp: 1000 },
-		{ grade: "Semi-Grade 1", xp: 750 },
-		{ grade: "Grade 2", xp: 500 },
-		{ grade: "Grade 3", xp: 250 },
-		{ grade: "Grade 4", xp: 0 } // Assuming Grade 4 is the starting/lowest grade
-	]
-
-	// Find the highest grade the user qualifies for based on their XP
-	const newGrade = gradeThresholds.find(gradeThreshold => newXP >= gradeThreshold.xp)?.grade
-
-	// Return the calculated grade; default to "Grade 4" if something goes wrong
-	return newGrade || "Grade 4"
 }
 
 export function createInventoryPage(items, startIndex, itemsPerPage, user) {
@@ -127,6 +124,9 @@ export function calculateEarnings(userProfile) {
 			break
 		case "Satoru Gojo's Assistant":
 			earnings = getRandomAmount(125000, 235000)
+			break
+		case "Curse Hunter":
+			earnings = getRandomAmount(62500, 74500)
 			break
 		default: // Non-Sorcerer and any other jobs
 			earnings = getRandomAmount(100, 1000)

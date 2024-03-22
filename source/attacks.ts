@@ -258,3 +258,44 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 	// If this point is reached, fallback to the last item
 	return attacks[attacks.length - 1]
 }
+
+export const clanAttacks = {
+	"Demon Vessel": [
+		{
+			name: "Cleave",
+			baseDamage: 10,
+			embedUpdate: embed => embed.setDescription("A swift and powerful cleave attack.")
+		},
+		{
+			name: "Dismantle",
+			baseDamage: 15,
+			embedUpdate: embed => embed.setDescription("Dismantles the opponent with precision.")
+		},
+		{
+			name: "Flame Arrow",
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Launches a fiery arrow towards the foe.")
+		}
+	],
+	"Limitless User": [
+		{
+			name: "Lapse: BLUE",
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("Manipulates space to crush the target.")
+		}
+	],
+	"Zenin": [
+		{
+			name: "Zenin Style: Blood Manipulation",
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Controls blood to attack or defend.")
+		}
+	],
+	"Fushiguro": [
+		{
+			name: "Frog",
+			baseDamage: 15,
+			embedUpdate: embed => embed.setDescription("Summons a frog for various tactical advantages.")
+		}
+	]
+}

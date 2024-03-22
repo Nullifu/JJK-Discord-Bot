@@ -12,6 +12,8 @@ export interface UserProfile {
 	domain?: string | null
 	job: string
 	activeTitle: string
+	heavenlyrestriction: string | null
+	clan: string
 }
 
 export interface BossData {
@@ -44,6 +46,8 @@ export interface User {
 	job: string
 	activeTitle: string
 	lastAlertedVersion: string
+	heavenlyrestriction: string
+	clan?: string | null
 }
 
 export interface Item {

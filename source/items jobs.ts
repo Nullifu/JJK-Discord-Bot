@@ -94,6 +94,14 @@ export const craftingRecipes = {
 			{ name: "Sukuna Finger", quantity: 1 }
 		],
 		craftedItemName: "Domain Token"
+	},
+	heavenly_restricted_blood: {
+		requiredItems: [
+			{ name: "Six Eyes", quantity: 1 },
+			{ name: "Sukuna Finger", quantity: 1 },
+			{ name: "Domain Token", quantity: 1 }
+		],
+		craftedItemName: "Heavenly Restricted Blood"
 	}
 }
 
@@ -192,33 +200,44 @@ export const titles = [
 		name: "Restless Gambler",
 		description: "Unlock Idle Deaths Gamble",
 		achievementId: "unlockIdleDeathsGamble",
-		reward: "[TITLE ] Restless Gambler"
+		reward: "[TITLE] Restless Gambler"
 	},
 	{
 		name: "Void Walker",
 		description: "Unlock Unlimited Void",
 		achievementId: "unlockUnlimitedVoid",
-		reward: "[TITLE ] Void Walker"
+		reward: "[TITLE] Void Walker"
 	},
 	{
 		name: "Shrine Keeper",
 		description: "Unlock Malevolent Shrine",
 		achievementId: "unlockMalevolentShrine",
-		reward: "[TITLE ] Shrine Keeper"
+		reward: "[TITLE] Shrine Keeper"
 	},
 	{
 		name: "Cursed Spirit",
 		description: "Die for the first time!",
 		achievementId: "diedfirstTime",
-		reward: "[TITLE ] Cursed Spirit"
+		reward: "[TITLE] Cursed Spirit"
 	},
 	{
 		name: "Domain Expansion User",
 		description: "Unlock Domain Expansion!",
 		achievementId: "unlockedDomain",
-		reward: "[TITLE ] Domain Expansion User"
+		reward: "[TITLE] Domain Expansion User"
 	},
-	{ name: "Cursed Object", description: "???" },
+	{
+		name: "Sukunas Vessel",
+		description: "Consume Sukunas Finger",
+		achievementId: "consumeFinger",
+		reward: "[TITLE] Sukunas Vessel"
+	},
+	{
+		name: "Heavenly Restricted",
+		description: "Unlock Heavenly Restriction",
+		achievementId: "unlockHeavenlyRestriction",
+		reward: "[TITLE] Heavenly Restricted"
+	},
 	{ name: "Honored One", description: "???" },
 	{ name: "Cursed Child", description: "???" }
 ]
@@ -254,6 +273,61 @@ export const allAchievements: Record<string, Achievement> = {
 		name: "Domain Expansion User",
 		description: "Unlock Domain Expansion!",
 		reward: "[TITLE] Domain Expansion User"
+	},
+	consumeFinger: {
+		name: "Demon Vessel",
+		description: "Consume Sukunas Finger",
+		reward: "[TITLE] Demon Vessel"
+	},
+	unlockHeavenlyRestriction: {
+		name: "Heavenly Restricted",
+		description: "Unlock Heavenly Restriction",
+		reward: "[TITLE] Heavenly Restricted"
 	}
+
 	// Add additional achievements as needed.
+}
+
+export const lookupItems = [
+	{
+		name: "Sukuna Finger",
+		description: "One of the 20 cursed fingers from the fearsome curse Ryomen Sukuna.",
+		effect: "Eat one and you might gain special abilities!"
+	},
+	{ name: "Tailsman", description: "Common Tailsman!" },
+	{
+		name: "Domain Token",
+		description: "A special grade token that can grant the user a domain of their choice!",
+		effect: "Use it and manifest your domain!"
+	},
+	{ name: "Jogos (Fixed) Balls", description: "Shibuya Aftermath!", effect: "Doesn't really do much" },
+	{ name: "Platinum", description: "Rare" },
+	{
+		name: "Prison Realm Fragment",
+		description:
+			"Fragmented pieces of the Prison Realm were scattered across the lands following satoru gojos unsealment!",
+		effect: "Combine all 6 to create the Prison Realm!"
+	},
+	{ name: "Jogos left testicle", description: "One of them!", effect: "Find the other and you may fix them!" },
+	{
+		name: "Jogos right testicle",
+		description: "Oh, Here's the other!",
+		effect: "Find the other and you may fix them!"
+	},
+	{ name: "Super Glue", description: "Will fix (ANYTHING)", effect: "Use it to fix any broken item" },
+	{ name: "Six Eyes", description: "? ? ?", effect: "Throughout heaven and earth.." },
+	{ name: "Rikugan Eye", description: "? ? ?" },
+	{ name: "Heavenly Chain", description: "A chain with a fearsome aura.." }
+]
+
+export const clanTechniquesMapping = {
+	"Demon Vessel": ["Cleave", "Dismantle", "Flame Arrow"],
+	"Limitless User": ["Limitless: Blue", "Hollow Purple", "Limitless: Red"],
+	"Zenin": ["Zenin Style: Playful Cloud: STRIKE", "Zenin Style: Cursed Spirit Binding"],
+	"Fushiguro": [
+		"Ten Shadows Technique: Divine Dogs",
+		"Ten Shadows Technique: Nue",
+		"Ten Shadows Technique: Toad",
+		"Eight-Handled Sword Divergent Sila Divine General Mahoraga"
+	]
 }

@@ -24,6 +24,8 @@ import {
 	handleFightCommand,
 	handleInventoryCommand,
 	handleJobSelection,
+	handleJujutsuStatsCommand,
+	handleLookupCommand,
 	handleProfileCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
@@ -33,6 +35,7 @@ import {
 	handleUseItemCommand,
 	handleWorkCommand
 } from "./command.js"
+import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 
 dotenv()
@@ -60,6 +63,9 @@ let index = 0
 
 client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`)
+	client.guilds.cache.forEach(guild => {
+		console.log(`${guild.name} (ID: ${guild.id})`)
+	})
 
 	setInterval(async () => {
 		// Dynamically update the activities list with current member and server counts
@@ -133,7 +139,7 @@ client.on("guildCreate", guild => {
 })
 
 export const latestVersion = "1.1" // Update this with each new version
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -151,6 +157,11 @@ export const randomdig2 = [
 	"Dug out",
 	"Exhumed"
 ]
+
+const itemChoices = lookupItems.map(item => ({
+	name: item.name,
+	value: item.name.toLowerCase().replace(/\s+/g, "_") // Ensure these values meet Discord's requirements
+}))
 
 export const userLastDaily = new Map<string, number>() // Maps user IDs to the last time they used /daily
 
@@ -171,8 +182,21 @@ const commands = [
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
 	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
 	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
+	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
+	new SlashCommandBuilder()
+		.setName("lookup")
+		.setDescription("Looks up an item and displays information about it.")
+		.addStringOption(
+			option =>
+				option
+					.setName("name")
+					.setDescription("The name of the item to lookup")
+					.setRequired(true)
+					.addChoices(...itemChoices) // Add choices dynamically
+		),
+
 	new SlashCommandBuilder()
 		.setName("deposit")
 		.setDescription("Deposit money into your bank account.")
@@ -189,7 +213,8 @@ const commands = [
 					{ name: "Prison Realm", value: "prison_realm" },
 					{ name: "Six Eyes", value: "six_eyes" },
 					{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
-					{ name: "Domain Token", value: "domain_token" }
+					{ name: "Domain Token", value: "domain_token" },
+					{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" }
 				)
 		),
 	new SlashCommandBuilder()
@@ -200,7 +225,10 @@ const commands = [
 				.setName("item")
 				.setDescription("The name of the item to use")
 				.setRequired(true)
-				.addChoices({ name: "Sukuna Finger", value: "Sukuna Finger" })
+				.addChoices(
+					{ name: "Sukuna Finger", value: "Sukuna Finger" },
+					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" }
+				)
 		)
 ].map(command => command.toJSON())
 
@@ -269,32 +297,24 @@ client.on("interactionCreate", async interaction => {
 })
 
 client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "update") {
-		await handleUpdateCommand(chatInputInteraction)
-		return
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isCommand()) return
-	const chatInputInteraction = interaction as ChatInputCommandInteraction
-	const { commandName } = chatInputInteraction
-	if (commandName === "support") {
-		await handleSupportCommand(chatInputInteraction)
-		return
-	}
-})
-
-client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
 	if (commandName === "register") {
 		await handleRegisterCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "lookup") {
+		await handleLookupCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "support") {
+		await handleSupportCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "update") {
+		await handleUpdateCommand(chatInputInteraction)
 		return
 	}
 
@@ -344,6 +364,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "achievements":
 			await handleAchievementsCommand(chatInputInteraction)
+			break
+		case "jujutsustatus":
+			await handleJujutsuStatsCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { config as dotenv } from "dotenv"
-import { Collection, InsertOneResult, MongoClient } from "mongodb"
+import { Collection, MongoClient } from "mongodb"
 import { BossData, User, UserProfile } from "./interface"
-import { titles } from "./items jobs.js"
+import { clanTechniquesMapping, titles } from "./items jobs.js"
 
 dotenv()
 
@@ -65,9 +65,23 @@ export async function addUser(
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Now inserting a user document with id, balance, grade, experience, health, domain, and inventory
-		const insertResult: InsertOneResult<Document> = await usersCollection.insertOne({
-			id: id,
+		const clans = Object.keys(clanTechniquesMapping) // Get all clan names
+		let assignedClan = null
+		let assignedTechnique = null
+
+		// Determine if the user gets a clan
+		if (Math.random() < 0.7) {
+			// 50% chance to get a clan
+			const randomClanIndex = Math.floor(Math.random() * clans.length)
+			assignedClan = clans[randomClanIndex]
+
+			// Randomly assign one technique from the clan's list
+			const techniques = clanTechniquesMapping[assignedClan]
+			assignedTechnique = techniques[Math.floor(Math.random() * techniques.length)]
+		}
+
+		const insertResult = await usersCollection.insertOne({
+			id,
 			balance: initialBalance,
 			bankBalance: initialBankBalance,
 			job: initialJob,
@@ -79,18 +93,19 @@ export async function addUser(
 			unlockedTitles: [],
 			inventory: [],
 			achievements: [],
-			lastAlertedVersion: []
+			lastAlertedVersion: [],
+			heavenlyrestriction: null,
+			clan: assignedClan,
+			techniques: [assignedTechnique] // Store the initial technique in an array
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
 		return { insertedId: insertResult.insertedId }
 	} catch (error) {
 		console.error(`Error when adding user with ID: ${id}`, error)
-		if (error.code === 11000) {
-			return { error: "User already exists" }
-		} else {
-			return { error: error.message }
-		}
+		return { error: "Failed to add user." }
+	} finally {
+		await client.close()
 	}
 }
 
@@ -145,7 +160,19 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 		// Fetch the user profile from the database
 		const userDocument = await usersCollection.findOne(
 			{ id: userId },
-			{ projection: { _id: 0, balance: 1, experience: 1, grade: 1, domain: 1, job: 1, activeTitle: 1 } }
+			{
+				projection: {
+					_id: 0,
+					balance: 1,
+					experience: 1,
+					grade: 1,
+					domain: 1,
+					job: 1,
+					activeTitle: 1,
+					heavenlyrestriction: 1,
+					clan: 1
+				}
+			}
 		)
 
 		if (!userDocument) {
@@ -160,7 +187,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			grade: userDocument.grade,
 			domain: userDocument.domain || null,
 			job: userDocument.job || "Non-Sorcerer",
-			activeTitle: userDocument.activeTitle || null
+			activeTitle: userDocument.activeTitle || null,
+			heavenlyrestriction: userDocument.heavenlyrestriction || null,
+			clan: userDocument.clan || "None"
 		}
 
 		console.log(`User profile found for ID: ${userId}`, userProfile)
@@ -761,5 +790,75 @@ export async function updateUserDailyData(userId: string, lastDaily: number, str
 	} finally {
 		// Consider whether you really want to close the client here
 		// await client.close();
+	}
+}
+
+// function to update heavenlyrestriction in database from null to yes
+export async function updateUserHeavenlyRestriction(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { heavenlyrestriction: true } })
+	} catch (error) {
+		console.error("Error updating heavenly restriction:", error)
+		throw error
+	}
+}
+
+export async function checkUserHasHeavenlyRestriction(userId) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { heavenlyrestriction: 1 } })
+
+		if (user && user.heavenlyrestriction === true) {
+			return true // User has Heavenly Restriction
+		} else {
+			return false
+		}
+	} catch (error) {
+		console.error("Error checking Heavenly Restriction:", error)
+		throw error // Rethrow or handle as needed
+	} finally {
+		//
+	}
+}
+
+// get user clan
+export async function getUserClan(userId: string): Promise<string | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.clan : null
+	} catch (error) {
+		console.error(`Error when retrieving clan for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// get user techniques
+export async function getUserTechniques(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.techniques : []
+	} catch (error) {
+		console.error(`Error when retrieving techniques for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
 	}
 }

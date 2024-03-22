@@ -26,22 +26,33 @@ import {
 	getRandomXPGain
 } from "./calculate.js"
 import { BossData, determineDomainAchievements, formatDomainExpansion } from "./interface.js"
-import { DOMAIN_EXPANSIONS, allAchievements, craftingRecipes, dailyitems, getRandomItem, jobs } from "./items jobs.js"
+import {
+	DOMAIN_EXPANSIONS,
+	allAchievements,
+	craftingRecipes,
+	dailyitems,
+	getRandomItem,
+	jobs,
+	lookupItems
+} from "./items jobs.js"
 import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItemToUserInventory,
 	addUser,
 	awardTitlesForAchievements,
+	checkUserHasHeavenlyRestriction,
 	getBalance,
 	getBosses,
 	getUserAchievements,
 	getUserBankBalance,
+	getUserClan,
 	getUserDailyData,
 	getUserDomain,
 	getUserGrade,
 	getUserHealth,
 	getUserInventory,
 	getUserProfile,
+	getUserTechniques,
 	getUserUnlockedTitles,
 	removeItemFromUserInventory,
 	updateBalance,
@@ -51,6 +62,7 @@ import {
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserHealth,
+	updateUserHeavenlyRestriction,
 	updateUserJob,
 	updateUserTitle,
 	userExists
@@ -134,25 +146,34 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
 
-	// Function to create the profile embed
 	const createProfileEmbed = async userId => {
 		const userProfile = await getUserProfile(userId)
 		if (!userProfile) throw new Error("Profile not found.")
 
-		const domainExpansionValue = formatDomainExpansion(userProfile.domain)
+		const hasHeavenlyRestriction = !!userProfile.heavenlyrestriction
+
+		let domainExpansionValue
+		if (hasHeavenlyRestriction) {
+			domainExpansionValue = "Not applicable due to Heavenly Restriction"
+		} else {
+			domainExpansionValue = formatDomainExpansion(userProfile.domain)
+		}
 
 		return new EmbedBuilder()
 			.setColor(0x1f6b4e) // Changed to a dark green for thematic consistency
 			.setTitle(`Jujutsu Profile: ${interaction.user.username} 🌀`)
 			.setThumbnail(interaction.user.displayAvatarURL())
 			.addFields(
+				{ name: "**Clan** 🏆", value: userProfile.clan || "None", inline: false },
 				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: false },
 				{ name: "**Balance** 💰", value: `\`${userProfile.balance.toLocaleString()}\``, inline: false },
 				{ name: "**Experience** ✨", value: userProfile.experience.toLocaleString(), inline: false },
 				{ name: "**Sorcerer Rank** 🏅", value: userProfile.grade || "Unranked", inline: false },
 				{ name: "**Job** 💼", value: userProfile.job || "None", inline: false },
-				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false }
+				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false },
+				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false }
 			)
+
 			.setFooter({
 				text: "Harness your cursed energy. Update your profile to reflect your growth in the Jujutsu world."
 			})
@@ -603,6 +624,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
 		const playerHealth = await getUserHealth(interaction.user.id)
+		const userTechniques = await getUserTechniques(interaction.user.id)
 
 		// Create embed
 		const primaryEmbed = new EmbedBuilder()
@@ -627,10 +649,26 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("domain").setLabel("Domain").setStyle(ButtonStyle.Success)
 		)
+		const selectMenu = new SelectMenuBuilder()
+			.setCustomId("technique selection")
+			.setPlaceholder("Select your skills!")
+			.addOptions(
+				userTechniques.map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName // Ensure this value is unique
+				}))
+			)
+
+		const menurow = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
 
 		// Defer reply and send initial message
 		await interaction.deferReply()
-		const fightMessage = await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		const fightMessage = await interaction.editReply({
+			embeds: [primaryEmbed],
+			components: [row, menurow]
+		})
 
 		// Button Interaction Logic
 		const collector = fightMessage.createMessageComponentCollector({
@@ -643,6 +681,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				// Get player's health
 				const playerHealth = await getUserHealth(interaction.user.id)
+				const userId = interaction.user.id // Define userId from interaction
 
 				// get boss health
 				const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
@@ -652,7 +691,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const playerGradeString = playerGradeData // This is already in the correct format
 
 				// Calculate damage using the string grade
-				const damage = calculateDamage(playerGradeString) // Use the grade string directly
+				const damage = await calculateDamage(playerGradeString, userId)
 
 				// Calculate boss new health after damage dealt
 				bossHealthMap.set(interaction.user.id, currentBossHealth - damage)
@@ -739,10 +778,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
 						primaryEmbed.setFooter({ text: bossAttackMessage })
 
-						await buttonInteraction.editReply({ embeds: [chosenAttack.embedUpdate(primaryEmbed)] })
+						await buttonInteraction.editReply({
+							embeds: [chosenAttack.embedUpdate(primaryEmbed)]
+						})
 					}
 				}
 			}
+
 			if (buttonInteraction.customId === "domain") {
 				await buttonInteraction.deferUpdate()
 
@@ -756,7 +798,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 
 				try {
-					// Fetch domain information and display its activation
+					const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(buttonInteraction.user.id)
+
+					if (hasHeavenlyRestriction) {
+						await buttonInteraction.followUp({
+							content: "Your Heavenly Restriction negates the use of domain expansion.",
+							ephemeral: true
+						})
+						return // Exit if Heavenly Restriction is present, or adjust as needed
+					}
 					const domainInfo = await getUserDomain(buttonInteraction.user.id)
 					const domainEmbed = new EmbedBuilder()
 					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
@@ -796,14 +846,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						console.log("No image URL found for domain:", domainInfo)
 					}
 
-					// Proceed with additional fight logic including extra domain damage
-					// Assuming getPlayerGradeFromDatabase correctly retrieves the player's grade as a string like "Grade 4"
 					const playerGradeData = await getUserGrade(interaction.user.id)
 					const playerGradeString = playerGradeData // This is already in the correct format
+					const userId = interaction.user.id // Define userId from interaction
 
-					// Calculate damage using the string grade
-					const baseDamage = calculateDamage(playerGradeString) // Use the grade string directly
-					const extraDomainDamage = 50 // Fixed extra damage from domain activation; adjust as needed
+					const baseDamage = await calculateDamage(playerGradeString, userId, true)
+					const extraDomainDamage = 30
 					const totalDamage = baseDamage + extraDomainDamage
 
 					// Update boss health in the Map
@@ -869,8 +917,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			}
 		})
 	} catch (error) {
-		console.error("Error in fight command:", error)
-		await interaction.reply({ content: "An error occurred during the fight!", ephemeral: true })
+		console.error("Error during fight command:", error)
+		await interaction.reply({
+			content: "An error occurred during the fight. Please try again later.",
+			ephemeral: true
+		})
 	}
 }
 
@@ -1239,6 +1290,48 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		return
 	}
 
+	if (itemName === "Heavenly Restricted Blood") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("A Cursed Choice...")
+			.setDescription("Your fingers close around blood vial")
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		setTimeout(async () => {
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the blood, feeling an overwhelming power surge within..."
+				)
+
+			// Now, edit the reply with the new embed after the delay
+			await interaction.followUp({ embeds: [embedSecond] })
+		}, 2000) // 40000 milliseconds delay
+
+		const xpGained = 225
+		await updateUserExperience(userId, xpGained)
+		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		await removeItemFromUserInventory(userId, item.name, 1)
+		await updateUserHeavenlyRestriction(userId)
+		await updateUserAchievements(userId, "unlockHeavenlyRestriction")
+
+		setTimeout(() => {
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400") // Dark green, symbolizing growth
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"As the blood enters your body, You feel your cursed energy depleting.. What have you done?"
+				)
+				.setImage("https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg") // An image URL showing the unleashed power
+
+			// Edit the reply with the new embed after a delay
+			interaction.followUp({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}, 4000)
+		return
+	}
+
 	// Adding suspense and thematic depth for the "Sukuna Finger"
 	if (itemName === "Sukuna Finger") {
 		await interaction.deferReply()
@@ -1252,19 +1345,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 				"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
 			) // Add a fitting image URL
 		await interaction.followUp({ embeds: [embedFirst] })
-
-		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
-				)
-				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
-
-			// This operation to edit the reply is placed inside the setTimeout callback to ensure the delay
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 4000)
 
 		const xpGained = 125
 		await updateUserExperience(userId, xpGained)
@@ -1304,6 +1384,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 	}
+	return
 }
 
 const checkmarkEmoji = "✅" // Use custom emojis if you have them
@@ -1390,9 +1471,9 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction: ChatInputCommandInteraction) {
 	const recentUpdates = [
 		{
-			title: "Update 1.3",
+			title: "Update 1.5",
 			description:
-				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server <:1564maskedgojode:1220626413141622794>				"
+				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server, also added heavenly restriction. adding more features to it ltr on next thing is fixing the fight command and adding techniques//clans! <:1564maskedgojode:1220626413141622794>				"
 		}
 	]
 
@@ -1408,4 +1489,70 @@ export async function handleUpdateCommand(interaction: ChatInputCommandInteracti
 // quick reply command with support server no embed needed ephemeral
 export async function handleSupportCommand(interaction: ChatInputCommandInteraction) {
 	await interaction.reply({ content: "https://discord.gg/wmVyBpqWgs", ephemeral: true })
+}
+
+export async function handleLookupCommand(interaction) {
+	const itemName = interaction.options.getString("name").toLowerCase().replace(/\s+/g, "_")
+
+	// Find the item using the transformed input.
+	const item = lookupItems.find(i => i.name.toLowerCase().replace(/\s+/g, "_") === itemName)
+
+	if (!item) {
+		await interaction.reply({ content: `No item found with the name "${itemName}".`, ephemeral: true })
+		return
+	}
+
+	const embed = new EmbedBuilder().setTitle(item.name).setDescription(item.description).setColor("#0099ff")
+
+	if (item.effect) {
+		embed.addFields({ name: "Effect", value: item.effect })
+	}
+
+	await interaction.reply({ embeds: [embed], ephemeral: true })
+}
+
+// clan information embed
+export async function handleClanInfoCommand(interaction: ChatInputCommandInteraction) {
+	const clanEmbed = new EmbedBuilder()
+		.setTitle("Clan Information")
+		.setDescription("Here is some info about the clans. Each come with their own unique abilities and perks.")
+		.setColor("#0099ff")
+		.addFields(
+			{
+				name: "Demon Vessel",
+				value: "Access to Cleave, Dismantle, Fire Arrow."
+			},
+			{
+				name: "Fushiguro",
+				value: "Access to Ten Shadows Technique, Including Mahoraga."
+			},
+			{
+				name: "Limitless User",
+				value: "ur broken op"
+			}
+		)
+
+	await interaction.reply({ embeds: [clanEmbed], ephemeral: true })
+}
+
+// jujutsu stats embed that fetches your clan your techniques your domain and your heavenly restriction
+export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInteraction) {
+	const userId = interaction.user.id
+
+	const userClan = await getUserClan(userId)
+	const userTechniques = await getUserTechniques(userId)
+	const userDomain = await getUserDomain(userId)
+	const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
+
+	const embed = new EmbedBuilder()
+		.setTitle("Jujutsu Stats")
+		.setColor("#0099ff")
+		.addFields(
+			{ name: "Clan", value: userClan || "None" },
+			{ name: "Techniques", value: userTechniques.join(", ") || "None" },
+			{ name: "Domain", value: userDomain || "None" },
+			{ name: "Heavenly Restriction", value: userHeavenlyRestriction ? "Active" : "Inactive" }
+		)
+
+	await interaction.reply({ embeds: [embed], ephemeral: true })
 }
