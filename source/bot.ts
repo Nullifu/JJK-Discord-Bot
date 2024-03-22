@@ -133,7 +133,7 @@ client.on("guildCreate", guild => {
 })
 
 export const latestVersion = "1.1" // Update this with each new version
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
