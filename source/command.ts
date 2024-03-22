@@ -725,6 +725,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						bossHealthMap.delete(interaction.user.id)
 						await updateUserHealth(interaction.user.id, 100)
 						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+						// Send an additional ephemeral message indicating the player has died
+						await buttonInteraction.followUp({
+							content: `${randomOpponent.name} Killed you!`,
+							ephemeral: true
+						})
 					} else {
 						// Update to new player health after damage dealt
 						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
@@ -1387,7 +1392,7 @@ export async function handleUpdateCommand(interaction: ChatInputCommandInteracti
 		{
 			title: "Update 1.3",
 			description:
-				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server <:gojode:1220622724905304116>"
+				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server <:1564maskedgojode:1220626413141622794>				"
 		}
 	]
 

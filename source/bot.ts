@@ -293,11 +293,9 @@ client.on("interactionCreate", async interaction => {
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
-
-	// Directly handle the 'register' command without middleware check
 	if (commandName === "register") {
 		await handleRegisterCommand(chatInputInteraction)
-		return // Ensure no further processing for 'register' command
+		return
 	}
 
 	// For other commands, proceed with the middleware check
