@@ -47,11 +47,9 @@ export async function userExists(discordId: string): Promise<boolean> {
 	const usersCollection = database.collection(usersCollectionName)
 
 	const user = await usersCollection.findOne({ id: discordId })
-	await client.close() // Close the connection after the operation
+	// await client.close() // Close the connection after the operation
 	return user !== null // Returns true if the user exists, false otherwise
 }
-
-const currentBotVersion = "1.0.0" // Replace with your current bot version
 
 export async function addUser(
 	id: string,
@@ -550,7 +548,7 @@ export async function updatePlayerGrade(userId) {
 		console.error(`Error updating grade for user ${userId} in the users collection:`, error)
 	} finally {
 		// Consider the best strategy for handling your MongoDB client connection here
-		await client.close()
+		// await client.close()
 	}
 }
 

@@ -133,7 +133,7 @@ client.on("guildCreate", guild => {
 })
 
 export const latestVersion = "1.1" // Update this with each new version
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -259,33 +259,52 @@ client.on("interactionCreate", async interaction => {
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
-
-	// Check for ping command directly for special handling
 	if (interaction.commandName === "ping") {
 		const before = Date.now()
 		await interaction.deferReply()
 		const latency = Date.now() - before
 		await interaction.editReply(`Pong! Latency is ${latency}ms. API Latency is ${Math.round(client.ws.ping)}ms.`)
-		return // Important: Exit early after handling the ping command
+		return
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "update") {
+		await handleUpdateCommand(chatInputInteraction)
+		return
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (!interaction.isCommand()) return
+	const chatInputInteraction = interaction as ChatInputCommandInteraction
+	const { commandName } = chatInputInteraction
+	if (commandName === "support") {
+		await handleSupportCommand(chatInputInteraction)
+		return
 	}
 })
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
 
-	const shouldProceed = await checkRegistrationMiddleware(interaction)
-	if (!shouldProceed) return
-
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
 
+	// Directly handle the 'register' command without middleware check
+	if (commandName === "register") {
+		await handleRegisterCommand(chatInputInteraction)
+		return // Ensure no further processing for 'register' command
+	}
+
+	// For other commands, proceed with the middleware check
+	const shouldProceed = await checkRegistrationMiddleware(interaction)
+	if (!shouldProceed) return
+
 	switch (commandName) {
-		case "update":
-			await handleUpdateCommand(chatInputInteraction)
-			break
-		case "register":
-			await handleRegisterCommand(chatInputInteraction)
-			break
 		case "balance":
 			await handleBalanceCommand(chatInputInteraction)
 			break
@@ -327,9 +346,6 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "achievements":
 			await handleAchievementsCommand(chatInputInteraction)
-			break
-		case "support":
-			await handleSupportCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

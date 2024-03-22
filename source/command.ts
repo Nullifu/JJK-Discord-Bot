@@ -1385,8 +1385,9 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction: ChatInputCommandInteraction) {
 	const recentUpdates = [
 		{
-			title: "Update 1.2",
-			description: "Bug fixes, alert system + update system, fixed bug with duplication of registration."
+			title: "Update 1.3",
+			description:
+				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server <:gojode:1220622724905304116>"
 		}
 	]
 
