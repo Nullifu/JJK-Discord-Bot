@@ -134,6 +134,25 @@ export const DOMAIN_EXPANSIONS = [
 	}
 ]
 
+export const SKILLS = [
+	{
+		name: "Flame Arrow",
+		description: "Turn up the volume..",
+		image_URL: "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+	},
+	{
+		name: "Dismantle",
+		description: "Considered one of the most powerful techniques in Jujutsu",
+		image_URL:
+			"https://64.media.tumblr.com/366de99d6648d5915140d29a0ecff673/c351c57420a7daeb-3d/s540x810/1e37fa6f81e7f2531d806c4bd4504ffeb128fd12.gif"
+	},
+	{
+		name: "Cleave",
+		description: "Embodiment of true fear and terror",
+		image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif"
+	}
+]
+
 export type items = {
 	name: string
 	rarity: string

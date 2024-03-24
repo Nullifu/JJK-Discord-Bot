@@ -17,14 +17,17 @@ import { config as dotenv } from "dotenv"
 import {
 	handleAchievementsCommand,
 	handleBalanceCommand,
+	handleClanInfoCommand,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
 	handleDomainSelection,
 	handleFightCommand,
+	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
 	handleJujutsuStatsCommand,
+	handleLeaderBoardCommand,
 	handleLookupCommand,
 	handleProfileCommand,
 	handleRegisterCommand,
@@ -138,8 +141,7 @@ client.on("guildCreate", guild => {
 	}
 })
 
-export const latestVersion = "1.1" // Update this with each new version
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -177,6 +179,9 @@ const commands = [
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
+	new SlashCommandBuilder().setName("leaderboard").setDescription("Global Leaderboard!"),
+	new SlashCommandBuilder().setName("claninfo").setDescription("clan info!"),
+	new SlashCommandBuilder().setName("guide").setDescription("If your stuck refer to this!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
@@ -305,6 +310,14 @@ client.on("interactionCreate", async interaction => {
 		await handleRegisterCommand(chatInputInteraction)
 		return
 	}
+	if (commandName === "claninfo") {
+		await handleClanInfoCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "guide") {
+		await handleGuideCommand(chatInputInteraction)
+		return
+	}
 	if (commandName === "lookup") {
 		await handleLookupCommand(chatInputInteraction)
 		return
@@ -367,6 +380,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "jujutsustatus":
 			await handleJujutsuStatsCommand(chatInputInteraction)
+			break
+		case "leaderboard":
+			await handleLeaderBoardCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

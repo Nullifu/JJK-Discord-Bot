@@ -41,6 +41,7 @@ import {
 	addUser,
 	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
+	getAllUserExperience,
 	getBalance,
 	getBosses,
 	getUserAchievements,
@@ -309,6 +310,8 @@ export async function handleDigCommand(interaction) {
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
 }
+
+console.log("jon is mid")
 
 export async function handleJobSelection(interaction: CommandInteraction) {
 	if (!interaction.isChatInputCommand()) return
@@ -602,343 +605,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		console.error("Error in crafting or inventory process:", error)
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
-}
-
-async function delay(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
-	try {
-		// Fetch boss data from database
-		const allBosses = await getBosses()
-
-		if (allBosses.length === 0) {
-			console.error("No bosses found in the database.")
-			return // Or handle this situation appropriately
-		}
-
-		// Select random opponent
-		const randomIndex = Math.floor(Math.random() * allBosses.length)
-		const randomOpponent = allBosses[randomIndex]
-
-		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
-		const playerHealth = await getUserHealth(interaction.user.id)
-		const userTechniques = await getUserTechniques(interaction.user.id)
-
-		// Create embed
-		const primaryEmbed = new EmbedBuilder()
-			.setColor(cursedEnergyPurple)
-			.setTitle("Cursed Battle!")
-			.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
-			.setImage(randomOpponent.image_url)
-			.addFields({ name: "Health", value: randomOpponent.current_health.toString() })
-			.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
-		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
-		if (remainingHealthPercentage < 0.5) {
-			primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
-		}
-		// Add JJK Flavor Text based for this boss
-		const flavorText = getJujutsuFlavorText(randomOpponent.name)
-		if (flavorText) {
-			primaryEmbed.addFields([flavorText])
-		}
-
-		// Create buttons
-		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId("domain").setLabel("Domain").setStyle(ButtonStyle.Success)
-		)
-		const selectMenu = new SelectMenuBuilder()
-			.setCustomId("technique selection")
-			.setPlaceholder("Select your skills!")
-			.addOptions(
-				userTechniques.map(techniqueName => ({
-					label: techniqueName,
-					description: "Select to use this technique",
-					value: techniqueName // Ensure this value is unique
-				}))
-			)
-
-		const menurow = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-
-		// Defer reply and send initial message
-		await interaction.deferReply()
-
-		const fightMessage = await interaction.editReply({
-			embeds: [primaryEmbed],
-			components: [row, menurow]
-		})
-
-		// Button Interaction Logic
-		const collector = fightMessage.createMessageComponentCollector({
-			filter: buttonInteraction => buttonInteraction.user.id === interaction.user.id
-		})
-
-		collector.on("collect", async (buttonInteraction: ButtonInteraction) => {
-			if (buttonInteraction.customId === "fight") {
-				await buttonInteraction.deferUpdate()
-
-				// Get player's health
-				const playerHealth = await getUserHealth(interaction.user.id)
-				const userId = interaction.user.id // Define userId from interaction
-
-				// get boss health
-				const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-
-				// Get player's grade
-				const playerGradeData = await getUserGrade(interaction.user.id)
-				const playerGradeString = playerGradeData // This is already in the correct format
-
-				// Calculate damage using the string grade
-				const damage = await calculateDamage(playerGradeString, userId)
-
-				// Calculate boss new health after damage dealt
-				bossHealthMap.set(interaction.user.id, currentBossHealth - damage)
-				randomOpponent.current_health = Math.max(0, currentBossHealth - damage) // Keep in sync
-
-				// Construct result message
-				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
-				primaryEmbed.setDescription(fightResult)
-				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
-				// Is the boss dead?
-				if (randomOpponent.current_health <= 0) {
-					domainActivationState.set(contextKey, false) // Reset domain activation state
-					// Reset health in the database
-					bossHealthMap.delete(interaction.user.id)
-					const victoryMessage = "You won the fight!"
-					primaryEmbed.setDescription(victoryMessage)
-					await buttonInteraction.editReply({
-						embeds: [primaryEmbed],
-						components: []
-					})
-					// Calculate XP gain
-					const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
-					await updateUserHealth(interaction.user.id, 100)
-					await updateUserExperience(buttonInteraction.user.id, xpGain)
-					await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
-
-					const drop = getBossDrop(randomOpponent.name)
-					if (drop) {
-						console.log("Drop found:", drop)
-
-						// Pass drop.name instead of the entire drop object
-						await addItemToUserInventory(interaction.user.id, drop.name, 1)
-					}
-
-					const privateEmbed = new EmbedBuilder()
-						.setColor("#0099ff") // Set the color of the embed
-						.setTitle("Battle Rewards") // Set a title for the embed
-						.addFields(
-							{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
-							{ name: "Experience Gained", value: `You've gained ${xpGain} XP for defeating the boss!` }
-						)
-
-					// Send the embed as an ephemeral follow-up to the button interaction
-					await buttonInteraction.followUp({ embeds: [privateEmbed], ephemeral: true })
-				} else {
-					// Update to new boss health after damage dealt
-					bossHealthMap.set(randomOpponent.name, randomOpponent.current_health)
-
-					await delay(700) // Wait for 2 seconds
-					// *** Boss Attack ***
-					const possibleAttacks = attacks[randomOpponent.name]
-					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
-
-					//const damageToPlayer = Math.floor(chosenAttack.baseDamage * Math.random())
-					const damageToPlayer = chosenAttack.baseDamage
-
-					// Calculate player new health after damage dealt by boss
-					const newPlayerHealth = playerHealth - damageToPlayer
-
-					// Ensure player health is never below 0
-					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
-
-					// Did the player die?
-					if (clampedPlayerHealth <= 0) {
-						// Generic defeat message for other bosses
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-
-						// Reset player health in the database.
-						bossHealthMap.delete(interaction.user.id)
-						await updateUserHealth(interaction.user.id, 100)
-						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-						// Send an additional ephemeral message indicating the player has died
-						await buttonInteraction.followUp({
-							content: `${randomOpponent.name} Killed you!`,
-							ephemeral: true
-						})
-					} else {
-						// Update to new player health after damage dealt
-						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-
-						// Update embed with attack message from boss
-
-						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-
-						await buttonInteraction.editReply({
-							embeds: [chosenAttack.embedUpdate(primaryEmbed)]
-						})
-					}
-				}
-			}
-
-			if (buttonInteraction.customId === "domain") {
-				await buttonInteraction.deferUpdate()
-
-				//domain check if used
-				if (domainActivationState.get(contextKey)) {
-					await buttonInteraction.followUp({
-						content: "You can only activate your domain once per fight.",
-						ephemeral: true
-					})
-					return
-				}
-
-				try {
-					const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(buttonInteraction.user.id)
-
-					if (hasHeavenlyRestriction) {
-						await buttonInteraction.followUp({
-							content: "Your Heavenly Restriction negates the use of domain expansion.",
-							ephemeral: true
-						})
-						return // Exit if Heavenly Restriction is present, or adjust as needed
-					}
-					const domainInfo = await getUserDomain(buttonInteraction.user.id)
-					const domainEmbed = new EmbedBuilder()
-					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
-					if (domainInfo) {
-						domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
-						// Add any specific logic for domain effects on player or opponent
-					}
-
-					if (!domainInfo) {
-						await buttonInteraction.followUp({
-							content: "You do not have a domain unlocked yet.",
-							ephemeral: true
-						})
-						return
-					}
-					const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
-					if (!domainObject) {
-						console.error("Domain not found:", domainInfo)
-						return
-					}
-					domainActivationState.set(contextKey, true)
-					// User has a domain, construct an embed to show its activation and fight image
-					domainEmbed
-						.setColor("Blue")
-						.setTitle(`${buttonInteraction.user.username} has activated their domain!`)
-						.setDescription(`Domain: ${domainInfo}`)
-						.addFields(
-							{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: true },
-							{ name: "Your Health", value: playerHealth.toString(), inline: true },
-							{ name: "Domain Effect", value: domainEffectMessage }
-						)
-
-					// Add image if domainObject has an imageURL
-					if (domainObject.image_URL) {
-						domainEmbed.setImage(domainObject.image_URL)
-					} else {
-						console.log("No image URL found for domain:", domainInfo)
-					}
-
-					const playerGradeData = await getUserGrade(interaction.user.id)
-					const playerGradeString = playerGradeData // This is already in the correct format
-					const userId = interaction.user.id // Define userId from interaction
-
-					const baseDamage = await calculateDamage(playerGradeString, userId, true)
-					const extraDomainDamage = 30
-					const totalDamage = baseDamage + extraDomainDamage
-
-					// Update boss health in the Map
-					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
-					bossHealthMap.set(interaction.user.id, currentBossHealth)
-
-					// Construct result message
-					const fightResult = await handleFightLogic(
-						interaction,
-						randomOpponent,
-						playerGradeString,
-						totalDamage
-					)
-					primaryEmbed.setDescription(fightResult)
-					await buttonInteraction.editReply({ embeds: [primaryEmbed] })
-					// Is the boss dead?
-					if (randomOpponent.current_health <= 0) {
-						domainActivationState.set(contextKey, false) // Reset domain activation state
-						// Reset health in the database
-						bossHealthMap.delete(interaction.user.id)
-						const victoryMessage = "You won the fight!"
-						primaryEmbed.setDescription(victoryMessage)
-						await buttonInteraction.editReply({
-							embeds: [primaryEmbed],
-							components: []
-						})
-						// Calculate XP gain
-						const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
-						// Update player's experience
-						await updateUserHealth(interaction.user.id, 100)
-						await updateUserExperience(buttonInteraction.user.id, xpGain)
-						await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
-
-						const drop = getBossDrop(randomOpponent.name)
-						if (drop) {
-							console.log("Drop found:", drop)
-							const dropMessage = `You've also found a ${drop} among the remains!`
-							await buttonInteraction.followUp({ content: dropMessage })
-							await addItemToUserInventory(interaction.user.id, drop, 1)
-						}
-
-						// Send a message about the XP gain
-						const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
-						await buttonInteraction.followUp({ content: xpMessage })
-					} else {
-						// Generic defeat message for other bosses
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-					}
-
-					// Update in-memory opponent object
-					randomOpponent.current_health = currentBossHealth
-
-					await buttonInteraction.editReply({ embeds: [domainEmbed] })
-				} catch (error) {
-					console.error("Error during domain activation or fight logic:", error)
-					await buttonInteraction.followUp({
-						content: "An error occurred during domain activation or in the fight. Please try again later.",
-						ephemeral: true
-					})
-				}
-			}
-		})
-	} catch (error) {
-		console.error("Error during fight command:", error)
-		await interaction.reply({
-			content: "An error occurred during the fight. Please try again later.",
-			ephemeral: true
-		})
-	}
-}
-
-async function handleFightLogic(
-	interaction: Interaction,
-	randomOpponent: BossData,
-	playerGradeString: string,
-	damage: number
-): Promise<string> {
-	let resultMessage = `You dealt ${damage} damage to ${randomOpponent.name}!`
-	if (randomOpponent.current_health <= 0) {
-		resultMessage += " You won the fight!"
-	} else {
-		resultMessage += ` Boss health remaining: ${randomOpponent.current_health}`
-	}
-
-	return resultMessage
 }
 
 export async function handleTitleSelectCommand(interaction: ChatInputCommandInteraction) {
@@ -1468,22 +1134,54 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 	})
 }
 
-export async function handleUpdateCommand(interaction: ChatInputCommandInteraction) {
+export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			title: "Update 1.5",
-			description:
-				"Bot was really bugged my bad, fixed all of it mostly should work fine if you encounter erros please make a ticket in the support server, also added heavenly restriction. adding more features to it ltr on next thing is fixing the fight command and adding techniques//clans! <:1564maskedgojode:1220626413141622794>				"
+			version: "Update 2.0",
+			date: "2024-03-24", // Example date, adjust as necessary
+			changes: [
+				{
+					name: "Heavenly Restriction",
+					value: "Buffs damage in fight command and removes usage of domain expansion. Obtain HR by crafting the blood vial."
+				},
+				{
+					name: "Guide Command",
+					value: "Use this command if you're ever stuck."
+				},
+				{
+					name: "Lookup Command",
+					value: "Helps you know more about an item. Still work in progress, more items to be added soon."
+				},
+				{
+					name: "Leaderboard Command",
+					value: "Displays the leaderboard for highest earned XP. More features to be added later."
+				},
+				{
+					name: "Fight Command Rework",
+					value: "Currently under rework. Techniques seem to work, so expect updates in the coming week."
+				},
+				{
+					name: "Bugs",
+					value: "**> If theres any bugs please report them in the support server. <** /support"
+				}
+			]
 		}
 	]
 
-	const updatesEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Recent Updates")
+	// Creating an embed for the update information
+	const updateEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle(recentUpdates[0].version)
+		.setDescription(`Released on: **${recentUpdates[0].date}**\nHere's what's new:`)
+		.setTimestamp()
 
-	recentUpdates.forEach(update => {
-		updatesEmbed.addFields({ name: update.title, value: update.description })
+	// Add each change as a field in the embed
+	recentUpdates[0].changes.forEach(change => {
+		updateEmbed.addFields({ name: change.name, value: change.value })
 	})
 
-	await interaction.reply({ embeds: [updatesEmbed], ephemeral: true })
+	// Reply to the interaction with the update information
+	await interaction.reply({ embeds: [updateEmbed], ephemeral: true })
 }
 
 // quick reply command with support server no embed needed ephemeral
@@ -1515,7 +1213,9 @@ export async function handleLookupCommand(interaction) {
 export async function handleClanInfoCommand(interaction: ChatInputCommandInteraction) {
 	const clanEmbed = new EmbedBuilder()
 		.setTitle("Clan Information")
-		.setDescription("Here is some info about the clans. Each come with their own unique abilities and perks.")
+		.setDescription(
+			"Here is some info about the clans. Each come with their own unique abilities and perks. [ WIP Still, when the fight command gets reworked they'll be used and for future stuff. ]"
+		)
 		.setColor("#0099ff")
 		.addFields(
 			{
@@ -1528,7 +1228,7 @@ export async function handleClanInfoCommand(interaction: ChatInputCommandInterac
 			},
 			{
 				name: "Limitless User",
-				value: "ur broken op"
+				value: "literally satoru gojo."
 			}
 		)
 
@@ -1555,4 +1255,388 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		)
 
 	await interaction.reply({ embeds: [embed], ephemeral: true })
+}
+
+async function delay(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
+	try {
+		// Fetch boss data from database
+		const allBosses = await getBosses()
+
+		if (allBosses.length === 0) {
+			console.error("No bosses found in the database.")
+			return // Or handle this situation appropriately
+		}
+
+		// Select random opponent
+		const randomIndex = Math.floor(Math.random() * allBosses.length)
+		const randomOpponent = allBosses[randomIndex]
+
+		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+		const playerHealth = await getUserHealth(interaction.user.id)
+
+		// Create embed
+		const primaryEmbed = new EmbedBuilder()
+			.setColor(cursedEnergyPurple)
+			.setTitle("Cursed Battle!")
+			.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
+			.setImage(randomOpponent.image_url)
+			.addFields({ name: "Health", value: randomOpponent.current_health.toString() })
+			.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
+		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
+		if (remainingHealthPercentage < 0.5) {
+			primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
+		}
+		// Add JJK Flavor Text based for this boss
+		const flavorText = getJujutsuFlavorText(randomOpponent.name)
+		if (flavorText) {
+			primaryEmbed.addFields([flavorText])
+		}
+
+		// Create buttons
+		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("domain").setLabel("Domain").setStyle(ButtonStyle.Success)
+		)
+
+		// Defer reply and send initial message
+		await interaction.deferReply()
+
+		const fightMessage = await interaction.editReply({
+			embeds: [primaryEmbed],
+			components: [row]
+		})
+
+		// Button Interaction Logic
+		const collector = fightMessage.createMessageComponentCollector({
+			filter: buttonInteraction => buttonInteraction.user.id === interaction.user.id
+		})
+
+		collector.on("collect", async (buttonInteraction: ButtonInteraction) => {
+			if (buttonInteraction.customId === "fight") {
+				await buttonInteraction.deferUpdate()
+
+				// Get player's health
+				const playerHealth = await getUserHealth(interaction.user.id)
+				const userId = interaction.user.id // Define userId from interaction
+
+				// get boss health
+				const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+
+				// Get player's grade
+				const playerGradeData = await getUserGrade(interaction.user.id)
+				const playerGradeString = playerGradeData // This is already in the correct format
+
+				// Calculate damage using the string grade
+				const damage = await calculateDamage(playerGradeString, userId)
+
+				// Calculate boss new health after damage dealt
+				bossHealthMap.set(interaction.user.id, currentBossHealth - damage)
+				randomOpponent.current_health = Math.max(0, currentBossHealth - damage) // Keep in sync
+
+				// Construct result message
+				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
+				primaryEmbed.setDescription(fightResult)
+				primaryEmbed.setFields(
+					{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+					{ name: "Player Health", value: playerHealth.toString() }
+				)
+				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
+				// Is the boss dead?
+				if (randomOpponent.current_health <= 0) {
+					domainActivationState.set(contextKey, false) // Reset domain activation state
+					// Reset health in the database
+					bossHealthMap.delete(interaction.user.id)
+					const victoryMessage = "You won the fight!"
+					primaryEmbed.setDescription(victoryMessage)
+					await buttonInteraction.editReply({
+						embeds: [primaryEmbed],
+						components: []
+					})
+					// Calculate XP gain
+					const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
+					await updateUserHealth(interaction.user.id, 100)
+					await updateUserExperience(buttonInteraction.user.id, xpGain)
+					await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
+
+					const drop = getBossDrop(randomOpponent.name)
+					if (drop) {
+						console.log("Drop found:", drop)
+
+						// Pass drop.name instead of the entire drop object
+						await addItemToUserInventory(interaction.user.id, drop.name, 1)
+					}
+
+					const privateEmbed = new EmbedBuilder()
+						.setColor("#0099ff") // Set the color of the embed
+						.setTitle("Battle Rewards") // Set a title for the embed
+						.addFields(
+							{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
+							{ name: "Experience Gained", value: `You've gained ${xpGain} XP for defeating the boss!` }
+						)
+
+					// Send the embed as an ephemeral follow-up to the button interaction
+					await buttonInteraction.followUp({ embeds: [privateEmbed], ephemeral: true })
+				} else {
+					// Update to new boss health after damage dealt
+					bossHealthMap.set(randomOpponent.name, randomOpponent.current_health)
+
+					await delay(700) // Wait for 2 seconds
+					// *** Boss Attack ***
+					const possibleAttacks = attacks[randomOpponent.name]
+					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+
+					//const damageToPlayer = Math.floor(chosenAttack.baseDamage * Math.random())
+					const damageToPlayer = chosenAttack.baseDamage
+
+					// Calculate player new health after damage dealt by boss
+					const newPlayerHealth = playerHealth - damageToPlayer
+
+					// Ensure player health is never below 0
+					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+					// Did the player die?
+					if (clampedPlayerHealth <= 0) {
+						// Generic defeat message for other bosses
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
+
+						// Reset player health in the database.
+						bossHealthMap.delete(interaction.user.id)
+						await updateUserHealth(interaction.user.id, 100)
+						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+						// Send an additional ephemeral message indicating the player has died
+						await buttonInteraction.followUp({
+							content: `${randomOpponent.name} Killed you!`,
+							ephemeral: true
+						})
+					} else {
+						// Update to new player health after damage dealt
+						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+
+						// Update embed with attack message from boss
+
+						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
+
+						await buttonInteraction.editReply({
+							embeds: [chosenAttack.embedUpdate(primaryEmbed)]
+						})
+					}
+				}
+			}
+
+			if (buttonInteraction.customId === "domain") {
+				await buttonInteraction.deferUpdate()
+
+				//domain check if used
+				if (domainActivationState.get(contextKey)) {
+					await buttonInteraction.followUp({
+						content: "You can only activate your domain once per fight.",
+						ephemeral: true
+					})
+					return
+				}
+
+				try {
+					const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(buttonInteraction.user.id)
+
+					if (hasHeavenlyRestriction) {
+						await buttonInteraction.followUp({
+							content: "Your Heavenly Restriction negates the use of domain expansion.",
+							ephemeral: true
+						})
+						return // Exit if Heavenly Restriction is present, or adjust as needed
+					}
+					const domainInfo = await getUserDomain(buttonInteraction.user.id)
+					const domainEmbed = new EmbedBuilder()
+					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
+					if (domainInfo) {
+						domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
+						// Add any specific logic for domain effects on player or opponent
+					}
+
+					if (!domainInfo) {
+						await buttonInteraction.followUp({
+							content: "You do not have a domain unlocked yet.",
+							ephemeral: true
+						})
+						return
+					}
+					const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+					if (!domainObject) {
+						console.error("Domain not found:", domainInfo)
+						return
+					}
+					domainActivationState.set(contextKey, true)
+					// User has a domain, construct an embed to show its activation and fight image
+					domainEmbed
+						.setColor("Blue")
+						.setTitle(`${buttonInteraction.user.username} has activated their domain!`)
+						.setDescription(`Domain: ${domainInfo}`)
+						.addFields(
+							{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: true },
+							{ name: "Your Health", value: playerHealth.toString(), inline: true },
+							{ name: "Domain Effect", value: domainEffectMessage }
+						)
+
+					// Add image if domainObject has an imageURL
+					if (domainObject.image_URL) {
+						domainEmbed.setImage(domainObject.image_URL)
+					} else {
+						console.log("No image URL found for domain:", domainInfo)
+					}
+
+					const playerGradeData = await getUserGrade(interaction.user.id)
+					const playerGradeString = playerGradeData // This is already in the correct format
+					const userId = interaction.user.id // Define userId from interaction
+
+					const baseDamage = await calculateDamage(playerGradeString, userId, true)
+					const extraDomainDamage = 30
+					const totalDamage = baseDamage + extraDomainDamage
+
+					// Update boss health in the Map
+					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+					bossHealthMap.set(interaction.user.id, currentBossHealth)
+
+					// Construct result message
+					const fightResult = await handleFightLogic(
+						interaction,
+						randomOpponent,
+						playerGradeString,
+						totalDamage
+					)
+					primaryEmbed.setDescription(fightResult)
+					await buttonInteraction.editReply({ embeds: [primaryEmbed] })
+					// Is the boss dead?
+					if (randomOpponent.current_health <= 0) {
+						domainActivationState.set(contextKey, false) // Reset domain activation state
+						// Reset health in the database
+						bossHealthMap.delete(interaction.user.id)
+						const victoryMessage = "You won the fight!"
+						primaryEmbed.setDescription(victoryMessage)
+						await buttonInteraction.editReply({
+							embeds: [primaryEmbed],
+							components: []
+						})
+						// Calculate XP gain
+						const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
+						// Update player's experience
+						await updateUserHealth(interaction.user.id, 100)
+						await updateUserExperience(buttonInteraction.user.id, xpGain)
+						await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
+
+						const drop = getBossDrop(randomOpponent.name)
+						if (drop) {
+							console.log("Drop found:", drop)
+							const dropMessage = `You've also found a ${drop} among the remains!`
+							await buttonInteraction.followUp({ content: dropMessage })
+							await addItemToUserInventory(interaction.user.id, drop, 1)
+						}
+
+						// Send a message about the XP gain
+						const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
+						await buttonInteraction.followUp({ content: xpMessage })
+					} else {
+						// Generic defeat message for other bosses
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
+					}
+
+					// Update in-memory opponent object
+					randomOpponent.current_health = currentBossHealth
+
+					await buttonInteraction.editReply({ embeds: [domainEmbed] })
+				} catch (error) {
+					console.error("Error during domain activation or fight logic:", error)
+					await buttonInteraction.followUp({
+						content: "An error occurred during domain activation or in the fight. Please try again later.",
+						ephemeral: true
+					})
+				}
+			}
+		})
+	} catch (error) {
+		console.error("Error during fight command:", error)
+		await interaction.reply({
+			content: "An error occurred during the fight. Please try again later.",
+			ephemeral: true
+		})
+	}
+}
+
+async function handleFightLogic(
+	interaction: Interaction,
+	randomOpponent: BossData,
+	playerGradeString: string,
+	damage: number
+): Promise<string> {
+	let resultMessage = `You dealt ${damage} damage to ${randomOpponent.name}!`
+	if (randomOpponent.current_health <= 0) {
+		resultMessage += " You won the fight!"
+	} else {
+		resultMessage += ` Boss health remaining: ${randomOpponent.current_health}`
+	}
+
+	return resultMessage
+}
+
+// guide command
+export async function handleGuideCommand(interaction: ChatInputCommandInteraction) {
+	const guideEmbed = new EmbedBuilder()
+		.setTitle("Jujutsu Kaisen Bot Guide")
+		.setDescription(
+			"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [ Very WIP ]"
+		)
+		.setColor("#0099ff")
+		.addFields(
+			{
+				name: "Commands",
+				value: "1. `/search` - Search for items!.\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
+			},
+			{
+				name: "Additional Information",
+				value: "Use these commands to explore the world of Jujutsu Kaisen and grow your cursed energy. Good luck!"
+			}
+		)
+
+	await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
+}
+
+export async function handleLeaderBoardCommand(interaction) {
+	try {
+		const userExperiences = await getAllUserExperience()
+		userExperiences.sort((a, b) => b.experience - a.experience)
+
+		// Create an embed for the leaderboard
+		const leaderboardEmbed = new EmbedBuilder()
+			.setColor("#00FF00") // A vibrant color
+			.setTitle("🏆 Leaderboard - Top Performers 🏆")
+			.setDescription("Here are the top performers based on XP earned:")
+			.setTimestamp()
+
+		// Use emojis or icons for rankings
+		const rankEmojis = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+
+		// Limiting to top 10 for conciseness
+		userExperiences.slice(0, 10).forEach((user, index) => {
+			const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
+			const text = `${rank} <@${user.id}> - **${user.experience} XP**`
+			// For the first three, consider adding more flair or details
+			if (index < 3) {
+				leaderboardEmbed.addFields({ name: `Top ${index + 1}`, value: text, inline: false })
+			} else {
+				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false }) // \u200B is a zero-width space
+			}
+		})
+
+		// Reply with the leaderboard
+		await interaction.reply({ embeds: [leaderboardEmbed] })
+	} catch (error) {
+		console.error("Failed to handle leaderboard command:", error)
+		await interaction.reply("There was an error trying to execute that command!")
+	}
 }

@@ -274,7 +274,11 @@ export const clanAttacks = {
 		{
 			name: "Flame Arrow",
 			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Launches a fiery arrow towards the foe.")
+			embedUpdate: embed => {
+				embed.setImage("https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif")
+				embed.setDescription("Burn.")
+				return embed
+			}
 		}
 	],
 	"Limitless User": [
@@ -298,4 +302,36 @@ export const clanAttacks = {
 			embedUpdate: embed => embed.setDescription("Summons a frog for various tactical advantages.")
 		}
 	]
+}
+
+export const heavenlyrestrictionattacks = {
+	"Heavenly Restriction": [
+		{
+			name: "Purge",
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Blitz.")
+		},
+		{
+			name: "Pummel",
+			baseDamage: 15,
+			embedUpdate: embed => embed.setDescription("Dismantles the opponent with precision.")
+		},
+		{
+			name: "Bullet rain",
+			baseDamage: 20,
+			embedUpdate: embed => {
+				embed.setImage("https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif")
+				embed.setDescription("Burn.")
+				return embed
+			}
+		}
+	]
+}
+
+export function getTechniqueImage(selectedTechnique) {
+	// Assuming each technique directly has an 'image_URL' property if there's an image associated with it
+
+	// You already have the selectedTechnique object from your interaction
+	// Just directly access the 'image_URL' property
+	return selectedTechnique.image_URL || null // Return the URL or null if it doesn't exist
 }

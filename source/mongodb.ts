@@ -862,3 +862,23 @@ export async function getUserTechniques(userId: string): Promise<string[]> {
 		// await client.close()
 	}
 }
+
+// get ALL user experience
+export async function getAllUserExperience(): Promise<{ id: string; experience: number }[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const users = (await usersCollection.find({}, { projection: { id: 1, experience: 1 } }).toArray()).map(
+			user => ({ id: user.id, experience: user.experience })
+		)
+
+		return users
+	} catch (error) {
+		console.error("Error when retrieving all user experience:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
