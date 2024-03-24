@@ -36,6 +36,7 @@ import {
 	handleTitleSelectCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
+	handleVoteCommand,
 	handleWorkCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
@@ -174,6 +175,7 @@ const commands = [
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
+	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
@@ -312,6 +314,10 @@ client.on("interactionCreate", async interaction => {
 	}
 	if (commandName === "claninfo") {
 		await handleClanInfoCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "vote") {
+		await handleVoteCommand(chatInputInteraction)
 		return
 	}
 	if (commandName === "guide") {

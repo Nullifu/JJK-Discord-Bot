@@ -1640,3 +1640,25 @@ export async function handleLeaderBoardCommand(interaction) {
 		await interaction.reply("There was an error trying to execute that command!")
 	}
 }
+
+export async function handleVoteCommand(interaction) {
+	// Creating an embed message for the vote command
+	const voteEmbed = new EmbedBuilder()
+		.setColor("#00FFFF") // Cyan color
+		.setTitle("Vote for Our Bot!")
+		.setDescription("Support us by voting on the following sites:")
+		.setTimestamp()
+		.setFooter({ text: "Thank you for your support!" })
+
+	// Creating buttons for each voting site
+	const voteButtonTopGG = new ButtonBuilder()
+		.setLabel("Vote on Top.gg")
+		.setStyle(ButtonStyle.Link)
+		.setURL("https://top.gg/bot/991443928790335518/vote")
+
+	// Creating an action row and adding the buttons to it
+	const row = new ActionRowBuilder().addComponents(voteButtonTopGG)
+
+	// Replying to the /vote command with the embed message and the buttons
+	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
+}
