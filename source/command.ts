@@ -1032,41 +1032,42 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 		const randomNumber = Math.floor(Math.random() * 100) + 1
 
+		let isDemonVessel = false
+
 		const xpGained = 125
 		await updateUserExperience(userId, xpGained)
 		await updateUserCursedEnergy(userId, 45)
 		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
 
-		if (randomNumber === 70) {
+		if (randomNumber === 20) {
 			await updateUserClan(userId, "Demon Vessel")
+			isDemonVessel = true
 		}
-
 		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
-				)
-				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
+			// Check if the user is a Demon Vessel to send a special embed
+			if (isDemonVessel) {
+				const specialEmbed = new EmbedBuilder()
+					.setColor("#4b0082") // A color that might represent demonic power, for example, indigo
+					.setTitle("A Dark Pact Forged")
+					.setDescription(
+						"The pact is sealed. Darkness embraces you, as you feel an ancient power coursing through your veins."
+					)
+					.setImage("https://media1.tenor.com/m/mzqdk4E2KVwAAAAC/sukuna-jjk.gif") // A hypothetical URL for the transformation image
 
-			// Now, edit the reply with the new embed after the delay
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 2000) // 40000 milliseconds delay
+				await interaction.editReply({ embeds: [specialEmbed] })
+			} else {
+				const embedSecond = new EmbedBuilder()
+					.setColor("#8b0000")
+					.setTitle("Power or Peril?")
+					.setDescription(
+						"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
+					)
+					.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif")
 
-		setTimeout(() => {
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400") // Dark green, symbolizing growth
-				.setTitle("Power Unleashed")
-				.setDescription("The deed is done. You've gained 125 experience. What dark powers have you awakened?")
-				.setImage(
-					"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
-				) // An image URL showing the unleashed power
-
-			// Edit the reply with the new embed after a delay
-			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
-		}, 4000)
+				await interaction.editReply({ embeds: [embedSecond] })
+			}
+		}, 2000)
 	} else {
 		// Handle other items or general case
 		const embed = new EmbedBuilder()
