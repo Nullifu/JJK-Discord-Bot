@@ -295,32 +295,36 @@ export async function handleDigCommand(interaction) {
 	await updateBalance(interaction.user.id, coinsFound)
 
 	if (doesDiscoverItem) {
-		// Logic for finding an item
-		const itemFound = getRandomItem() // Simulate finding a random item
+		// Attempt to find an item
+		const itemFound = getRandomItem() // This function needs to handle the logic of item discovery chance internally
 		if (itemFound) {
+			// An item was found
 			await addItemToUserInventory(authorId, itemFound.name, 1)
+			const digEmbed = new EmbedBuilder()
+				.setColor(0x00ff00) // Success color
+				.setTitle("Digging Results")
+				.setDescription(`You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`)
+				.setTimestamp()
+			await interaction.editReply({ embeds: [digEmbed] })
+		} else {
+			// No item was found, even though an attempt was made
+			const digEmbed = new EmbedBuilder()
+				.setColor(0x00ff00) // Success color
+				.setTitle("Digging Results")
+				.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
+				.setTimestamp()
+			await interaction.editReply({ embeds: [digEmbed] })
 		}
-		// Create the response embed for finding an item
-		const digEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Green color for success
-			.setTitle("Digging Results")
-			.setDescription(`You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`)
-			.setTimestamp()
-
-		await interaction.editReply({ embeds: [digEmbed] })
 	} else {
-		// Create the response embed for not finding an item
+		// No attempt to find an item was made
 		const digEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Green color for success
+			.setColor(0x00ff00) // Success color
 			.setTitle("Digging Results")
 			.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
 			.setTimestamp()
-
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
 }
-
-console.log("jon is mid")
 
 export async function handleJobSelection(interaction: CommandInteraction) {
 	if (!interaction.isChatInputCommand()) return
