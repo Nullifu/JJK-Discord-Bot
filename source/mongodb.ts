@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient } from "mongodb"
 import { BossData, User, UserProfile } from "./interface"
-import { clanTechniquesMapping, titles } from "./items jobs.js"
+import { titles } from "./items jobs.js"
 
 dotenv()
 
 const bossCollectionName = "bosses"
 const usersCollectionName = "users"
+const questsCollectioName = "quests"
 
 const mongoUser = process.env["MONGO_USER"]
 const mongoPassword = process.env["MONGO_PASSWORD"]
@@ -65,21 +67,6 @@ export async function addUser(
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const clans = Object.keys(clanTechniquesMapping) // Get all clan names
-		let assignedClan = null
-		let assignedTechnique = null
-
-		// Determine if the user gets a clan
-		if (Math.random() < 0.7) {
-			// 50% chance to get a clan
-			const randomClanIndex = Math.floor(Math.random() * clans.length)
-			assignedClan = clans[randomClanIndex]
-
-			// Randomly assign one technique from the clan's list
-			const techniques = clanTechniquesMapping[assignedClan]
-			assignedTechnique = techniques[Math.floor(Math.random() * techniques.length)]
-		}
-
 		const insertResult = await usersCollection.insertOne({
 			id,
 			balance: initialBalance,
@@ -95,8 +82,10 @@ export async function addUser(
 			achievements: [],
 			lastAlertedVersion: [],
 			heavenlyrestriction: null,
-			clan: assignedClan,
-			techniques: [assignedTechnique] // Store the initial technique in an array
+			cursedEnergy: 100,
+			clan: null,
+			techniques: [],
+			heavenlytechniques: []
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -877,6 +866,211 @@ export async function getAllUserExperience(): Promise<{ id: string; experience: 
 		return users
 	} catch (error) {
 		console.error("Error when retrieving all user experience:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// get all quest
+export async function getAllQuests(): Promise<{ id: string; name: string; description: string }[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const questsCollection = database.collection(questsCollectioName)
+
+		const quests = (
+			await questsCollection.find({}, { projection: { _id: 0, id: 1, name: 1, description: 1 } }).toArray()
+		).map(quest => ({
+			id: quest.id,
+			name: quest.name,
+			description: quest.description
+		}))
+
+		return quests
+	} catch (error) {
+		console.error("Error when retrieving all quests:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+// update user techniques
+export async function addUserTechnique(userId: string, newTechnique: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's document to append a new technique
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $addToSet: { techniques: newTechnique } } // Use $addToSet to avoid duplicate entries
+		)
+	} catch (error) {
+		console.error("Error updating user techniques:", error)
+		throw error
+	} finally {
+		// Generally, you keep the connection open in a web server context
+		// await client.close();
+	}
+}
+
+// update user clan
+export async function updateUserClan(userId: string, newClan: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's clan
+		await usersCollection.updateOne({ id: userId }, { $set: { clan: newClan } })
+	} catch (error) {
+		console.error("Error updating user clan:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// update heavenly restriction techniques heavenlytechnqiues
+export async function updateUserHeavenlyTechniques(userId: string, newTechnique: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's document to append a new heavenly technique
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $addToSet: { heavenlytechniques: newTechnique } } // Use $addToSet to avoid duplicate entries
+		)
+	} catch (error) {
+		console.error("Error updating user heavenly techniques:", error)
+		throw error
+	} finally {
+		// Generally, you keep the connection open in a web server context
+		// await client.close();
+	}
+}
+
+// get heavenly techniques
+export async function getUserHeavenlyTechniques(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.heavenlytechniques : []
+	} catch (error) {
+		console.error(`Error when retrieving heavenly techniques for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+export async function toggleHeavenlyRestriction(userId) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Get user achievements to check if they have unlocked Heavenly Restriction
+		const userAchievements = await getUserAchievements(userId)
+
+		// Check if the user has the 'unlockHeavenlyRestriction' achievement
+		if (!userAchievements.includes("unlockHeavenlyRestriction")) {
+			console.log(`User with ID: ${userId} has not unlocked Heavenly Restriction.`)
+			return false // User has not unlocked this feature, so don't toggle
+		}
+
+		// Proceed with toggling if the user has the achievement
+		const updateResult = await usersCollection.updateOne(
+			{ id: userId },
+			[{ $set: { heavenlyrestriction: { $not: "$heavenlyrestriction" } } }],
+			{ upsert: true }
+		)
+
+		if (updateResult.matchedCount === 0) {
+			console.log(`No user found with ID: ${userId}`)
+			return false
+		}
+
+		console.log(`Toggled Heavenly Restriction for user with ID: ${userId}`)
+		return true
+	} catch (error) {
+		console.error(`Error when toggling Heavenly Restriction for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// Optionally close the client connection
+	}
+}
+
+export async function handleToggleHeavenlyRestrictionCommand(interaction) {
+	// Ensure this function is handling a CommandInteraction
+	if (!(interaction instanceof CommandInteraction)) return
+
+	const userId = interaction.user.id // Discord user ID
+
+	try {
+		const success = await toggleHeavenlyRestriction(userId)
+
+		if (success) {
+			// Successfully toggled, inform the user
+			await interaction.reply({
+				content:
+					"Your Heavenly Restriction status has been toggled. You can now harness its power differently!",
+				ephemeral: true // Only the user can see this
+			})
+		} else {
+			// User has not unlocked the feature, inform them accordingly
+			await interaction.reply({
+				content:
+					"It seems you have not unlocked Heavenly Restriction yet. Keep training and exploring to unlock this ability!",
+				ephemeral: true
+			})
+		}
+	} catch (error) {
+		console.error("Error toggling Heavenly Restriction:", error)
+		// Respond to the user with an error message
+		await interaction.reply({
+			content:
+				"An error occurred while trying to toggle your Heavenly Restriction status. Please try again later.",
+			ephemeral: true
+		})
+	}
+}
+
+// get user cursedEnergy
+export async function getUserCursedEnergy(userId: string): Promise<number> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.cursedEnergy : 100
+	} catch (error) {
+		console.error(`Error when retrieving cursed energy for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+// update user cursedEnergy
+export async function updateUserCursedEnergy(userId: string, newCursedEnergy: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { cursedEnergy: newCursedEnergy } })
+	} catch (error) {
+		console.error("Error updating user cursed energy:", error)
 		throw error
 	} finally {
 		// await client.close()

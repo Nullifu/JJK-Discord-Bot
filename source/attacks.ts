@@ -20,7 +20,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Domain Expansion: Malevolent Shrine!",
 			probability: 20,
-			baseDamage: 100,
+			baseDamage: 30,
 			embedUpdate: embed =>
 				embed.setImage(
 					"https://tenor.com/en-GB/view/jjk-jujutsu-kaisen-jjk-fight-jujutsu-kaisen-fight-sukuna-gif-15525695609492803291"
@@ -233,6 +233,58 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 10,
 			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
 		}
+	],
+	// Mahito
+	"The Honored One": [
+		{
+			name: "Awakened: Lapse Blue",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("Transfiguration!")
+		},
+		{
+			name: "Awakened: Reversal Red",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+		},
+		{
+			name: "Imaginary Technique: Purple",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed =>
+				embed
+					.setImage(
+						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
+					)
+					.setDescription("I'll show you the true nature of the soul.")
+		}
+	],
+	// Mahito
+	"Mahoraga": [
+		{
+			name: "Adapted: Strike",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("Transfiguration!")
+		},
+		{
+			name: "Pummel",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+		},
+		{
+			name: "Adapted: Blast",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed =>
+				embed
+					.setImage(
+						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
+					)
+					.setDescription("I'll show you the true nature of the soul.")
+		}
 	]
 
 	// ... Add the other attacks for Gojo, Todo, and Megumi ...
@@ -257,81 +309,4 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 
 	// If this point is reached, fallback to the last item
 	return attacks[attacks.length - 1]
-}
-
-export const clanAttacks = {
-	"Demon Vessel": [
-		{
-			name: "Cleave",
-			baseDamage: 10,
-			embedUpdate: embed => embed.setDescription("A swift and powerful cleave attack.")
-		},
-		{
-			name: "Dismantle",
-			baseDamage: 15,
-			embedUpdate: embed => embed.setDescription("Dismantles the opponent with precision.")
-		},
-		{
-			name: "Flame Arrow",
-			baseDamage: 20,
-			embedUpdate: embed => {
-				embed.setImage("https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif")
-				embed.setDescription("Burn.")
-				return embed
-			}
-		}
-	],
-	"Limitless User": [
-		{
-			name: "Lapse: BLUE",
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Manipulates space to crush the target.")
-		}
-	],
-	"Zenin": [
-		{
-			name: "Zenin Style: Blood Manipulation",
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Controls blood to attack or defend.")
-		}
-	],
-	"Fushiguro": [
-		{
-			name: "Frog",
-			baseDamage: 15,
-			embedUpdate: embed => embed.setDescription("Summons a frog for various tactical advantages.")
-		}
-	]
-}
-
-export const heavenlyrestrictionattacks = {
-	"Heavenly Restriction": [
-		{
-			name: "Purge",
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Blitz.")
-		},
-		{
-			name: "Pummel",
-			baseDamage: 15,
-			embedUpdate: embed => embed.setDescription("Dismantles the opponent with precision.")
-		},
-		{
-			name: "Bullet rain",
-			baseDamage: 20,
-			embedUpdate: embed => {
-				embed.setImage("https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif")
-				embed.setDescription("Burn.")
-				return embed
-			}
-		}
-	]
-}
-
-export function getTechniqueImage(selectedTechnique) {
-	// Assuming each technique directly has an 'image_URL' property if there's an image associated with it
-
-	// You already have the selectedTechnique object from your interaction
-	// Just directly access the 'image_URL' property
-	return selectedTechnique.image_URL || null // Return the URL or null if it doesn't exist
 }

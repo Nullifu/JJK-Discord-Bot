@@ -1,10 +1,11 @@
+/* eslint-disable indent */
+/* eslint-disable prettier/prettier */
 let contextKey: string
 
 import { SelectMenuBuilder } from "@discordjs/builders"
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
-	ButtonInteraction,
 	ButtonStyle,
 	CacheType,
 	ChatInputCommandInteraction,
@@ -12,7 +13,8 @@ import {
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
-	SelectMenuInteraction
+	SelectMenuInteraction,
+	StringSelectMenuBuilder
 } from "discord.js"
 import { attacks } from "./attacks.js"
 import { digCooldown, digCooldownBypassIDs, digCooldowns } from "./bot.js"
@@ -20,18 +22,19 @@ import {
 	calculateDamage,
 	calculateEarnings,
 	createInventoryPage,
-	getBossDrop,
 	getRandomAmount,
-	getRandomLocation,
-	getRandomXPGain
+	getRandomLocation
 } from "./calculate.js"
-import { BossData, determineDomainAchievements, formatDomainExpansion } from "./interface.js"
+import { executeSpecialTechnique, handleBossDeath } from "./fight.js"
+import { BossData, determineDomainAchievements, formatDomainExpansion, gradeMappings } from "./interface.js"
 import {
+	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
 	allAchievements,
 	craftingRecipes,
 	dailyitems,
 	getRandomItem,
+	heavenlyrestrictionskills,
 	jobs,
 	lookupItems
 } from "./items jobs.js"
@@ -39,6 +42,7 @@ import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItemToUserInventory,
 	addUser,
+	addUserTechnique,
 	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
 	getAllUserExperience,
@@ -47,10 +51,12 @@ import {
 	getUserAchievements,
 	getUserBankBalance,
 	getUserClan,
+	getUserCursedEnergy,
 	getUserDailyData,
 	getUserDomain,
 	getUserGrade,
 	getUserHealth,
+	getUserHeavenlyTechniques,
 	getUserInventory,
 	getUserProfile,
 	getUserTechniques,
@@ -59,11 +65,14 @@ import {
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
+	updateUserClan,
+	updateUserCursedEnergy,
 	updateUserDailyData,
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserHealth,
 	updateUserHeavenlyRestriction,
+	updateUserHeavenlyTechniques,
 	updateUserJob,
 	updateUserTitle,
 	userExists
@@ -718,14 +727,14 @@ export async function handleDomainSelection(interaction) {
 
 		// Continue with existing logic
 		const userGrade = await getUserGrade(interaction.user.id)
-		const gradeNumber = parseInt(userGrade.replace("Grade ", "")) // Remove "Grade " and convert to a number
 		console.log("User Grade:", userGrade)
 
 		// 2. Check Requirements
-		console.log("User has a Domain Token and is Grade 3 or higher.")
-		if (gradeNumber <= 3) {
+		const gradeLevel = userGrade.toLowerCase() // Normalize for comparison
+		if (gradeMappings[gradeLevel] <= 3) {
 			await updateUserAchievements(interaction.user.id, "unlockedDomain")
 			await removeItemFromUserInventory(interaction.user.id, "Domain Token", 1)
+			console.log("User has a Domain Token and is Grade 3 or higher.")
 
 			await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
 
@@ -1012,10 +1021,17 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			) // Add a fitting image URL
 		await interaction.followUp({ embeds: [embedFirst] })
 
+		const randomNumber = Math.floor(Math.random() * 100) + 1
+
 		const xpGained = 125
 		await updateUserExperience(userId, xpGained)
+		await updateUserCursedEnergy(userId, 45)
 		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
+
+		if (randomNumber === 70) {
+			await updateUserClan(userId, "Demon Vessel")
+		}
 
 		setTimeout(async () => {
 			const embedSecond = new EmbedBuilder()
@@ -1137,32 +1153,36 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 2.0",
-			date: "2024-03-24", // Example date, adjust as necessary
+			version: "Update 2.5", // Replace with your actual version number
+			date: "2024-03-26", // Adjust the date as needed
 			changes: [
 				{
-					name: "Heavenly Restriction",
-					value: "Buffs damage in fight command and removes usage of domain expansion. Obtain HR by crafting the blood vial."
+					name: "Technique System",
+					value: "Users can now acquire and develop unique Jujutsu techniques!"
 				},
 				{
-					name: "Guide Command",
-					value: "Use this command if you're ever stuck."
+					name: "Technique Shop",
+					value: "Spend hard-earned currency to unlock powerful abilities."
 				},
 				{
-					name: "Lookup Command",
-					value: "Helps you know more about an item. Still work in progress, more items to be added soon."
+					name: "Heavenly Restriction Rework",
+					value: "Characters with Heavenly Restriction gain access to specialized skills."
 				},
 				{
-					name: "Leaderboard Command",
-					value: "Displays the leaderboard for highest earned XP. More features to be added later."
+					name: "Fight Command Overhaul",
+					value: "Completely revamped the fight command for a smoother and more strategic battle experience."
 				},
 				{
-					name: "Fight Command Rework",
-					value: "Currently under rework. Techniques seem to work, so expect updates in the coming week."
+					name: "Grade System Fixes",
+					value: "Resolved issues with the grade system's functionality and accuracy."
 				},
 				{
-					name: "Bugs",
-					value: "**> If theres any bugs please report them in the support server. <** /support"
+					name: "Work/Dig Bug Squashing",
+					value: "Bugs for these commands have been fixed, and they should now work as intended."
+				},
+				{
+					name: "Found a bug? Report it!",
+					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
 				}
 			]
 		}
@@ -1239,349 +1259,64 @@ export async function handleClanInfoCommand(interaction: ChatInputCommandInterac
 export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
 
-	const userClan = await getUserClan(userId)
-	const userTechniques = await getUserTechniques(userId)
-	const userDomain = await getUserDomain(userId)
-	const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
-
-	const embed = new EmbedBuilder()
-		.setTitle("Jujutsu Stats")
-		.setColor("#0099ff")
-		.addFields(
-			{ name: "Clan", value: userClan || "None" },
-			{ name: "Techniques", value: userTechniques.join(", ") || "None" },
-			{ name: "Domain", value: userDomain || "None" },
-			{ name: "Heavenly Restriction", value: userHeavenlyRestriction ? "Active" : "Inactive" }
-		)
-
-	await interaction.reply({ embeds: [embed], ephemeral: true })
-}
-
-async function delay(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	try {
-		// Fetch boss data from database
-		const allBosses = await getBosses()
+		const userClan = await getUserClan(userId)
+		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
+		const userEnergy = await getUserCursedEnergy(userId)
+		let userTechniques = await (userHeavenlyRestriction
+			? getUserHeavenlyTechniques(userId)
+			: getUserTechniques(userId))
+		const userDomain = await getUserDomain(userId)
 
-		if (allBosses.length === 0) {
-			console.error("No bosses found in the database.")
-			return // Or handle this situation appropriately
-		}
-
-		// Select random opponent
-		const randomIndex = Math.floor(Math.random() * allBosses.length)
-		const randomOpponent = allBosses[randomIndex]
-
-		const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
-		const playerHealth = await getUserHealth(interaction.user.id)
-
-		// Create embed
-		const primaryEmbed = new EmbedBuilder()
-			.setColor(cursedEnergyPurple)
-			.setTitle("Cursed Battle!")
-			.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
-			.setImage(randomOpponent.image_url)
-			.addFields({ name: "Health", value: randomOpponent.current_health.toString() })
-			.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
-		const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
-		if (remainingHealthPercentage < 0.5) {
-			primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
-		}
-		// Add JJK Flavor Text based for this boss
-		const flavorText = getJujutsuFlavorText(randomOpponent.name)
-		if (flavorText) {
-			primaryEmbed.addFields([flavorText])
-		}
-
-		// Create buttons
-		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId("domain").setLabel("Domain").setStyle(ButtonStyle.Success)
-		)
-
-		// Defer reply and send initial message
-		await interaction.deferReply()
-
-		const fightMessage = await interaction.editReply({
-			embeds: [primaryEmbed],
-			components: [row]
-		})
-
-		// Button Interaction Logic
-		const collector = fightMessage.createMessageComponentCollector({
-			filter: buttonInteraction => buttonInteraction.user.id === interaction.user.id
-		})
-
-		collector.on("collect", async (buttonInteraction: ButtonInteraction) => {
-			if (buttonInteraction.customId === "fight") {
-				await buttonInteraction.deferUpdate()
-
-				// Get player's health
-				const playerHealth = await getUserHealth(interaction.user.id)
-				const userId = interaction.user.id // Define userId from interaction
-
-				// get boss health
-				const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-
-				// Get player's grade
-				const playerGradeData = await getUserGrade(interaction.user.id)
-				const playerGradeString = playerGradeData // This is already in the correct format
-
-				// Calculate damage using the string grade
-				const damage = await calculateDamage(playerGradeString, userId)
-
-				// Calculate boss new health after damage dealt
-				bossHealthMap.set(interaction.user.id, currentBossHealth - damage)
-				randomOpponent.current_health = Math.max(0, currentBossHealth - damage) // Keep in sync
-
-				// Construct result message
-				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
-				primaryEmbed.setDescription(fightResult)
-				primaryEmbed.setFields(
-					{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-					{ name: "Player Health", value: playerHealth.toString() }
-				)
-				await buttonInteraction.editReply({ embeds: [primaryEmbed] })
-				// Is the boss dead?
-				if (randomOpponent.current_health <= 0) {
-					domainActivationState.set(contextKey, false) // Reset domain activation state
-					// Reset health in the database
-					bossHealthMap.delete(interaction.user.id)
-					const victoryMessage = "You won the fight!"
-					primaryEmbed.setDescription(victoryMessage)
-					await buttonInteraction.editReply({
-						embeds: [primaryEmbed],
-						components: []
-					})
-					// Calculate XP gain
-					const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
-					await updateUserHealth(interaction.user.id, 100)
-					await updateUserExperience(buttonInteraction.user.id, xpGain)
-					await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
-
-					const drop = getBossDrop(randomOpponent.name)
-					if (drop) {
-						console.log("Drop found:", drop)
-
-						// Pass drop.name instead of the entire drop object
-						await addItemToUserInventory(interaction.user.id, drop.name, 1)
-					}
-
-					const privateEmbed = new EmbedBuilder()
-						.setColor("#0099ff") // Set the color of the embed
-						.setTitle("Battle Rewards") // Set a title for the embed
-						.addFields(
-							{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
-							{ name: "Experience Gained", value: `You've gained ${xpGain} XP for defeating the boss!` }
-						)
-
-					// Send the embed as an ephemeral follow-up to the button interaction
-					await buttonInteraction.followUp({ embeds: [privateEmbed], ephemeral: true })
-				} else {
-					// Update to new boss health after damage dealt
-					bossHealthMap.set(randomOpponent.name, randomOpponent.current_health)
-
-					await delay(700) // Wait for 2 seconds
-					// *** Boss Attack ***
-					const possibleAttacks = attacks[randomOpponent.name]
-					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
-
-					//const damageToPlayer = Math.floor(chosenAttack.baseDamage * Math.random())
-					const damageToPlayer = chosenAttack.baseDamage
-
-					// Calculate player new health after damage dealt by boss
-					const newPlayerHealth = playerHealth - damageToPlayer
-
-					// Ensure player health is never below 0
-					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
-
-					// Did the player die?
-					if (clampedPlayerHealth <= 0) {
-						// Generic defeat message for other bosses
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-
-						// Reset player health in the database.
-						bossHealthMap.delete(interaction.user.id)
-						await updateUserHealth(interaction.user.id, 100)
-						await buttonInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-						// Send an additional ephemeral message indicating the player has died
-						await buttonInteraction.followUp({
-							content: `${randomOpponent.name} Killed you!`,
-							ephemeral: true
-						})
-					} else {
-						// Update to new player health after damage dealt
-						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-
-						// Update embed with attack message from boss
-
-						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-
-						await buttonInteraction.editReply({
-							embeds: [chosenAttack.embedUpdate(primaryEmbed)]
-						})
-					}
-				}
+		// Function to simplify technique names
+		// eslint-disable-next-line no-inner-declarations
+		function simplifyTechniqueName(fullName) {
+			const nameMap = {
+				"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga":
+					"Divine General Mahoraga"
+				// Add other names that need simplifying here
 			}
+			return nameMap[fullName] || fullName
+		}
 
-			if (buttonInteraction.customId === "domain") {
-				await buttonInteraction.deferUpdate()
+		// Ensure userTechniques is defined and is an array before proceeding
+		userTechniques = Array.isArray(userTechniques) ? userTechniques : []
+		if (userDomain && userDomain !== "None") {
+			userTechniques.unshift(`Domain Expansion: ${userDomain}`)
+		}
 
-				//domain check if used
-				if (domainActivationState.get(contextKey)) {
-					await buttonInteraction.followUp({
-						content: "You can only activate your domain once per fight.",
-						ephemeral: true
-					})
-					return
+		const techniquesDisplay =
+			userTechniques.length > 0
+				? userTechniques.map(technique => `• ${simplifyTechniqueName(technique)}`).join("\n")
+				: "None"
+
+		const embed = new EmbedBuilder()
+			.setTitle(`${interaction.user.username}'s Jujutsu Profile`)
+			.setColor("#4B0082")
+			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
+			.addFields(
+				{ name: "🔥 **Clan**", value: userClan || "None", inline: true },
+				{ name: "🌀 **Techniques & Domain Expansion**", value: techniquesDisplay, inline: false },
+				{
+					name: "🤫 **Cursed Energy**",
+					value: `${userEnergy.toString()} units ${userEnergy > 1000 ? "🔥" : ""}`,
+					inline: true
+				},
+				{
+					name: "⚖️ **Heavenly Restriction**",
+					value: userHeavenlyRestriction ? "Active" : "Inactive",
+					inline: true
 				}
+			)
 
-				try {
-					const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(buttonInteraction.user.id)
-
-					if (hasHeavenlyRestriction) {
-						await buttonInteraction.followUp({
-							content: "Your Heavenly Restriction negates the use of domain expansion.",
-							ephemeral: true
-						})
-						return // Exit if Heavenly Restriction is present, or adjust as needed
-					}
-					const domainInfo = await getUserDomain(buttonInteraction.user.id)
-					const domainEmbed = new EmbedBuilder()
-					let domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
-					if (domainInfo) {
-						domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
-						// Add any specific logic for domain effects on player or opponent
-					}
-
-					if (!domainInfo) {
-						await buttonInteraction.followUp({
-							content: "You do not have a domain unlocked yet.",
-							ephemeral: true
-						})
-						return
-					}
-					const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
-					if (!domainObject) {
-						console.error("Domain not found:", domainInfo)
-						return
-					}
-					domainActivationState.set(contextKey, true)
-					// User has a domain, construct an embed to show its activation and fight image
-					domainEmbed
-						.setColor("Blue")
-						.setTitle(`${buttonInteraction.user.username} has activated their domain!`)
-						.setDescription(`Domain: ${domainInfo}`)
-						.addFields(
-							{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: true },
-							{ name: "Your Health", value: playerHealth.toString(), inline: true },
-							{ name: "Domain Effect", value: domainEffectMessage }
-						)
-
-					// Add image if domainObject has an imageURL
-					if (domainObject.image_URL) {
-						domainEmbed.setImage(domainObject.image_URL)
-					} else {
-						console.log("No image URL found for domain:", domainInfo)
-					}
-
-					const playerGradeData = await getUserGrade(interaction.user.id)
-					const playerGradeString = playerGradeData // This is already in the correct format
-					const userId = interaction.user.id // Define userId from interaction
-
-					const baseDamage = await calculateDamage(playerGradeString, userId, true)
-					const extraDomainDamage = 30
-					const totalDamage = baseDamage + extraDomainDamage
-
-					// Update boss health in the Map
-					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
-					bossHealthMap.set(interaction.user.id, currentBossHealth)
-
-					// Construct result message
-					const fightResult = await handleFightLogic(
-						interaction,
-						randomOpponent,
-						playerGradeString,
-						totalDamage
-					)
-					primaryEmbed.setDescription(fightResult)
-					await buttonInteraction.editReply({ embeds: [primaryEmbed] })
-					// Is the boss dead?
-					if (randomOpponent.current_health <= 0) {
-						domainActivationState.set(contextKey, false) // Reset domain activation state
-						// Reset health in the database
-						bossHealthMap.delete(interaction.user.id)
-						const victoryMessage = "You won the fight!"
-						primaryEmbed.setDescription(victoryMessage)
-						await buttonInteraction.editReply({
-							embeds: [primaryEmbed],
-							components: []
-						})
-						// Calculate XP gain
-						const xpGain = getRandomXPGain() // Assuming you have this function to get a random XP amount between 10 and 70
-						// Update player's experience
-						await updateUserHealth(interaction.user.id, 100)
-						await updateUserExperience(buttonInteraction.user.id, xpGain)
-						await updatePlayerGrade(buttonInteraction.user.id) // Update the player's grade based on new XP
-
-						const drop = getBossDrop(randomOpponent.name)
-						if (drop) {
-							console.log("Drop found:", drop)
-							const dropMessage = `You've also found a ${drop} among the remains!`
-							await buttonInteraction.followUp({ content: dropMessage })
-							await addItemToUserInventory(interaction.user.id, drop, 1)
-						}
-
-						// Send a message about the XP gain
-						const xpMessage = `You've gained ${xpGain} XP for defeating the boss!`
-						await buttonInteraction.followUp({ content: xpMessage })
-					} else {
-						// Generic defeat message for other bosses
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-					}
-
-					// Update in-memory opponent object
-					randomOpponent.current_health = currentBossHealth
-
-					await buttonInteraction.editReply({ embeds: [domainEmbed] })
-				} catch (error) {
-					console.error("Error during domain activation or fight logic:", error)
-					await buttonInteraction.followUp({
-						content: "An error occurred during domain activation or in the fight. Please try again later.",
-						ephemeral: true
-					})
-				}
-			}
-		})
+		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
-		console.error("Error during fight command:", error)
+		console.error("Error handling JujutsuStatsCommand:", error)
 		await interaction.reply({
-			content: "An error occurred during the fight. Please try again later.",
+			content: "An unexpected error occurred while retrieving your Jujutsu profile. Please try again later.",
 			ephemeral: true
 		})
 	}
-}
-
-async function handleFightLogic(
-	interaction: Interaction,
-	randomOpponent: BossData,
-	playerGradeString: string,
-	damage: number
-): Promise<string> {
-	let resultMessage = `You dealt ${damage} damage to ${randomOpponent.name}!`
-	if (randomOpponent.current_health <= 0) {
-		resultMessage += " You won the fight!"
-	} else {
-		resultMessage += ` Boss health remaining: ${randomOpponent.current_health}`
-	}
-
-	return resultMessage
 }
 
 // guide command
@@ -1661,4 +1396,618 @@ export async function handleVoteCommand(interaction) {
 
 	// Replying to the /vote command with the embed message and the buttons
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
+}
+async function delay(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+export const activeCollectors = new Map()
+
+export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
+	if (activeCollectors.has(interaction.user.id)) {
+		await interaction.reply({
+			content: "You already have an ongoing fight. Please finish it before starting a new one.",
+			ephemeral: true
+		})
+		return
+	}
+
+	activeCollectors.set(interaction.user.id, false)
+
+	const allBosses = await getBosses()
+
+	//
+	if (allBosses.length === 0) {
+		console.error("No bosses found in the database.")
+		return // Or handle this situation appropriately
+	}
+
+	// Select random opponent
+	const randomIndex = Math.floor(Math.random() * allBosses.length)
+	const randomOpponent = allBosses[randomIndex]
+
+	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+	const playerHealth = await getUserHealth(interaction.user.id)
+	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
+
+	// Fetch techniques based on whether the user has Heavenly Restriction
+	const userTechniques = hasHeavenlyRestriction
+		? await getUserHeavenlyTechniques(interaction.user.id)
+		: await getUserTechniques(interaction.user.id)
+
+	const battleOptions = [
+		{
+			label: "Domain Expansion",
+			value: "domain",
+			emoji: {
+				name: "1564maskedgojode", // Replace with your emoji's name
+				id: "1220626413141622794" // Replace with your emoji's ID
+			}
+		},
+		...userTechniques.map(techniqueName => ({
+			label: techniqueName,
+			description: "Select to use this technique",
+			value: techniqueName
+		}))
+	]
+
+	const selectMenu = new SelectMenuBuilder()
+		.setCustomId("select-battle-option")
+		.setPlaceholder("Choose your technique")
+		.addOptions(battleOptions)
+
+	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+
+	// Create embed
+	const primaryEmbed = new EmbedBuilder()
+		.setColor(cursedEnergyPurple)
+		.setTitle("Cursed Battle!")
+		.setDescription(`Your opponent is ${randomOpponent.name}! Prepare yourself.`)
+		.setImage(randomOpponent.image_url)
+		.addFields({ name: "Boss Health", value: randomOpponent.current_health.toString() })
+		.addFields({ name: "Player Health", value: playerHealth.toString() }) // Add player's health
+		.addFields({ name: "Enemy Technique", value: "Enemy technique goes here" }) // Add enemy's technique
+	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
+	if (remainingHealthPercentage < 0.5) {
+		primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
+	}
+	// Add JJK Flavor Text based for this boss
+	const flavorText = getJujutsuFlavorText(randomOpponent.name)
+	if (flavorText) {
+		primaryEmbed.addFields([flavorText])
+	}
+
+	await interaction.reply({
+		embeds: [primaryEmbed],
+		components: [row]
+	})
+
+	// Handle user selection
+	const collector = interaction.channel.createMessageComponentCollector({
+		filter: inter => inter.customId === "select-battle-option",
+		componentType: ComponentType.StringSelect,
+		time: 60000 // 60 seconds
+	})
+
+	collector.on("collect", async collectedInteraction => {
+		if (collectedInteraction.user.id !== interaction.user.id) return
+		await collectedInteraction.deferUpdate()
+		const playerHealth = await getUserHealth(collectedInteraction.user.id)
+
+		const selectedValue = collectedInteraction.values[0]
+
+		console.log("Selected value:", selectedValue)
+		if (selectedValue === "domain") {
+			console.log("Domain expansion selected.")
+			if (domainActivationState.get(contextKey)) {
+				await interaction.followUp({
+					content: "You can only activate your domain once per fight.",
+					ephemeral: true
+				})
+				return
+			}
+
+			try {
+				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
+
+				if (hasHeavenlyRestriction) {
+					await interaction.followUp({
+						content: "Your Heavenly Restriction negates the use of domain expansion.",
+						ephemeral: true
+					})
+					return // Exit if Heavenly Restriction is present, or adjust as needed
+				}
+				const domainInfo = await getUserDomain(interaction.user.id)
+				if (!domainInfo) {
+					await interaction.followUp({
+						content: "You do not have a domain unlocked yet.",
+						ephemeral: true
+					})
+					return
+				}
+				const domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
+
+				const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+				if (!domainObject) {
+					console.error("Invalid domain found in the database.")
+					return
+				}
+				domainActivationState.set(contextKey, true)
+				// embed here
+				const domainEmbed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle(`${interaction.user.username} has activated their domain!`)
+					.setDescription(`Domain: ${domainInfo}`)
+					.addFields(
+						{ name: "Enemy Health", value: randomOpponent.current_health.toString(), inline: false },
+						{ name: "Your Health", value: playerHealth.toString(), inline: false },
+						{ name: "Domain Effect", value: domainEffectMessage },
+						{ name: "Enemy Technique", value: "Enemy technique goes here" }
+					)
+				//add image
+				if (domainObject.image_URL) {
+					domainEmbed.setImage(domainObject.image_URL)
+				} else {
+					console.log("No image found for domain expansion.")
+				}
+				const playerGradeData = await getUserGrade(interaction.user.id)
+				const playerGradeString = playerGradeData
+				const userId = interaction.user.id
+
+				// Calculate the base damage and extra domain damage
+
+				const baseDamage = await calculateDamage(playerGradeString, userId, true)
+				const extraDomainDamage = 30
+				const totalDamage = baseDamage + extraDomainDamage
+				// update boss hp
+
+				let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+				currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+				bossHealthMap.set(interaction.user.id, currentBossHealth)
+
+				// result message
+				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, totalDamage)
+				primaryEmbed.setDescription(fightResult)
+				primaryEmbed.setFields(
+					{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+					{ name: "Player Health", value: playerHealth.toString() }
+				)
+				await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+				// is boss dead?
+				if (randomOpponent.current_health <= 0) {
+					domainActivationState.set(contextKey, false)
+					activeCollectors.set(interaction.user.id, false)
+
+					// reset health
+					bossHealthMap.delete(interaction.user.id)
+
+					handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+				} else {
+					const bossAttackMessage = `${randomOpponent.name} killed you`
+					primaryEmbed.setFooter({ text: bossAttackMessage })
+				}
+				// update hp
+				randomOpponent.current_health = currentBossHealth
+				activeCollectors.set(interaction.user.id, false)
+
+				await interaction.editReply({ embeds: [domainEmbed], components: [row] })
+
+				collector.on("collect", async collectedInteraction => {
+					if (collectedInteraction.user.id !== interaction.user.id) return
+				})
+
+				console.log("Before if-else block")
+			} catch (error) {
+				console.error("Error during fight command:", error)
+				await interaction.followUp({
+					content: "An error occurred during the fight. Please try again later.",
+					ephemeral: true
+				})
+			}
+		} else {
+			console.log("Technique selected:")
+			const userTechniques = new Map()
+			// Get player's health
+
+			// get boss hp
+			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+
+			// grade
+			const playerGradeData = await getUserGrade(interaction.user.id)
+			const playerGradeString = playerGradeData
+
+			// calculate damage
+			let damage = await calculateDamage(playerGradeString, interaction.user.id, true)
+
+			if (selectedValue === "Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
+					description: "With this treasure.. I summon.",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Hollow Purple") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/kIeDsa7o7VAAAAAC/jjk-red-and-blue.gif",
+					description: "Throughout heaven and earth.. I alone am the honored one.",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum: METEOR") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif",
+					description: `ILL BURN YOU TO A CRISP ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Zenin Style: Playful Cloud: STRIKE") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/BufoLoGxC9sAAAAd/toji-dagon.gif",
+					description: `PERISH ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Flame Arrow") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif",
+					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Inverted Spear Of Heaven: Severed Universe") {
+				damage = await executeSpecialTechnique({
+					interaction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
+					description: `I'm going to lose huh? ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: interaction.user.id,
+					primaryEmbed
+				})
+			}
+
+			// update boss hp
+			bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
+			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
+
+			// result message
+			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
+			primaryEmbed.setDescription(fightResult)
+			primaryEmbed.setFields(
+				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+				{ name: "Player Health", value: playerHealth.toString() }
+			)
+			await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+			// is boss dead?
+			if (randomOpponent.current_health <= 0) {
+				// Check if the boss is Gojo
+				if (randomOpponent.name === "Satoru Gojo") {
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					// 20% chance to respawn as The Honored One
+					if (random < 0.5) {
+						randomOpponent.name = "The Honored One"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+						// Don't end the fight
+						return
+					}
+				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					// 20% chance to respawn as The Honored One
+					if (random < 0.4) {
+						randomOpponent.name = "Mahoraga"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Megumi has summoned mahoraga!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+						// Don't end the fight
+						return
+					}
+				}
+				domainActivationState.set(contextKey, false)
+				activeCollectors.delete(interaction.user.id)
+
+				// reset health
+				bossHealthMap.delete(interaction.user.id)
+
+				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+				activeCollectors.delete(interaction.user.id)
+			} else {
+				//
+				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+				await delay(700)
+				// boss attack
+				const possibleAttacks = attacks[randomOpponent.name]
+				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+				// dmg
+				const damageToPlayer = chosenAttack.baseDamage
+				//
+				const newPlayerHealth = playerHealth - damageToPlayer
+				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+				//did bro die?
+				if (clampedPlayerHealth <= 0) {
+					activeCollectors.set(interaction.user.id, false)
+					const bossAttackMessage = `${randomOpponent.name} killed you!`
+					primaryEmbed.setFooter({ text: bossAttackMessage })
+
+					// Reset player health in the database.
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
+					await updateUserHealth(interaction.user.id, 100)
+					await interaction.editReply({ embeds: [primaryEmbed], components: [] })
+					// Send an additional ephemeral message indicating the player has died
+					await interaction.followUp({
+						content: `${randomOpponent.name} killed you!`,
+						ephemeral: true
+					})
+				} else {
+					// Update to new player health after damage dealt
+					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+					//
+					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+
+					await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+				}
+			}
+		}
+	})
+}
+
+async function handleFightLogic(
+	interaction: Interaction,
+	randomOpponent: BossData,
+	playerGradeString: string,
+	damage: number
+): Promise<string> {
+	let resultMessage = `You dealt ${damage} damage to ${randomOpponent.name}!`
+	if (randomOpponent.current_health <= 0) {
+		resultMessage += " You won the fight!"
+	} else {
+		resultMessage += ` Boss health remaining: ${randomOpponent.current_health}`
+	}
+
+	return resultMessage
+}
+
+const latestInteractionIdPerUser = new Map()
+const latestSessionTimestampPerUser = new Map()
+
+export async function handleTechniqueShopCommand(interaction: ChatInputCommandInteraction) {
+	const userId = interaction.user.id
+	const interactionId = interaction.id
+	const sessionTimestamp = Date.now()
+	const userTechniques = (await getUserTechniques(userId)) || []
+	const userBalance = await getBalance(userId)
+	const userInventory = (await getUserInventory(userId)) || [] // Ensure this defaults to an empty array
+	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
+	const clans = Object.keys(CLAN_SKILLS) // Assuming CLAN_SKILLS is an object mapping clans to their skills
+	await interaction.deferReply()
+
+	latestInteractionIdPerUser.set(userId, interactionId)
+	latestSessionTimestampPerUser.set(userId, sessionTimestamp)
+
+	// Initialize clanOptions based on heavenly restriction
+	let clanOptions
+	if (hasHeavenlyRestriction) {
+		clanOptions = [
+			{
+				label: "Heavenly Restriction",
+				value: "heavenly_restriction",
+				description: "Special techniques for those under Heavenly Restriction"
+			}
+		]
+	} else {
+		const clans = Object.keys(CLAN_SKILLS) // Assuming CLAN_SKILLS is an object mapping clans to their skills
+		clanOptions = clans.map(clan => ({
+			label: clan,
+			value: clan.toLowerCase().replace(/\s+/g, "_"),
+			description: `Select to view ${clan}'s techniques`
+		}))
+	}
+
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("select_clan")
+		.setPlaceholder("Select a Clan")
+		.addOptions(clanOptions)
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+	await interaction.followUp({
+		content: "Select a clan to view its available techniques.",
+		components: [row],
+		ephemeral: false
+	})
+
+	const filter = i =>
+		(i.customId === "select_clan" ||
+			i.customId.startsWith("buy_technique_") ||
+			i.customId.startsWith("buy_heavenly_technique_")) &&
+		i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector.on("collect", async i => {
+		const currentSessionTimestamp = latestSessionTimestampPerUser.get(userId)
+		const interactionTimestamp = i.createdTimestamp // Discord.js provides the timestamp of when the interaction was created
+		let skillsToDisplay
+		let embedTitle
+		let customIdPrefix
+
+		if (interactionTimestamp < currentSessionTimestamp) {
+			console.log("Attempted to interact with a stale session. Ignoring.")
+			return // Skip processing this interaction
+		}
+
+		if (i.isStringSelectMenu()) {
+			// Determine the set of skills based on whether the "Heavenly Restriction" option was selected or a clan was chosen
+			if (i.values[0] === "heavenly_restriction") {
+				// Heavenly Restriction skills
+				skillsToDisplay = heavenlyrestrictionskills.filter(skill => !userTechniques.includes(skill.name))
+				embedTitle = "Heavenly Restriction Techniques"
+				customIdPrefix = "buy_heavenly_technique_"
+			} else {
+				// Normal clan skills
+				const selectedClan = clans.find(clan => clan.toLowerCase().replace(/\s+/g, "_") === i.values[0])
+				skillsToDisplay = CLAN_SKILLS[selectedClan].filter(skill => !userTechniques.includes(skill.name))
+				embedTitle = `${selectedClan} Clan Techniques`
+				customIdPrefix = "buy_technique_"
+			}
+
+			// Build the embed for displaying skills
+			const embed = new EmbedBuilder()
+				.setTitle(embedTitle)
+				.setColor(0x1f512d)
+				.setDescription(
+					skillsToDisplay
+						.map(skill => {
+							return `**${skill.name}** - ${skill.cost} Coins${
+								skill.items && skill.items.length > 0
+									? ` - Requires: ${skill.items
+											.map(item => `${item.quantity}x ${item.name}`)
+											.join(", ")}`
+									: ""
+							}`
+						})
+						.join("\n\n")
+				)
+				.setFooter({ text: "Select a technique to buy." })
+
+			// Create buttons for purchasing skills
+			const skillButtons = skillsToDisplay.map(skill =>
+				new ButtonBuilder()
+					.setCustomId(`${customIdPrefix}${skill.name.toLowerCase().replace(/\s+/g, "_")}`)
+					.setLabel(`Buy ${skill.name}`)
+					.setStyle(ButtonStyle.Secondary)
+			)
+
+			// Create rows of buttons for skills
+			const buttonRows = []
+			for (let j = 0; j < skillButtons.length; j += 5) {
+				buttonRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(skillButtons.slice(j, j + 5)))
+			}
+
+			// Keep the dropdown menu in the components
+			buttonRows.unshift(row)
+
+			// Update the interaction with the embed and new buttons
+			await i.update({
+				embeds: [embed],
+				components: buttonRows
+			})
+		} else if (i.isButton()) {
+			// Extract the technique name from the customId
+			const isHeavenlySkill = i.customId.startsWith("buy_heavenly_technique_")
+			const techniqueName = i.customId
+				.replace("buy_technique_", "")
+				.replace("buy_heavenly_technique_", "")
+				.replace(/_/g, " ")
+
+			// Retrieve the selected technique details
+			const selectedSkill = isHeavenlySkill
+				? heavenlyrestrictionskills.find(skill => skill.name.toLowerCase() === techniqueName)
+				: Object.values(CLAN_SKILLS)
+						.flat()
+						.find(skill => skill.name.toLowerCase() === techniqueName)
+
+			if (!selectedSkill) {
+				await i.editReply({ content: "This technique does not exist." })
+				return
+			}
+
+			// Check if the user has enough balance
+			if (userBalance < parseInt(selectedSkill.cost, 10)) {
+				await i.editReply({
+					content: `You do not have enough coins to purchase ${selectedSkill.name}.`
+				})
+				return
+			}
+
+			// Check if the user has the required items (if any)
+			const hasRequiredItems = (selectedSkill.items || []).every(reqItem => {
+				const userItem = userInventory.find(item => item.name === reqItem.name)
+				return userItem && userItem.quantity >= reqItem.quantity
+			})
+
+			if (!hasRequiredItems) {
+				await i.editReply({
+					content: `You do not have the required items to purchase ${selectedSkill.name}.`
+				})
+				return
+			}
+
+			// Deduct coins and items
+			await updateBalance(userId, -parseInt(selectedSkill.cost, 10)) // Deduct coins
+			for (const { name, quantity } of selectedSkill.items || []) {
+				await removeItemFromUserInventory(userId, name, quantity) // Remove items
+			}
+
+			if (isHeavenlySkill) {
+				// If it's a heavenly restriction technique, add it to that collection
+				await updateUserHeavenlyTechniques(userId, selectedSkill.name)
+			} else {
+				// Otherwise, add it as a regular technique
+				await addUserTechnique(userId, selectedSkill.name)
+			}
+
+			// Respond to the interaction
+			await i.reply({
+				content: `Congratulations! You have successfully purchased the technique: ${selectedSkill.name}.`,
+				components: [], // Clear the components to remove the buttons
+				ephemeral: true
+			})
+		}
+	})
+
+	collector.on("end", () => {})
 }

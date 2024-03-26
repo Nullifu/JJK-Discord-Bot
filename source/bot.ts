@@ -33,6 +33,7 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSupportCommand,
+	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
@@ -41,6 +42,7 @@ import {
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
+import { handleToggleHeavenlyRestrictionCommand } from "./mongodb.js"
 
 dotenv()
 
@@ -83,7 +85,7 @@ client.on("ready", () => {
 			status: "online"
 		})
 		index++
-	}, 25000) // Update every 25 seconds
+	}, 60000) // Update every 25 seconds
 })
 
 async function updateDynamicActivities() {
@@ -174,8 +176,12 @@ const commands = [
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
+	new SlashCommandBuilder().setName("techniqueshop").setDescription("Aquire a technique!"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
+	new SlashCommandBuilder()
+		.setName("toggleheavenlyrestriction")
+		.setDescription("Toggles your Heavenly Restriction status."),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
@@ -348,6 +354,9 @@ client.on("interactionCreate", async interaction => {
 		case "profile":
 			await handleProfileCommand(chatInputInteraction)
 			break
+		case "techniqueshop":
+			await handleTechniqueShopCommand(chatInputInteraction)
+			break
 		case "inventory":
 			await handleInventoryCommand(chatInputInteraction)
 			break
@@ -389,6 +398,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "leaderboard":
 			await handleLeaderBoardCommand(chatInputInteraction)
+			break
+		case "toggleheavenlyrestriction":
+			await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

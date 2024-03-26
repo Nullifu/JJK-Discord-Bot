@@ -16,6 +16,16 @@ export interface UserProfile {
 	clan: string
 }
 
+export const gradeMappings = {
+	"special grade": 0, // Highest
+	"grade 1": 1,
+	"semi-grade 1": 1,
+	"grade 2": 2,
+	"grade 3": 3,
+	"grade 4": 4 // Lowest
+	// Add other grades if necessary
+}
+
 export interface BossData {
 	id?: string // Making `id` optional if it's not always available
 	name: string

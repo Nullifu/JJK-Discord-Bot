@@ -1,9 +1,5 @@
 export const items = [
-	{ name: "Wood", rarity: "Common", chance: 0.1, price: 10 },
 	{ name: "Tailsman", rarity: "Common", chance: 0.1, price: 400 },
-	{ name: "Emerald", rarity: "Rare", chance: 0.1, price: 1400 },
-	{ name: "Sapphire", rarity: "Rare", chance: 0.1, price: 3200 },
-	{ name: "Platinum", rarity: "Rare", chance: 0.1, price: 100000 },
 	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07, price: 2500 },
 	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07, price: 2500 },
@@ -13,7 +9,12 @@ export const items = [
 	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1, price: 600000 }
 ]
 
-export const bossDrops = {
+export interface BossDrop {
+	name: string
+	rarity: string
+}
+
+export const bossDrops: Record<string, BossDrop[]> = {
 	"Sukuna": [
 		{ name: "Sukuna Finger", rarity: "common" },
 		{ name: "Cursed Shard", rarity: "rare" }
@@ -48,6 +49,7 @@ export const bossDrops = {
 		{ name: "Cursed Shard", rarity: "rare" }
 	],
 	"Suguru Geto": [
+		{ name: "Prison Realm Fragment", rarity: "rare" },
 		{ name: "(Broken) Playful Cloud", rarity: "rare" },
 		{ name: "Transfigured Soul", rarity: "ultra rare" }
 	]
@@ -134,22 +136,78 @@ export const DOMAIN_EXPANSIONS = [
 	}
 ]
 
-export const SKILLS = [
+export const heavenlyrestrictionskills = [
 	{
-		name: "Flame Arrow",
-		description: "Turn up the volume..",
-		image_URL: "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+		name: "Pummel",
+		description: "Die!",
+		cost: "175000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
 	},
 	{
-		name: "Dismantle",
+		name: "Resonant Strike",
 		description: "Considered one of the most powerful techniques in Jujutsu",
-		image_URL:
-			"https://64.media.tumblr.com/366de99d6648d5915140d29a0ecff673/c351c57420a7daeb-3d/s540x810/1e37fa6f81e7f2531d806c4bd4504ffeb128fd12.gif"
+		cost: "75000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
 	},
 	{
-		name: "Cleave",
-		description: "Embodiment of true fear and terror",
-		image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif"
+		name: "Shrapnel Burst",
+		description: "Perish!",
+		cost: "25000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Nerve Cluster Blitz",
+		description: "Strike!",
+		cost: "175000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Unbound Fury",
+		description: "Fury of the heavens",
+		cost: "125000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Inverted Spear Of Heaven: Severed Universe",
+		description: "The skill that sliced through infinity..",
+		cost: "325000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 6
+			}
+		]
 	}
 ]
 
@@ -187,21 +245,21 @@ export const jobs = [
 		payout: { min: 25000, max: 37500 },
 		cost: 125000,
 		requiredExperience: 145,
-		cooldown: 180000
+		cooldown: 30 * 60 * 1000
 	},
 	{
 		name: "Jujutsu Sorcerer",
 		payout: { min: 40000, max: 56500 },
 		cost: 190000,
 		requiredExperience: 235,
-		cooldown: 180000
+		cooldown: 30 * 60 * 1000
 	},
 	{
 		name: "Curse Hunter",
 		payout: { min: 62500, max: 74500 },
 		cost: 245000,
 		requiredExperience: 300,
-		cooldown: 180000
+		cooldown: 2700000
 	},
 	{
 		name: "Satoru Gojo's Assistant",
@@ -339,14 +397,130 @@ export const lookupItems = [
 	{ name: "Heavenly Chain", description: "A chain with a fearsome aura.." }
 ]
 
-export const clanTechniquesMapping = {
-	"Demon Vessel": ["Cleave", "Dismantle", "Flame Arrow"],
-	"Limitless User": ["Limitless: Blue", "Hollow Purple", "Limitless: Red"],
-	"Zenin": ["Zenin Style: Playful Cloud: STRIKE", "Zenin Style: Cursed Spirit Binding"],
+export const CLAN_SKILLS = {
+	"Demon Vessel": [
+		{
+			name: "Flame Arrow",
+			description: "Fuga...",
+			cost: "325000",
+			energy: "20",
+			clan: "Demon Vessel",
+			items: [{ name: "Sukuna Finger", quantity: 6 }]
+		},
+		{
+			name: "Dismantle",
+			description: "SLICE!",
+			cost: "75000",
+			clan: "Demon Vessel",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		},
+		{
+			name: "Cleave",
+			description: "Embodiment of true fear and terror",
+			cost: "25000",
+			clan: "Demon Vessel",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		}
+	],
+	"Limitless": [
+		{
+			name: "Hollow Purple",
+			description: "Throughout heaven and earth..",
+			cost: "325000",
+			clan: "Limitless",
+			items: [{ name: "Six Eyes", quantity: 1 }]
+		},
+		{
+			name: "Lapse: Blue",
+			description: " Jutsushiki Junten・Ao!",
+			cost: "125000",
+			clan: "Limitless",
+			items: [{ name: "Rikugan Eye", quantity: 1 }]
+		},
+		{
+			name: "Limitless: Red",
+			description: "Aka..",
+			cost: "25000",
+			clan: "Limitless",
+			items: [{ name: "Rikugan Eye", quantity: 1 }]
+		}
+	],
 	"Fushiguro": [
-		"Ten Shadows Technique: Divine Dogs",
-		"Ten Shadows Technique: Nue",
-		"Ten Shadows Technique: Toad",
-		"Eight-Handled Sword Divergent Sila Divine General Mahoraga"
+		{
+			name: "Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga",
+			description: "With this treasure i summon...",
+			cost: "325000",
+			clan: "Fushiguro",
+			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
+		},
+		{
+			name: "Ten Shadows Technique: Divine Dogs",
+			description: "Divine Dogs!",
+			cost: "125000",
+			clan: "Fushiguro",
+			items: [{ name: "Tailsman", quantity: 1 }]
+		},
+		{
+			name: "Ten Shadows Technique: Nue",
+			description: "bird :3",
+			cost: "25000",
+			clan: "Fushiguro",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		}
+	],
+	"Zenin": [
+		{
+			name: "Zenin Style: Playful Cloud: STRIKE",
+			description: "Vanish!",
+			cost: "175000",
+			clan: "Zenin",
+			items: [{ name: "(Broken) Playful Cloud", quantity: 3 }]
+		},
+		{
+			name: "Zenin Style: Cursed Spirit Binding",
+			description: "Bind!",
+			cost: "125000",
+			clan: "Zenin",
+			items: [{ name: "(Broken) Playful Cloud", quantity: 1 }]
+		},
+		{
+			name: "Zenin Style: Overwhelming Strike",
+			description: "PERISH!",
+			cost: "25000",
+			clan: "Zenin",
+			items: [{ name: "(Broken) Playful Cloud", quantity: 1 }]
+		}
+	],
+	"Disaster Flames": [
+		{
+			name: "Maximum: METEOR!",
+			description: "I'LL TURN YOU INTO A CRISP!",
+			cost: "325000",
+			clan: "Disaster Flames",
+			items: [{ name: "Jogos (Fixed) Balls", quantity: 3 }]
+		},
+		{
+			name: "Disaster Flames: Lava Bend",
+			description: "Bend to my will!",
+			cost: "125000",
+			clan: "Disaster Flames",
+			items: [{ name: "Jogos right testicle", quantity: 1 }]
+		},
+		{
+			name: "Disaster Flames: Fire Manipulation",
+			description: "PERISH!",
+			cost: "25000",
+			clan: "Disaster Flames",
+			items: [{ name: "Jogos left testicle", quantity: 1 }]
+		}
 	]
+}
+
+export const CLAN_SORT_ORDER = {
+	"Limitless": 0,
+	"Zenin": 1,
+	"Fushiguro": 2,
+	"Demon Vessel": 3,
+	"Disaster Flames": 4
+	// ... add other clans
 }

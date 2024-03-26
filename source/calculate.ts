@@ -1,5 +1,5 @@
 import { EmbedBuilder } from "discord.js"
-import { bossDrops } from "./items jobs.js"
+import { BossDrop, bossDrops } from "./items jobs.js"
 import { checkUserHasHeavenlyRestriction } from "./mongodb.js"
 
 export function calculateDamage(
@@ -134,9 +134,9 @@ export function calculateEarnings(userProfile) {
 	return earnings
 }
 
-export function getBossDrop(bossName) {
+export function getBossDrop(bossName: string): BossDrop {
 	const drops = bossDrops[bossName]
-	if (!drops || drops.length === 0) return null
+	if (!drops || drops.length === 0) throw new Error("No drops found for the boss!")
 	const dropIndex = Math.floor(Math.random() * drops.length)
 	return drops[dropIndex]
 }
