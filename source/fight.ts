@@ -58,7 +58,7 @@ export async function handleBossDeath(
 
 // Function to handle the execution of special techniques
 export async function executeSpecialTechnique({
-	interaction,
+	collectedInteraction,
 	techniqueName,
 	damageMultiplier,
 	imageUrl,
@@ -69,36 +69,38 @@ export async function executeSpecialTechnique({
 	primaryEmbed
 }) {
 	const techniquesUsed = userTechniques.get(userId) || []
-	if (techniquesUsed.includes(techniqueName)) {
-		await interaction.followUp("You used this technique already, try another one!")
-		return // Stop execution if technique was already used
-	} else {
-		techniquesUsed.push(techniqueName)
-		userTechniques.set(userId, techniquesUsed) // Update the map with the new array
+	techniquesUsed.push(techniqueName)
+	userTechniques.set(userId, techniquesUsed) // Update the map with the new array
 
-		const playerGradeData = await getUserGrade(interaction.user.id)
-		const playerGradeString = playerGradeData
+	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
+	const playerGradeString = playerGradeData
 
-		// Technique hasn't been used, proceed
-		techniquesUsed.push(techniqueName)
-		userTechniques.set(userId, techniquesUsed) // Update the map with the new techniques list
+	// Technique hasn't been used, proceed
+	techniquesUsed.push(techniqueName)
+	userTechniques.set(userId, techniquesUsed) // Update the map with the new techniques list
 
-		const damage = (await calculateDamage(playerGradeString, userId, true)) * damageMultiplier
+	const damage = (await calculateDamage(playerGradeString, userId, true)) * damageMultiplier
 
-		primaryEmbed.setImage(imageUrl)
-		primaryEmbed.setDescription(description)
-		primaryEmbed.setFields({ name: "Technique", value: fieldValue })
+	primaryEmbed.setImage(imageUrl)
+	primaryEmbed.setDescription(description)
+	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
 
-		await interaction.editReply({ embeds: [primaryEmbed], components: [] })
-		await new Promise(resolve => setTimeout(resolve, 5000)) // Wait for effect
+	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+	await new Promise(resolve => setTimeout(resolve, 5000)) // Wait for effect
 
-		return damage // Return the calculated damage for further processing
-	}
+	return damage // Return the calculated damage for further processing
 }
 
-export async function executeDomainExpansion({ interaction, domainInfo, userDomains, userId, primaryEmbed }) {
+export async function executeDomainExpansion({
+	interaction,
+	domainInfo,
+	userDomains,
+	userId,
+	primaryEmbed,
+	collectedInteraction
+}) {
 	if (userDomains.has(userId)) {
-		await interaction.followUp({
+		await collectedInteraction.followUp({
 			content: "You can only activate your domain once per fight.",
 			ephemeral: true
 		})
@@ -119,7 +121,7 @@ export async function executeDomainExpansion({ interaction, domainInfo, userDoma
 		.setDescription(domainActivationDetails.description)
 		.setImage(domainActivationDetails.image_URL) // URL to the GIF representing the domain activation
 
-	await interaction.editReply({ embeds: [primaryEmbed], components: [] }) // Remove dropdown menu
+	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] }) // Remove dropdown menu
 	await new Promise(resolve => setTimeout(resolve, 5000)) // Wait for the "cutscene" to play out
 
 	// Here you would calculate and apply the domain's effects, similar to how you handle technique execution

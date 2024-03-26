@@ -599,7 +599,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 				// If they clicked cancel, let them know the crafting was canceled
 				await buttonInteraction.editReply({ content: "Crafting canceled.", components: [] })
 			}
-			collector.stop()
 
 			collector.on("end", () => {
 				// Disable the buttons after interaction
@@ -609,6 +608,8 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					components: [new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)]
 				})
 			})
+
+			collector.stop()
 		})
 	} catch (error) {
 		console.error("Error in crafting or inventory process:", error)
@@ -668,11 +669,14 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 			})
 			console.error(error)
 		}
+
 		collector.on("end", collected => {
 			if (collected.size === 0) {
 				interaction.followUp({ content: "You did not select a title.", components: [] }).catch(console.error)
 			}
 		})
+
+		//collector.stop()
 	})
 }
 
@@ -771,6 +775,7 @@ export async function handleDomainSelection(interaction) {
 				components: []
 			})
 		}
+
 		collector.stop()
 	})
 }
@@ -1403,6 +1408,7 @@ async function delay(ms) {
 export const activeCollectors = new Map()
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
+	await interaction.deferReply()
 	if (activeCollectors.has(interaction.user.id)) {
 		await interaction.reply({
 			content: "You already have an ongoing fight. Please finish it before starting a new one.",
@@ -1410,6 +1416,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		})
 		return
 	}
+
+	console.log("one")
 
 	activeCollectors.set(interaction.user.id, false)
 
@@ -1476,54 +1484,60 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		primaryEmbed.addFields([flavorText])
 	}
 
-	await interaction.reply({
+	await interaction.editReply({
 		embeds: [primaryEmbed],
 		components: [row]
 	})
 
+	console.log("two")
+
 	// Handle user selection
-	const collector = interaction.channel.createMessageComponentCollector({
-		filter: inter => inter.customId === "select-battle-option",
+	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
+		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
 		time: 60000 // 60 seconds
 	})
 
-	collector.on("collect", async collectedInteraction => {
-		if (collectedInteraction.user.id !== interaction.user.id) return
+	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
 		await collectedInteraction.deferUpdate()
-		const playerHealth = await getUserHealth(collectedInteraction.user.id)
-
+		if (collectedInteraction.user.id !== interaction.user.id) return
 		const selectedValue = collectedInteraction.values[0]
+		const playerHealth = await getUserHealth(collectedInteraction.user.id)
 
 		console.log("Selected value:", selectedValue)
 		if (selectedValue === "domain") {
 			console.log("Domain expansion selected.")
 			if (domainActivationState.get(contextKey)) {
-				await interaction.followUp({
+				await collectedInteraction.followUp({
 					content: "You can only activate your domain once per fight.",
 					ephemeral: true
 				})
 				return
 			}
+			console.log("two two")
 
 			try {
 				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 
 				if (hasHeavenlyRestriction) {
-					await interaction.followUp({
+					await collectedInteraction.followUp({
 						content: "Your Heavenly Restriction negates the use of domain expansion.",
 						ephemeral: true
 					})
 					return // Exit if Heavenly Restriction is present, or adjust as needed
 				}
+				console.log("three")
+
 				const domainInfo = await getUserDomain(interaction.user.id)
 				if (!domainInfo) {
-					await interaction.followUp({
+					await collectedInteraction.followUp({
 						content: "You do not have a domain unlocked yet.",
 						ephemeral: true
 					})
 					return
 				}
+				console.log("four")
+
 				const domainEffectMessage = "Domain activated! [You feel a surge of power! +50% DMG]"
 
 				const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
@@ -1571,41 +1585,83 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 					{ name: "Player Health", value: playerHealth.toString() }
 				)
-				await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+				console.log("five")
 
 				// is boss dead?
 				if (randomOpponent.current_health <= 0) {
+					// Check if the boss is Gojo
+					if (randomOpponent.name === "Satoru Gojo") {
+						// Generate a random number between 0 and 1
+						const random = Math.random()
+
+						// 20% chance to respawn as The Honored One
+						if (random < 0.5) {
+							randomOpponent.name = "The Honored One"
+							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+							updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+							primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
+							primaryEmbed.setImage(
+								"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
+							)
+							primaryEmbed.setFields(
+								{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+								{ name: "Player Health", value: playerHealth.toString() }
+							)
+							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+							console.log("six")
+
+							// Don't end the fight
+							return
+						}
+					} else if (randomOpponent.name === "Megumi Fushiguro") {
+						// Generate a random number between 0 and 1
+						const random = Math.random()
+
+						// 20% chance to respawn as The Honored One
+						if (random < 0.4) {
+							randomOpponent.name = "Mahoraga"
+							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+							updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+							primaryEmbed.setDescription("Megumi has summoned mahoraga!")
+							primaryEmbed.setImage(
+								"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
+							)
+							primaryEmbed.setFields(
+								{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+								{ name: "Player Health", value: playerHealth.toString() }
+							)
+							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+							console.log("7")
+
+							// Don't end the fight
+							return
+						}
+					}
 					domainActivationState.set(contextKey, false)
-					activeCollectors.set(interaction.user.id, false)
+					activeCollectors.delete(interaction.user.id)
 
 					// reset health
 					bossHealthMap.delete(interaction.user.id)
 
-					handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-				} else {
-					const bossAttackMessage = `${randomOpponent.name} killed you`
-					primaryEmbed.setFooter({ text: bossAttackMessage })
+					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
 				}
-				// update hp
-				randomOpponent.current_health = currentBossHealth
-				activeCollectors.set(interaction.user.id, false)
+				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [row] })
+				console.log("8")
 
-				await interaction.editReply({ embeds: [domainEmbed], components: [row] })
-
-				collector.on("collect", async collectedInteraction => {
-					if (collectedInteraction.user.id !== interaction.user.id) return
-				})
-
-				console.log("Before if-else block")
+				battleOptionSelectMenuCollector.stop()
 			} catch (error) {
 				console.error("Error during fight command:", error)
-				await interaction.followUp({
+				await collectedInteraction.followUp({
 					content: "An error occurred during the fight. Please try again later.",
 					ephemeral: true
 				})
 			}
+			console.log("9")
 		} else {
-			console.log("Technique selected:")
+			console.log("10")
 			const userTechniques = new Map()
 			// Get player's health
 
@@ -1617,78 +1673,81 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			const playerGradeString = playerGradeData
 
 			// calculate damage
-			let damage = await calculateDamage(playerGradeString, interaction.user.id, true)
+			let damage = calculateDamage(playerGradeString, interaction.user.id, true)
+			console.log("11")
 
-			if (selectedValue === "Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga") {
+			if (selectedValue === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
 					description: "With this treasure.. I summon.",
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+				console.log("1122")
 			} else if (selectedValue === "Hollow Purple") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/kIeDsa7o7VAAAAAC/jjk-red-and-blue.gif",
 					description: "Throughout heaven and earth.. I alone am the honored one.",
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
 			} else if (selectedValue === "Maximum: METEOR") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif",
 					description: `ILL BURN YOU TO A CRISP ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
 			} else if (selectedValue === "Zenin Style: Playful Cloud: STRIKE") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/BufoLoGxC9sAAAAd/toji-dagon.gif",
 					description: `PERISH ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
 			} else if (selectedValue === "Flame Arrow") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif",
 					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+				console.log("1123122")
 			} else if (selectedValue === "Inverted Spear Of Heaven: Severed Universe") {
 				damage = await executeSpecialTechnique({
-					interaction,
+					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
 					description: `I'm going to lose huh? ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques,
-					userId: interaction.user.id,
+					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
 			}
@@ -1704,20 +1763,28 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 				{ name: "Player Health", value: playerHealth.toString() }
 			)
-			await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+			try {
+				//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+			} catch (err: unknown) {
+				console.error(err?.toString())
+			}
+			console.log("12", randomOpponent.name)
 			// is boss dead?
 			if (randomOpponent.current_health <= 0) {
+				console.log("13", randomOpponent.name)
 				// Check if the boss is Gojo
 				if (randomOpponent.name === "Satoru Gojo") {
+					console.log("14", randomOpponent.name)
 					// Generate a random number between 0 and 1
 					const random = Math.random()
 
 					// 20% chance to respawn as The Honored One
 					if (random < 0.5) {
+						console.log("15", randomOpponent.name)
 						randomOpponent.name = "The Honored One"
 						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 						updateUserHealth(interaction.user.id, 100) // Reset player health to max
-
+						console.log("16", randomOpponent.name)
 						primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
 						primaryEmbed.setImage(
 							"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
@@ -1726,12 +1793,14 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 							{ name: "Player Health", value: playerHealth.toString() }
 						)
-						await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
-
+						console.log("17", randomOpponent.name)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+						console.log("18", randomOpponent.name)
 						// Don't end the fight
 						return
 					}
 				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					console.log("19", randomOpponent.name)
 					// Generate a random number between 0 and 1
 					const random = Math.random()
 
@@ -1749,12 +1818,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 							{ name: "Player Health", value: playerHealth.toString() }
 						)
-						await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 						// Don't end the fight
 						return
 					}
 				}
+				console.log("20", randomOpponent.name)
 				domainActivationState.set(contextKey, false)
 				activeCollectors.delete(interaction.user.id)
 
@@ -1762,7 +1832,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				bossHealthMap.delete(interaction.user.id)
 
 				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-				activeCollectors.delete(interaction.user.id)
+
+				battleOptionSelectMenuCollector.stop()
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
@@ -1777,7 +1848,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
 				//did bro die?
 				if (clampedPlayerHealth <= 0) {
-					activeCollectors.set(interaction.user.id, false)
 					const bossAttackMessage = `${randomOpponent.name} killed you!`
 					primaryEmbed.setFooter({ text: bossAttackMessage })
 
@@ -1785,12 +1855,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					activeCollectors.delete(interaction.user.id)
 					bossHealthMap.delete(interaction.user.id)
 					await updateUserHealth(interaction.user.id, 100)
-					await interaction.editReply({ embeds: [primaryEmbed], components: [] })
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 					// Send an additional ephemeral message indicating the player has died
-					await interaction.followUp({
+					await collectedInteraction.followUp({
 						content: `${randomOpponent.name} killed you!`,
 						ephemeral: true
 					})
+					battleOptionSelectMenuCollector.stop()
 				} else {
 					// Update to new player health after damage dealt
 					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
@@ -1798,7 +1869,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
 					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 
-					await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 				}
 			}
 		}
@@ -2009,5 +2080,5 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		}
 	})
 
-	collector.on("end", () => {})
+	collector.stop()
 }

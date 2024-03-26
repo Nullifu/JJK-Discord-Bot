@@ -447,7 +447,7 @@ export const CLAN_SKILLS = {
 	],
 	"Fushiguro": [
 		{
-			name: "Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga",
+			name: "Ten Shadows Technique: Divergent Sila Divine General Mahoraga",
 			description: "With this treasure i summon...",
 			cost: "325000",
 			clan: "Fushiguro",
