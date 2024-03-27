@@ -2232,7 +2232,10 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				components: [], // Clear the components to remove the buttons
 				ephemeral: true
 			})
+			collector.stop()
 		}
-		collector.stop()
+	})
+	collector.on("end", collected => {
+		console.log(`Collected ${collected.size} items`)
 	})
 }
