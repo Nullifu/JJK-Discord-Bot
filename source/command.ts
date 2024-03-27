@@ -2094,16 +2094,19 @@ const latestInteractionIdPerUser = new Map()
 const latestSessionTimestampPerUser = new Map()
 
 export async function handleTechniqueShopCommand(interaction: ChatInputCommandInteraction) {
+	await interaction.deferReply()
+
+	//
 	const userId = interaction.user.id
 	const interactionId = interaction.id
 	const sessionTimestamp = Date.now()
 	const userTechniques = (await getUserTechniques(userId)) || []
 	const userBalance = await getBalance(userId)
-	const userInventory = (await getUserInventory(userId)) || [] // Ensure this defaults to an empty array
+	const userInventory = (await getUserInventory(userId)) || []
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
-	const clans = Object.keys(CLAN_SKILLS) // Assuming CLAN_SKILLS is an object mapping clans to their skills
-	await interaction.deferReply()
+	const clans = Object.keys(CLAN_SKILLS)
 
+	//
 	latestInteractionIdPerUser.set(userId, interactionId)
 	latestSessionTimestampPerUser.set(userId, sessionTimestamp)
 
@@ -2161,6 +2164,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		}
 
 		if (i.isStringSelectMenu()) {
+			await i.deferUpdate()
 			// Determine the set of skills based on whether the "Heavenly Restriction" option was selected or a clan was chosen
 			if (i.values[0] === "heavenly_restriction") {
 				// Heavenly Restriction skills
@@ -2212,12 +2216,12 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			buttonRows.unshift(row)
 
 			// Update the interaction with the embed and new buttons
-			await i.update({
+			await i.editReply({
 				embeds: [embed],
 				components: buttonRows
 			})
 		} else if (i.isButton()) {
-			// Extract the technique name from the customId
+			await i.deferUpdate()
 			const isHeavenlySkill = i.customId.startsWith("buy_heavenly_technique_")
 			const techniqueName = i.customId
 				.replace("buy_technique_", "")
@@ -2232,13 +2236,13 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 						.find(skill => skill.name.toLowerCase() === techniqueName)
 
 			if (!selectedSkill) {
-				await i.editReply({ content: "This technique does not exist." })
+				await i.followUp({ content: "This technique does not exist." })
 				return
 			}
 
 			// Check if the user has enough balance
 			if (userBalance < parseInt(selectedSkill.cost, 10)) {
-				await i.editReply({
+				await i.followUp({
 					content: `You do not have enough coins to purchase ${selectedSkill.name}.`
 				})
 				return
@@ -2251,7 +2255,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			})
 
 			if (!hasRequiredItems) {
-				await i.editReply({
+				await i.followUp({
 					content: `You do not have the required items to purchase ${selectedSkill.name}.`
 				})
 				return
@@ -2272,7 +2276,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			}
 
 			// Respond to the interaction
-			await i.reply({
+			await i.followUp({
 				content: `Congratulations! You have successfully purchased the technique: ${selectedSkill.name}.`,
 				components: [], // Clear the components to remove the buttons
 				ephemeral: true
