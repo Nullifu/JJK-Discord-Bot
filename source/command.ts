@@ -1001,7 +1001,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 				)
 
 			// Now, edit the reply with the new embed after the delay
-			await interaction.followUp({ embeds: [embedSecond] })
+			await interaction.editReply({ embeds: [embedSecond] })
 		}, 2000) // 40000 milliseconds delay
 
 		const xpGained = 225
@@ -1021,7 +1021,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 				.setImage("https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg") // An image URL showing the unleashed power
 
 			// Edit the reply with the new embed after a delay
-			interaction.followUp({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
 		}, 4000)
 		return
 	}
