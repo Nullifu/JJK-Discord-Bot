@@ -2070,6 +2070,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 			}
 		}
+		battleOptionSelectMenuCollector.stop()
 	})
 }
 
@@ -2124,6 +2125,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			description: `Select to view ${clan}'s techniques`
 		}))
 	}
+
+	clanOptions = clanOptions.filter(option => option.label && option.value)
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("select_clan")
