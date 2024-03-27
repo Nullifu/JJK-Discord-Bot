@@ -2448,14 +2448,13 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 		await interaction.reply({ embeds: [resultEmbed] })
 	} else if (gameType === "coinflip") {
-		// Coin flip logic
 		const coinSides = ["Heads", "Tails"]
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
 		const didWin = Math.random() < 0.5 // 50%
 
 		let resultMessage = ""
 		if (didWin) {
-			await updateBalance(userId, betAmount) // Win: simply return the bet amount for demonstration
+			await updateBalance(userId, betAmount * 2) // Win: simply return the bet amount for demonstration
 			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won $${formatNumberWithCommas(
 				betAmount * 2
 			)} coins!`
