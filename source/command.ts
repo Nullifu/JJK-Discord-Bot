@@ -2317,6 +2317,10 @@ function spinSlots(): string[] {
 	return Array.from({ length: 3 }, () => slotSymbols[Math.floor(Math.random() * slotSymbols.length)])
 }
 
+function formatNumberWithCommas(number) {
+	return number.toLocaleString("en-US") // Formats with commas for US locale
+}
+
 function checkWin(spinResults: string[]): boolean {
 	return new Set(spinResults).size === 1 // Win if all symbols match
 }
@@ -2329,6 +2333,13 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
+		return
+	}
+
+	const maxBetLimit = 1000000 // Example: Set your individual bet limit
+
+	if (betAmount > maxBetLimit) {
+		await interaction.reply(`The maximum bet amount is ${formatNumberWithCommas(maxBetLimit)} coins.`)
 		return
 	}
 
@@ -2356,14 +2367,16 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			if (isJackpot) {
 				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif" // Set the URL for jackpot
 				await updateBalance(userId, betAmount * 5) // Bigger reward for jackpot
-				resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${betAmount * 5} coins!`
+				resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${formatNumberWithCommas(
+					betAmount * 2
+				)} coins!`
 			} else {
 				await updateBalance(userId, betAmount * 2) // Reward for normal win
-				resultMessage = `🎉 Congratulations, you won ${betAmount * 2} coins!`
+				resultMessage = `🎉 Congratulations, you won ${formatNumberWithCommas(betAmount * 2)} coins!`
 			}
 		} else {
 			await updateBalance(userId, -betAmount)
-			resultMessage = `😢 Better luck next time! You lost ${betAmount} coins.`
+			resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount * 2)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
@@ -2382,15 +2395,19 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		// Coin flip logic
 		const coinSides = ["Heads", "Tails"]
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
-		const didWin = Math.random() < 0.5 // Simplified 50/50 chance
+		const didWin = Math.random() < 0.2 // Simplified 50/50 chance
 
 		let resultMessage = ""
 		if (didWin) {
 			await updateBalance(userId, betAmount) // Win: simply return the bet amount for demonstration
-			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${betAmount * 2} coins!`
+			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won $${formatNumberWithCommas(
+				betAmount * 2
+			)} coins!`
 		} else {
 			await updateBalance(userId, -betAmount)
-			resultMessage = `🪙 It landed on ${result === "Heads" ? "Tails" : "Heads"}! You lost ${betAmount} coins.`
+			resultMessage = `🪙 It landed on ${
+				result === "Heads" ? "Tails" : "Heads"
+			}! You lost $${formatNumberWithCommas(betAmount)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
