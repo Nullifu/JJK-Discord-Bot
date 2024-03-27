@@ -64,7 +64,7 @@ export async function handleBossDeath(
 		.addFields(
 			{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
 			{ name: "Experience Gained", value: `You've gained ${experienceGain} XP for defeating the boss!` },
-			{ name: "Coins Gained", value: `You've gained ${coinsGained} XP for defeating the boss!` }
+			{ name: "Coins Gained", value: `You've gained ${coinsGained} Coins for defeating the boss!` }
 		)
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }

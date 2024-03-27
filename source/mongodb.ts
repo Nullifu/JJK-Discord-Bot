@@ -1076,3 +1076,35 @@ export async function updateUserCursedEnergy(userId: string, newCursedEnergy: nu
 		// await client.close()
 	}
 }
+// get user last vote time
+export async function getUserLastVoteTime(userId: string): Promise<number> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.lastVoteTime : 0
+	} catch (error) {
+		console.error(`Error when retrieving last vote time for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+// update user last vote time
+export async function updateUserLastVoteTime(userId: string, newLastVoteTime: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { lastVoteTime: newLastVoteTime } })
+	} catch (error) {
+		console.error("Error updating user last vote time:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}

@@ -2174,7 +2174,9 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		}))
 	}
 
-	clanOptions = clanOptions.filter(option => option.label && option.value)
+	clanOptions = clanOptions.filter(
+		option => typeof option.label === "string" && option.label && typeof option.value === "string" && option.value
+	)
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("select_clan")
@@ -2224,6 +2226,15 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				skillsToDisplay = CLAN_SKILLS[selectedClan].filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = `${selectedClan} Clan Techniques`
 				customIdPrefix = "buy_technique_"
+			}
+
+			if (skillsToDisplay.length === 0) {
+				await i.editReply({
+					content: "There are no more techniques available for you to purchase in this category.",
+					components: [] // Clear any interactive components
+				})
+				techniqueshopcollector.stop
+				return // Stop further execution if no skills are available
 			}
 
 			// Build the embed for displaying skills
