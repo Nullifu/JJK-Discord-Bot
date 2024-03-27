@@ -2460,7 +2460,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 				betAmount * 2
 			)} coins!`
 		} else {
-			await updateBalance(userId, betAmount)
+			await updateBalance(userId, -betAmount)
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
 			}! You lost $${formatNumberWithCommas(betAmount)} coins.`
