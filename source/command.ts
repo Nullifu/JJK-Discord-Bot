@@ -2404,7 +2404,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 				betAmount * 2
 			)} coins!`
 		} else {
-			await updateBalance(userId, -betAmount)
+			await updateBalance(userId, betAmount)
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
 			}! You lost $${formatNumberWithCommas(betAmount)} coins.`
@@ -2425,10 +2425,11 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const benefactors = [
-		{ name: "Satoru Gojo", coins: 3000 },
+		{ name: "Satoru Gojo", coins: 30000 },
 		{ name: "Kento Nanami", coins: 1500 },
 		{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1 },
-		{ name: "Hakari Kinji", coins: 300, item: "Gambler Token", itemQuantity: 1 }
+		{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1 },
+		{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1 }
 		// Add more characters and rewards as desired
 	]
 

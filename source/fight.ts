@@ -40,8 +40,14 @@ export async function handleBossDeath(
 	}
 	await interaction.editReply({ embeds: [embed], components: [] })
 
+	function getrandommoney(min = 25000, max = 50000) {
+		// The maximum is inclusive and the minimum is inclusive
+		return Math.floor(Math.random() * (max - min + 1)) + min
+	}
+
 	// Calculate experience they get
 	const experienceGain = getRandomXPGain()
+	const coinsGained = getrandommoney()
 
 	// Update values in the database
 	activeCollectors.delete(interaction.user.id)
@@ -57,7 +63,8 @@ export async function handleBossDeath(
 		.setTitle("Battle Rewards")
 		.addFields(
 			{ name: "Loot Drop", value: `You've also found a ${drop.name} among the remains!` },
-			{ name: "Experience Gained", value: `You've gained ${experienceGain} XP for defeating the boss!` }
+			{ name: "Experience Gained", value: `You've gained ${experienceGain} XP for defeating the boss!` },
+			{ name: "Coins Gained", value: `You've gained ${coinsGained} XP for defeating the boss!` }
 		)
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }
