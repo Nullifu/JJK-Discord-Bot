@@ -205,7 +205,6 @@ const commands = [
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("leaderboard").setDescription("Global Leaderboard!"),
 	new SlashCommandBuilder().setName("claninfo").setDescription("clan info!"),
-	new SlashCommandBuilder().setName("guide").setDescription("If your stuck refer to this!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
@@ -215,6 +214,21 @@ const commands = [
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
+	new SlashCommandBuilder()
+		.setName("guide")
+		.setDescription("Get guides on various topics.")
+		.addStringOption(option =>
+			option
+				.setName("topic")
+				.setDescription("The topic of the guide you want to view.")
+				.setRequired(false) // Make this optional so users can still ask for a general guide
+				.addChoices(
+					{ name: "Crafting", value: "crafting" },
+					{ name: "Techniques", value: "technique" }
+					// Add more choices for different guides here
+				)
+		),
+
 	new SlashCommandBuilder()
 		.setName("gamble")
 		.setDescription("Try your luck!")

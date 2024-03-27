@@ -1442,13 +1442,24 @@ export const activeCollectors = new Map()
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	await updateUserHealth(interaction.user.id, 100) // Set user's health to 100
 	await interaction.deferReply()
-	if (activeCollectors.has(interaction.user.id)) {
-		await interaction.editReply({
-			content: "You already have an ongoing fight. Please finish it before starting a new one."
-		})
-		return
-	}
+	const currentTime = Date.now() // Get current time in milliseconds
 
+	//
+	if (activeCollectors.has(interaction.user.id)) {
+		const fightStartTime = activeCollectors.get(interaction.user.id)
+
+		// Check if more than 30 seconds have elapsed since the fight started
+		if (currentTime - fightStartTime > 30000) {
+			// More than 30 seconds have elapsed, allow starting a new fight
+			activeCollectors.set(interaction.user.id, currentTime) // Update the start time for the new fight
+		} else {
+			// Fight is still active, and less than 30 seconds have elapsed
+			await interaction.editReply({
+				content: "You already have an ongoing fight. Please finish it before starting a new one."
+			})
+			return
+		}
+	}
 	console.log("one")
 
 	activeCollectors.set(interaction.user.id, true)
