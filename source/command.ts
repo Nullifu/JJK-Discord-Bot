@@ -2463,7 +2463,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			await updateBalance(userId, -betAmount)
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
-			}! You lost $${formatNumberWithCommas(-betAmount)} coins.`
+			}! You lost $${formatNumberWithCommas(betAmount)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
