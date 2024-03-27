@@ -1443,16 +1443,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	await updateUserHealth(interaction.user.id, 100) // Set user's health to 100
 	await interaction.deferReply()
 	if (activeCollectors.has(interaction.user.id)) {
-		await interaction.reply({
-			content: "You already have an ongoing fight. Please finish it before starting a new one.",
-			ephemeral: true
+		await interaction.editReply({
+			content: "You already have an ongoing fight. Please finish it before starting a new one."
 		})
 		return
 	}
 
 	console.log("one")
 
-	activeCollectors.set(interaction.user.id, false)
+	activeCollectors.set(interaction.user.id, true)
 
 	const allBosses = await getBosses()
 
@@ -1532,7 +1531,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
-		time: 60000 // 60 seconds
+		time: 30000 // 60 seconds
 	})
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
@@ -1787,8 +1786,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				bossHealthMap.delete(interaction.user.id)
 
 				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-
-				battleOptionSelectMenuCollector.stop()
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
@@ -1816,7 +1813,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						content: `${randomOpponent.name} killed you!`,
 						ephemeral: true
 					})
-					battleOptionSelectMenuCollector.stop()
 				} else {
 					// Update to new player health after damage dealt
 					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
