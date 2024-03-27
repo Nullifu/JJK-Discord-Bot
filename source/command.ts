@@ -1357,23 +1357,56 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 }
 
 // guide command
-export async function handleGuideCommand(interaction: ChatInputCommandInteraction) {
-	const guideEmbed = new EmbedBuilder()
-		.setTitle("Jujutsu Kaisen Bot Guide")
-		.setDescription(
-			"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [ Very WIP ]"
-		)
-		.setColor("#0099ff")
-		.addFields(
-			{
-				name: "Commands",
-				value: "1. `/search` - Search for items!.\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
-			},
-			{
-				name: "Additional Information",
-				value: "Use these commands to explore the world of Jujutsu Kaisen and grow your cursed energy. Good luck!"
-			}
-		)
+export async function handleGuideCommand(interaction) {
+	const topic = interaction.options.getString("topic")
+
+	const guideEmbed = new EmbedBuilder().setColor("#0099ff")
+
+	// Dynamically set the title and description based on the topic
+	switch (topic) {
+		case "crafting":
+			guideEmbed
+				.setTitle("Crafting Guide")
+				.setDescription("Here's how you can craft items in the Jujutsu Kaisen Bot...")
+				.addFields(
+					// Add crafting-specific instructions here
+					{
+						name: "Basic Crafting",
+						value: "To start crafting, use `/craft [item]`. You'll need the right materials."
+					}
+					// More fields as necessary
+				)
+			break
+		case "technique":
+			guideEmbed
+				.setTitle("Technique Guide")
+				.setDescription("Here's how you can aquire techniques in the Jujutsu Kaisen Bot...")
+				.addFields(
+					// Add crafting-specific instructions here
+					{
+						name: "Techniques",
+						value: "To start learning techniques, use `/techniqueshop`. You'll need the right materials. And money."
+					}
+					// More fields as necessary
+				)
+			break
+		default:
+			guideEmbed
+				.setTitle("Jujutsu Kaisen Bot Guide")
+				.setDescription(
+					"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [ Very WIP ]"
+				)
+				.addFields(
+					{
+						name: "Commands",
+						value: "1. `/search` - Search for items!.\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
+					},
+					{
+						name: "Additional Information",
+						value: "Use these commands to explore the world of Jujutsu Kaisen and grow your cursed energy. Good luck!"
+					}
+				)
+	}
 
 	await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 }
@@ -2096,6 +2129,7 @@ async function handleFightLogic(
 	return resultMessage
 }
 
+const userCollectors = new Map()
 const latestInteractionIdPerUser = new Map()
 const latestSessionTimestampPerUser = new Map()
 
@@ -2111,6 +2145,11 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 	const userInventory = (await getUserInventory(userId)) || []
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 	const clans = Object.keys(CLAN_SKILLS)
+
+	if (userCollectors.has(userId)) {
+		const existingCollector = userCollectors.get(userId)
+		existingCollector.stop("A new shop session was initiated.")
+	}
 
 	//
 	latestInteractionIdPerUser.set(userId, interactionId)
@@ -2155,9 +2194,11 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			i.customId.startsWith("buy_technique_") ||
 			i.customId.startsWith("buy_heavenly_technique_")) &&
 		i.user.id === interaction.user.id
-	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+	const techniqueshopcollector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
 
-	collector.on("collect", async i => {
+	userCollectors.set(userId, techniqueshopcollector)
+
+	techniqueshopcollector.on("collect", async i => {
 		const currentSessionTimestamp = latestSessionTimestampPerUser.get(userId)
 		const interactionTimestamp = i.createdTimestamp // Discord.js provides the timestamp of when the interaction was created
 		let skillsToDisplay
@@ -2287,11 +2328,13 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				components: [], // Clear the components to remove the buttons
 				ephemeral: true
 			})
-			collector.stop()
+			techniqueshopcollector.stop()
 		}
 	})
-	collector.on("end", collected => {
-		console.log(`Collected ${collected.size} items`)
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	techniqueshopcollector.on("end", _collected => {
+		techniqueshopcollector.stop()
+		userCollectors.delete(userId)
 	})
 }
 
