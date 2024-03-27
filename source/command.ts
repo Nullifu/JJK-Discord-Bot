@@ -2066,7 +2066,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 			}
 		}
-		battleOptionSelectMenuCollector.stop()
 	})
 }
 
