@@ -155,10 +155,10 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 }
 
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
-	const userId = interaction.user.id
+	const targetUser = interaction.options.getUser("user") || interaction.user
 
-	const createProfileEmbed = async userId => {
-		const userProfile = await getUserProfile(userId)
+	const createProfileEmbed = async user => {
+		const userProfile = await getUserProfile(user.id)
 		if (!userProfile) throw new Error("Profile not found.")
 
 		const hasHeavenlyRestriction = !!userProfile.heavenlyrestriction
@@ -172,8 +172,8 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 
 		return new EmbedBuilder()
 			.setColor(0x1f6b4e) // Changed to a dark green for thematic consistency
-			.setTitle(`Jujutsu Profile: ${interaction.user.username} 🌀`)
-			.setThumbnail(interaction.user.displayAvatarURL())
+			.setTitle(`Jujutsu Profile: ${targetUser.username} 🌀`)
+			.setThumbnail(targetUser.displayAvatarURL())
 			.addFields(
 				{ name: "**Clan** 🏆", value: userProfile.clan || "None", inline: false },
 				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: false },
@@ -191,7 +191,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 	}
 
 	try {
-		const profileEmbed = await createProfileEmbed(userId)
+		const profileEmbed = await createProfileEmbed(targetUser)
 		await interaction.reply({ embeds: [profileEmbed] })
 	} catch (error) {
 		console.error("Error handling profile command:", error)
@@ -1051,6 +1051,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 		if (randomNumber <= 20) {
 			await updateUserClan(userId, "Demon Vessel")
+			await updateUserAchievements(userId, "becursedDemonVessel")
 			isDemonVessel = true // Set the flag to true when the user becomes a Demon Vessel
 		}
 		setTimeout(async () => {
@@ -1088,6 +1089,71 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 					.setImage(
 						"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
 					) // An image URL showing the unleashed power
+			}
+			await interaction.editReply({ embeds: [embedSecond] })
+		}, 4000)
+	}
+	// Adding suspense and thematic depth for the "Sukuna Finger"
+	if (itemName === "Six Eyes") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("A Mystical Choice...")
+			.setDescription(
+				"You stare into the Six Eyes, its cursed energy pulsing against your skin... And the uneasy feeling of infinity.."
+			)
+			.setImage(
+				"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless"
+			) // Add a fitting image URL
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		const randomNumber = Math.floor(Math.random() * 100) + 1
+		let isLimitless = false
+
+		const xpGained = 175
+		await updateUserExperience(userId, xpGained)
+		await updateUserCursedEnergy(userId, 45)
+		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		await removeItemFromUserInventory(userId, item.name, 1)
+
+		if (randomNumber <= 30) {
+			await updateUserClan(userId, "Limitless")
+			await updateUserAchievements(userId, "behonoredLimitless")
+			isLimitless = true // Set the flag to true when the user becomes a Demon Vessel
+		}
+		setTimeout(async () => {
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"As you stare into the Six Eyes, you feel an overwhelming power surge within... The uneasy feeling of limitless thoughts.."
+				)
+				.setImage("https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif") // Image URL of the consumption
+
+			// Now, edit the reply with the new embed after the delay
+			await interaction.editReply({ embeds: [embedSecond] })
+		}, 2000) // 40000 milliseconds delay
+
+		setTimeout(async () => {
+			let embedSecond
+			if (isLimitless) {
+				// Special embed for Demon Vessel
+				embedSecond = new EmbedBuilder()
+					.setColor("#4b0082")
+					.setTitle("????")
+					.setDescription(
+						"The swirling, malevolent auras of limitless cursed energy blaze before your eyes, their intensity scorching your senses. Your expanding knowledge of jujutsu opens your mind, unlocking a terrifying new depth of perception.. 𝓨𝓸𝓾 𝓱𝓪𝓿𝓮 𝓫𝓮𝓮𝓷 𝓻𝓮𝓪𝔀𝓸𝓴𝓮𝓷"
+					)
+					.setImage("https://media1.tenor.com/m/sr0GO11Kbf0AAAAC/gojo-satoru.gif")
+			} else {
+				// Generic response for non-Demon Vessel outcome
+				embedSecond = new EmbedBuilder()
+					.setColor("#006400") // Dark green, symbolizing growth
+					.setTitle("Power Unleashed")
+					.setDescription(
+						"The deed is done. You've gained 175 experience. What mystical powers have you awakened?"
+					)
+					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif") // An image URL showing the unleashed power
 			}
 			await interaction.editReply({ embeds: [embedSecond] })
 		}, 4000)

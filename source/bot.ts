@@ -188,7 +188,12 @@ export const userLastDaily = new Map<string, number>() // Maps user IDs to the l
 
 // Slash Commands
 const commands = [
-	new SlashCommandBuilder().setName("profile").setDescription("User Profile"),
+	new SlashCommandBuilder()
+		.setName("profile")
+		.setDescription("User Profile")
+		.addUserOption(
+			option => option.setName("user").setDescription("The user to display the profile for").setRequired(false) // Makes mentioning a user optional
+		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
@@ -284,7 +289,8 @@ const commands = [
 				.setRequired(true)
 				.addChoices(
 					{ name: "Sukuna Finger", value: "Sukuna Finger" },
-					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" }
+					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
+					{ name: "Six Eyes", value: "Six Eyes" }
 				)
 		)
 ].map(command => command.toJSON())

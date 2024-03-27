@@ -347,7 +347,12 @@ export const titles = [
 		achievementId: "unlockHeavenlyRestriction",
 		reward: "[TITLE] Heavenly Restricted"
 	},
-	{ name: "Honored One", description: "???" },
+	{
+		name: "The Honored One",
+		description: "? ? ?",
+		achievementId: "behonoredLimitless",
+		reward: "[TITLE] The Honored One"
+	},
 	{ name: "Cursed Child", description: "???" }
 ]
 
@@ -392,6 +397,11 @@ export const allAchievements: Record<string, Achievement> = {
 		name: "Heavenly Restricted",
 		description: "Unlock Heavenly Restriction",
 		reward: "[TITLE] Heavenly Restricted"
+	},
+	behonoredLimitless: {
+		name: "The Honored One",
+		description: "? ? ?",
+		reward: "[TITLE] The Honored One"
 	}
 
 	// Add additional achievements as needed.
@@ -569,13 +579,4 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Gambler Token", quantity: 1 }]
 		}
 	]
-}
-
-export const CLAN_SORT_ORDER = {
-	"Limitless": 0,
-	"Zenin": 1,
-	"Fushiguro": 2,
-	"Demon Vessel": 3,
-	"Disaster Flames": 4
-	// ... add other clans
 }
