@@ -122,7 +122,7 @@ export async function executeDomainExpansion({
 		.setImage(domainActivationDetails.image_URL) // URL to the GIF representing the domain activation
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] }) // Remove dropdown menu
-	await new Promise(resolve => setTimeout(resolve, 5000)) // Wait for the "cutscene" to play out
+	await new Promise(resolve => setTimeout(resolve, 3000)) // Wait for the "cutscene" to play out
 
 	// Here you would calculate and apply the domain's effects, similar to how you handle technique execution
 	// This might involve increasing damage, altering player stats, etc., based on your game's mechanics

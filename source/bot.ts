@@ -14,7 +14,9 @@ import {
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
+import cron from "node-cron"
 import {
+	generateStatsEmbed,
 	handleAchievementsCommand,
 	handleBalanceCommand,
 	handleClanInfoCommand,
@@ -141,6 +143,18 @@ client.on("guildCreate", guild => {
 
 		// Send the embed with the button
 		defaultChannel.send({ embeds: [welcomeEmbed], components: [row] })
+	}
+})
+
+const channelId = "1222537263523696785"
+const statsMessageId = "1222537329378594951"
+
+cron.schedule("*/1 * * * *", async () => {
+	const channel = await client.channels.fetch(channelId)
+	if (channel.isTextBased()) {
+		const message = await channel.messages.fetch(statsMessageId)
+		const statsEmbed = generateStatsEmbed(client)
+		await message.edit({ embeds: [statsEmbed] }).catch(console.error)
 	}
 })
 
@@ -318,6 +332,7 @@ client.on("interactionCreate", async interaction => {
 		await handleRegisterCommand(chatInputInteraction)
 		return
 	}
+
 	if (commandName === "claninfo") {
 		await handleClanInfoCommand(chatInputInteraction)
 		return

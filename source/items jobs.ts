@@ -52,6 +52,16 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Prison Realm Fragment", rarity: "rare" },
 		{ name: "(Broken) Playful Cloud", rarity: "rare" },
 		{ name: "Transfigured Soul", rarity: "ultra rare" }
+	],
+	"The Honored One": [
+		{ name: "Rikugan Eye", rarity: "rare" },
+		{ name: "Sukuna Finger", rarity: "rare" },
+		{ name: "Rikugan Eye", rarity: "ultra rare" }
+	],
+	"Mahoraga": [
+		{ name: "(Broken) Divine General Wheel", rarity: "rare" },
+		{ name: "Tailsman", rarity: "rare" },
+		{ name: "(Fixed) Divine General Wheel", rarity: "ultra rare" }
 	]
 }
 
@@ -116,8 +126,7 @@ export const DOMAIN_EXPANSIONS = [
 	{
 		name: "Unlimited Void",
 		description: "Considered one of the most powerful techniques in Jujutsu",
-		image_URL:
-			"https://64.media.tumblr.com/366de99d6648d5915140d29a0ecff673/c351c57420a7daeb-3d/s540x810/1e37fa6f81e7f2531d806c4bd4504ffeb128fd12.gif"
+		image_URL: "https://media1.tenor.com/m/GXV82xs5pFgAAAAC/jujutsu-kaisen-satoru-gojo.gif"
 	},
 	{
 		name: "Malevolent Shrine",

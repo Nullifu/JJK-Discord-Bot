@@ -1,7 +1,6 @@
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
-
 import { SelectMenuBuilder } from "@discordjs/builders"
 import {
 	ActionRowBuilder,
@@ -9,6 +8,7 @@ import {
 	ButtonStyle,
 	CacheType,
 	ChatInputCommandInteraction,
+	Client,
 	CommandInteraction,
 	ComponentType,
 	EmbedBuilder,
@@ -781,6 +781,9 @@ export async function handleDomainSelection(interaction) {
 		}
 
 		collector.stop()
+		collector.on("end", collected => {
+			console.log(`Collected ${collected.size} items`)
+		})
 	})
 }
 
@@ -920,6 +923,9 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 				})
 
 				collector.stop()
+				collector.on("end", collected => {
+					console.log(`Collected ${collected.size} items`)
+				})
 			}
 		} else if (inter.customId === "end_search") {
 			console.log(`End search button clicked by ${inter.user.tag}`)
@@ -945,6 +951,9 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 
 			collector.stop()
 		}
+	})
+	collector.on("end", collected => {
+		console.log(`Collected ${collected.size} items`)
 	})
 }
 
@@ -1176,7 +1185,7 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 2.5", // Replace with your actual version number
+			version: "Update 2.5.1", // Replace with your actual version number
 			date: "2024-03-26", // Adjust the date as needed
 			changes: [
 				{
@@ -1200,8 +1209,8 @@ export async function handleUpdateCommand(interaction) {
 					value: "Resolved issues with the grade system's functionality and accuracy."
 				},
 				{
-					name: "Work/Dig Bug Squashing",
-					value: "Bugs for these commands have been fixed, and they should now work as intended."
+					name: "Fixing all bugs, Most have been fixed!",
+					value: "Fight, Dig, Work, < Fixed. as for the thinking bug it's still being worked on. :D"
 				},
 				{
 					name: "Found a bug? Report it!",
@@ -1271,7 +1280,11 @@ export async function handleClanInfoCommand(interaction: ChatInputCommandInterac
 			},
 			{
 				name: "Limitless User",
-				value: "literally satoru gojo."
+				value: "Throughout heaven and earth..."
+			},
+			{
+				name: "Zenin",
+				value: "Access to zenin style etc."
 			}
 		)
 
@@ -1673,8 +1686,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [row] })
 				console.log("8")
-
-				battleOptionSelectMenuCollector.stop()
 			} catch (error) {
 				console.error("Error during fight command:", error)
 				await collectedInteraction.followUp({
@@ -2238,4 +2249,34 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 	collector.on("end", collected => {
 		console.log(`Collected ${collected.size} items`)
 	})
+}
+
+// Helper function for formatting uptime
+function formatUptime(uptime: number): string {
+	const totalSeconds = uptime / 1000
+	const days = Math.floor(totalSeconds / 86400)
+	const hours = Math.floor(totalSeconds / 3600) % 24
+	const minutes = Math.floor(totalSeconds / 60) % 60
+	const seconds = Math.floor(totalSeconds % 60)
+	return `${days}d ${hours}h ${minutes}m ${seconds}s`
+}
+
+export function generateStatsEmbed(client: Client): EmbedBuilder {
+	const uptime = formatUptime(client.uptime ?? 0)
+	const apiLatency = Math.round(client.ws.ping)
+
+	const statsEmbed = new EmbedBuilder()
+		.setColor("#0099FF")
+		.setTitle("🤖 Bot Stats")
+		.setDescription("Current bot stats, updated every minute.")
+		.addFields(
+			{ name: "Uptime", value: uptime, inline: true },
+			{ name: "API Latency", value: `${apiLatency}ms`, inline: true },
+			{ name: "Status", value: "🟩", inline: true }
+			// Add more fields as needed
+		)
+		.setTimestamp() // This automatically adds the current time as the "footer" timestamp
+		.setFooter({ text: "Last Updated" }) // This sets the footer text
+
+	return statsEmbed
 }
