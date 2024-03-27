@@ -2395,7 +2395,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		// Coin flip logic
 		const coinSides = ["Heads", "Tails"]
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
-		const didWin = Math.random() < 0.2 // Simplified 50/50 chance
+		const didWin = Math.random() < 0.5 // Simplified 50/50 chance
 
 		let resultMessage = ""
 		if (didWin) {
