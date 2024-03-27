@@ -19,12 +19,14 @@ import {
 	generateStatsEmbed,
 	handleAchievementsCommand,
 	handleBalanceCommand,
+	handleBegCommand,
 	handleClanInfoCommand,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
 	handleDomainSelection,
 	handleFightCommand,
+	handleGambleCommand,
 	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
@@ -212,6 +214,20 @@ const commands = [
 	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
+	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
+	new SlashCommandBuilder()
+		.setName("gamble")
+		.setDescription("Try your luck!")
+		.addStringOption(option =>
+			option
+				.setName("game")
+				.setDescription("The game you want to play")
+				.setRequired(true)
+				.addChoices({ name: "Slot Machine", value: "slot" }, { name: "Coin Flip", value: "coinflip" })
+		)
+		.addIntegerOption(option =>
+			option.setName("amount").setDescription("The amount of coins to gamble").setRequired(true)
+		),
 	new SlashCommandBuilder()
 		.setName("lookup")
 		.setDescription("Looks up an item and displays information about it.")
@@ -416,6 +432,12 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "toggleheavenlyrestriction":
 			await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
+			break
+		case "gamble":
+			await handleGambleCommand(chatInputInteraction)
+			break
+		case "beg":
+			await handleBegCommand(chatInputInteraction)
 			break
 		default:
 		// Handle unknown commands if needed

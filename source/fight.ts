@@ -32,6 +32,12 @@ export async function handleBossDeath(
 			"https://cdn.discordapp.com/attachments/681985000521990179/1222162641620041798/ezgif-2-cc9a6b6268.gif?ex=661536a8&is=6602c1a8&hm=591265d694ffde07b30eef7cfc538c2055643d8e349500cd4fd9be4484ffe4e7&f"
 		)
 	}
+	if (opponent.name === "Mahito Instant Spirit Body of Distorted Killing") {
+		embed.setDescription("I admit it, Mahito i am you.")
+		embed.setImage(
+			"https://cdn.discordapp.com/attachments/681985000521990179/1222162641620041798/ezgif-2-cc9a6b6268.gif?ex=661536a8&is=6602c1a8&hm=591265d694ffde07b30eef7cfc538c2055643d8e349500cd4fd9be4484ffe4e7&f"
+		)
+	}
 	await interaction.editReply({ embeds: [embed], components: [] })
 
 	// Calculate experience they get
@@ -119,13 +125,10 @@ export async function executeDomainExpansion({
 	primaryEmbed
 		.setTitle(`Domain Expansion: ${domainActivationDetails.name}`)
 		.setDescription(domainActivationDetails.description)
-		.setImage(domainActivationDetails.image_URL) // URL to the GIF representing the domain activation
+		.setImage(domainActivationDetails.image_URL)
 
-	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] }) // Remove dropdown menu
-	await new Promise(resolve => setTimeout(resolve, 3000)) // Wait for the "cutscene" to play out
+	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+	await new Promise(resolve => setTimeout(resolve, 3000))
 
-	// Here you would calculate and apply the domain's effects, similar to how you handle technique execution
-	// This might involve increasing damage, altering player stats, etc., based on your game's mechanics
-
-	return // Additional logic to apply domain effects or continue the fight sequence
+	return
 }

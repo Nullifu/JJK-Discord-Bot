@@ -120,13 +120,16 @@ export function calculateEarnings(userProfile) {
 			earnings = getRandomAmount(25000, 37500)
 			break
 		case "Jujutsu Sorcerer":
-			earnings = getRandomAmount(40000, 56000)
+			earnings = getRandomAmount(40000, 56500)
 			break
 		case "Satoru Gojo's Assistant":
 			earnings = getRandomAmount(125000, 235000)
 			break
 		case "Curse Hunter":
 			earnings = getRandomAmount(62500, 74500)
+			break
+		case "Hakari Kinjis Lawyer":
+			earnings = getRandomAmount(185000, 300000)
 			break
 		default: // Non-Sorcerer and any other jobs
 			earnings = getRandomAmount(100, 1000)

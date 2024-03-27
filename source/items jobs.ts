@@ -62,6 +62,22 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "(Broken) Divine General Wheel", rarity: "rare" },
 		{ name: "Tailsman", rarity: "rare" },
 		{ name: "(Fixed) Divine General Wheel", rarity: "ultra rare" }
+	],
+	"Mahito Instant Spirit Body of Distorted Killing": [
+		{ name: "Transfigured Soul", rarity: "rare" },
+		{ name: "Tailsman", rarity: "rare" },
+		{ name: "Junpei", rarity: "ultra rare" }
+	],
+	"Hakari Kinji": [
+		{ name: "Gambler Token", rarity: "rare" },
+		{ name: "Tailsman", rarity: "rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" }
+	],
+
+	"Kashimo": [
+		{ name: "(Broken) Electrical Staff", rarity: "rare" },
+		{ name: "Tailsman", rarity: "rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" }
 	]
 }
 
@@ -274,7 +290,14 @@ export const jobs = [
 		name: "Satoru Gojo's Assistant",
 		payout: { min: 125000, max: 235000 },
 		cost: 1000000,
-		requiredExperience: 750,
+		requiredExperience: 1250,
+		cooldown: 60 * 60 * 1000
+	},
+	{
+		name: "Hakari Kinji's Lawyer",
+		payout: { min: 185000, max: 300000 },
+		cost: 2500000,
+		requiredExperience: 2500,
 		cooldown: 60 * 60 * 1000
 	}
 
@@ -521,6 +544,29 @@ export const CLAN_SKILLS = {
 			cost: "25000",
 			clan: "Disaster Flames",
 			items: [{ name: "Jogos left testicle", quantity: 1 }]
+		}
+	],
+	"Gambler Fever": [
+		{
+			name: "Jackpot: Strike",
+			description: "Let's get lucky...",
+			cost: "525000",
+			clan: "Gambler Fever",
+			items: [{ name: "Gambler Token", quantity: 3 }]
+		},
+		{
+			name: "Gambler Fever: Random Rush!",
+			description: "Perish!",
+			cost: "185000",
+			clan: "Gambler Fever",
+			items: [{ name: "Gambler Token", quantity: 1 }]
+		},
+		{
+			name: "Gambler Fever: Cargo Rush",
+			description: "Take this!",
+			cost: "65000",
+			clan: "Gambler Fever",
+			items: [{ name: "Gambler Token", quantity: 1 }]
 		}
 	]
 }

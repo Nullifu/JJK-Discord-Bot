@@ -49,7 +49,6 @@ import {
 	getBalance,
 	getBosses,
 	getUserAchievements,
-	getUserBankBalance,
 	getUserClan,
 	getUserCursedEnergy,
 	getUserDailyData,
@@ -137,19 +136,21 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
 	await interaction.deferReply()
 	const user = interaction.user
-	const bankBalance = await getUserBankBalance(user.id)
+
+	// Assuming getUserBankBalance and getBalance are async functions returning numbers
 	const balance = await getBalance(user.id)
-	const cursedCoins = balance ? balance.toString() : "0" // Consider formatting for readability
-	const cursedBalance = bankBalance ? bankBalance.toString() : "0" // Consider formatting for readability
+
+	// Convert to strings with commas for thousands, millions, etc.
+	const cursedCoins = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
 
 	const balanceEmbed = new EmbedBuilder()
 		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
-		.setTitle(`${user.username}'s Cursed Energy`)
+		.setTitle(`${user.username}'s Cursed Wallet`)
 		.setThumbnail(user.displayAvatarURL()) // Ideally, a thematic image here
-		.addFields({ name: "Cursed Bank Balance", value: `${cursedBalance} `, inline: false })
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
 		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
 		.setTimestamp()
+
 	await interaction.editReply({ embeds: [balanceEmbed] })
 }
 
@@ -1916,6 +1917,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Jackpot: Strike") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/AQ7Hs9jfutAAAAAd/hakari-jujutsu-kaisen.gif",
+					description: `TURN UP THE VOLUME ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			// update boss hp
@@ -1970,7 +1983,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					// Generate a random number between 0 and 1
 					const random = Math.random()
 
-					// 20% chance to respawn as The Honored One
 					if (random < 0.4) {
 						randomOpponent.name = "Mahoraga"
 						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
@@ -1987,6 +1999,25 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 						// Don't end the fight
+						return
+					}
+				} else if (randomOpponent.name === "Mahito (Transfigured)") {
+					console.log("19", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					if (random < 0.2) {
+						randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Mahito has reached the true essence of his soul!")
+						primaryEmbed.setImage("https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif")
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 						return
 					}
 				}
@@ -2279,4 +2310,131 @@ export function generateStatsEmbed(client: Client): EmbedBuilder {
 		.setFooter({ text: "Last Updated" }) // This sets the footer text
 
 	return statsEmbed
+}
+
+const slotSymbols = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓"]
+function spinSlots(): string[] {
+	return Array.from({ length: 3 }, () => slotSymbols[Math.floor(Math.random() * slotSymbols.length)])
+}
+
+function checkWin(spinResults: string[]): boolean {
+	return new Set(spinResults).size === 1 // Win if all symbols match
+}
+
+export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
+	const gameType = interaction.options.getString("game") // Assuming "game" is the option name
+	const betAmount = interaction.options.getInteger("amount", true)
+	const userId = interaction.user.id
+	const currentBalance = await getBalance(userId)
+
+	if (betAmount > currentBalance) {
+		await interaction.reply("You don't have enough coins to make this bet.")
+		return
+	}
+
+	if (gameType === "slot") {
+		const betAmount = interaction.options.getInteger("amount", true)
+
+		// Assume getBalance and updateBalance functions are defined elsewhere
+		const userId = interaction.user.id // Identifier for the user's balance
+		const currentBalance = await getBalance(userId)
+
+		if (betAmount > currentBalance) {
+			await interaction.reply("You don't have enough coins to make this bet.")
+			return
+		}
+
+		// Proceed with the gamble
+		const spinResults = spinSlots()
+		const didWin = checkWin(spinResults)
+		let resultMessage = ""
+		let jackpotGIF = "" // Initialize here for broader scope
+
+		if (didWin) {
+			// Check if it's a jackpot win
+			const isJackpot = spinResults.every(symbol => symbol === "🍓") // Adjusted to the correct symbol
+			if (isJackpot) {
+				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif" // Set the URL for jackpot
+				await updateBalance(userId, betAmount * 5) // Bigger reward for jackpot
+				resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${betAmount * 5} coins!`
+			} else {
+				await updateBalance(userId, betAmount * 2) // Reward for normal win
+				resultMessage = `🎉 Congratulations, you won ${betAmount * 2} coins!`
+			}
+		} else {
+			await updateBalance(userId, -betAmount)
+			resultMessage = `😢 Better luck next time! You lost ${betAmount} coins.`
+		}
+
+		const resultEmbed = new EmbedBuilder()
+			.setTitle("🎰 Slot Machine 🎰")
+			.setDescription(`${spinResults.join(" | ")}\n${resultMessage}`)
+			.setColor(didWin ? "#00FF00" : "#FF0000")
+			.setTimestamp()
+
+		// Add the jackpot GIF to the embed if there is one
+		if (jackpotGIF) {
+			resultEmbed.setImage(jackpotGIF)
+		}
+
+		await interaction.reply({ embeds: [resultEmbed] })
+	} else if (gameType === "coinflip") {
+		// Coin flip logic
+		const coinSides = ["Heads", "Tails"]
+		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
+		const didWin = Math.random() < 0.5 // Simplified 50/50 chance
+
+		let resultMessage = ""
+		if (didWin) {
+			await updateBalance(userId, betAmount) // Win: simply return the bet amount for demonstration
+			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${betAmount * 2} coins!`
+		} else {
+			await updateBalance(userId, -betAmount)
+			resultMessage = `🪙 It landed on ${result === "Heads" ? "Tails" : "Heads"}! You lost ${betAmount} coins.`
+		}
+
+		const resultEmbed = new EmbedBuilder()
+			.setTitle("🪙 Coin Flip 🪙")
+			.setDescription(resultMessage)
+			.setColor(didWin ? "#00FF00" : "#FF0000")
+			.setTimestamp()
+
+		await interaction.reply({ embeds: [resultEmbed] })
+	} else {
+		// Handle unexpected game type, if necessary
+		await interaction.reply("Unknown game type selected.")
+	}
+}
+
+export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
+	const benefactors = [
+		{ name: "Satoru Gojo", coins: 3000 },
+		{ name: "Kento Nanami", coins: 1500 },
+		{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1 },
+		{ name: "Hakari Kinji", coins: 300, item: "Gambler Token", itemQuantity: 1 }
+		// Add more characters and rewards as desired
+	]
+
+	const chosenOne = benefactors[Math.floor(Math.random() * benefactors.length)]
+
+	let resultMessage = ""
+	if ("coins" in chosenOne) {
+		await updateBalance(interaction.user.id, chosenOne.coins)
+		resultMessage = `You begged ${
+			chosenOne.name
+		} and they felt generous, giving you ${chosenOne.coins.toLocaleString()} coins!`
+	} else if ("item" in chosenOne) {
+		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
+		resultMessage = `You begged ${chosenOne.name} and they handed you ${chosenOne.itemQuantity ?? 1} x ${
+			chosenOne.item
+		}!`
+	}
+
+	const resultEmbed = new EmbedBuilder()
+		.setTitle("Begging Result")
+		.setDescription(resultMessage)
+		.setColor("#FFD700") // Gold color for a "golden opportunity"
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [resultEmbed] })
 }

@@ -240,13 +240,13 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Awakened: Lapse Blue",
 			probability: 50,
 			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Transfiguration!")
+			embedUpdate: embed => embed.setDescription("Blue!")
 		},
 		{
 			name: "Awakened: Reversal Red",
 			probability: 30,
 			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+			embedUpdate: embed => embed.setDescription("Aka!")
 		},
 		{
 			name: "Imaginary Technique: Purple",
@@ -257,7 +257,7 @@ export const attacks: Record<string, Attack[]> = {
 					.setImage(
 						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
 					)
-					.setDescription("I'll show you the true nature of the soul.")
+					.setDescription("Hollow.. Purple")
 		}
 	],
 	// Mahito
@@ -266,13 +266,13 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Adapted: Strike",
 			probability: 50,
 			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Transfiguration!")
+			embedUpdate: embed => embed.setDescription("......")
 		},
 		{
 			name: "Pummel",
 			probability: 30,
 			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+			embedUpdate: embed => embed.setDescription(".......")
 		},
 		{
 			name: "Adapted: Blast",
@@ -283,7 +283,74 @@ export const attacks: Record<string, Attack[]> = {
 					.setImage(
 						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
 					)
+					.setDescription("......")
+		}
+	],
+
+	// Mahito
+	"Mahito Instant Spirit Body of Distorted Killing": [
+		{
+			name: "Soul Multiplicity",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("Transfiguration!")
+		},
+		{
+			name: "Soul Snatch",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+		},
+		{
+			name: "Domain Expansion: Self Embodiment of Perfection",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed =>
+				embed
+					.setImage("https://media1.tenor.com/m/J_g_1B1HK0oAAAAC/koogender.gif")
 					.setDescription("I'll show you the true nature of the soul.")
+		}
+	],
+	// Mahito
+	"Kashimo": [
+		{
+			name: "Electricity Manipulation",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Electricity Blast",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Electrified Strike",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	// Mahito
+	"Hakari Kinji": [
+		{
+			name: "Jackpot: Strike",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Gamblers Strike",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Jackpot: Cargo Rush",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	]
 
