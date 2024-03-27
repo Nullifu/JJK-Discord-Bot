@@ -1426,6 +1426,7 @@ async function delay(ms) {
 export const activeCollectors = new Map()
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
+	await updateUserHealth(interaction.user.id, 100) // Set user's health to 100
 	await interaction.deferReply()
 	if (activeCollectors.has(interaction.user.id)) {
 		await interaction.reply({
@@ -1468,6 +1469,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				name: "1564maskedgojode", // Replace with your emoji's name
 				id: "1220626413141622794" // Replace with your emoji's ID
 			}
+		},
+		{
+			label: "Punch",
+			value: "punch"
 		},
 		...userTechniques.map(techniqueName => ({
 			label: techniqueName,
@@ -1678,6 +1683,138 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				})
 			}
 			console.log("9")
+		} else if (selectedValue === "punch") {
+			// Get player's health
+
+			// get boss hp
+			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+
+			// grade
+			const playerGradeData = await getUserGrade(interaction.user.id)
+			const playerGradeString = playerGradeData
+
+			// calculate damage
+			const damage = calculateDamage(playerGradeString, interaction.user.id, true)
+			// update boss hp
+			bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
+			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
+
+			// result message
+			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
+			primaryEmbed.setDescription(fightResult)
+			primaryEmbed.setFields(
+				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+				{ name: "Player Health", value: playerHealth.toString() }
+			)
+			try {
+				//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+			} catch (err: unknown) {
+				console.error(err?.toString())
+			}
+			console.log("12", randomOpponent.name)
+			// is boss dead?
+			if (randomOpponent.current_health <= 0) {
+				console.log("13", randomOpponent.name)
+				// Check if the boss is Gojo
+				if (randomOpponent.name === "Satoru Gojo") {
+					console.log("14", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					// 20% chance to respawn as The Honored One
+					if (random < 0.5) {
+						console.log("15", randomOpponent.name)
+						randomOpponent.name = "The Honored One"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+						console.log("16", randomOpponent.name)
+						primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						console.log("17", randomOpponent.name)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+						console.log("18", randomOpponent.name)
+						// Don't end the fight
+						return
+					}
+				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					console.log("19", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					// 20% chance to respawn as The Honored One
+					if (random < 0.4) {
+						randomOpponent.name = "Mahoraga"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Megumi has summoned mahoraga!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+						// Don't end the fight
+						return
+					}
+				}
+				console.log("20", randomOpponent.name)
+				domainActivationState.set(contextKey, false)
+				activeCollectors.delete(interaction.user.id)
+
+				// reset health
+				bossHealthMap.delete(interaction.user.id)
+
+				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+
+				battleOptionSelectMenuCollector.stop()
+			} else {
+				//
+				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+				await delay(700)
+				// boss attack
+				const possibleAttacks = attacks[randomOpponent.name]
+				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+				// dmg
+				const damageToPlayer = chosenAttack.baseDamage
+				//
+				const newPlayerHealth = playerHealth - damageToPlayer
+				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+				//did bro die?
+				if (clampedPlayerHealth <= 0) {
+					const bossAttackMessage = `${randomOpponent.name} killed you!`
+					primaryEmbed.setFooter({ text: bossAttackMessage })
+
+					// Reset player health in the database.
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
+					await updateUserHealth(interaction.user.id, 100)
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+					// Send an additional ephemeral message indicating the player has died
+					await collectedInteraction.followUp({
+						content: `${randomOpponent.name} killed you!`,
+						ephemeral: true
+					})
+					battleOptionSelectMenuCollector.stop()
+				} else {
+					// Update to new player health after damage dealt
+					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+					//
+					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+				}
+			}
 		} else {
 			console.log("10")
 			const userTechniques = new Map()
@@ -2096,7 +2233,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				ephemeral: true
 			})
 		}
+		collector.stop()
 	})
-
-	collector.stop()
 }
