@@ -1048,6 +1048,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		if (randomNumber <= 20) {
 			await updateUserClan(userId, "Demon Vessel")
 			await updateUserAchievements(userId, "becursedDemonVessel")
+			await addUserTechnique(userId, "World Cutting Slash")
 			isDemonVessel = true
 		}
 		setTimeout(async () => {
@@ -1115,6 +1116,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		if (randomNumber <= 30) {
 			await updateUserClan(userId, "Limitless")
 			await updateUserAchievements(userId, "behonoredLimitless")
+			await addUserTechnique(userId, "Imaginary Technique: Purple")
 			isLimitless = true // Set the flag to true when the user becomes a Demon Vessel
 		}
 		setTimeout(async () => {
@@ -1856,7 +1858,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						console.log("17", randomOpponent.name)
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 						console.log("18", randomOpponent.name)
-						// Don't end the fight
 						return
 					}
 				} else if (randomOpponent.name === "Megumi Fushiguro") {
@@ -1870,7 +1871,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 						updateUserHealth(interaction.user.id, 100) // Reset player health to max
 
-						primaryEmbed.setDescription("Megumi has summoned mahoraga!")
+						primaryEmbed.setDescription("Megumi has summoned Mahoraga!")
 						primaryEmbed.setImage(
 							"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
 						)
@@ -1879,8 +1880,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 							{ name: "Player Health", value: playerHealth.toString() }
 						)
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-						// Don't end the fight
 						return
 					}
 				}
@@ -1963,8 +1962,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
-					imageUrl: "https://media1.tenor.com/m/kIeDsa7o7VAAAAAC/jjk-red-and-blue.gif",
-					description: "Throughout heaven and earth.. I alone am the honored one.",
+					imageUrl: "https://media1.tenor.com/m/ZdRh7cZgkGIAAAAC/hollow-purple.gif",
+					description: `I guess i can play a little rough. ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques,
 					userId: collectedInteraction.user.id,
@@ -2031,6 +2030,32 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "World Cutting Slash") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/O8RVjFsdWI8AAAAC/sukuna-ryomen.gif",
+					description: `Dissect! ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Imaginary Technique: Purple") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl:
+						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif",
+					description:
+						"Sorry, Amanai I;m not even angry over you right now. I bear no grudge against anyone. But the world is just so peaceful.\n **Throughout heaven and earth, I alone am the honored one.**",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			// update boss hp
@@ -2060,7 +2085,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const random = Math.random()
 
 					// 20% chance to respawn as The Honored One
-					if (random < 0.5) {
+					if (random < 0.4) {
 						console.log("15", randomOpponent.name)
 						randomOpponent.name = "The Honored One"
 						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
@@ -2075,7 +2100,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 							{ name: "Player Health", value: playerHealth.toString() }
 						)
 						console.log("17", randomOpponent.name)
+						//
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+						//
 						console.log("18", randomOpponent.name)
 						// Don't end the fight
 						return
@@ -2108,7 +2135,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					// Generate a random number between 0 and 1
 					const random = Math.random()
 
-					if (random < 0.2) {
+					if (random < 0.4) {
 						randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
 						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 						updateUserHealth(interaction.user.id, 100) // Reset player health to max
@@ -2126,13 +2153,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				console.log("20", randomOpponent.name)
 				domainActivationState.set(contextKey, false)
 				activeCollectors.delete(interaction.user.id)
-
-				// reset health
 				bossHealthMap.delete(interaction.user.id)
-
+				//
 				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-
-				battleOptionSelectMenuCollector.stop()
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)

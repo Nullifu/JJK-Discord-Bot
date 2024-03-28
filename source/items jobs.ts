@@ -158,6 +158,11 @@ export const DOMAIN_EXPANSIONS = [
 		name: "Self-Embodiment of Perfection",
 		description: "The true nature of the soul.",
 		image_URL: "https://media1.tenor.com/m/419YEH3WEwIAAAAC/jujutsu-kaisen-mahito.gif"
+	},
+	{
+		name: "Horizon of the Captivating Skandha",
+		description: "This domain resembles a beach",
+		image_URL: "https://media1.tenor.com/m/K_3LZ71V7s0AAAAd/nanami-nanamin.gif"
 	}
 ]
 
@@ -299,6 +304,13 @@ export const jobs = [
 		cost: 2500000,
 		requiredExperience: 2500,
 		cooldown: 60 * 60 * 1000
+	},
+	{
+		name: "Veil Caster",
+		payout: { min: 275000, max: 542000 },
+		cost: 3000000,
+		requiredExperience: 6400,
+		cooldown: 60 * 60 * 2000
 	}
 
 	// ...
