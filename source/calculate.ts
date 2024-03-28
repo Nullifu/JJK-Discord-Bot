@@ -131,6 +131,9 @@ export function calculateEarnings(userProfile) {
 		case "Hakari Kinji's Lawyer":
 			earnings = getRandomAmount(185000, 300000)
 			break
+		case "Veil Caster":
+			earnings = getRandomAmount(275000, 542000)
+			break
 		default: // Non-Sorcerer and any other jobs
 			earnings = getRandomAmount(100, 1000)
 	}
