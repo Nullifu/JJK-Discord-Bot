@@ -2624,7 +2624,10 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 	if (lastCommandTime && now - lastCommandTime < begcooldownamount) {
 		// User is on cooldown, calculate remaining time
 		const timeLeft = ((begcooldownamount - (now - lastCommandTime)) / 1000).toFixed(1)
-		await interaction.reply(`You need to wait ${timeLeft} more second(s) before begging again.`)
+		await interaction.reply({
+			content: `You need to wait ${timeLeft} more second(s) before begging again.`,
+			ephemeral: true
+		})
 		return // Stop execution if on cooldown
 	}
 
