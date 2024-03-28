@@ -10,6 +10,7 @@ import { DOMAIN_EXPANSIONS } from "./items jobs.js"
 import {
 	addItemToUserInventory,
 	getUserGrade,
+	updateBalance,
 	updatePlayerGrade,
 	updateUserExperience,
 	updateUserHealth
@@ -58,6 +59,7 @@ export async function handleBossDeath(
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
+	await updateBalance(interaction.user.id, coinsGained)
 	const privateEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
 		.setTitle("Battle Rewards")

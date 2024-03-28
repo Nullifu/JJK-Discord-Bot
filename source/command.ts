@@ -1002,8 +1002,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		await updateUserExperience(userId, xpGained)
 		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
-		await updateUserHeavenlyRestriction(userId)
-		await updateUserAchievements(userId, "unlockHeavenlyRestriction")
 
 		setTimeout(() => {
 			const embedFinal = new EmbedBuilder()
@@ -1488,6 +1486,24 @@ export async function handleGuideCommand(interaction) {
 					{
 						name: "Techniques",
 						value: "To start learning techniques, use `/techniqueshop`. You'll need the right materials. And money."
+					}
+					// More fields as necessary
+				)
+			break
+		case "jobs":
+			guideEmbed
+				.setTitle("Jobs Information")
+				.setDescription("All info on jobs")
+				.addFields(
+					// Add crafting-specific instructions here
+					{
+						name: "Jobs",
+						value: jobs
+							.map(
+								job =>
+									`- ${job.name}: ${job.payout}: ${job.cost}: ${job.requiredExperience}: ${job.cooldown}`
+							)
+							.join("\n")
 					}
 					// More fields as necessary
 				)

@@ -227,7 +227,11 @@ const commands = [
 				.setName("topic")
 				.setDescription("The topic of the guide you want to view.")
 				.setRequired(false)
-				.addChoices({ name: "Crafting", value: "crafting" }, { name: "Techniques", value: "technique" })
+				.addChoices(
+					{ name: "Crafting", value: "crafting" },
+					{ name: "Techniques", value: "technique" },
+					{ name: "Jobs", value: "jobs" }
+				)
 		),
 
 	new SlashCommandBuilder()
