@@ -1019,6 +1019,44 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		}, 4000)
 		return
 	}
+	if (itemName === "Jogos (Fixed) Balls") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("A Cursed Choice...")
+			.setDescription("Your fingers close around the Jogos Balls, its cursed energy pulsing against your skin...")
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		setTimeout(async () => {
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the BALLS, feeling an overwhelming power surge within..."
+				)
+
+			// Now, edit the reply with the new embed after the delay
+			await interaction.editReply({ embeds: [embedSecond] })
+		}, 2000) // 40000 milliseconds delay
+
+		const xpGained = 225
+		await updateUserExperience(userId, xpGained)
+		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		await removeItemFromUserInventory(userId, item.name, 1)
+		await updateUserHeavenlyRestriction(userId)
+
+		setTimeout(() => {
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400") // Dark green, symbolizing growth
+				.setTitle("Power Unleashed")
+				.setDescription("As the balls enter your body, You feel your own BALLS depleting.. What have you done?")
+				.setImage("https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg") // An image URL showing the unleashed power
+
+			// Edit the reply with the new embed after a delay
+			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}, 4000)
+		return
+	}
 	//
 	//
 	//
@@ -2574,7 +2612,25 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 }
 
+const begcooldown = new Map<string, number>()
+const begcooldownamount = 5 * 1000 // 5 seconds in milliseconds
+
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
+	// Check if the user is on cooldown
+	const now = Date.now()
+	const userId = interaction.user.id
+	const lastCommandTime = begcooldown.get(userId)
+
+	if (lastCommandTime && now - lastCommandTime < begcooldownamount) {
+		// User is on cooldown, calculate remaining time
+		const timeLeft = ((begcooldownamount - (now - lastCommandTime)) / 1000).toFixed(1)
+		await interaction.reply(`You need to wait ${timeLeft} more second(s) before begging again.`)
+		return // Stop execution if on cooldown
+	}
+
+	// Update the cooldown for the user
+	begcooldown.set(userId, now)
+
 	const benefactors = [
 		{ name: "Satoru Gojo", coins: 30000, item: "Rikugan Eye", itemQuantity: 2 },
 		{ name: "Kento Nanami", coins: 1500 },
@@ -2585,18 +2641,25 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 
 	const chosenOne = benefactors[Math.floor(Math.random() * benefactors.length)]
 
-	let resultMessage = ""
+	let resultMessage = `You begged ${chosenOne.name}`
+	let receivedItems = false
+
 	if ("coins" in chosenOne) {
 		await updateBalance(interaction.user.id, chosenOne.coins)
-		resultMessage = `You begged ${
-			chosenOne.name
-		} and they felt generous, giving you ${chosenOne.coins.toLocaleString()} coins!`
-	} else if ("item" in chosenOne) {
-		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
-		resultMessage = `You begged ${chosenOne.name} and they handed you ${chosenOne.itemQuantity ?? 1} x ${
-			chosenOne.item
-		}!`
+		resultMessage += ` and they felt generous, giving you ${chosenOne.coins.toLocaleString()} coins`
+		receivedItems = true
 	}
+	if ("item" in chosenOne) {
+		// Note the change here to a separate if statement
+		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
+		if (receivedItems) {
+			resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+		} else {
+			resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+		}
+	}
+
+	resultMessage += "!" // Finalize the message
 
 	const resultEmbed = new EmbedBuilder()
 		.setTitle("Begging Result")

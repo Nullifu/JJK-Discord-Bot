@@ -286,7 +286,8 @@ const commands = [
 				.addChoices(
 					{ name: "Sukuna Finger", value: "Sukuna Finger" },
 					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
-					{ name: "Six Eyes", value: "Six Eyes" }
+					{ name: "Six Eyes", value: "Six Eyes" },
+					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" }
 				)
 		)
 ].map(command => command.toJSON())
