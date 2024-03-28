@@ -2488,7 +2488,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		return
 	}
 
-	const maxBetLimit = 1000000 // Example: Set your individual bet limit
+	const maxBetLimit = 5000000 // Example: Set your individual bet limit
 
 	if (betAmount > maxBetLimit) {
 		await interaction.reply(`The maximum bet amount is ${formatNumberWithCommas(maxBetLimit)} coins.`)
