@@ -1457,6 +1457,14 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	}
 }
 
+function formatCooldown(cooldown) {
+	const seconds = Math.floor((cooldown / 1000) % 60)
+	const minutes = Math.floor((cooldown / (1000 * 60)) % 60)
+	const hours = Math.floor((cooldown / (1000 * 60 * 60)) % 24)
+
+	return `${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "m " : ""}${seconds > 0 ? seconds + "s" : ""}`
+}
+
 // guide command
 export async function handleGuideCommand(interaction) {
 	const topic = interaction.options.getString("topic")
@@ -1492,22 +1500,26 @@ export async function handleGuideCommand(interaction) {
 				)
 			break
 		case "jobs":
-			guideEmbed
-				.setTitle("Jobs Information")
-				.setDescription("All info on jobs")
-				.addFields(
-					// Add crafting-specific instructions here
-					{
-						name: "Jobs",
-						value: jobs
-							.map(
-								job =>
-									`- ${job.name}: ${job.payout}: ${job.cost}: ${job.requiredExperience}: ${job.cooldown}`
-							)
-							.join("\n")
-					}
-					// More fields as necessary
-				)
+			guideEmbed.setTitle("Jobs Information").setDescription("All info on jobs")
+
+			// Iterate over the jobs array to add each job as a field
+			jobs.forEach(job => {
+				// Format the job's details
+				const jobDetails =
+					`Payout: $${job.payout.min} - $${job.payout.max}\n` +
+					`Cost: $${job.cost}\n` +
+					`Required Experience: ${job.requiredExperience}\n` +
+					`Cooldown: ${formatCooldown(job.cooldown)}`
+
+				// Add the job as a field to the embed
+				guideEmbed.addFields({
+					name: job.name,
+					value: jobDetails,
+					inline: true // Set to false if you prefer each job to be listed one after the other without side-by-side alignment
+				})
+			})
+
+			// Send or return the embed here...
 			break
 		default:
 			guideEmbed
