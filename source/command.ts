@@ -1002,6 +1002,8 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		await updateUserExperience(userId, xpGained)
 		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
+		await updateUserHeavenlyRestriction(userId)
+		await updateUserAchievements(userId, "unlockHeavenlyRestriction")
 
 		setTimeout(() => {
 			const embedFinal = new EmbedBuilder()
@@ -1041,7 +1043,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		await updateUserExperience(userId, xpGained)
 		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
-		await updateUserHeavenlyRestriction(userId)
 
 		setTimeout(() => {
 			const embedFinal = new EmbedBuilder()
