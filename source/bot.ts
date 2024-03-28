@@ -200,9 +200,6 @@ const commands = [
 	new SlashCommandBuilder().setName("techniqueshop").setDescription("Aquire a technique!"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
-	new SlashCommandBuilder()
-		.setName("toggleheavenlyrestriction")
-		.setDescription("Toggles your Heavenly Restriction status."),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
@@ -220,18 +217,17 @@ const commands = [
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
 	new SlashCommandBuilder()
+		.setName("toggleheavenlyrestriction")
+		.setDescription("Toggles your Heavenly Restriction status."),
+	new SlashCommandBuilder()
 		.setName("guide")
 		.setDescription("Get guides on various topics.")
 		.addStringOption(option =>
 			option
 				.setName("topic")
 				.setDescription("The topic of the guide you want to view.")
-				.setRequired(false) // Make this optional so users can still ask for a general guide
-				.addChoices(
-					{ name: "Crafting", value: "crafting" },
-					{ name: "Techniques", value: "technique" }
-					// Add more choices for different guides here
-				)
+				.setRequired(false)
+				.addChoices({ name: "Crafting", value: "crafting" }, { name: "Techniques", value: "technique" })
 		),
 
 	new SlashCommandBuilder()
@@ -332,11 +328,11 @@ client.on("interactionCreate", async interaction => {
 			.addFields([
 				{
 					name: "**General Commands**",
-					value: "Update -  View recent updates!\nRegister - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
+					value: "Gamble - I think we all know what this is\nBeg - Beg some innocent people for money!\nGuide - Stuck? Refer to this!\nSupport - Link for the support server\nUpdate -  View recent updates!\nRegister - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
 				},
 				{
 					name: "**Jujutsu System!**",
-					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomainSelection - Manifest your domain expansion!"
+					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomainSelection - Manifest your domain expansion!\nJujutsuStatus - Check your jujutsu stats!\nTechniqueShop - Check out the shop for some new techniques!"
 				}
 			])
 			.setTimestamp()

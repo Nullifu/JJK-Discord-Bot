@@ -964,12 +964,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 	const userId = interaction.user.id
 	const itemName = interaction.options.getString("item")
 
-	if (!itemName) {
-		console.log("Item name not provided in command.")
-		await interaction.reply({ content: "You must specify the name of the item you wish to use.", ephemeral: true })
-		return
-	}
-
 	// Fetch user's inventory to check item existence and quantity
 	const inventoryItems = await getUserInventory(userId)
 	const item = inventoryItems.find(i => i.name === itemName && i.quantity > 0)
@@ -1025,7 +1019,9 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		}, 4000)
 		return
 	}
-
+	//
+	//
+	//
 	// Adding suspense and thematic depth for the "Sukuna Finger"
 	if (itemName === "Sukuna Finger") {
 		await interaction.deferReply()
@@ -1046,31 +1042,29 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const xpGained = 125
 		await updateUserExperience(userId, xpGained)
 		await updateUserCursedEnergy(userId, 45)
-		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		await updatePlayerGrade(userId)
 		await removeItemFromUserInventory(userId, item.name, 1)
 
 		if (randomNumber <= 20) {
 			await updateUserClan(userId, "Demon Vessel")
 			await updateUserAchievements(userId, "becursedDemonVessel")
-			isDemonVessel = true // Set the flag to true when the user becomes a Demon Vessel
+			isDemonVessel = true
 		}
 		setTimeout(async () => {
 			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setColor("#8b0000")
 				.setTitle("Power or Peril?")
 				.setDescription(
 					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
 				)
 				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
 
-			// Now, edit the reply with the new embed after the delay
 			await interaction.editReply({ embeds: [embedSecond] })
 		}, 2000) // 40000 milliseconds delay
 
 		setTimeout(async () => {
 			let embedSecond
 			if (isDemonVessel) {
-				// Special embed for Demon Vessel
 				embedSecond = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("A Dark Pact Forged")
@@ -1079,21 +1073,23 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 					)
 					.setImage("https://media1.tenor.com/m/mzqdk4E2KVwAAAAC/sukuna-jjk.gif")
 			} else {
-				// Generic response for non-Demon Vessel outcome
 				embedSecond = new EmbedBuilder()
-					.setColor("#006400") // Dark green, symbolizing growth
+					.setColor("#006400")
 					.setTitle("Power Unleashed")
 					.setDescription(
 						"The deed is done. You've gained 125 experience. What dark powers have you awakened?"
 					)
 					.setImage(
 						"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
-					) // An image URL showing the unleashed power
+					)
 			}
 			await interaction.editReply({ embeds: [embedSecond] })
 		}, 4000)
+		return
 	}
-	// Adding suspense and thematic depth for the "Sukuna Finger"
+	//
+	//
+	//
 	if (itemName === "Six Eyes") {
 		await interaction.deferReply()
 		const embedFirst = new EmbedBuilder()
