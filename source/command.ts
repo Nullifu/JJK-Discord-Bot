@@ -2576,12 +2576,11 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const benefactors = [
-		{ name: "Satoru Gojo", coins: 30000 },
+		{ name: "Satoru Gojo", coins: 30000, item: "Rikugan Eye", itemQuantity: 2 },
 		{ name: "Kento Nanami", coins: 1500 },
 		{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1 },
 		{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1 },
 		{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1 }
-		// Add more characters and rewards as desired
 	]
 
 	const chosenOne = benefactors[Math.floor(Math.random() * benefactors.length)]
