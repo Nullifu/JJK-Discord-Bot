@@ -121,23 +121,32 @@ export async function updateBalance(id: string, amount: number): Promise<void> {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's balance by the specified amount
-		const updateResult = await usersCollection.updateOne(
-			{ id: id },
-			{ $inc: { balance: amount } } // Increment the balance field by the amount
-		)
-
-		if (updateResult.matchedCount === 0) {
+		// Get the user's current balance
+		const user = await usersCollection.findOne({ id: id })
+		if (!user) {
 			console.log(`No user found with ID: ${id}`)
 			throw new Error(`No user found with ID: ${id}`)
 		}
 
-		console.log(`Updated balance for user with ID: ${id}`)
+		// Calculate the potential new balance
+		const newBalance = user.balance + amount
+
+		// Failsafe: Only update if the new balance would be non-negative
+		if (newBalance >= 0) {
+			const updateResult = await usersCollection.updateOne(
+				{ id: id },
+				{ $set: { balance: newBalance } } // Use $set to directly update the value
+			)
+
+			console.log(`Updated balance for user with ID: ${id}`)
+		} else {
+			console.log("Balance update prevented: would have resulted in negative balance")
+		}
 	} catch (error) {
 		console.error(`Error when updating balance for user with ID: ${id}`, error)
-		throw error // Rethrow the error so it can be caught and handled by the calling code
+		throw error
 	} finally {
-		// await client.close()
+		// await client.close();
 	}
 }
 
@@ -1106,5 +1115,25 @@ export async function updateUserLastVoteTime(userId: string, newLastVoteTime: nu
 		throw error
 	} finally {
 		// await client.close()
+	}
+}
+// get all users balance
+export async function getAllUsersBalance() {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const users = await usersCollection.find({}, { projection: { _id: 0, id: 1, balance: 1 } }).toArray()
+
+		return users.map(user => ({
+			id: user.id,
+			balance: user.balance
+		}))
+	} catch (error) {
+		console.error("Error when retrieving all users balance:", error)
+		throw error
+	} finally {
+		await client.close()
 	}
 }

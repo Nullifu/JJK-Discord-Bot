@@ -1,12 +1,46 @@
+export const digitems = [
+	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Super Glue", rarity: "Super Rare", chance: 0.07 },
+	{ name: "Sukuna Finger", rarity: "Special Grade", chance: 0.05 },
+	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.03 },
+	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1 }
+]
 export const items = [
-	{ name: "Tailsman", rarity: "Common", chance: 0.1, price: 400 },
+	{ name: "Tailsman", rarity: "Super Rare", chance: 0.07, price: 0 },
+	{ name: "Takada-Chan Autograph", rarity: "Super Rare", chance: 0.07, price: 200 },
+	{ name: "Junpei", rarity: "Super Rare", chance: 0.07, price: 200 },
+	{ name: "(Broken) Electrical Staff", rarity: "Super Rare", chance: 0.07, price: 0 },
+	{ name: "(Broken) Split Soul Katana", rarity: "Super Rare", chance: 0.07, price: 0 },
+	{ name: "(Broken) Divine General Wheel", rarity: "Super Rare", chance: 0.07, price: 0 },
+	{ name: "(Broken) Playful Cloud", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07, price: 0 },
+
+	// ^ Easy to find
 	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07, price: 2500 },
 	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07, price: 2500 },
-	{ name: "Super Glue", rarity: "Super Rare", chance: 0.07, price: 2500 },
-	{ name: "Sukuna Finger", rarity: "Special Grade", chance: 0.05, price: 74000 },
-	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.03, price: 90000 },
-	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1, price: 600000 }
+	{ name: "Go//Jo", rarity: "Super Rare", chance: 0.07, price: 2500 },
+
+	// Medium to find
+	{ name: "Super Glue", rarity: "Super Rare", chance: 0.07, price: 12500 },
+	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1, price: 14000 },
+	{ name: "Cursed Shard", rarity: "Special Grade", chance: 0.1, price: 14500 },
+	{ name: "Transfigured Soul", rarity: "Special Grade", chance: 0.1, price: 19500 },
+	{ name: "Brotherly Bracelet", rarity: "Special Grade", chance: 0.1, price: 14500 },
+	{ name: "Cursed Shard", rarity: "Special Grade", chance: 0.1, price: 14500 },
+
+	// Semi hard to find^
+	{ name: "Jogos (Fixed) Balls", rarity: "Special Grade", chance: 0.1, price: 75000 },
+	{ name: "Sukuna Fingers", rarity: "Special Grade", chance: 0.1, price: 25000 },
+	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.1, price: 25000 },
+
+	//
+	{ name: "(Fixed) Divine General Wheel", rarity: "Special Grade", chance: 0.1, price: 125000 },
+	{ name: "Six Eyes", rarity: "Special Grade", chance: 0.1, price: 175000 },
+	{ name: "Domain Token", rarity: "Special Grade", chance: 0.1, price: 275000 },
+	{ name: "Heavenly Restricted Blood", rarity: "Special Grade", chance: 0.1, price: 275000 }
+	// ^ Hard to find // Difficult crafted items
 ]
 
 export interface BossDrop {

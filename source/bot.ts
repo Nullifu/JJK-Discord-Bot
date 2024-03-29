@@ -36,6 +36,7 @@ import {
 	handleProfileCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
+	handleSellCommand,
 	handleSupportCommand,
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
@@ -131,7 +132,12 @@ client.on("guildCreate", guild => {
 			.setDescription("This is the Discord Jujutsu Kaisen bot, currently a work in progress (WIP).")
 			.addFields(
 				{ name: "Getting Started", value: "Please use `/register` to start!" },
-				{ name: "Need Help?", value: "Proceed with `/help` to explore all the features." }
+				{ name: "Need Help?", value: "Proceed with `/help` to explore all the features." },
+				{ name: "Stuck?", value: "Use /guide if your ever stuck!" },
+				{
+					name: "Found a bug? Report it!",
+					value: "If you find a bug report it in our discord support server! <3"
+				}
 			)
 			.setFooter({ text: "Enjoy your journey into the world of Jujutsu Kaisen with us!" })
 			.setTimestamp()
@@ -151,7 +157,7 @@ client.on("guildCreate", guild => {
 const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
 	const channel = await client.channels.fetch(channelId)
 	if (channel.isTextBased()) {
 		const message = await channel.messages.fetch(statsMessageId)
@@ -205,7 +211,6 @@ const commands = [
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
-	new SlashCommandBuilder().setName("leaderboard").setDescription("Global Leaderboard!"),
 	new SlashCommandBuilder().setName("claninfo").setDescription("clan info!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
@@ -216,6 +221,23 @@ const commands = [
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
+	new SlashCommandBuilder()
+		.setName("sell")
+		.setDescription("Sell an item from your inventory.")
+		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
+		.addIntegerOption(option => option.setName("quantity").setDescription("How many to sell").setRequired(false)),
+	new SlashCommandBuilder()
+		.setName("leaderboard")
+		.setDescription("View the global leaderboard!")
+		.addStringOption(
+			option =>
+				option
+					.setName("type")
+					.setDescription("The type of leaderboard")
+					.setRequired(true)
+					.addChoices({ name: "XP", value: "xp" }, { name: "Money", value: "money" })
+			// Add more choices here if you have more leaderboard types
+		),
 	new SlashCommandBuilder()
 		.setName("toggleheavenlyrestriction")
 		.setDescription("Toggles your Heavenly Restriction status."),
@@ -402,6 +424,9 @@ client.on("interactionCreate", async interaction => {
 	switch (commandName) {
 		case "balance":
 			await handleBalanceCommand(chatInputInteraction)
+			break
+		case "sell":
+			await handleSellCommand(chatInputInteraction)
 			break
 		case "profile":
 			await handleProfileCommand(chatInputInteraction)

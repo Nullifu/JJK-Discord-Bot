@@ -35,6 +35,7 @@ import {
 	dailyitems,
 	getRandomItem,
 	heavenlyrestrictionskills,
+	items,
 	jobs,
 	lookupItems
 } from "./items jobs.js"
@@ -382,7 +383,6 @@ export async function handleJobSelection(interaction: CommandInteraction) {
 		}
 
 		const updateSuccess = await updateUserJob(interaction.user.id, selectedJobName)
-		await updateBalance(interaction.user.id, selectedJob.cost * -1)
 		if (!updateSuccess) {
 			await interaction.editReply({
 				content: "Error: Could not update your job. Please try again later.",
@@ -390,7 +390,7 @@ export async function handleJobSelection(interaction: CommandInteraction) {
 			})
 			return
 		}
-
+		await updateBalance(interaction.user.id, selectedJob.cost * -1)
 		await interaction.editReply({
 			content: `Congratulations! You're now a ${selectedJobName}.`,
 			components: []
@@ -452,7 +452,7 @@ export async function handleWorkCommand(interaction: ChatInputCommandInteraction
 	const embed = new EmbedBuilder()
 		.setColor(0x00ff00)
 		.setTitle("Work Completed")
-		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings}** coins!`)
+		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings.toLocaleString}** coins!`)
 		.setTimestamp()
 
 	await interaction.reply({ embeds: [embed] })
@@ -1024,35 +1024,54 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const embedFirst = new EmbedBuilder()
 			.setColor("#4b0082") // Indigo, for a mystical feel
 			.setTitle("A Cursed Choice...")
-			.setDescription("Your fingers close around the Jogos Balls, its cursed energy pulsing against your skin...")
+			.setDescription("Your fingers close around the BALLS, its cursed energy pulsing against your skin...")
 		await interaction.followUp({ embeds: [embedFirst] })
 
+		const randomNumber = Math.floor(Math.random() * 100) + 1
+		let isballs = false
+
+		const xpGained = 300
+		await updateUserExperience(userId, xpGained)
+		await updateUserCursedEnergy(userId, 45)
+		await updatePlayerGrade(userId)
+		await removeItemFromUserInventory(userId, item.name, 1)
+
+		if (randomNumber <= 20) {
+			await addUserTechnique(userId, "Disaster Flames: Full Fire Formatio")
+			isballs = true
+		}
 		setTimeout(async () => {
 			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
+				.setColor("#8b0000")
 				.setTitle("Power or Peril?")
 				.setDescription(
-					"With a decisive motion, you consume the BALLS, feeling an overwhelming power surge within..."
+					"As jogo watches you consume the balls, You begin to feel an overwhelming power surge within..."
 				)
 
-			// Now, edit the reply with the new embed after the delay
 			await interaction.editReply({ embeds: [embedSecond] })
 		}, 2000) // 40000 milliseconds delay
 
-		const xpGained = 225
-		await updateUserExperience(userId, xpGained)
-		await updatePlayerGrade(userId) // Update the player's grade based on new XP
-		await removeItemFromUserInventory(userId, item.name, 1)
-
-		setTimeout(() => {
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400") // Dark green, symbolizing growth
-				.setTitle("Power Unleashed")
-				.setDescription("As the balls enter your body, You feel your own BALLS depleting.. What have you done?")
-				.setImage("https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg") // An image URL showing the unleashed power
-
-			// Edit the reply with the new embed after a delay
-			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		setTimeout(async () => {
+			let embedSecond
+			if (isballs) {
+				embedSecond = new EmbedBuilder()
+					.setColor("#4b0082")
+					.setTitle("A Dark Pact Forged")
+					.setDescription(
+						"The deed is done, You consume the balls as jogo cries in the distance. You feel a new technique burning within.."
+					)
+					.setImage(
+						"https://preview.redd.it/is-jogo-a-top-10-character-v0-a1vtlv29tltb1.jpg?width=640&crop=smart&auto=webp&s=0c1c7bb3bf807b812e685e224a36cb96a229bf36"
+					)
+			} else {
+				embedSecond = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Balls unleashed")
+					.setDescription(
+						"The deed is done. You've gained 300 experience. Why did you eat the balls? What have you done?"
+					)
+			}
+			await interaction.editReply({ embeds: [embedSecond] })
 		}, 4000)
 		return
 	}
@@ -1613,7 +1632,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		const fightStartTime = activeCollectors.get(interaction.user.id)
 
 		// Check if more than 30 seconds have elapsed since the fight started
-		if (currentTime - fightStartTime > 30000) {
+		if (currentTime - fightStartTime > 40000) {
 			// More than 30 seconds have elapsed, allow starting a new fight
 			activeCollectors.set(interaction.user.id, currentTime) // Update the start time for the new fight
 		} else {
@@ -2090,7 +2109,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
-					imageUrl: "https://media1.tenor.com/m/AQ7Hs9jfutAAAAAd/hakari-jujutsu-kaisen.gif",
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1223345474397016134/ezgif-6-37bc5a10ee.gif?ex=66198441&is=66070f41&hm=4a3dafff4b4ced975dce6677b3764c16f1e42838fa4e4fae7cbeca0dcf818077&",
 					description: `TURN UP THE VOLUME ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques,
@@ -2118,6 +2138,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif",
 					description:
 						"Sorry, Amanai I;m not even angry over you right now. I bear no grudge against anyone. But the world is just so peaceful.\n **Throughout heaven and earth, I alone am the honored one.**",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Disaster Flames: Full Fire Formation") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
+					description:
+						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
 					fieldValue: selectedValue,
 					userTechniques,
 					userId: collectedInteraction.user.id,
@@ -2555,7 +2588,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		return
 	}
 
-	const maxBetLimit = 5000000 // Example: Set your individual bet limit
+	const maxBetLimit = 10000000 // Example: Set your individual bet limit
 
 	if (betAmount > maxBetLimit) {
 		await interaction.reply(`The maximum bet amount is ${formatNumberWithCommas(maxBetLimit)} coins.`)
@@ -2642,37 +2675,47 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 }
 
 const begcooldown = new Map<string, number>()
-const begcooldownamount = 5 * 1000 // 5 seconds in milliseconds
+const begcooldownamount = 10 * 1000 // 5 seconds in milliseconds
+
+const benefactors = [
+	{ name: "Satoru Gojo", coins: 9500, item: "Rikugan Eye", itemQuantity: 1, weight: 1 },
+	{ name: "Kento Nanami", coins: 1500, weight: 8 },
+	{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1, weight: 2 },
+	{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1, weight: 5 },
+	{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1, weight: 3 },
+	{ name: "Megumi Fushiguro", coins: 5000, weight: 10 }
+]
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
-	// Check if the user is on cooldown
-	const now = Date.now()
 	const userId = interaction.user.id
-	const lastCommandTime = begcooldown.get(userId)
+	const now = Date.now()
 
+	// Cooldown Check
+	const lastCommandTime = begcooldown.get(userId)
 	if (lastCommandTime && now - lastCommandTime < begcooldownamount) {
-		// User is on cooldown, calculate remaining time
 		const timeLeft = ((begcooldownamount - (now - lastCommandTime)) / 1000).toFixed(1)
-		await interaction.reply({
+		return interaction.reply({
 			content: `You need to wait ${timeLeft} more second(s) before begging again.`,
 			ephemeral: true
 		})
-		return // Stop execution if on cooldown
 	}
 
-	// Update the cooldown for the user
+	// Update Cooldown
 	begcooldown.set(userId, now)
 
-	const benefactors = [
-		{ name: "Satoru Gojo", coins: 30000, item: "Rikugan Eye", itemQuantity: 2 },
-		{ name: "Kento Nanami", coins: 1500 },
-		{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1 },
-		{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1 },
-		{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1 }
-	]
+	// Weighted Random Benefactor Selection
+	const totalWeight = benefactors.reduce((sum, benefactor) => sum + benefactor.weight, 0)
+	let random = Math.random() * totalWeight
+	let chosenOne
+	for (const benefactor of benefactors) {
+		random -= benefactor.weight
+		if (random <= 0) {
+			chosenOne = benefactor
+			break
+		}
+	}
 
-	const chosenOne = benefactors[Math.floor(Math.random() * benefactors.length)]
-
+	// Result Message Construction
 	let resultMessage = `You begged ${chosenOne.name}`
 	let receivedItems = false
 
@@ -2682,22 +2725,97 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 		receivedItems = true
 	}
 	if ("item" in chosenOne) {
-		// Note the change here to a separate if statement
-		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
-		if (receivedItems) {
-			resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+		if (Math.random() < 0.3) {
+			// 50% chance to get the item
+			await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
+			if (receivedItems) {
+				resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+			} else {
+				resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+			}
+			receivedItems = true
 		} else {
-			resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+			resultMessage += ", but didn't give you any items this time."
 		}
+		resultMessage += "!"
+
+		// Embed Creation
+		const resultEmbed = new EmbedBuilder()
+			.setTitle("Begging Result")
+			.setDescription(resultMessage)
+			.setColor("#FFD700")
+			.setTimestamp()
+
+		await interaction.reply({ embeds: [resultEmbed] })
+	}
+}
+
+// handle sell command
+
+export async function handleSellCommand(interaction) {
+	const itemToSell = interaction.options.getString("item").toLowerCase() // Normalize input for case-insensitive comparison
+	const quantity = interaction.options.getInteger("quantity") || 1
+
+	// Fetch user's inventory
+	const userInventory = await getUserInventory(interaction.user.id)
+	// Check if the item exists in the user's inventory with case-insensitive comparison
+	const inventoryItem = userInventory.find(i => i.name.toLowerCase() === itemToSell)
+	if (!inventoryItem) {
+		return interaction.reply({ content: "You don't have that item in your inventory.", ephemeral: true })
 	}
 
-	resultMessage += "!" // Finalize the message
+	// Attempt to find the item in the predefined items array to get its price, if it exists
+	const itemDetails = items.find(i => i.name.toLowerCase() === itemToSell)
 
-	const resultEmbed = new EmbedBuilder()
-		.setTitle("Begging Result")
-		.setDescription(resultMessage)
-		.setColor("#FFD700") // Gold color for a "golden opportunity"
-		.setTimestamp()
+	// If the item exists in the array, use its price; otherwise, use the default price of 5000
+	const price = itemDetails ? itemDetails.price : 5000
+	const earnings = price * quantity
 
-	await interaction.reply({ embeds: [resultEmbed] })
+	// Prepare the confirmation embed
+	const confirmationEmbed = new EmbedBuilder()
+		.setColor(0x0099ff)
+		.setTitle("Confirm Sale")
+		.setDescription(
+			`Are you sure you want to sell ${quantity} x ${inventoryItem.name} for ${earnings.toLocaleString()} coins?`
+		)
+
+	// Prepare "Confirm" and "Cancel" buttons
+	const row = new ActionRowBuilder().addComponents(
+		new ButtonBuilder().setCustomId("confirm_sell").setLabel("Confirm").setStyle(ButtonStyle.Success),
+		new ButtonBuilder().setCustomId("cancel_sell").setLabel("Cancel").setStyle(ButtonStyle.Danger)
+	)
+
+	// Send the confirmation message with buttons
+	await interaction.reply({ embeds: [confirmationEmbed], components: [row], ephemeral: true })
+
+	// Button interaction handling
+	const filter = i => ["confirm_sell", "cancel_sell"].includes(i.customId) && i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 })
+
+	collector.on("collect", async i => {
+		if (i.customId === "confirm_sell") {
+			// Proceed with the sale
+			await removeItemFromUserInventory(interaction.user.id, inventoryItem.name, quantity)
+			await updateBalance(interaction.user.id, earnings)
+			const balance = await getBalance(interaction.user.id)
+
+			await i.update({
+				content: `You've sold ${quantity} x ${
+					inventoryItem.name
+				} for ${earnings} coins. Your new balance: ${balance.toLocaleString()}`,
+				embeds: [],
+				components: []
+			})
+		} else {
+			// Cancel the sale
+			await i.update({ content: "Sale cancelled.", embeds: [], components: [] })
+		}
+	})
+
+	collector.on("end", (collected, reason) => {
+		if (reason === "time") {
+			interaction.editReply({ content: "Confirmation time expired. Sale cancelled.", components: [] })
+			collector.stop
+		}
+	})
 }
