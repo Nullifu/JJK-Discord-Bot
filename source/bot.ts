@@ -235,7 +235,7 @@ const commands = [
 					.setName("type")
 					.setDescription("The type of leaderboard")
 					.setRequired(true)
-					.addChoices({ name: "XP", value: "xp" }, { name: "Money", value: "money" })
+					.addChoices({ name: "xp", value: "xp" }, { name: "Wealth", value: "wealth" })
 			// Add more choices here if you have more leaderboard types
 		),
 	new SlashCommandBuilder()

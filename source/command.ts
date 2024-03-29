@@ -47,6 +47,7 @@ import {
 	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
 	getAllUserExperience,
+	getAllUsersBalance,
 	getBalance,
 	getBosses,
 	getUserAchievements,
@@ -1563,32 +1564,44 @@ export async function handleGuideCommand(interaction) {
 
 export async function handleLeaderBoardCommand(interaction) {
 	try {
-		const userExperiences = await getAllUserExperience()
-		userExperiences.sort((a, b) => b.experience - a.experience)
+		// Assuming there's an option in the slash command where `choice` is either 'xp' or 'wealth'
+		const choice = interaction.options.getString("type") // Get the user's choice from the command options
 
-		// Create an embed for the leaderboard
-		const leaderboardEmbed = new EmbedBuilder()
-			.setColor("#00FF00") // A vibrant color
-			.setTitle("🏆 Leaderboard - Top Performers 🏆")
-			.setDescription("Here are the top performers based on XP earned:")
-			.setTimestamp()
-
-		// Use emojis or icons for rankings
+		const leaderboardEmbed = new EmbedBuilder().setColor("#00FF00").setTimestamp()
 		const rankEmojis = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
-		// Limiting to top 10 for conciseness
-		userExperiences.slice(0, 10).forEach((user, index) => {
-			const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
-			const text = `${rank} <@${user.id}> - **${user.experience} XP**`
-			// For the first three, consider adding more flair or details
-			if (index < 3) {
-				leaderboardEmbed.addFields({ name: `Top ${index + 1}`, value: text, inline: false })
-			} else {
-				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false }) // \u200B is a zero-width space
-			}
-		})
+		if (choice === "xp") {
+			const userExperiences = await getAllUserExperience()
+			userExperiences.sort((a, b) => b.experience - a.experience)
 
-		// Reply with the leaderboard
+			leaderboardEmbed
+				.setTitle("🏆 Leaderboard - Top Performers 🏆")
+				.setDescription("Here are the top performers based on XP earned:")
+
+			userExperiences.slice(0, 10).forEach((user, index) => {
+				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
+				const text = `${rank} <@${user.id}> - **${user.experience} XP**`
+				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false })
+			})
+		} else if (choice === "wealth") {
+			const userBalances = await getAllUsersBalance()
+			userBalances.sort((a, b) => b.balance - a.balance)
+
+			leaderboardEmbed
+				.setTitle("💰 Leaderboard - Top Wealth 💰")
+				.setDescription("Here are the top users based on balance:")
+
+			userBalances.slice(0, 10).forEach((user, index) => {
+				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
+				const text = `${rank} <@${user.id}> - **$${user.balance.toLocaleString()}**`
+				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false })
+			})
+		} else {
+			await interaction.reply("Invalid choice! Please choose between 'xp' and 'wealth'.")
+			return
+		}
+
+		// Reply with the chosen type of leaderboard
 		await interaction.reply({ embeds: [leaderboardEmbed] })
 	} catch (error) {
 		console.error("Failed to handle leaderboard command:", error)
