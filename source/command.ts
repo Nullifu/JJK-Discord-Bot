@@ -452,7 +452,7 @@ export async function handleWorkCommand(interaction: ChatInputCommandInteraction
 	const embed = new EmbedBuilder()
 		.setColor(0x00ff00)
 		.setTitle("Work Completed")
-		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings.toLocaleString}** coins!`)
+		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings}** coins!`)
 		.setTimestamp()
 
 	await interaction.reply({ embeds: [embed] })
@@ -2725,29 +2725,26 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 		receivedItems = true
 	}
 	if ("item" in chosenOne) {
-		if (Math.random() < 0.3) {
-			// 50% chance to get the item
-			await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
-			if (receivedItems) {
-				resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
-			} else {
-				resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
-			}
-			receivedItems = true
+		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
+		if (receivedItems) {
+			resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
 		} else {
-			resultMessage += ", but didn't give you any items this time."
+			resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
 		}
-		resultMessage += "!"
-
-		// Embed Creation
-		const resultEmbed = new EmbedBuilder()
-			.setTitle("Begging Result")
-			.setDescription(resultMessage)
-			.setColor("#FFD700")
-			.setTimestamp()
-
-		await interaction.reply({ embeds: [resultEmbed] })
+		receivedItems = true
+	} else {
+		resultMessage += ", but didn't give you any items this time."
 	}
+	resultMessage += "!"
+
+	// Embed Creation
+	const resultEmbed = new EmbedBuilder()
+		.setTitle("Begging Result")
+		.setDescription(resultMessage)
+		.setColor("#FFD700")
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [resultEmbed] })
 }
 
 // handle sell command
