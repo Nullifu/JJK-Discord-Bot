@@ -47,7 +47,12 @@ import {
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import { handleToggleHeavenlyRestrictionCommand } from "./mongodb.js"
+import {
+	handleToggleHeavenlyRestrictionCommand,
+	hasUserReceivedVoteReward,
+	updateBalance,
+	updateUserVoteRewardStatus
+} from "./mongodb.js"
 
 dotenv()
 
@@ -56,7 +61,8 @@ const client = new Client({
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildMembers
+		GatewayIntentBits.GuildMembers,
+		GatewayIntentBits.DirectMessages
 	],
 	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 })
@@ -105,8 +111,6 @@ async function updateDynamicActivities() {
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "Gojo’s explanations", type: ActivityType.Listening },
-		{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
-		{ name: "Domain Expansion theories", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
 		{ name: "Exchange Event", type: ActivityType.Competing },
 		{ name: "/register", type: ActivityType.Listening }
@@ -334,6 +338,52 @@ async function doApplicationCommands() {
 doApplicationCommands()
 // --------------------------------------------------------------------------------------------------------------------------
 //
+
+import { Webhook } from "@top-gg/sdk"
+import express from "express"
+const app = express()
+//
+
+const webhook = new Webhook(process.env.TOPGG_WEBHOOK_AUTH)
+
+// Use express.json() middleware for parsing application/json
+app.use(express.json())
+
+app.post(
+	"/webhook",
+	webhook.listener(async vote => {
+		// The 'vote' object contains details about the vote. For example, vote.user is the ID of the user who voted.
+		console.log(vote.user) // Log the user ID of the voter
+
+		const userId = vote.user
+		try {
+			const user = await client.users.fetch(userId)
+			if (!user) {
+				console.error(`Cannot DM user: User with ID ${userId} not found.`)
+				return
+			}
+
+			// Optional: Check if the user has already received a reward
+			const hasReceivedReward = await hasUserReceivedVoteReward(userId)
+			if (hasReceivedReward) {
+				console.log(`User ${userId} already received a vote reward. Skipping DM.`)
+				return // Acknowledge to Top.gg but skip further processing
+			}
+
+			// Send the DM and update the database
+			await user.send("Thanks for voting! You've been granted a bonus reward for supporting the bot.")
+			console.log(`Vote DM sent to ${user.tag}`)
+			const rewardAmount = 150000
+			await updateBalance(userId, rewardAmount)
+			await updateUserVoteRewardStatus(userId) // Update your database accordingly
+		} catch (error) {
+			console.error("Error handling vote webhook:", error)
+			// Handle errors, such as issues with fetching the user, sending the DM, or updating the database
+		}
+	})
+)
+
+app.listen(5000, () => console.log("Server is listening on port 5000"))
 //
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return

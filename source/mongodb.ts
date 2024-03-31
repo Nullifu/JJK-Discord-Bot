@@ -1137,3 +1137,153 @@ export async function getAllUsersBalance() {
 		await client.close()
 	}
 }
+
+// get user gamble info
+export async function getUserGambleInfo(
+	userId: string
+): Promise<{ lastGamble: number; streak: number; betCount: number; lastGambleDate: Date | null }> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return {
+			lastGamble: user?.lastGamble || 0,
+			streak: user?.streak || 0,
+			betCount: user?.betCount || 0,
+			lastGambleDate: user?.lastGambleDate || null
+		}
+	} catch (error) {
+		console.error(`Error when retrieving gamble info for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+// update user gamble info
+export async function updateUserGambleInfo(userId: string): Promise<void> {
+	// Renamed for clarity
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $inc: { betCount: 1 } } // Use $inc to increment betCount
+		)
+	} catch (error) {
+		console.error("Error updating user gamble info:", error)
+		throw error
+	}
+}
+
+function isNewDay(oldDate: Date, newDate: Date): boolean {
+	return (
+		oldDate.getFullYear() !== newDate.getFullYear() ||
+		oldDate.getMonth() !== newDate.getMonth() ||
+		oldDate.getDate() !== newDate.getDate() ||
+		oldDate.getHours() !== newDate.getHours() // Check for hour change
+	)
+}
+
+//update user gamble
+export async function updateUserGamble(userId: string, newGamble: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { gamble: newGamble } })
+	} catch (error) {
+		console.error("Error updating user gamble:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+import moment from "moment-timezone"
+
+async function dailyReset() {
+	const database = client.db(mongoDatabase)
+	const usersCollection = database.collection("users") // Correct way to get a collection
+	const users = await usersCollection.find().toArray()
+
+	for (const user of users) {
+		const nowInUserTimezone = moment().tz(user.timezone)
+		if (nowInUserTimezone.hour() === 0 && nowInUserTimezone.minute() === 0) {
+			await usersCollection.updateOne({ id: user.id }, { $set: { gamblesToday: 0 } })
+		}
+	}
+}
+
+// Using node-cron for scheduling
+import cron from "node-cron"
+cron.schedule("0 0 * * *", dailyReset) // Runs at midnight every day
+
+// get user work cooldown
+export async function getUserWorkCooldown(userId: string): Promise<number> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user?.cooldowns?.work || 0
+	} catch (error) {
+		console.error(`Error when retrieving work cooldown for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// update user work cooldown
+export async function updateUserCooldown(userId: string, jobType: string, newCooldown: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { [`cooldowns.${jobType}`]: newCooldown } })
+	} catch (error) {
+		console.error("Error updating user work cooldown:", error)
+		throw error
+	}
+}
+
+// has user recieved vote reward
+export async function hasUserReceivedVoteReward(userId: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne(
+			{ id: userId },
+			{ projection: { receivedVoteReward: 1 } } // Projection
+		)
+
+		return user?.receivedVoteReward || false
+	} catch (error) {
+		console.error(`Error when checking vote reward for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// updateUserVoteRewardStatus 150k balance
+export async function updateUserVoteRewardStatus(userId: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { receivedVoteReward: true } })
+	} catch (error) {
+		console.error("Error updating user vote reward status:", error)
+		throw error
+	}
+}

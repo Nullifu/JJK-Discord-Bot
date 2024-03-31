@@ -31,6 +31,7 @@ import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
 	allAchievements,
+	benefactors,
 	craftingRecipes,
 	dailyitems,
 	getRandomItem,
@@ -55,6 +56,7 @@ import {
 	getUserCursedEnergy,
 	getUserDailyData,
 	getUserDomain,
+	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
 	getUserHeavenlyTechniques,
@@ -62,15 +64,18 @@ import {
 	getUserProfile,
 	getUserTechniques,
 	getUserUnlockedTitles,
+	getUserWorkCooldown,
 	removeItemFromUserInventory,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
 	updateUserClan,
+	updateUserCooldown,
 	updateUserCursedEnergy,
 	updateUserDailyData,
 	updateUserDomainExpansion,
 	updateUserExperience,
+	updateUserGambleInfo,
 	updateUserHealth,
 	updateUserHeavenlyRestriction,
 	updateUserHeavenlyTechniques,
@@ -80,7 +85,6 @@ import {
 } from "./mongodb.js"
 
 const domainActivationState = new Map()
-const userJobCooldowns = new Map()
 const bossHealthMap = new Map() // Create a Map to store boss health per user
 
 export const searchCooldowns = new Map()
@@ -401,14 +405,10 @@ export async function handleJobSelection(interaction: CommandInteraction) {
 
 export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id
-
 	const userProfile = await getUserProfile(userId)
 	const currentJobName = userProfile.job || "Student"
-
-	// Find the job object based on the user's current job
 	const currentJob = jobs.find(job => job.name === currentJobName)
 
-	// Ensure we have a valid job object before proceeding
 	if (!currentJob) {
 		await interaction.reply({ content: "Error: Invalid job specified.", ephemeral: true })
 		return
@@ -416,49 +416,46 @@ export async function handleWorkCommand(interaction: ChatInputCommandInteraction
 
 	const currentTime = Date.now()
 
-	// Initialize cooldown tracking for the user if it doesn't exist
-	if (!userJobCooldowns.has(userId)) {
-		userJobCooldowns.set(userId, {})
-	}
+	try {
+		const lastWorkTime = await getUserWorkCooldown(userId)
 
-	const userCooldowns = userJobCooldowns.get(userId)
+		if (currentTime - lastWorkTime < currentJob.cooldown) {
+			const endCooldownTime = Math.floor((lastWorkTime + currentJob.cooldown) / 1000)
+			await interaction.reply({
+				content: `You're too tired to work as a ${currentJobName} right now. You can work again <t:${endCooldownTime}:R>.`,
+				ephemeral: true
+			})
+			return
+		}
 
-	// Get the last work time for the current job, or 0 if it's the first time
-	const lastWorkTime = userCooldowns[currentJobName] || 0
+		// If the cooldown has passed, continue with work command logic...
+		const earnings = calculateEarnings(userProfile)
+		const experienceGain = getRandomAmount(20, 50)
 
-	if (currentTime - lastWorkTime < currentJob.cooldown) {
-		// Calculate the end of the cooldown period for messaging
-		const endCooldownTime = Math.floor((lastWorkTime + currentJob.cooldown) / 1000)
+		// Update user data
+		await updateBalance(userId, earnings)
+		await updateUserExperience(userId, experienceGain)
+		await updatePlayerGrade(userId)
+
+		// Update the work cooldown (using 'work' as the jobType)
+		await updateUserCooldown(userId, "work", currentTime)
+
+		// Reply with the earnings
+		const embed = new EmbedBuilder()
+			.setColor(0x00ff00)
+			.setTitle("Work Completed")
+			.setDescription(`You worked hard as a ${currentJobName} and earned **${earnings}** coins!`)
+			.setTimestamp()
+
+		await interaction.reply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Failed to process work command:", error)
 		await interaction.reply({
-			content: `You're too tired to work as a ${currentJobName} right now. You can work again <t:${endCooldownTime}:R>.`,
+			content: "An error occurred while trying to work. Please try again later.",
 			ephemeral: true
 		})
-		return
 	}
-
-	// fag
-	const earnings = calculateEarnings(userProfile)
-	const experienceGain = getRandomAmount(20, 50) // Random experience gain between 20 and 50
-
-	// Update user balance
-	await updateBalance(userId, earnings)
-	await updateUserExperience(userId, experienceGain)
-	await updatePlayerGrade(interaction.user.id) // Update the player's grade based on new XP
-
-	// Set new cooldown
-	userCooldowns[currentJobName] = currentTime
-	userJobCooldowns.set(userId, userCooldowns)
-
-	// Reply with the earnings
-	const embed = new EmbedBuilder()
-		.setColor(0x00ff00)
-		.setTitle("Work Completed")
-		.setDescription(`You worked hard as a ${userProfile.job} and earned **${earnings}** coins!`)
-		.setTimestamp()
-
-	await interaction.reply({ embeds: [embed] })
 }
-
 export async function handleDailyCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id
 	const currentTime = Date.now()
@@ -2591,27 +2588,44 @@ function checkWin(spinResults: string[]): boolean {
 }
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
+	//
+	const maxBetLimit = 10000000
+	//
 	const gameType = interaction.options.getString("game") // Assuming "game" is the option name
 	const betAmount = interaction.options.getInteger("amount", true)
 	const userId = interaction.user.id
 	const currentBalance = await getBalance(userId)
+	const { betCount } = await getUserGambleInfo(userId)
+
+	//
+	const userBetCounts = {}
+
+	if (!userBetCounts[userId]) {
+		userBetCounts[userId] = 0
+	}
+	userBetCounts[userId]++
+
+	if (betCount >= 15) {
+		await interaction.reply("You've reached your daily gamble limit of 15. Please try again tomorrow.")
+		return
+	}
 
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
 		return
 	}
 
-	const maxBetLimit = 10000000 // Example: Set your individual bet limit
-
 	if (betAmount > maxBetLimit) {
 		await interaction.reply(`The maximum bet amount is ${formatNumberWithCommas(maxBetLimit)} coins.`)
 		return
 	}
 
-	if (gameType === "slot") {
-		const betAmount = interaction.options.getInteger("amount", true)
+	//
+	//
 
-		// Assume getBalance and updateBalance functions are defined elsewhere
+	if (gameType === "slot") {
+		//
+		const betAmount = interaction.options.getInteger("amount", true)
 		const userId = interaction.user.id // Identifier for the user's balance
 		const currentBalance = await getBalance(userId)
 
@@ -2619,15 +2633,15 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			await interaction.reply("You don't have enough coins to make this bet.")
 			return
 		}
-
-		// Proceed with the gamble
+		userBetCounts[userId]++ // Increment the count
+		await updateUserGambleInfo(userId)
+		//
 		const spinResults = spinSlots()
 		const didWin = checkWin(spinResults)
 		let resultMessage = ""
-		let jackpotGIF = "" // Initialize here for broader scope
+		let jackpotGIF = ""
 
 		if (didWin) {
-			// Check if it's a jackpot win
 			const isJackpot = spinResults.every(symbol => symbol === "🍓") // Adjusted to the correct symbol
 			if (isJackpot) {
 				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif" // Set the URL for jackpot
@@ -2650,7 +2664,6 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			.setColor(didWin ? "#00FF00" : "#FF0000")
 			.setTimestamp()
 
-		// Add the jackpot GIF to the embed if there is one
 		if (jackpotGIF) {
 			resultEmbed.setImage(jackpotGIF)
 		}
@@ -2661,6 +2674,10 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
 		const didWin = Math.random() < 0.5 // 50%
 
+		//
+		userBetCounts[userId]++ // Increment the count
+		await updateUserGambleInfo(userId)
+		//
 		let resultMessage = ""
 		if (didWin) {
 			await updateBalance(userId, betAmount * 2) // Win: simply return the bet amount for demonstration
@@ -2682,22 +2699,12 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 		await interaction.reply({ embeds: [resultEmbed] })
 	} else {
-		// Handle unexpected game type, if necessary
 		await interaction.reply("Unknown game type selected.")
 	}
 }
 
 const begcooldown = new Map<string, number>()
 const begcooldownamount = 10 * 1000 // 5 seconds in milliseconds
-
-const benefactors = [
-	{ name: "Satoru Gojo", coins: 9500, item: "Rikugan Eye", itemQuantity: 1, weight: 1 },
-	{ name: "Kento Nanami", coins: 1500, weight: 8 },
-	{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1, weight: 2 },
-	{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1, weight: 5 },
-	{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1, weight: 3 },
-	{ name: "Megumi Fushiguro", coins: 5000, weight: 10 }
-]
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
@@ -2766,18 +2773,14 @@ export async function handleSellCommand(interaction) {
 	const itemToSell = interaction.options.getString("item").toLowerCase() // Normalize input for case-insensitive comparison
 	const quantity = interaction.options.getInteger("quantity") || 1
 
-	// Fetch user's inventory
 	const userInventory = await getUserInventory(interaction.user.id)
-	// Check if the item exists in the user's inventory with case-insensitive comparison
 	const inventoryItem = userInventory.find(i => i.name.toLowerCase() === itemToSell)
 	if (!inventoryItem) {
 		return interaction.reply({ content: "You don't have that item in your inventory.", ephemeral: true })
 	}
 
-	// Attempt to find the item in the predefined items array to get its price, if it exists
 	const itemDetails = items.find(i => i.name.toLowerCase() === itemToSell)
 
-	// If the item exists in the array, use its price; otherwise, use the default price of 5000
 	const price = itemDetails ? itemDetails.price : 5000
 	const earnings = price * quantity
 
@@ -2821,11 +2824,11 @@ export async function handleSellCommand(interaction) {
 			await i.update({ content: "Sale cancelled.", embeds: [], components: [] })
 		}
 	})
-
+	//
+	collector.stop
 	collector.on("end", (collected, reason) => {
 		if (reason === "time") {
 			interaction.editReply({ content: "Confirmation time expired. Sale cancelled.", components: [] })
-			collector.stop
 		}
 	})
 }
