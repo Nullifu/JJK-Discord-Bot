@@ -42,7 +42,7 @@
 		"snoowrap": "^1.23.0"
 	},
 	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.7",
+		"@types/better-sqlite3": "^7.6.9",
 		"@types/lowdb": "^1.0.15",
 		"@types/mysql": "^2.15.24",
 		"@types/node": "^20.12.2",
