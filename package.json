@@ -25,7 +25,7 @@
 	"license": "UNLICENSED",
 	"dependencies": {
 		"@discordjs/builders": "^1.6.4",
-		"@discordjs/rest": "^2.0.0",
+		"@discordjs/rest": "^2.2.0",
 		"@sapphire/shapeshift": "^3.9.2",
 		"@top-gg/sdk": "^3.1.6",
 		"better-sqlite3": "^9.4.3",
