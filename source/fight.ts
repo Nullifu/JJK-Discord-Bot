@@ -100,14 +100,16 @@ export async function executeSpecialTechnique({
 	techniquesUsed.push(techniqueName)
 	userTechniques.set(userId, techniquesUsed) // Update the map with the new techniques list
 
-	const damage = (await calculateDamage(playerGradeString, userId, true)) * damageMultiplier
+	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
 
 	primaryEmbed.setImage(imageUrl)
 	primaryEmbed.setDescription(description)
 	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-	await new Promise(resolve => setTimeout(resolve, 5000)) // Wait for effect
+	await new Promise(resolve => setTimeout(resolve, 3000)) // Wait for effect
+
+	//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 	return damage // Return the calculated damage for further processing
 }

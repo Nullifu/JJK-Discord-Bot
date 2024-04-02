@@ -2129,7 +2129,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-				console.log("1122")
 			} else if (selectedValue === "Hollow Purple") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2137,6 +2136,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/ZdRh7cZgkGIAAAAC/hollow-purple.gif",
 					description: `I guess i can play a little rough. ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Prayer Song") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 5,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1224830505686532146/FAG.png?ex=661eeb4c&is=660c764c&hm=ade3b67e94899e4c951f42269c6b95ee88046e727357d58b2900cccbc691577c&",
+					description: "**You move to the rythem of your opponent.. This truly is a terryfying technique**",
 					fieldValue: selectedValue,
 					userTechniques,
 					userId: collectedInteraction.user.id,
@@ -2178,7 +2190,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-				console.log("1123122")
 			} else if (selectedValue === "Inverted Spear Of Heaven: Severed Universe") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2279,143 +2290,142 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			}
 
+			// update boss hp
+			bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
+			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
 
-				// update boss hp
-				bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
-				randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
+			// result message
+			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
+			primaryEmbed.setDescription(fightResult)
+			primaryEmbed.setFields(
+				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+				{ name: "Player Health", value: playerHealth.toString() }
+			)
+			try {
+				//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+			} catch (err: unknown) {
+				console.error(err?.toString())
+			}
+			console.log("12", randomOpponent.name)
+			// is boss dead?
+			if (randomOpponent.current_health <= 0) {
+				console.log("13", randomOpponent.name)
+				// Check if the boss is Gojo
+				if (randomOpponent.name === "Satoru Gojo") {
+					console.log("14", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
 
-				// result message
-				const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
-				primaryEmbed.setDescription(fightResult)
-				primaryEmbed.setFields(
-					{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-					{ name: "Player Health", value: playerHealth.toString() }
-				)
-				try {
-					//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-				} catch (err: unknown) {
-					console.error(err?.toString())
-				}
-				console.log("12", randomOpponent.name)
-				// is boss dead?
-				if (randomOpponent.current_health <= 0) {
-					console.log("13", randomOpponent.name)
-					// Check if the boss is Gojo
-					if (randomOpponent.name === "Satoru Gojo") {
-						console.log("14", randomOpponent.name)
-						// Generate a random number between 0 and 1
-						const random = Math.random()
-
-						// 20% chance to respawn as The Honored One
-						if (random < 0.4) {
-							console.log("15", randomOpponent.name)
-							randomOpponent.name = "The Honored One"
-							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-							updateUserHealth(interaction.user.id, 100) // Reset player health to max
-							console.log("16", randomOpponent.name)
-							primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
-							primaryEmbed.setImage(
-								"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
-							)
-							primaryEmbed.setFields(
-								{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-								{ name: "Player Health", value: playerHealth.toString() }
-							)
-							console.log("17", randomOpponent.name)
-							//
-							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-							//
-							console.log("18", randomOpponent.name)
-							// Don't end the fight
-							return
-						}
-					} else if (randomOpponent.name === "Megumi Fushiguro") {
-						console.log("19", randomOpponent.name)
-						// Generate a random number between 0 and 1
-						const random = Math.random()
-
-						if (random < 0.4) {
-							randomOpponent.name = "Mahoraga"
-							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-							updateUserHealth(interaction.user.id, 100) // Reset player health to max
-
-							primaryEmbed.setDescription("Megumi has summoned mahoraga!")
-							primaryEmbed.setImage(
-								"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
-							)
-							primaryEmbed.setFields(
-								{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-								{ name: "Player Health", value: playerHealth.toString() }
-							)
-							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-							// Don't end the fight
-							return
-						}
-					} else if (randomOpponent.name === "Mahito (Transfigured)") {
-						console.log("19", randomOpponent.name)
-						// Generate a random number between 0 and 1
-						const random = Math.random()
-
-						if (random < 0.4) {
-							randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
-							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-							updateUserHealth(interaction.user.id, 100) // Reset player health to max
-
-							primaryEmbed.setDescription("Mahito has reached the true essence of his soul!")
-							primaryEmbed.setImage("https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif")
-							primaryEmbed.setFields(
-								{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-								{ name: "Player Health", value: playerHealth.toString() }
-							)
-							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-							return
-						}
+					// 20% chance to respawn as The Honored One
+					if (random < 0.4) {
+						console.log("15", randomOpponent.name)
+						randomOpponent.name = "The Honored One"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+						console.log("16", randomOpponent.name)
+						primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						console.log("17", randomOpponent.name)
+						//
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+						//
+						console.log("18", randomOpponent.name)
+						// Don't end the fight
+						return
 					}
-					console.log("20", randomOpponent.name)
-					domainActivationState.set(contextKey, false)
+				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					console.log("19", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					if (random < 0.4) {
+						randomOpponent.name = "Mahoraga"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Megumi has summoned mahoraga!")
+						primaryEmbed.setImage(
+							"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
+						)
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+						// Don't end the fight
+						return
+					}
+				} else if (randomOpponent.name === "Mahito (Transfigured)") {
+					console.log("19", randomOpponent.name)
+					// Generate a random number between 0 and 1
+					const random = Math.random()
+
+					if (random < 0.4) {
+						randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
+						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+						updateUserHealth(interaction.user.id, 100) // Reset player health to max
+
+						primaryEmbed.setDescription("Mahito has reached the true essence of his soul!")
+						primaryEmbed.setImage("https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif")
+						primaryEmbed.setFields(
+							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+							{ name: "Player Health", value: playerHealth.toString() }
+						)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+						return
+					}
+				}
+				console.log("20", randomOpponent.name)
+				domainActivationState.set(contextKey, false)
+				activeCollectors.delete(interaction.user.id)
+				bossHealthMap.delete(interaction.user.id)
+				//
+				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+			} else {
+				//
+				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+				await delay(700)
+				// boss attack
+				const possibleAttacks = attacks[randomOpponent.name]
+				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+				// dmg
+				const damageToPlayer = chosenAttack.baseDamage
+				//
+				const newPlayerHealth = playerHealth - damageToPlayer
+				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+				//did bro die?
+				if (clampedPlayerHealth <= 0) {
+					const bossAttackMessage = `${randomOpponent.name} killed you!`
+					primaryEmbed.setFooter({ text: bossAttackMessage })
+
+					// Reset player health in the database.
 					activeCollectors.delete(interaction.user.id)
 					bossHealthMap.delete(interaction.user.id)
-					//
-					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					await updateUserHealth(interaction.user.id, 100)
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+					// Send an additional ephemeral message indicating the player has died
+					await collectedInteraction.followUp({
+						content: `${randomOpponent.name} killed you!`,
+						ephemeral: true
+					})
+					battleOptionSelectMenuCollector.stop()
 				} else {
+					// Update to new player health after damage dealt
+					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
 					//
-					bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
-					await delay(700)
-					// boss attack
-					const possibleAttacks = attacks[randomOpponent.name]
-					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
-					// dmg
-					const damageToPlayer = chosenAttack.baseDamage
-					//
-					const newPlayerHealth = playerHealth - damageToPlayer
-					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
-					//did bro die?
-					if (clampedPlayerHealth <= 0) {
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
+					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 
-						// Reset player health in the database.
-						activeCollectors.delete(interaction.user.id)
-						bossHealthMap.delete(interaction.user.id)
-						await updateUserHealth(interaction.user.id, 100)
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-						// Send an additional ephemeral message indicating the player has died
-						await collectedInteraction.followUp({
-							content: `${randomOpponent.name} killed you!`,
-							ephemeral: true
-						})
-						battleOptionSelectMenuCollector.stop()
-					} else {
-						// Update to new player health after damage dealt
-						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-						//
-						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
-						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
-
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-					}
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 				}
 			}
 		}
@@ -2787,10 +2797,11 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		const coinSides = ["Heads", "Tails"]
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
 		const didWin = Math.random() < 0.5 // 50%
-		const technique = Math.random() < 0.8 // 10%
+		const technique = Math.random() < 0.1 // 10%
+		const supatechnique = Math.random() < 0.01 // 10%
 
 		//
-		userBetCounts[userId]++ // Increment the count
+		userBetCounts[userId]++
 		await updateUserGambleInfo(userId)
 		//
 		let resultMessage = ""
@@ -2813,13 +2824,28 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			.setTimestamp()
 
 		await interaction.reply({ embeds: [resultEmbed] })
-		if (technique) {
+
+		const userTechniques = await getUserTechniques(userId)
+		//
+		if (technique && !userTechniques.includes("Private Pure Love Train: Jackpot")) {
 			await addUserTechnique(userId, "Private Pure Love Train: Jackpot")
 			const techniqueEmbed = new EmbedBuilder()
 				.setColor("#FFD700")
 				.setTitle("🌟 Technique Acquired! 🌟")
 				.setDescription(
 					"Luck seems to be on your side! You've acquired Hakari Kinji's Private Pure Love Train: Jackpot technique."
+				)
+				.setThumbnail("https://i.imgur.com/zCP3OWc.png")
+
+			await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
+		}
+		if (supatechnique && !userTechniques.includes("Prayer Songt")) {
+			await addUserTechnique(userId, "Prayer Song")
+			const techniqueEmbed = new EmbedBuilder()
+				.setColor("#FFD700")
+				.setTitle("🌟 Technique Acquired! 🌟")
+				.setDescription(
+					"You move with the grace of a god! You've acquired Prayer Song.. This is the power of JUJUTSU!"
 				)
 				.setThumbnail("https://i.imgur.com/zCP3OWc.png")
 
