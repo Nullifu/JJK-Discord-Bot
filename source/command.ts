@@ -2280,7 +2280,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					primaryEmbed
 				})
 
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 				// update boss hp
 				bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
