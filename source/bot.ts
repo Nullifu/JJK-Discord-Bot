@@ -16,6 +16,7 @@ import {
 import { config as dotenv } from "dotenv"
 import cron from "node-cron"
 import {
+	claimQuestsCommand,
 	generateStatsEmbed,
 	handleAchievementsCommand,
 	handleBalanceCommand,
@@ -34,6 +35,7 @@ import {
 	handleLeaderBoardCommand,
 	handleLookupCommand,
 	handleProfileCommand,
+	handleQuestCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
@@ -43,7 +45,8 @@ import {
 	handleUpdateCommand,
 	handleUseItemCommand,
 	handleVoteCommand,
-	handleWorkCommand
+	handleWorkCommand,
+	viewQuestsCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
@@ -201,8 +204,8 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("profile")
 		.setDescription("User Profile")
-		.addUserOption(
-			option => option.setName("user").setDescription("The user to display the profile for").setRequired(false) // Makes mentioning a user optional
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
@@ -219,12 +222,15 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
+	new SlashCommandBuilder().setName("questclaim").setDescription("Claim Quest Rewards!"),
 	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
 	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
 	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
+	new SlashCommandBuilder().setName("quest").setDescription("Get a quest!"),
+	new SlashCommandBuilder().setName("activequests").setDescription("View your active quests."),
 	new SlashCommandBuilder()
 		.setName("sell")
 		.setDescription("Sell an item from your inventory.")
@@ -233,14 +239,12 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("leaderboard")
 		.setDescription("View the global leaderboard!")
-		.addStringOption(
-			option =>
-				option
-					.setName("type")
-					.setDescription("The type of leaderboard")
-					.setRequired(true)
-					.addChoices({ name: "xp", value: "xp" }, { name: "Wealth", value: "wealth" })
-			// Add more choices here if you have more leaderboard types
+		.addStringOption(option =>
+			option
+				.setName("type")
+				.setDescription("The type of leaderboard")
+				.setRequired(true)
+				.addChoices({ name: "xp", value: "xp" }, { name: "Wealth", value: "wealth" })
 		),
 	new SlashCommandBuilder()
 		.setName("toggleheavenlyrestriction")
@@ -304,7 +308,8 @@ const commands = [
 					{ name: "Domain Token", value: "domain_token" },
 					{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" }
 				)
-		),
+		)
+		.addIntegerOption(option => option.setName("quantity").setDescription("How many to craft.").setRequired(false)),
 	new SlashCommandBuilder()
 		.setName("useitem") // Command name as it will appear in Discord
 		.setDescription("Use an item from your inventory")
@@ -317,7 +322,8 @@ const commands = [
 					{ name: "Sukuna Finger", value: "Sukuna Finger" },
 					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
 					{ name: "Six Eyes", value: "Six Eyes" },
-					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" }
+					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
+					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" }
 				)
 		)
 ].map(command => command.toJSON())
@@ -484,6 +490,9 @@ client.on("interactionCreate", async interaction => {
 		case "techniqueshop":
 			await handleTechniqueShopCommand(chatInputInteraction)
 			break
+		case "activequests":
+			await viewQuestsCommand(chatInputInteraction)
+			break
 		case "inventory":
 			await handleInventoryCommand(chatInputInteraction)
 			break
@@ -502,8 +511,14 @@ client.on("interactionCreate", async interaction => {
 		case "domainselection":
 			await handleDomainSelection(chatInputInteraction)
 			break
+		case "quest":
+			await handleQuestCommand(chatInputInteraction)
+			break
 		case "fight":
 			await handleFightCommand(chatInputInteraction)
+			break
+		case "questclaim":
+			await claimQuestsCommand(chatInputInteraction)
 			break
 		case "selectjob":
 			await handleJobSelection(chatInputInteraction)

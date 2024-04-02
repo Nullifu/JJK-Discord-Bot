@@ -2,7 +2,7 @@
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient } from "mongodb"
-import { BossData, User, UserProfile } from "./interface"
+import { BossData, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { titles } from "./items jobs.js"
 
 dotenv()
@@ -85,7 +85,8 @@ export async function addUser(
 			cursedEnergy: 100,
 			clan: null,
 			techniques: [],
-			heavenlytechniques: []
+			heavenlytechniques: [],
+			quests: []
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -418,18 +419,21 @@ export async function getUserHealth(userId: string): Promise<number> {
 }
 
 // get bosses from bosses collection also get the health and current health
-export async function getBosses(): Promise<BossData[]> {
+export async function getBosses(userGrade: string): Promise<BossData[]> {
 	try {
-		await client.connect()
-		const database = client.db(mongoDatabase)
+		// Find the health multiplier based on the user's grade
+		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
+
+		const database = client.db(mongoDatabase) // Assuming the client is already connected
 		const domainsCollection = database.collection(bossCollectionName)
 
 		const bosses = (await domainsCollection.find({}).toArray()).map(boss => ({
 			id: boss._id.toString(), // Convert MongoDB ObjectId to string
 			name: boss.name,
-			max_health: boss.max_health, // Access the Int32 value directly
-			current_health: boss.current_health, // Access the Int32 value directly
-			image_url: boss.image_URL, // Access the String value directly, make sure the property name matches
+			// Apply the multiplier to the max_health and current_health
+			max_health: Math.round(boss.max_health * healthMultiplier),
+			current_health: Math.round(boss.current_health * healthMultiplier),
+			image_url: boss.image_URL, // Ensure the property name matches your database
 			difficulty_tier: boss.difficulty_tier // Assuming this is the correct property and type
 		}))
 
@@ -437,8 +441,6 @@ export async function getBosses(): Promise<BossData[]> {
 	} catch (error) {
 		console.error("Error when retrieving bosses:", error)
 		throw error
-	} finally {
-		// Usually, you shouldn't close the client if you plan to use it again soon.
 	}
 }
 
@@ -1285,5 +1287,99 @@ export async function updateUserVoteRewardStatus(userId: string): Promise<void> 
 	} catch (error) {
 		console.error("Error updating user vote reward status:", error)
 		throw error
+	}
+}
+
+// addUserQuest
+export async function addUserQuest(userId: string, questId: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $addToSet: { quests: { id: questId, progress: 0 } } })
+	} catch (error) {
+		console.error("Error adding user quest:", error)
+		throw error
+	}
+}
+// addUserQuestProgress
+export async function addUserQuestProgress(userId, questName, progress) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ "id": userId, "quests.id": questName }, { $set: { "quests.$.progress": 1 } })
+	} catch (error) {
+		console.error("Error adding user quest progress:", error)
+		throw error
+	}
+}
+// getUserQuests
+export async function getUserQuests(userId) {
+	try {
+		console.log("Attempting to retrieve quests for userId:", userId)
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+		console.log("User document retrieved:", user) // This should log the user document or null
+
+		if (!user) return { quests: [] }
+
+		const userQuests = user.quests ? [...user.quests] : [] // Use spread operator to clone the quests array
+		return { quests: userQuests }
+	} catch (error) {
+		console.error(`Error when retrieving quests for user with ID: ${userId}:`, error.stack)
+		throw error
+	} finally {
+		await client.close()
+	}
+}
+
+// removeUserQuest function
+export async function removeUserQuest(userId, questName) {
+	try {
+		// Assuming client is already connected and available
+		const database = client.db(mongoDatabase)
+		const usersCollection: Collection<User> = database.collection<User>(usersCollectionName)
+
+		// Update the user's document by pulling the quest from the quests array by its name
+		const result = await usersCollection.updateOne(
+			{ id: userId },
+			{ $pull: { quests: { id: questName } } } // Make sure 'id' matches the property in the Quest interface.
+		)
+
+		if (result.modifiedCount === 0) {
+			console.log(`No quest was removed for the user with ID: ${userId}`)
+			return false
+		} else {
+			console.log(`Quest with name: ${questName} was removed for the user with ID: ${userId}`)
+			return true
+		}
+	} catch (error) {
+		console.error(`Error when removing quest for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user health cant go above 200.
+export async function updateUserrHealth(userId: string, newHealth: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Ensure the health value does not exceed 200
+		const updatedHealth = Math.min(newHealth, 200)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { health: updatedHealth } })
+	} catch (error) {
+		console.error("Error updating user health:", error)
+		throw error
+	} finally {
+		// await client.close()
 	}
 }

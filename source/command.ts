@@ -1,3 +1,5 @@
+/* eslint-disable no-inner-declarations */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
@@ -26,7 +28,13 @@ import {
 	getRandomLocation
 } from "./calculate.js"
 import { executeSpecialTechnique, handleBossDeath } from "./fight.js"
-import { BossData, determineDomainAchievements, formatDomainExpansion, gradeMappings } from "./interface.js"
+import {
+	BossData,
+	buildQuestEmbed,
+	determineDomainAchievements,
+	formatDomainExpansion,
+	gradeMappings
+} from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -38,12 +46,15 @@ import {
 	heavenlyrestrictionskills,
 	items,
 	jobs,
-	lookupItems
+	lookupItems,
+	questsArray
 } from "./items jobs.js"
 import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItemToUserInventory,
 	addUser,
+	addUserQuest,
+	addUserQuestProgress,
 	addUserTechnique,
 	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
@@ -62,10 +73,12 @@ import {
 	getUserHeavenlyTechniques,
 	getUserInventory,
 	getUserProfile,
+	getUserQuests,
 	getUserTechniques,
 	getUserUnlockedTitles,
 	getUserWorkCooldown,
 	removeItemFromUserInventory,
+	removeUserQuest,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
@@ -81,6 +94,7 @@ import {
 	updateUserHeavenlyTechniques,
 	updateUserJob,
 	updateUserTitle,
+	updateUserrHealth,
 	userExists
 } from "./mongodb.js"
 
@@ -511,6 +525,7 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
 	const selectedItem = interaction.options.getString("item")
+	const quantity = interaction.options.getInteger("quantity") || 1 // Default to 1 if not provided
 
 	try {
 		const userInventory = await getUserInventory(interaction.user.id)
@@ -534,7 +549,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		}
 
 		const craftEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Green color
+			.setColor(0x00ff00)
 			.setTitle(`Crafting ${selectedItem.replace("_", " ")}`)
 			.setDescription(`Do you want to craft **${selectedItem.replace("_", " ")}**?`)
 			.addFields(
@@ -996,12 +1011,11 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			await interaction.editReply({ embeds: [embedSecond] })
 		}, 2000) // 40000 milliseconds delay
 
-		const xpGained = 225
-		await updateUserExperience(userId, xpGained)
-		await updatePlayerGrade(userId) // Update the player's grade based on new XP
+		// Update user data after consuming the item
 		await removeItemFromUserInventory(userId, item.name, 1)
 		await updateUserHeavenlyRestriction(userId)
 		await updateUserAchievements(userId, "unlockHeavenlyRestriction")
+		await updateUserrHealth(userId, 25)
 
 		setTimeout(() => {
 			const embedFinal = new EmbedBuilder()
@@ -1017,6 +1031,44 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		}, 4000)
 		return
 	}
+	if (itemName === "Special-Grade Geo Locator") {
+		await interaction.deferReply()
+		const embedFirst = new EmbedBuilder()
+			.setColor("#4b0082") // Indigo, for a mystical feel
+			.setTitle("SCANNING.")
+			.setDescription("Scanning for frauds...")
+		await interaction.followUp({ embeds: [embedFirst] })
+
+		setTimeout(async () => {
+			const findChance = Math.random()
+			const chanceToFindYuta = 0.1
+
+			if (findChance <= chanceToFindYuta) {
+				// If found
+				const embedSecond = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("LOCATED YUTA OKKOTSU")
+					.setDescription("He's right there, get him!")
+					.setImage("https://i.ytimg.com/vi/1mTM_tWt1eA/maxresdefault.jpg")
+
+				// Edit the reply with the success embed
+				await interaction.editReply({ embeds: [embedSecond] })
+				await addUserQuestProgress(userId, "Find Yuta!", 1)
+			} else {
+				// If not found
+				const embedSecond = new EmbedBuilder()
+					.setColor("#8b0000") // Dark red, for dramatic effect
+					.setTitle("Yuta Not Located")
+					.setDescription("Yuta remains elusive...")
+
+				await interaction.editReply({ embeds: [embedSecond] })
+			}
+		}, 4000) // 4000 milliseconds delay for the scan to "complete"
+
+		await removeItemFromUserInventory(userId, item.name, 1)
+
+		return
+	}
 	if (itemName === "Jogos (Fixed) Balls") {
 		await interaction.deferReply()
 		const embedFirst = new EmbedBuilder()
@@ -1028,14 +1080,11 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const randomNumber = Math.floor(Math.random() * 100) + 1
 		let isballs = false
 
-		const xpGained = 300
-		await updateUserExperience(userId, xpGained)
 		await updateUserCursedEnergy(userId, 45)
-		await updatePlayerGrade(userId)
 		await removeItemFromUserInventory(userId, item.name, 1)
 
 		if (randomNumber <= 20) {
-			await addUserTechnique(userId, "Disaster Flames: Full Fire Formatio")
+			await addUserTechnique(userId, "Disaster Flames: Full Fire Formation")
 			isballs = true
 		}
 		setTimeout(async () => {
@@ -1093,16 +1142,15 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const randomNumber = Math.floor(Math.random() * 100) + 1
 		let isDemonVessel = false
 
-		const xpGained = 125
-		await updateUserExperience(userId, xpGained)
 		await updateUserCursedEnergy(userId, 45)
-		await updatePlayerGrade(userId)
 		await removeItemFromUserInventory(userId, item.name, 1)
 
 		if (randomNumber <= 20) {
 			await updateUserClan(userId, "Demon Vessel")
 			await updateUserAchievements(userId, "becursedDemonVessel")
 			await addUserTechnique(userId, "World Cutting Slash")
+			await addUserQuestProgress(userId, "Curse King", 1)
+			await updateUserrHealth(userId, 25)
 			isDemonVessel = true
 		}
 		setTimeout(async () => {
@@ -1161,17 +1209,16 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const randomNumber = Math.floor(Math.random() * 100) + 1
 		let isLimitless = false
 
-		const xpGained = 175
-		await updateUserExperience(userId, xpGained)
 		await updateUserCursedEnergy(userId, 45)
-		await updatePlayerGrade(userId) // Update the player's grade based on new XP
 		await removeItemFromUserInventory(userId, item.name, 1)
 
 		if (randomNumber <= 30) {
 			await updateUserClan(userId, "Limitless")
 			await updateUserAchievements(userId, "behonoredLimitless")
 			await addUserTechnique(userId, "Imaginary Technique: Purple")
-			isLimitless = true // Set the flag to true when the user becomes a Demon Vessel
+			await addUserQuestProgress(userId, "The Honored One", 1)
+			await updateUserrHealth(userId, 30)
+			isLimitless = true
 		}
 		setTimeout(async () => {
 			const embedSecond = new EmbedBuilder()
@@ -1429,7 +1476,6 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			const nameMap = {
 				"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga":
 					"Divine General Mahoraga"
-				// Add other names that need simplifying here
 			}
 			return nameMap[fullName] || fullName
 		}
@@ -1464,7 +1510,42 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				}
 			)
 
-		await interaction.reply({ embeds: [embed] })
+		const selectMenu = new StringSelectMenuBuilder() // Note: StringSelectMenuBuilder
+			.setCustomId("selectMenu")
+			.setPlaceholder("Select an option")
+			.addOptions([
+				{
+					label: "Main Profile",
+					description: "View your main profile",
+					value: "mainProfile",
+					default: true
+				},
+				{
+					label: "Active Quests",
+					description: "View your active quests",
+					value: "activeQuests"
+				}
+			])
+
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+		await interaction.reply({ embeds: [embed], components: [row] })
+
+		const filter = i => i.customId === "selectMenu" && i.user.id === interaction.user.id
+		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+		collector.on("collect", async i => {
+			if (i.isStringSelectMenu()) {
+				const selectedOption = i.values[0]
+
+				if (selectedOption === "mainProfile") {
+					await i.update({ embeds: [embed] })
+				} else if (selectedOption === "activeQuests") {
+					const questEmbed = await buildQuestEmbed(userId, interaction)
+					await i.update({ embeds: [questEmbed] }) // Display the main profile embed
+				}
+			}
+		})
 	} catch (error) {
 		console.error("Error handling JujutsuStatsCommand:", error)
 		await interaction.reply({
@@ -1633,7 +1714,7 @@ async function delay(ms) {
 export const activeCollectors = new Map()
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
-	await updateUserHealth(interaction.user.id, 100) // Set user's health to 100
+	await updateUserHealth(interaction.user.id, 100)
 	await interaction.deferReply()
 	const currentTime = Date.now() // Get current time in milliseconds
 
@@ -1641,12 +1722,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	if (activeCollectors.has(interaction.user.id)) {
 		const fightStartTime = activeCollectors.get(interaction.user.id)
 
-		// Check if more than 30 seconds have elapsed since the fight started
 		if (currentTime - fightStartTime > 40000) {
-			// More than 30 seconds have elapsed, allow starting a new fight
 			activeCollectors.set(interaction.user.id, currentTime) // Update the start time for the new fight
 		} else {
-			// Fight is still active, and less than 30 seconds have elapsed
 			await interaction.editReply({
 				content: "You already have an ongoing fight. Please finish it before starting a new one."
 			})
@@ -1657,12 +1735,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	activeCollectors.set(interaction.user.id, true)
 
-	const allBosses = await getBosses()
+	const usergrade = await getUserGrade(interaction.user.id)
+	const allBosses = await getBosses(usergrade)
 
 	//
 	if (allBosses.length === 0) {
 		console.error("No bosses found in the database.")
-		return // Or handle this situation appropriately
+		return
 	}
 
 	// Select random opponent
@@ -1735,7 +1814,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
-		time: 30000 // 60 seconds
+		time: 60000 // 60 seconds
 	})
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
@@ -1832,10 +1911,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				if (randomOpponent.current_health <= 0) {
 					// Check if the boss is Gojo
 					if (randomOpponent.name === "Satoru Gojo") {
-						// Generate a random number between 0 and 1
 						const random = Math.random()
 
-						// 20% chance to respawn as The Honored One
 						if (random < 0.5) {
 							randomOpponent.name = "The Honored One"
 							randomOpponent.current_health = randomOpponent.max_health // Reset health to max
@@ -2161,6 +2238,30 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
 					description:
 						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "MAXIMUM: BLACK FLASH") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/FILnhw_rozUAAAAC/black-flash-jujutsu-kaisen.gif",
+					description: "**KOKU...SEN!**",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Pure Love: Unleashed Fury") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/ZGlpNTqs6xcAAAAd/jjk0-yuta.gif",
+					description: `**How Rude ${randomOpponent.name}, It's pure love.**`,
 					fieldValue: selectedValue,
 					userTechniques,
 					userId: collectedInteraction.user.id,
@@ -2704,7 +2805,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 }
 
 const begcooldown = new Map<string, number>()
-const begcooldownamount = 10 * 1000 // 5 seconds in milliseconds
+const begcooldownamount = 30 * 1000 // 5 seconds in milliseconds
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
@@ -2831,4 +2932,178 @@ export async function handleSellCommand(interaction) {
 			interaction.editReply({ content: "Confirmation time expired. Sale cancelled.", components: [] })
 		}
 	})
+}
+// Ban...KAI!
+export async function handleQuestCommand(interaction: ChatInputCommandInteraction) {
+	console.log(questsArray)
+	const userId = interaction.user.id
+
+	if (questsArray.length === 0) {
+		throw new Error("There are no available quests.")
+	}
+
+	const questOptions = questsArray.map(quest => ({
+		label: quest.name,
+		value: quest.name,
+		description: quest.description
+	}))
+
+	// Ensure questOptions has between 1 and 25 elements
+	if (questOptions.length === 0) {
+		throw new Error("No quests available for this user.")
+	} else if (questOptions.length > 25) {
+		questOptions.length = 25
+	}
+
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("select_quest")
+		.setPlaceholder("Select a Quest")
+		.addOptions(questOptions)
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+	await interaction.reply({
+		content: "Select a quest to begin your adventure.",
+		components: [row],
+		ephemeral: true
+	})
+
+	console.log("before menu")
+
+	const filter = i => i.customId === "select_quest" && i.user.id === interaction.user.id
+	const questCollector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+	console.log("after menu")
+
+	questCollector.on("collect", async i => {
+		if (i.isStringSelectMenu()) {
+			const selectedquestname = i.values[0]
+			console.log(selectedquestname)
+			const selectedQuest = questsArray.find(quest => quest.name === selectedquestname)
+
+			await addUserQuest(userId, selectedQuest.name)
+
+			console.log("before embed")
+
+			const questEmbed = new EmbedBuilder()
+				.setTitle(selectedQuest.name)
+				.setDescription(selectedQuest.description)
+				.setColor("#0099ff")
+				.setFooter({ text: "Task: " + selectedQuest.task })
+
+			await i.update({
+				content: "Your quest has begun!",
+				embeds: [questEmbed],
+				components: []
+			})
+			console.log("after embed")
+		}
+	})
+
+	questCollector.on("end", collected => {
+		if (collected.size === 0) {
+			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
+		}
+		questCollector.stop
+	})
+}
+
+export async function claimQuestsCommand(interaction) {
+	try {
+		const userId = interaction.user.id // Get the user's ID from the interaction
+		const userQuests = await getUserQuests(userId)
+
+		const completedQuests = userQuests.quests.filter(q => {
+			const questDetails = questsArray.find(quest => quest.name === q.id)
+			return questDetails && q.progress >= questDetails.totalProgress
+		})
+
+		if (completedQuests.length === 0) {
+			return "You have no completed quests to claim."
+		}
+
+		const claimResults = []
+
+		for (const completedQuest of completedQuests) {
+			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+
+			const { coins, item, experience } = questDetails
+
+			const balanceUpdateResult = await updateBalance(userId, coins)
+			const addItemResult = await addItemToUserInventory(userId, item, 1)
+			const experienceUpdateResult = await updateUserExperience(userId, experience)
+			const playerGradeUpdateResult = await updatePlayerGrade(userId)
+
+			const questRemovalResult = await removeUserQuest(userId, completedQuest.id)
+
+			// Add results to claimResults
+			claimResults.push({
+				questId: completedQuest.id,
+				balanceUpdateResult,
+				addItemResult,
+				experienceUpdateResult,
+				playerGradeUpdateResult,
+				questRemovalResult
+			})
+		}
+
+		const embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Quest Rewards Claimed")
+			.setDescription("You have successfully claimed your rewards for the following quests:")
+
+		// Add fields for each completed quest and its rewards
+		completedQuests.forEach(completedQuest => {
+			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+
+			if (questDetails) {
+				// Constructing the reward text
+				const rewardsText =
+					`• **Coins**: ${questDetails.coins} :coin:\n` +
+					`• **Item**: ${questDetails.item} x1 :package:\n` +
+					`• **Experience**: ${questDetails.experience} :star:`
+
+				// Add a field for each completed quest with its rewards
+				embed.addFields({ name: completedQuest.id, value: rewardsText, inline: false })
+			}
+		})
+
+		await interaction.reply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Error claiming quests:", error)
+		throw new Error("An error occurred while claiming quests.")
+	}
+}
+
+// view all active quests using getuserquest
+export async function viewQuestsCommand(interaction) {
+	const userId = interaction.user.id
+	const userQuests = await getUserQuests(userId)
+
+	if (userQuests.quests.length === 0) {
+		return "You have no active quests."
+	}
+
+	const embed = new EmbedBuilder()
+		.setColor(0x0099ff)
+		.setTitle("Active Quests")
+		.setDescription("Here are your currently active quests:")
+
+	userQuests.quests.forEach(quest => {
+		const questDetails = questsArray.find(q => q.name === quest.id)
+		if (questDetails) {
+			const progress = quest.progress
+			const totalProgress = questDetails.totalProgress
+
+			const progressText = `${progress}/${totalProgress}`
+
+			embed.addFields({
+				name: quest.id,
+				value: `**Progress**: ${progressText}\n**Task**: ${questDetails.task}`,
+				inline: false
+			})
+		}
+	})
+
+	await interaction.reply({ embeds: [embed] })
 }

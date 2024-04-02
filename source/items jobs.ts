@@ -624,6 +624,29 @@ export const CLAN_SKILLS = {
 			clan: "Gambler Fever",
 			items: [{ name: "Gambler Token", quantity: 1 }]
 		}
+	],
+	"Okkotsu": [
+		{
+			name: "MAXIMUM: BLACK FLASH",
+			description: "....",
+			cost: "925000",
+			clan: "Okkotsu",
+			items: [{ name: "Yuta's Token", quantity: 3 }]
+		},
+		{
+			name: "Pure Love: Unleashed Fury",
+			description: "Perish!",
+			cost: "500000",
+			clan: "Okkotsu",
+			items: [{ name: "Yuta's Token", quantity: 1 }]
+		},
+		{
+			name: "Steel Arm: Freezing Strike",
+			description: "Take this!",
+			cost: "325000",
+			clan: "Okkotsu",
+			items: [{ name: "Yuta's Token", quantity: 1 }]
+		}
 	]
 }
 
@@ -634,4 +657,58 @@ export const benefactors = [
 	{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1, weight: 5 },
 	{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1, weight: 3 },
 	{ name: "Megumi Fushiguro", coins: 5000, weight: 10 }
+]
+
+// quests array
+export const questsArray = [
+	{
+		name: "Gamblers Fever",
+		description: "Defeat Hakari Kinji 5 Times!",
+		coins: 45000,
+		experience: 470,
+		item: "Hakari Kinji's Token",
+		itemQuantity: 1,
+		task: "Defeat Hakari Kinji",
+		totalProgress: 5
+	},
+	{
+		name: "Nature of Curses",
+		description: "Defeat Mahito In His True Form.",
+		coins: 23000,
+		experience: 320,
+		item: "Junpei",
+		itemQuantity: 1,
+		task: "Defeat Reborn Mahito",
+		totalProgress: 1
+	},
+	{
+		name: "Curse King",
+		description: "Get Cursed By Sukuna....",
+		coins: 23000,
+		experience: 320,
+		item: "Special-Grade Geo Locator",
+		itemQuantity: 1,
+		task: "Get Cursed By Sukuna.",
+		totalProgress: 1
+	},
+	{
+		name: "Find Yuta!",
+		description: "Locate Yuta Okkotsu!",
+		coins: 34000,
+		experience: 250,
+		item: "Yuta's Token",
+		itemQuantity: 1,
+		task: "Find this fraud!",
+		totalProgress: 1
+	},
+	{
+		name: "The Honored One",
+		description: "Be blessed with the six eyes..",
+		coins: 20000,
+		experience: 320,
+		item: "Sacred Eye",
+		itemQuantity: 1,
+		task: "Be blessed with the limitless technique...",
+		totalProgress: 1
+	}
 ]

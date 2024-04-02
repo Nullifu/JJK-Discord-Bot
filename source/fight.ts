@@ -9,6 +9,7 @@ import { BossData } from "./interface.js"
 import { DOMAIN_EXPANSIONS } from "./items jobs.js"
 import {
 	addItemToUserInventory,
+	addUserQuestProgress,
 	getUserGrade,
 	updateBalance,
 	updatePlayerGrade,
@@ -39,10 +40,14 @@ export async function handleBossDeath(
 			"https://cdn.discordapp.com/attachments/681985000521990179/1222162641620041798/ezgif-2-cc9a6b6268.gif?ex=661536a8&is=6602c1a8&hm=591265d694ffde07b30eef7cfc538c2055643d8e349500cd4fd9be4484ffe4e7&f"
 		)
 	}
+
+	if (opponent.name === "Hakari Kinji") {
+		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+	}
+
 	await interaction.editReply({ embeds: [embed], components: [] })
 
 	function getrandommoney(min = 25000, max = 50000) {
-		// The maximum is inclusive and the minimum is inclusive
 		return Math.floor(Math.random() * (max - min + 1)) + min
 	}
 
@@ -55,6 +60,7 @@ export async function handleBossDeath(
 	await updateUserHealth(interaction.user.id, 100)
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
+	await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
