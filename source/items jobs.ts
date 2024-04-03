@@ -687,7 +687,7 @@ export const questsArray = [
 		coins: 23000,
 		experience: 320,
 		item: "Special-Grade Geo Locator",
-		itemQuantity: 1,
+		itemQuantity: 3,
 		task: "Get Cursed By Sukuna.",
 		totalProgress: 1
 	},
