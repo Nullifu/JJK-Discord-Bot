@@ -2315,7 +2315,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				domainActivationState.set(contextKey, false)
 				activeCollectors.delete(interaction.user.id)
 				bossHealthMap.delete(interaction.user.id)
-				//
+				if (randomOpponent.name === "Hakari Kinji") {
+					await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+				}
 				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
 			} else {
 				//
