@@ -142,7 +142,7 @@ export const craftingRecipes = {
 			{ name: "Prison Realm Fragment", quantity: 6 },
 			{ name: "Rikugan Eye", quantity: 2 },
 			{ name: "Special Grade Cursed Object", quantity: 4 },
-			{ name: "Sukuna Finger", quantity: 4 }
+			{ name: "Sukuna Finger", quantity: 1 }
 		],
 		craftedItemName: "Special-Grade Geo Locator"
 	},
