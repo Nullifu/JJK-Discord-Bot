@@ -1032,11 +1032,11 @@ export const items1: Item1[] = [
 			if (isLimitless) {
 				const gains =
 					"You have gained:\n" +
-					"• Clan: Demon Vessel\n" +
-					"• Achievement: becursedDemonVessel\n" +
-					"• Technique: World Cutting Slash\n" +
-					"• Quest Progress: Curse King +1\n" +
-					"• Max Health +25"
+					"• Clan: Limitless\n" +
+					"• Achievement: behonoredLimitless\n" +
+					"• Technique: Imaginary Technique: Purple\n" +
+					"• Quest Progress: The Honored One +1\n" +
+					"• Max Health +30"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")
@@ -1054,6 +1054,46 @@ export const items1: Item1[] = [
 					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif")
 			}
 			await interaction.editReply({ embeds: [embedFinal] })
+		}
+	},
+	{
+		itemName: "Special-Grade Geo Locator",
+		description: "A mystical device used to locate cursed objects and individuals.",
+		rarity: "Special",
+		imageUrl: "...",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("SCANNING.")
+				.setDescription("Scanning for frauds...")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			setTimeout(async () => {
+				const findChance = Math.random()
+				const chanceToFindYuta = 0.2
+
+				if (findChance <= chanceToFindYuta) {
+					const embedSecond = new EmbedBuilder()
+						.setColor("#006400")
+						.setTitle("LOCATED YUTA OKKOTSU")
+						.setDescription("He's right there, get him!")
+						.setImage("https://i.ytimg.com/vi/1mTM_tWt1eA/maxresdefault.jpg")
+
+					await interaction.editReply({ embeds: [embedSecond] })
+					await addUserQuestProgress(interaction.user.id, "Find Yuta!", 1)
+				} else {
+					const embedSecond = new EmbedBuilder()
+						.setColor("#8b0000")
+						.setTitle("Yuta Not Located")
+						.setDescription("Yuta remains elusive...")
+
+					await interaction.editReply({ embeds: [embedSecond] })
+				}
+			}, 4000)
+
+			await removeItemFromUserInventory(interaction.user.id, "Special-Grade Geo Locator", 1)
 		}
 	}
 ]
