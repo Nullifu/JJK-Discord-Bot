@@ -807,6 +807,7 @@ const userSearching = new Map<
 		searchCount: number
 		riskFactor: number
 		coinsFound: number
+		itemFound: string
 	}
 >()
 
@@ -843,7 +844,8 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 	userSearching.set(interaction.user.id, {
 		searchCount: 0,
 		riskFactor: 0,
-		coinsFound: 0
+		coinsFound: 0,
+		itemFound: ""
 	})
 
 	const searchLocation = getRandomLocation() // Assuming this function returns a string describing the location
@@ -920,12 +922,15 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
 			} else {
 				const coinsFound = userSearching.get(inter.user.id).coinsFound
+				const itemFound = getRandomItem().name
 
 				// final embed but not so final
 				const finalEmbed = new EmbedBuilder()
 					.setColor("#0099ff")
 					.setTitle("Search Completed")
-					.setDescription(`You've finished your searching. You gathered a total of ${coinsFound} coins.`)
+					.setDescription(
+						`You've finished your searching. You gathered a total of ${coinsFound} coins, You also found a ${itemFound}!`
+					)
 					.setTimestamp()
 
 				updateBalance(inter.user.id, coinsFound)

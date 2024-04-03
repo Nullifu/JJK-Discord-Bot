@@ -39,7 +39,8 @@ export const items = [
 	{ name: "(Fixed) Divine General Wheel", rarity: "Special Grade", chance: 0.1, price: 125000 },
 	{ name: "Six Eyes", rarity: "Special Grade", chance: 0.1, price: 175000 },
 	{ name: "Domain Token", rarity: "Special Grade", chance: 0.1, price: 275000 },
-	{ name: "Heavenly Restricted Blood", rarity: "Special Grade", chance: 0.1, price: 275000 }
+	{ name: "Heavenly Restricted Blood", rarity: "Special Grade", chance: 0.1, price: 275000 },
+	{ name: "Special-Grade Geo Locator", rarity: "Special Grade", chance: 0.1, price: 500000 }
 	// ^ Hard to find // Difficult crafted items
 ]
 
@@ -135,6 +136,15 @@ export const craftingRecipes = {
 			{ name: "Rikugan Eye", quantity: 2 }
 		],
 		craftedItemName: "Prison Realm"
+	},
+	special_locator: {
+		requiredItems: [
+			{ name: "Prison Realm Fragment", quantity: 6 },
+			{ name: "Rikugan Eye", quantity: 2 },
+			{ name: "Special Grade Cursed Object", quantity: 4 },
+			{ name: "Sukuna Finger", quantity: 4 }
+		],
+		craftedItemName: "Special-Grade Geo Locator"
 	},
 	six_eyes: {
 		requiredItems: [{ name: "Rikugan Eye", quantity: 6 }],
@@ -285,7 +295,7 @@ export function getRandomItem() {
 	const roll = Math.random()
 	let cumulativeChance = 0
 
-	for (const item of items) {
+	for (const item of digitems) {
 		cumulativeChance += item.chance
 		if (roll < cumulativeChance) {
 			return item
@@ -631,7 +641,7 @@ export const CLAN_SKILLS = {
 			description: "....",
 			cost: "925000",
 			clan: "Okkotsu",
-			items: [{ name: "Yuta's Token", quantity: 3 }]
+			items: [{ name: "Yuta's Token", quantity: 1 }]
 		},
 		{
 			name: "Pure Love: Unleashed Fury",

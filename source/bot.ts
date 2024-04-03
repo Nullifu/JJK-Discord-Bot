@@ -306,7 +306,8 @@ const commands = [
 					{ name: "Six Eyes", value: "six_eyes" },
 					{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
 					{ name: "Domain Token", value: "domain_token" },
-					{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" }
+					{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" },
+					{ name: "Special-Grade Geo Locator", value: "special_locator" }
 				)
 		)
 		.addIntegerOption(option => option.setName("quantity").setDescription("How many to craft.").setRequired(false)),
