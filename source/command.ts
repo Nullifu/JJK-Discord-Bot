@@ -1041,7 +1041,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 		setTimeout(async () => {
 			const findChance = Math.random()
-			const chanceToFindYuta = 0.1
+			const chanceToFindYuta = 0.2 // 20% chance to find Yuta Okkotsu
 
 			if (findChance <= chanceToFindYuta) {
 				// If found

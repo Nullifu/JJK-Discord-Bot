@@ -697,7 +697,7 @@ export const questsArray = [
 		coins: 34000,
 		experience: 250,
 		item: "Yuta's Token",
-		itemQuantity: 1,
+		itemQuantity: 2,
 		task: "Find this fraud!",
 		totalProgress: 1
 	},
