@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "discord.js"
+import { ObjectId } from "mongodb"
 import { questsArray } from "./items jobs.js"
 import { getUserQuests } from "./mongodb.js"
 
@@ -29,13 +30,23 @@ export const gradeMappings = {
 	"grade 4": 4 // Lowest
 	// Add other grades if necessary
 }
+export interface TradeRequest {
+	_id: ObjectId // Include this line to define the _id property
+	initiatorName: string
+	initiatorId: string
+	targetUserId: string
+	item: string
+	quantity: number
+	status: string
+	createdAt: Date
+}
 
 export const healthMultipliersByGrade = {
-	"special grade": 2.5, // Boss health is doubled for the highest grade
-	"grade 1": 1.8,
-	"semi-grade 1": 1.6,
-	"grade 2": 1.4,
-	"grade 3": 1.2,
+	"special grade": 1.5, // Boss health is doubled for the highest grade
+	"grade 1": 1.3,
+	"semi-grade 1": 1.4,
+	"grade 2": 1.2,
+	"grade 3": 1.1,
 	"grade 4": 1.0 // No change for the lowest grade
 }
 

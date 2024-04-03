@@ -38,6 +38,7 @@ import {
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
+	INVENTORY_CLAN,
 	allAchievements,
 	benefactors,
 	craftingRecipes,
@@ -45,6 +46,7 @@ import {
 	getRandomItem,
 	heavenlyrestrictionskills,
 	items,
+	items1,
 	jobs,
 	lookupItems,
 	questsArray
@@ -58,10 +60,13 @@ import {
 	addUserTechnique,
 	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
+	createTradeRequest,
+	getActiveTrades,
 	getAllUserExperience,
 	getAllUsersBalance,
 	getBalance,
 	getBosses,
+	getPreviousTrades,
 	getUserAchievements,
 	getUserClan,
 	getUserCursedEnergy,
@@ -72,30 +77,29 @@ import {
 	getUserHealth,
 	getUserHeavenlyTechniques,
 	getUserInventory,
+	getUserMaxHealth,
 	getUserProfile,
 	getUserQuests,
 	getUserTechniques,
 	getUserUnlockedTitles,
 	getUserWorkCooldown,
+	handleTradeAcceptance,
 	removeItemFromUserInventory,
 	removeUserQuest,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserAchievements,
-	updateUserClan,
 	updateUserCooldown,
-	updateUserCursedEnergy,
 	updateUserDailyData,
 	updateUserDomainExpansion,
 	updateUserExperience,
 	updateUserGambleInfo,
 	updateUserHealth,
-	updateUserHeavenlyRestriction,
 	updateUserHeavenlyTechniques,
 	updateUserJob,
 	updateUserTitle,
-	updateUserrHealth,
-	userExists
+	userExists,
+	viewTradeRequests
 } from "./mongodb.js"
 
 const domainActivationState = new Map()
@@ -976,302 +980,6 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 	})
 }
 
-export async function handleUseItemCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-	console.log("useCommand function initiated.")
-
-	const userId = interaction.user.id
-	const itemName = interaction.options.getString("item")
-
-	// Fetch user's inventory to check item existence and quantity
-	const inventoryItems = await getUserInventory(userId)
-	const item = inventoryItems.find(i => i.name === itemName && i.quantity > 0)
-
-	if (!item) {
-		// User lacks the specified item
-		const embed = new EmbedBuilder()
-			.setColor("#FF0000")
-			.setTitle("Search yields no results...")
-			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
-		await interaction.reply({ embeds: [embed], ephemeral: true })
-		return
-	}
-
-	if (itemName === "Heavenly Restricted Blood") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("A Cursed Choice...")
-			.setDescription("Your fingers close around blood vial")
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"With a decisive motion, you consume the blood, feeling an overwhelming power surge within..."
-				)
-
-			// Now, edit the reply with the new embed after the delay
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 2000) // 40000 milliseconds delay
-
-		// Update user data after consuming the item
-		await removeItemFromUserInventory(userId, item.name, 1)
-		await updateUserHeavenlyRestriction(userId)
-		await updateUserAchievements(userId, "unlockHeavenlyRestriction")
-		await updateUserrHealth(userId, 25)
-
-		setTimeout(() => {
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400") // Dark green, symbolizing growth
-				.setTitle("Power Unleashed")
-				.setDescription(
-					"As the blood enters your body, You feel your cursed energy depleting.. What have you done?"
-				)
-				.setImage("https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg") // An image URL showing the unleashed power
-
-			// Edit the reply with the new embed after a delay
-			interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
-		}, 4000)
-		return
-	}
-	if (itemName === "Special-Grade Geo Locator") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("SCANNING.")
-			.setDescription("Scanning for frauds...")
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		setTimeout(async () => {
-			const findChance = Math.random()
-			const chanceToFindYuta = 0.2 // 20% chance to find Yuta Okkotsu
-
-			if (findChance <= chanceToFindYuta) {
-				// If found
-				const embedSecond = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("LOCATED YUTA OKKOTSU")
-					.setDescription("He's right there, get him!")
-					.setImage("https://i.ytimg.com/vi/1mTM_tWt1eA/maxresdefault.jpg")
-
-				// Edit the reply with the success embed
-				await interaction.editReply({ embeds: [embedSecond] })
-				await addUserQuestProgress(userId, "Find Yuta!", 1)
-			} else {
-				// If not found
-				const embedSecond = new EmbedBuilder()
-					.setColor("#8b0000") // Dark red, for dramatic effect
-					.setTitle("Yuta Not Located")
-					.setDescription("Yuta remains elusive...")
-
-				await interaction.editReply({ embeds: [embedSecond] })
-			}
-		}, 4000) // 4000 milliseconds delay for the scan to "complete"
-
-		await removeItemFromUserInventory(userId, item.name, 1)
-
-		return
-	}
-	if (itemName === "Jogos (Fixed) Balls") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("A Cursed Choice...")
-			.setDescription("Your fingers close around the BALLS, its cursed energy pulsing against your skin...")
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		const randomNumber = Math.floor(Math.random() * 100) + 1
-		let isballs = false
-
-		await updateUserCursedEnergy(userId, 45)
-		await removeItemFromUserInventory(userId, item.name, 1)
-
-		if (randomNumber <= 20) {
-			await addUserTechnique(userId, "Disaster Flames: Full Fire Formation")
-			isballs = true
-		}
-		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000")
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"As jogo watches you consume the balls, You begin to feel an overwhelming power surge within..."
-				)
-
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 2000) // 40000 milliseconds delay
-
-		setTimeout(async () => {
-			let embedSecond
-			if (isballs) {
-				embedSecond = new EmbedBuilder()
-					.setColor("#4b0082")
-					.setTitle("A Dark Pact Forged")
-					.setDescription(
-						"The deed is done, You consume the balls as jogo cries in the distance. You feel a new technique burning within.."
-					)
-					.setImage(
-						"https://preview.redd.it/is-jogo-a-top-10-character-v0-a1vtlv29tltb1.jpg?width=640&crop=smart&auto=webp&s=0c1c7bb3bf807b812e685e224a36cb96a229bf36"
-					)
-			} else {
-				embedSecond = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("Balls unleashed")
-					.setDescription(
-						"The deed is done. You've gained 300 experience. Why did you eat the balls? What have you done?"
-					)
-			}
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 4000)
-		return
-	}
-	//
-	//
-	//
-	// Adding suspense and thematic depth for the "Sukuna Finger"
-	if (itemName === "Sukuna Finger") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("A Cursed Choice...")
-			.setDescription(
-				"Your fingers close around the Sukuna Finger, its cursed energy pulsing against your skin..."
-			)
-			.setImage(
-				"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
-			) // Add a fitting image URL
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		const randomNumber = Math.floor(Math.random() * 100) + 1
-		let isDemonVessel = false
-
-		await updateUserCursedEnergy(userId, 45)
-		await removeItemFromUserInventory(userId, item.name, 1)
-
-		if (randomNumber <= 20) {
-			await updateUserClan(userId, "Demon Vessel")
-			await updateUserAchievements(userId, "becursedDemonVessel")
-			await addUserTechnique(userId, "World Cutting Slash")
-			await addUserQuestProgress(userId, "Curse King", 1)
-			await updateUserrHealth(userId, 25)
-			isDemonVessel = true
-		}
-		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000")
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"With a decisive motion, you consume the finger, feeling an overwhelming power surge within..."
-				)
-				.setImage("https://i.makeagif.com/media/12-06-2023/jn6fNF.gif") // Image URL of the consumption
-
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 2000) // 40000 milliseconds delay
-
-		setTimeout(async () => {
-			let embedSecond
-			if (isDemonVessel) {
-				embedSecond = new EmbedBuilder()
-					.setColor("#4b0082")
-					.setTitle("A Dark Pact Forged")
-					.setDescription(
-						"The pact is sealed. Darkness embraces you, as you feel an ancient power coursing through your veins. 𝓨𝓸𝓾 𝓱𝓪𝓿𝓮 𝓫𝓮𝓮𝓷 𝓬𝓾𝓻𝓼𝓮𝓭.."
-					)
-					.setImage("https://media1.tenor.com/m/mzqdk4E2KVwAAAAC/sukuna-jjk.gif")
-			} else {
-				embedSecond = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("Power Unleashed")
-					.setDescription(
-						"The deed is done. You've gained 125 experience. What dark powers have you awakened?"
-					)
-					.setImage(
-						"https://64.media.tumblr.com/59312918933aab3c9330302112a04c79/57360a58ce418849-17/s540x810/bdc0f44011a25a630b7e1f9dd857f9a9376bca7b.gif"
-					)
-			}
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 4000)
-		return
-	}
-	//
-	//
-	//
-	if (itemName === "Six Eyes") {
-		await interaction.deferReply()
-		const embedFirst = new EmbedBuilder()
-			.setColor("#4b0082") // Indigo, for a mystical feel
-			.setTitle("A Mystical Choice...")
-			.setDescription(
-				"You stare into the Six Eyes, its cursed energy pulsing against your skin... And the uneasy feeling of infinity.."
-			)
-			.setImage(
-				"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless"
-			) // Add a fitting image URL
-		await interaction.followUp({ embeds: [embedFirst] })
-
-		const randomNumber = Math.floor(Math.random() * 100) + 1
-		let isLimitless = false
-
-		await updateUserCursedEnergy(userId, 45)
-		await removeItemFromUserInventory(userId, item.name, 1)
-
-		if (randomNumber <= 30) {
-			await updateUserClan(userId, "Limitless")
-			await updateUserAchievements(userId, "behonoredLimitless")
-			await addUserTechnique(userId, "Imaginary Technique: Purple")
-			await addUserQuestProgress(userId, "The Honored One", 1)
-			await updateUserrHealth(userId, 30)
-			isLimitless = true
-		}
-		setTimeout(async () => {
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000") // Dark red, for dramatic effect
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"As you stare into the Six Eyes, you feel an overwhelming power surge within... The uneasy feeling of limitless thoughts.."
-				)
-				.setImage("https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif") // Image URL of the consumption
-
-			// Now, edit the reply with the new embed after the delay
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 2000) // 40000 milliseconds delay
-
-		setTimeout(async () => {
-			let embedSecond
-			if (isLimitless) {
-				// Special embed for Demon Vessel
-				embedSecond = new EmbedBuilder()
-					.setColor("#4b0082")
-					.setTitle("????")
-					.setDescription(
-						"The swirling, malevolent auras of limitless cursed energy blaze before your eyes, their intensity scorching your senses. Your expanding knowledge of jujutsu opens your mind, unlocking a terrifying new depth of perception.. 𝓨𝓸𝓾 𝓱𝓪𝓿𝓮 𝓫𝓮𝓮𝓷 𝓻𝓮𝓪𝔀𝓸𝓴𝓮𝓷"
-					)
-					.setImage("https://media1.tenor.com/m/sr0GO11Kbf0AAAAC/gojo-satoru.gif")
-			} else {
-				// Generic response for non-Demon Vessel outcome
-				embedSecond = new EmbedBuilder()
-					.setColor("#006400") // Dark green, symbolizing growth
-					.setTitle("Power Unleashed")
-					.setDescription(
-						"The deed is done. You've gained 175 experience. What mystical powers have you awakened?"
-					)
-					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif") // An image URL showing the unleashed power
-			}
-			await interaction.editReply({ embeds: [embedSecond] })
-		}, 4000)
-	} else {
-		// Handle other items or general case
-		const embed = new EmbedBuilder()
-			.setColor("#FFFF00")
-			.setTitle("No Effect")
-			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
-		await interaction.reply({ embeds: [embed], ephemeral: true })
-	}
-	return
-}
-
 const checkmarkEmoji = "✅" // Use custom emojis if you have them
 const crossEmoji = "❌" // Use custom emojis if you have them
 
@@ -1356,36 +1064,40 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 2.5.1", // Replace with your actual version number
-			date: "2024-03-26", // Adjust the date as needed
+			version: "Update 3.0", // Replace with your actual version number
+			date: "2024-04-04", // Adjust the date as needed
 			changes: [
 				{
-					name: "Technique System",
-					value: "Users can now acquire and develop unique Jujutsu techniques!"
+					name: "**TRADING SYSTEM BETA RELEASE**",
+					value: "This trading system is still highly experimental and may have bugs. Please report any issues.\nCurrently you can only give items not request any."
 				},
 				{
-					name: "Technique Shop",
-					value: "Spend hard-earned currency to unlock powerful abilities."
+					name: "Trading System Usage:",
+					value: "Use `/trade @user item quantity` to give an item to another user. Example: `/trade @JohnDoe sukuna finger 1` You can also use /previoustrades to see your trade history. Or /activetrades to see your active trades."
 				},
 				{
-					name: "Heavenly Restriction Rework",
-					value: "Characters with Heavenly Restriction gain access to specialized skills."
+					name: "Useitem Command Rework..",
+					value: "Reworked it to be more streamline and explained better."
 				},
 				{
-					name: "Fight Command Overhaul",
-					value: "Completely revamped the fight command for a smoother and more strategic battle experience."
+					name: "New Techniques",
+					value: "Added Okkotsu + Hakari + More!"
 				},
 				{
-					name: "Grade System Fixes",
-					value: "Resolved issues with the grade system's functionality and accuracy."
+					name: "Grade System Rework",
+					value: "Bosses scale with your grade. And you can increase YOUR health by using the items like sukuna finger, six eyes."
 				},
 				{
-					name: "Fixing all bugs, Most have been fixed!",
-					value: "Fight, Dig, Work, < Fixed. as for the thinking bug it's still being worked on. :D"
+					name: "Interaction failed bug",
+					value: "Still working on this bug, if you get this error please try again. Sorry!"
 				},
 				{
 					name: "Found a bug? Report it!",
 					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
+				},
+				{
+					name: "**IF YOU LOSE ANY ITEMS DURING TRADES**",
+					value: "Please report it to the support server. We can help you get your items back."
 				}
 			]
 		}
@@ -1462,7 +1174,29 @@ export async function handleClanInfoCommand(interaction: ChatInputCommandInterac
 	await interaction.reply({ embeds: [clanEmbed], ephemeral: true })
 }
 
-// jujutsu stats embed that fetches your clan your techniques your domain and your heavenly restriction
+// Function to find a technique's clan
+function findTechniqueClan(techniqueName: string): string {
+	for (const clanName in INVENTORY_CLAN) {
+		if (
+			INVENTORY_CLAN[clanName].some(
+				tech => simplifyTechniqueName(tech.name) === simplifyTechniqueName(techniqueName)
+			)
+		) {
+			return clanName
+		}
+	}
+	return "" // Or "Unknown" if you prefer
+}
+
+// Simplify technique names (assuming this function already exists in your code)
+function simplifyTechniqueName(fullName: string): string {
+	const nameMap = {
+		"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga": "Divine General Mahoraga"
+		// Add other simplifications as needed
+	}
+	return nameMap[fullName] || fullName
+}
+
 export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
 
@@ -1470,49 +1204,65 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		const userClan = await getUserClan(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const userEnergy = await getUserCursedEnergy(userId)
-		let userTechniques = await (userHeavenlyRestriction
+		let userTechniques: string[] = await (userHeavenlyRestriction
 			? getUserHeavenlyTechniques(userId)
 			: getUserTechniques(userId))
 		const userDomain = await getUserDomain(userId)
-
-		// Function to simplify technique names
-		// eslint-disable-next-line no-inner-declarations
-		function simplifyTechniqueName(fullName) {
-			const nameMap = {
-				"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga":
-					"Divine General Mahoraga"
-			}
-			return nameMap[fullName] || fullName
-		}
-
-		// Ensure userTechniques is defined and is an array before proceeding
+		const userMaxHealth = await getUserMaxHealth(userId)
+		// Ensure userTechniques is an array
 		userTechniques = Array.isArray(userTechniques) ? userTechniques : []
+
+		// Enrich techniques with clan information
+		const userTechniquesWithClan = userTechniques.map(technique => {
+			return {
+				name: technique,
+				clan: findTechniqueClan(technique) || "Unknown"
+			}
+		})
+
+		// Group techniques by clan
+		const techniquesByClan = userTechniquesWithClan.reduce((acc, technique) => {
+			acc[technique.clan] = acc[technique.clan] || []
+			acc[technique.clan].push(technique.name)
+			return acc
+		}, {})
+
+		// Sort clans and techniques alphabetically and create the display string
+		let techniquesDisplay = Object.keys(techniquesByClan)
+			.sort()
+			.map(clan => {
+				const techniques = techniquesByClan[clan]
+					.sort()
+					.map(technique => `> • ${simplifyTechniqueName(technique)}`) // Using block quote for indentation
+				return `**${clan}**\n${techniques.join("\n")}` // Clan name in bold
+			})
+			.join("\n\n")
+
+		// Add domain expansion if present at the top
 		if (userDomain && userDomain !== "None") {
-			userTechniques.unshift(`Domain Expansion: ${userDomain}`)
+			techniquesDisplay = `**Domain Expansion: ${userDomain}**\n\n` + techniquesDisplay // Domain name in bold
 		}
 
-		const techniquesDisplay =
-			userTechniques.length > 0
-				? userTechniques.map(technique => `• ${simplifyTechniqueName(technique)}`).join("\n")
-				: "None"
-
+		// Construct the embed
 		const embed = new EmbedBuilder()
 			.setTitle(`${interaction.user.username}'s Jujutsu Profile`)
 			.setColor("#4B0082")
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
-				{ name: "🔥 **Clan**", value: userClan || "None", inline: true },
-				{ name: "🌀 **Techniques & Domain Expansion**", value: techniquesDisplay, inline: false },
+				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
+				{ name: "🔥 Clan", value: userClan || "None", inline: true },
 				{
-					name: "🤫 **Cursed Energy**",
+					name: "🤫 Cursed Energy",
 					value: `${userEnergy.toString()} units ${userEnergy > 1000 ? "🔥" : ""}`,
 					inline: true
 				},
+
 				{
-					name: "⚖️ **Heavenly Restriction**",
+					name: "⚖️ Heavenly Restriction",
 					value: userHeavenlyRestriction ? "Active" : "Inactive",
 					inline: true
-				}
+				},
+				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay, inline: false }
 			)
 
 		const selectMenu = new StringSelectMenuBuilder() // Note: StringSelectMenuBuilder
@@ -1574,55 +1324,42 @@ export async function handleGuideCommand(interaction) {
 
 	const guideEmbed = new EmbedBuilder().setColor("#0099ff")
 
-	// Dynamically set the title and description based on the topic
 	switch (topic) {
 		case "crafting":
 			guideEmbed
 				.setTitle("Crafting Guide")
 				.setDescription("Here's how you can craft items in the Jujutsu Kaisen Bot...")
-				.addFields(
-					// Add crafting-specific instructions here
-					{
-						name: "Basic Crafting",
-						value: "To start crafting, use `/craft [item]`. You'll need the right materials."
-					}
-					// More fields as necessary
-				)
+				.addFields({
+					name: "Basic Crafting",
+					value: "To start crafting, use `/craft [item]`. You'll need the right materials."
+				})
 			break
 		case "technique":
 			guideEmbed
 				.setTitle("Technique Guide")
 				.setDescription("Here's how you can aquire techniques in the Jujutsu Kaisen Bot...")
-				.addFields(
-					// Add crafting-specific instructions here
-					{
-						name: "Techniques",
-						value: "To start learning techniques, use `/techniqueshop`. You'll need the right materials. And money."
-					}
-					// More fields as necessary
-				)
+				.addFields({
+					name: "Techniques",
+					value: "To start learning techniques, use `/techniqueshop`. You'll need the right materials. And money."
+				})
 			break
 		case "jobs":
 			guideEmbed.setTitle("Jobs Information").setDescription("All info on jobs")
 
-			// Iterate over the jobs array to add each job as a field
 			jobs.forEach(job => {
-				// Format the job's details
 				const jobDetails =
 					`Payout: $${job.payout.min} - $${job.payout.max}\n` +
 					`Cost: $${job.cost}\n` +
 					`Required Experience: ${job.requiredExperience}\n` +
 					`Cooldown: ${formatCooldown(job.cooldown)}`
 
-				// Add the job as a field to the embed
 				guideEmbed.addFields({
 					name: job.name,
 					value: jobDetails,
-					inline: true // Set to false if you prefer each job to be listed one after the other without side-by-side alignment
+					inline: true
 				})
 			})
 
-			// Send or return the embed here...
 			break
 		default:
 			guideEmbed
@@ -1719,26 +1456,12 @@ async function delay(ms) {
 export const activeCollectors = new Map()
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
-	await updateUserHealth(interaction.user.id, 100) // Reset user's health to max
-	await interaction.deferReply()
-	const currentTime = Date.now() // Get current time in milliseconds
-
 	//
-	if (activeCollectors.has(interaction.user.id)) {
-		const fightStartTime = activeCollectors.get(interaction.user.id)
-
-		if (currentTime - fightStartTime > 40000) {
-			activeCollectors.set(interaction.user.id, currentTime) // Update the start time for the new fight
-		} else {
-			await interaction.editReply({
-				content: "You already have an ongoing fight. Please finish it before starting a new one."
-			})
-			return
-		}
-	}
+	const playerHealth1 = await getUserMaxHealth(interaction.user.id) // Get the user's maximum health
+	await updateUserHealth(interaction.user.id, playerHealth1) // Set the user's current health to their maximum health
+	//
+	await interaction.deferReply()
 	console.log("one")
-
-	activeCollectors.set(interaction.user.id, true)
 
 	const usergrade = await getUserGrade(interaction.user.id)
 	const allBosses = await getBosses(usergrade)
@@ -1754,7 +1477,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const randomOpponent = allBosses[randomIndex]
 
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
-	const playerHealth = await getUserHealth(interaction.user.id)
+	const playerHealth = await getUserMaxHealth(interaction.user.id)
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 
 	// Fetch techniques based on whether the user has Heavenly Restriction
@@ -1770,10 +1493,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				name: "1564maskedgojode", // Replace with your emoji's name
 				id: "1220626413141622794" // Replace with your emoji's ID
 			}
-		},
-		{
-			label: "Punch",
-			value: "punch"
 		},
 		...userTechniques.map(techniqueName => ({
 			label: techniqueName,
@@ -1819,7 +1538,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
-		time: 60000 // 60 seconds
+		time: 100000 // 60 seconds
 	})
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
@@ -1980,132 +1699,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				})
 			}
 			console.log("9")
-		} else if (selectedValue === "punch") {
-			// Get player's health
-
-			// get boss hp
-			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-
-			// grade
-			const playerGradeData = await getUserGrade(interaction.user.id)
-			const playerGradeString = playerGradeData
-
-			// calculate damage
-			const damage = calculateDamage(playerGradeString, interaction.user.id, true)
-			// update boss hp
-			bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
-			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
-
-			// result message
-			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
-			primaryEmbed.setDescription(fightResult)
-			primaryEmbed.setFields(
-				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-				{ name: "Player Health", value: playerHealth.toString() }
-			)
-			try {
-				//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-			} catch (err: unknown) {
-				console.error(err?.toString())
-			}
-			console.log("12", randomOpponent.name)
-			// is boss dead?
-			if (randomOpponent.current_health <= 0) {
-				console.log("13", randomOpponent.name)
-				// Check if the boss is Gojo
-				if (randomOpponent.name === "Satoru Gojo") {
-					console.log("14", randomOpponent.name)
-					// Generate a random number between 0 and 1
-					const random = Math.random()
-
-					// 20% chance to respawn as The Honored One
-					if (random < 0.5) {
-						console.log("15", randomOpponent.name)
-						randomOpponent.name = "The Honored One"
-						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-						updateUserHealth(interaction.user.id, 100) // Reset player health to max
-						console.log("16", randomOpponent.name)
-						primaryEmbed.setDescription("Gojo has reawakened as The Honored One!")
-						primaryEmbed.setImage(
-							"https://media1.tenor.com/m/TQWrKGuC9GsAAAAC/gojo-satoru-the-honored-one.gif"
-						)
-						primaryEmbed.setFields(
-							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-							{ name: "Player Health", value: playerHealth.toString() }
-						)
-						console.log("17", randomOpponent.name)
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-						console.log("18", randomOpponent.name)
-						return
-					}
-				} else if (randomOpponent.name === "Megumi Fushiguro") {
-					console.log("19", randomOpponent.name)
-					// Generate a random number between 0 and 1
-					const random = Math.random()
-
-					// 20% chance to respawn as The Honored One
-					if (random < 0.4) {
-						randomOpponent.name = "Mahoraga"
-						randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-						updateUserHealth(interaction.user.id, 100) // Reset player health to max
-
-						primaryEmbed.setDescription("Megumi has summoned Mahoraga!")
-						primaryEmbed.setImage(
-							"https://media1.tenor.com/m/Rws8n4bYKLIAAAAC/jujutsu-kaisen-shibuya-arc-mahoraga-shibuya.gif"
-						)
-						primaryEmbed.setFields(
-							{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-							{ name: "Player Health", value: playerHealth.toString() }
-						)
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-						return
-					}
-				}
-				console.log("20", randomOpponent.name)
-				domainActivationState.set(contextKey, false)
-				activeCollectors.delete(interaction.user.id)
-
-				// reset health
-				bossHealthMap.delete(interaction.user.id)
-
-				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-			} else {
-				//
-				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
-				await delay(700)
-				// boss attack
-				const possibleAttacks = attacks[randomOpponent.name]
-				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
-				// dmg
-				const damageToPlayer = chosenAttack.baseDamage
-				//
-				const newPlayerHealth = playerHealth - damageToPlayer
-				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
-				//did bro die?
-				if (clampedPlayerHealth <= 0) {
-					const bossAttackMessage = `${randomOpponent.name} killed you!`
-					primaryEmbed.setFooter({ text: bossAttackMessage })
-
-					// Reset player health in the database.
-					activeCollectors.delete(interaction.user.id)
-					bossHealthMap.delete(interaction.user.id)
-					await updateUserHealth(interaction.user.id, 100)
-					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-					// Send an additional ephemeral message indicating the player has died
-					await collectedInteraction.followUp({
-						content: `${randomOpponent.name} killed you!`,
-						ephemeral: true
-					})
-				} else {
-					// Update to new player health after damage dealt
-					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-					//
-					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
-					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
-
-					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-				}
-			}
 		} else {
 			console.log("10")
 			const userTechniques = new Map()
@@ -2250,7 +1843,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 2,
 					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
 					description:
 						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
@@ -2263,7 +1856,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 6,
 					imageUrl: "https://media1.tenor.com/m/FILnhw_rozUAAAAC/black-flash-jujutsu-kaisen.gif",
 					description: "**KOKU...SEN!**",
 					fieldValue: selectedValue,
@@ -2275,7 +1868,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 5,
 					imageUrl: "https://media1.tenor.com/m/ZGlpNTqs6xcAAAAd/jjk0-yuta.gif",
 					description: `**How Rude ${randomOpponent.name}, It's pure love.**`,
 					fieldValue: selectedValue,
@@ -2287,7 +1880,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 4,
+					damageMultiplier: 3,
 					imageUrl: "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif",
 					description: "You gamble... AND FORTUNE FAVORS THE BOLD! You deal double damage!",
 					fieldValue: selectedValue,
@@ -3090,4 +2683,267 @@ export async function viewQuestsCommand(interaction) {
 	})
 
 	await interaction.reply({ embeds: [embed] })
+}
+
+export async function handleUseItemCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	console.log("useCommand function initiated.")
+
+	const userId = interaction.user.id
+	const itemName = interaction.options.getString("item")
+
+	const inventoryItems = await getUserInventory(userId)
+	const item = items1.find(i => i.itemName === itemName) // Search in items1
+	const hasItem = inventoryItems.some(i => i.name === itemName && i.quantity > 0)
+
+	if (!hasItem) {
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Search yields no results...")
+			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	if (!item) {
+		const embed = new EmbedBuilder()
+			.setColor("#FFFF00")
+			.setTitle("No Effect")
+			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	try {
+		removeItemFromUserInventory(userId, itemName, 1)
+		if (item) {
+			await item.effect(interaction)
+		}
+	} catch (error) {
+		console.error("Error executing item effect:", error)
+		await interaction.reply("Uh oh, something unexpected went wrong!")
+	}
+}
+
+export async function handleTradeCommand(interaction) {
+	const targetUser = interaction.options.getUser("user")
+	const item = interaction.options.getString("item")
+	const quantity = interaction.options.getInteger("quantity")
+
+	// --- Check initiator's inventory ---
+	const initiatorInventory = await getUserInventory(interaction.user.id)
+	const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
+
+	if (!initiatorItem) {
+		await interaction.reply({ content: "You do not have enough of the specified item to trade.", ephemeral: true })
+		return
+	}
+
+	// --- Check target user's inventory ---
+	const targetUserInventory = await getUserInventory(targetUser.id)
+
+	// **Insert additional logic to check if the target user has the item that would be part of the trade.**
+	// You will need to determine how you want to handle the expected item for the trade
+
+	if (!targetUserInventory) {
+		await interaction.reply({
+			content: "The user you are trying to trade with does not exist or has no inventory.",
+			ephemeral: true
+		})
+		return
+	}
+
+	// --- Create a trade request (database) ---
+	await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
+
+	// --- Construct Trade Request Embed---
+	const tradeEmbed = new EmbedBuilder()
+		.setColor("Aqua") // Your color choice
+		.setTitle("🔄 Trade Request")
+		.setDescription(
+			`You have received a trade request from ${interaction.user.username}. Please review the details below:`
+		)
+		.addFields(
+			{
+				name: "Trade Details",
+				value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
+				inline: false
+			},
+			// Instructions
+			{
+				name: "Next Steps",
+				value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
+				inline: false
+			},
+			{
+				name: "⚠️ **IMPORTANT WARNING**",
+				value:
+					"Please read carefully before proceeding with the trade:\n\n" +
+					"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
+					"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
+					"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
+				inline: false
+			}
+			// Expiration Notice
+		)
+		.setFooter({ text: "Trade requests are time-sensitive and subject to item availability." })
+		.setTimestamp() // Sets the current timestamp
+
+	// --- Send to the Target User ---
+	try {
+		await targetUser.send({ embeds: [tradeEmbed] })
+		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
+	} catch (error) {
+		console.error("Failed to send a trade request DM:", error)
+		await interaction.reply({
+			content: "Failed to send a trade request. The user might have DMs disabled.",
+			ephemeral: true
+		})
+	}
+}
+
+export async function handleAcceptTrade(interaction) {
+	const userId = interaction.user.id
+
+	try {
+		const tradeRequests = await viewTradeRequests(userId)
+
+		if (tradeRequests.length === 0) {
+			await interaction.reply({ content: "You have no pending trade requests.", ephemeral: true })
+			return
+		}
+
+		// Map trade requests to select menu options
+		const options = tradeRequests.map(request => {
+			return {
+				label: request.item, // Or use a more descriptive label
+				description: `From: ${request.initiatorId} (Qty: ${request.quantity})`, // Replace ID with usernames if possible
+				value: request._id.toString()
+			}
+		})
+
+		// Construct the select menu
+		const selectMenu = new SelectMenuBuilder()
+			.setCustomId("accept_trade_select")
+			.setPlaceholder("Select a trade request to accept")
+			.addOptions(options)
+
+		// Construct the message action row
+		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
+
+		// Reply to the interaction with the select menu
+		await interaction.reply({
+			content: "Choose a trade request to accept:",
+			components: [actionRow],
+			ephemeral: true
+		})
+	} catch (error) {
+		console.error("Error in handleAcceptTrade:", error)
+		await interaction.reply({
+			content: "An error occurred while trying to process trade requests.",
+			ephemeral: true
+		})
+	}
+}
+
+export async function processTradeSelection(interaction) {
+	const selectedTradeId = interaction.values[0]
+
+	try {
+		// Assume you have a function to handle the trade acceptance logic
+		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
+		await interaction.update({
+			content: "Trade request accepted successfully!",
+			components: []
+		})
+	} catch (error) {
+		console.error("Error handling trade acceptance:", error)
+		await interaction.update({
+			content: "An error occurred while trying to accept the trade request.",
+			components: []
+		})
+	}
+}
+
+// view trade command, it has a selectmenu with two options. active trades and previous trades active trades shows all current pending and outgoing trades and previous trades shows all completed trades
+export async function handlePreviousTradesCommand(interaction) {
+	const userId = interaction.user.id
+
+	try {
+		const previousTrades = await getPreviousTrades(userId)
+
+		if (previousTrades.length === 0) {
+			await interaction.reply("You don't have any previous trades.")
+			return
+		}
+
+		await paginateTrades(interaction, previousTrades, "Previous Trades")
+	} catch (error) {
+		console.error("Error fetching previous trades:", error)
+		await interaction.reply({ content: "An error occurred while fetching your trades.", ephemeral: true })
+	}
+}
+export async function handleActiveTradesCommand(interaction) {
+	const userId = interaction.user.id
+
+	try {
+		const activeTrades = await getActiveTrades(userId)
+
+		if (activeTrades.length === 0) {
+			await interaction.reply("You don't have any active trades.")
+			return
+		}
+
+		await paginateTrades(interaction, activeTrades, "Active Trades")
+	} catch (error) {
+		console.error("Error fetching active trades:", error)
+		await interaction.reply({ content: "An error occurred while fetching your trades.", ephemeral: true })
+	}
+}
+
+async function paginateTrades(interaction, trades, title) {
+	const itemsPerPage = 5
+	let page = 0
+	const maxPages = Math.ceil(trades.length / itemsPerPage) - 1
+
+	const generateEmbed = currentPage => {
+		const start = currentPage * itemsPerPage
+		const end = start + itemsPerPage
+		const pageTrades = trades.slice(start, end)
+
+		return new EmbedBuilder()
+			.setColor("Aqua") // Your chosen color
+			.setTitle(title)
+			.setDescription(
+				pageTrades
+					.map(
+						trade =>
+							`**Item:** ${trade.item} (x${trade.quantity})
+                **With:** <@${trade.targetUserId}>
+                **Status:** ${trade.status}
+                **Date:** ${trade.createdAt.toLocaleDateString()}`
+					)
+					.join("\n\n")
+			)
+			.setFooter({ text: `Page ${currentPage + 1} of ${maxPages + 1}` })
+	}
+
+	const initialEmbed = generateEmbed(page)
+	const msg = await interaction.reply({ embeds: [initialEmbed], fetchReply: true })
+
+	await msg.react("⬅️")
+	await msg.react("➡️")
+
+	const filter = (reaction, user) =>
+		(reaction.emoji.name === "⬅️" || reaction.emoji.name === "➡️") && user.id === interaction.user.id
+	const collector = msg.createReactionCollector({ filter, time: 60000 })
+
+	collector.on("collect", reaction => {
+		if (reaction.emoji.name === "⬅️") {
+			page = (page - 1 + maxPages + 1) % (maxPages + 1) // Loop pages
+		} else {
+			page = (page + 1) % (maxPages + 1)
+		}
+		msg.edit({ embeds: [generateEmbed(page)] })
+		reaction.users.remove(interaction.user.id) // Avoid reacting multiple times
+	})
 }

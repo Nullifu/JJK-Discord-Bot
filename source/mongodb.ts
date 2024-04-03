@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
-import { Collection, MongoClient } from "mongodb"
-import { BossData, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
+import { Collection, MongoClient, ObjectId } from "mongodb"
+import { BossData, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { titles } from "./items jobs.js"
 
 dotenv()
@@ -10,6 +10,7 @@ dotenv()
 const bossCollectionName = "bosses"
 const usersCollectionName = "users"
 const questsCollectioName = "quests"
+const tradeCollectionName = "trades"
 
 const mongoUser = process.env["MONGO_USER"]
 const mongoPassword = process.env["MONGO_PASSWORD"]
@@ -60,7 +61,8 @@ export async function addUser(
 	initialExperience: number = 0,
 	initialHealth: number = 100,
 	initialJob: string = "Student",
-	initialBankBalance: number = 0
+	initialBankBalance: number = 0,
+	initialmaxhealth: number = 100
 ): Promise<{ insertedId?: unknown; error?: string }> {
 	try {
 		await client.connect()
@@ -75,6 +77,7 @@ export async function addUser(
 			grade: initialGrade,
 			experience: initialExperience,
 			health: initialHealth,
+			maxhealth: initialmaxhealth,
 			domain: null,
 			activeTitle: null,
 			unlockedTitles: [],
@@ -1365,21 +1368,205 @@ export async function removeUserQuest(userId, questName) {
 	}
 }
 
-// update user health cant go above 200.
-export async function updateUserrHealth(userId: string, newHealth: number): Promise<void> {
+// update user max health
+export async function updateUserMaxHealth(userId: string, incrementAmount: number): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the health value does not exceed 200
-		const updatedHealth = Math.min(newHealth, 200)
+		// Attempt to find the user's document
+		const user = await usersCollection.findOne({ id: userId })
 
-		await usersCollection.updateOne({ id: userId }, { $set: { health: updatedHealth } })
+		let newMaxHealth = 100
+		if (user && user.maxHealth) {
+			newMaxHealth = user.maxHealth + incrementAmount
+		} else {
+			newMaxHealth += incrementAmount
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { maxHealth: newMaxHealth } }, { upsert: true })
 	} catch (error) {
-		console.error("Error updating user health:", error)
+		console.error("Error updating user max health:", error)
 		throw error
-	} finally {
-		// await client.close()
+	}
+}
+
+// get user max health
+export async function getUserMaxHealth(userId: string): Promise<number> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.maxHealth : 100
+	} catch (error) {
+		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+// create trade request
+export async function createTradeRequest(
+	initiatorId: string,
+	targetUserId: string,
+	item: string,
+	quantity: number
+): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		const tradeRequest = {
+			initiatorId,
+			targetUserId,
+			item,
+			quantity,
+			status: "pending", // Initial status of the trade request
+			createdAt: new Date() // Store the creation time
+		}
+
+		await tradeRequestsCollection.insertOne(tradeRequest)
+	} catch (error) {
+		console.error("Error creating trade request:", error)
+		throw error
+	}
+}
+
+// accept trade request
+export async function acceptTradeRequest(tradeRequestId: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		// Update the status of the trade request to 'accepted'
+		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
+	} catch (error) {
+		console.error("Error accepting trade request:", error)
+		throw error
+	}
+}
+
+// view trade requests
+export async function viewTradeRequests(userId: string): Promise<TradeRequest[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		const tradeRequests = await tradeRequestsCollection.find({ targetUserId: userId }).toArray()
+
+		return tradeRequests.map(doc => ({
+			_id: doc._id,
+			initiatorName: doc.initiatorName,
+			initiatorId: doc.initiatorId,
+			targetUserId: doc.targetUserId,
+			item: doc.item,
+			quantity: doc.quantity,
+			status: doc.status,
+			createdAt: doc.createdAt
+		}))
+	} catch (error) {
+		console.error("Error viewing trade requests:", error)
+		throw error
+	}
+}
+
+// validate trade request
+export async function validateTradeRequest(tradeRequestId: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		const tradeRequest = await tradeRequestsCollection.findOne({ _id: new ObjectId(tradeRequestId) })
+
+		return tradeRequest && tradeRequest.status === "pending"
+	} catch (error) {
+		console.error("Error validating trade request:", error)
+		throw error
+	}
+}
+
+export async function handleTradeAcceptance(tradeRequestId: string, userId: string): Promise<void> {
+	const database = client.db(mongoDatabase)
+	const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+	try {
+		// Fetch the trade request
+		const tradeRequest = await tradeRequestsCollection.findOne({
+			_id: new ObjectId(tradeRequestId),
+			status: "pending",
+			targetUserId: userId // Ensure the acceptor is the target user
+		})
+
+		if (!tradeRequest) {
+			throw new Error("Trade request not found or not valid for this user.")
+		}
+
+		// Decrement the quantity of the item from the initiator's inventory
+		await removeItemFromUserInventory(tradeRequest.initiatorId, tradeRequest.item, tradeRequest.quantity)
+
+		// Increment the quantity of the item for the acceptor's inventory
+		await addItemToUserInventory(tradeRequest.targetUserId, tradeRequest.item, tradeRequest.quantity)
+
+		// Update the trade request's status to 'accepted'
+		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
+	} catch (error) {
+		console.error("Error during trade acceptance:", error)
+		throw error // Consider more specific error handling
+	}
+}
+
+// getPreviousTrades
+export async function getPreviousTrades(userId: string): Promise<TradeRequest[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		const tradeRequests = await tradeRequestsCollection.find({ initiatorId: userId, status: "accepted" }).toArray()
+
+		return tradeRequests.map(doc => ({
+			_id: doc._id,
+			initiatorName: doc.initiatorName,
+			initiatorId: doc.initiatorId,
+			targetUserId: doc.targetUserId,
+			item: doc.item,
+			quantity: doc.quantity,
+			status: doc.status,
+			createdAt: doc.createdAt
+		}))
+	} catch (error) {
+		console.error("Error getting previous trades:", error)
+		throw error
+	}
+}
+
+// getactivetrades
+export async function getActiveTrades(userId: string): Promise<TradeRequest[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const tradeRequestsCollection = database.collection(tradeCollectionName)
+
+		const tradeRequests = await tradeRequestsCollection.find({ initiatorId: userId, status: "pending" }).toArray()
+
+		return tradeRequests.map(doc => ({
+			_id: doc._id,
+			initiatorName: doc.initiatorName,
+			initiatorId: doc.initiatorId,
+			targetUserId: doc.targetUserId,
+			item: doc.item,
+			quantity: doc.quantity,
+			status: doc.status,
+			createdAt: doc.createdAt
+		}))
+	} catch (error) {
+		console.error("Error getting active trades:", error)
+		throw error
 	}
 }

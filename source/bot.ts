@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import { ActionRowBuilder, EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
@@ -11,6 +12,7 @@ import {
 	PermissionFlagsBits,
 	REST,
 	Routes,
+	SelectMenuInteraction,
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
@@ -18,7 +20,9 @@ import cron from "node-cron"
 import {
 	claimQuestsCommand,
 	generateStatsEmbed,
+	handleAcceptTrade,
 	handleAchievementsCommand,
+	handleActiveTradesCommand,
 	handleBalanceCommand,
 	handleBegCommand,
 	handleClanInfoCommand,
@@ -34,6 +38,7 @@ import {
 	handleJujutsuStatsCommand,
 	handleLeaderBoardCommand,
 	handleLookupCommand,
+	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handleQuestCommand,
 	handleRegisterCommand,
@@ -42,20 +47,17 @@ import {
 	handleSupportCommand,
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
+	handleTradeCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
 	handleVoteCommand,
 	handleWorkCommand,
+	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import {
-	handleToggleHeavenlyRestrictionCommand,
-	hasUserReceivedVoteReward,
-	updateBalance,
-	updateUserVoteRewardStatus
-} from "./mongodb.js"
+import { handleToggleHeavenlyRestrictionCommand } from "./mongodb.js"
 
 dotenv()
 
@@ -290,10 +292,6 @@ const commands = [
 		),
 
 	new SlashCommandBuilder()
-		.setName("deposit")
-		.setDescription("Deposit money into your bank account.")
-		.addNumberOption(option => option.setName("amount").setDescription("The amount to deposit").setRequired(true)),
-	new SlashCommandBuilder()
 		.setName("craft")
 		.setDescription("Craft an item using components in your inventory.")
 		.addStringOption(option =>
@@ -326,7 +324,22 @@ const commands = [
 					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
 					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" }
 				)
+		),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Initiate a trade with another user")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user you want to trade with").setRequired(true)
 		)
+		.addStringOption(option =>
+			option.setName("item").setDescription("The item you want to trade").setRequired(true)
+		)
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+		),
+	new SlashCommandBuilder().setName("acceptrade").setDescription("Accept a pending trade request"),
+	new SlashCommandBuilder().setName("previoustrades").setDescription("Shows your history of completed trades"),
+	new SlashCommandBuilder().setName("activetrades").setDescription("View details of a pending trade request")
 ].map(command => command.toJSON())
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
@@ -343,54 +356,9 @@ async function doApplicationCommands() {
 	}
 }
 doApplicationCommands()
-// --------------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------\\
 //
-
-import { Webhook } from "@top-gg/sdk"
-import express from "express"
-const app = express()
-//
-
-const webhook = new Webhook(process.env.TOPGG_WEBHOOK_AUTH)
-
-// Use express.json() middleware for parsing application/json
-app.use(express.json())
-
-app.post(
-	"/webhook",
-	webhook.listener(async vote => {
-		// The 'vote' object contains details about the vote. For example, vote.user is the ID of the user who voted.
-		console.log(vote.user) // Log the user ID of the voter
-
-		const userId = vote.user
-		try {
-			const user = await client.users.fetch(userId)
-			if (!user) {
-				console.error(`Cannot DM user: User with ID ${userId} not found.`)
-				return
-			}
-
-			// Optional: Check if the user has already received a reward
-			const hasReceivedReward = await hasUserReceivedVoteReward(userId)
-			if (hasReceivedReward) {
-				console.log(`User ${userId} already received a vote reward. Skipping DM.`)
-				return // Acknowledge to Top.gg but skip further processing
-			}
-
-			// Send the DM and update the database
-			await user.send("Thanks for voting! You've been granted a bonus reward for supporting the bot.")
-			console.log(`Vote DM sent to ${user.tag}`)
-			const rewardAmount = 150000
-			await updateBalance(userId, rewardAmount)
-			await updateUserVoteRewardStatus(userId) // Update your database accordingly
-		} catch (error) {
-			console.error("Error handling vote webhook:", error)
-			// Handle errors, such as issues with fetching the user, sending the DM, or updating the database
-		}
-	})
-)
-
-app.listen(5000, () => console.log("Server is listening on port 5000"))
+// --------------------------------------------------------------------------------------------------------------------------\\
 //
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
@@ -485,6 +453,9 @@ client.on("interactionCreate", async interaction => {
 		case "sell":
 			await handleSellCommand(chatInputInteraction)
 			break
+		case "trade":
+			await handleTradeCommand(chatInputInteraction)
+			break
 		case "profile":
 			await handleProfileCommand(chatInputInteraction)
 			break
@@ -551,9 +522,32 @@ client.on("interactionCreate", async interaction => {
 		case "beg":
 			await handleBegCommand(chatInputInteraction)
 			break
+		case "acceptrade":
+			await handleAcceptTrade(chatInputInteraction)
+			break
+		case "previoustrades":
+			await handlePreviousTradesCommand(chatInputInteraction)
+			break
+		case "activetrades":
+			await handleActiveTradesCommand(chatInputInteraction)
+			break
+		// Handle more commands as needed
 		default:
-		// Handle unknown commands if needed
+			// Optional: Handle unknown commands
+			break
 	}
+	client.on("interactionCreate", async interaction => {
+		console.log("Interaction received") // Debug log
+		// Handle Select Menu Interactions
+		if (interaction.isStringSelectMenu()) {
+			console.log("Select menu interaction detected") // Debug log
+			const selectMenuInteraction = interaction as SelectMenuInteraction
+			if (selectMenuInteraction.customId === "accept_trade_select") {
+				console.log("Handling trade selection...") // Debug log
+				await processTradeSelection(selectMenuInteraction)
+			}
+		}
+	})
 })
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

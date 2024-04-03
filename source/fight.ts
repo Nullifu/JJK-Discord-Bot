@@ -6,7 +6,6 @@ import { CacheType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js
 import { calculateDamage, getBossDrop, getRandomXPGain } from "./calculate.js"
 import { activeCollectors } from "./command.js"
 import { BossData } from "./interface.js"
-import { DOMAIN_EXPANSIONS } from "./items jobs.js"
 import {
 	addItemToUserInventory,
 	addUserQuestProgress,
@@ -41,10 +40,6 @@ export async function handleBossDeath(
 		)
 	}
 
-	if (opponent.name === "Hakari Kinji") {
-		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
-	}
-
 	await interaction.editReply({ embeds: [embed], components: [] })
 
 	function getrandommoney(min = 25000, max = 50000) {
@@ -54,6 +49,10 @@ export async function handleBossDeath(
 	// Calculate experience they get
 	const experienceGain = getRandomXPGain()
 	const coinsGained = getrandommoney()
+
+	if (opponent.name === "Hakari Kinji") {
+		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+	}
 
 	// Update values in the database
 	activeCollectors.delete(interaction.user.id)
@@ -107,45 +106,7 @@ export async function executeSpecialTechnique({
 	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-	await new Promise(resolve => setTimeout(resolve, 3000)) // Wait for effect
+	await new Promise(resolve => setTimeout(resolve, 2000))
 
-	//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-	return damage // Return the calculated damage for further processing
-}
-
-export async function executeDomainExpansion({
-	interaction,
-	domainInfo,
-	userDomains,
-	userId,
-	primaryEmbed,
-	collectedInteraction
-}) {
-	if (userDomains.has(userId)) {
-		await collectedInteraction.followUp({
-			content: "You can only activate your domain once per fight.",
-			ephemeral: true
-		})
-		return // Domain already activated in this fight
-	}
-
-	const domainActivationDetails = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo.name)
-	if (!domainActivationDetails) {
-		console.error("Invalid domain name.")
-		return // Invalid domain name
-	}
-
-	userDomains.set(userId, true) // Mark domain as activated
-
-	// Configure the embed for the domain activation
-	primaryEmbed
-		.setTitle(`Domain Expansion: ${domainActivationDetails.name}`)
-		.setDescription(domainActivationDetails.description)
-		.setImage(domainActivationDetails.image_URL)
-
-	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-	await new Promise(resolve => setTimeout(resolve, 3000))
-
-	return
+	return damage
 }

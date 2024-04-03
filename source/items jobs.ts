@@ -1,3 +1,15 @@
+import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import {
+	addUserQuestProgress,
+	addUserTechnique,
+	removeItemFromUserInventory,
+	updateUserAchievements,
+	updateUserClan,
+	updateUserExperience,
+	updateUserHeavenlyRestriction,
+	updateUserMaxHealth
+} from "./mongodb.js"
+
 export const digitems = [
 	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07 },
 	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07 },
@@ -285,12 +297,6 @@ export const heavenlyrestrictionskills = [
 	}
 ]
 
-export type items = {
-	name: string
-	rarity: string
-	chance: number
-	price: number
-}
 export function getRandomItem() {
 	const roll = Math.random()
 	let cumulativeChance = 0
@@ -722,5 +728,332 @@ export const questsArray = [
 		itemQuantity: 1,
 		task: "Be blessed with the limitless technique...",
 		totalProgress: 1
+	}
+]
+
+export const INVENTORY_CLAN = {
+	"Demon Vessel": [
+		{
+			name: "Flame Arrow",
+			description: "Fuga...",
+			clan: "Demon Vessel"
+		},
+		{
+			name: "Dismantle",
+			description: "SLICE!",
+			clan: "Demon Vessel"
+		},
+		{
+			name: "Cleave",
+			description: "Embodiment of true fear and terror",
+			clan: "Demon Vessel"
+		}
+	],
+	"Limitless": [
+		{
+			name: "Hollow Purple",
+			description: "Throughout heaven and earth..",
+			clan: "Limitless"
+		},
+		{
+			name: "Lapse: Blue",
+			description: " Jutsushiki Junten・Ao!",
+			clan: "Limitless"
+		},
+		{
+			name: "Limitless: Red",
+			description: "Aka..",
+			clan: "Limitless"
+		}
+	],
+	"Fushiguro": [
+		{
+			name: "Ten Shadows Technique: Divergent Sila Divine General Mahoraga",
+			description: "With this treasure i summon...",
+			clan: "Fushiguro"
+		},
+		{
+			name: "Ten Shadows Technique: Divine Dogs",
+			description: "Divine Dogs!",
+			clan: "Fushiguro"
+		},
+		{
+			name: "Ten Shadows Technique: Nue",
+			description: "bird :3",
+			clan: "Fushiguro"
+		}
+	],
+	"Zenin": [
+		{
+			name: "Zenin Style: Playful Cloud: STRIKE",
+			description: "Vanish!",
+			clan: "Zenin"
+		},
+		{
+			name: "Zenin Style: Cursed Spirit Binding",
+			description: "Bind!",
+			clan: "Zenin"
+		},
+		{
+			name: "Zenin Style: Overwhelming Strike",
+			description: "PERISH!",
+			clan: "Zenin"
+		}
+	],
+	"Disaster Flames": [
+		{
+			name: "Maximum: METEOR!",
+			description: "I'LL TURN YOU INTO A CRISP!",
+			clan: "Disaster Flames"
+		},
+		{
+			name: "Disaster Flames: Lava Bend",
+			description: "Bend to my will!",
+			clan: "Disaster Flames"
+		},
+		{
+			name: "Disaster Flames: Fire Manipulation",
+			description: "PERISH!",
+			clan: "Disaster Flames"
+		}
+	],
+	"Gambler Fever": [
+		{
+			name: "Jackpot: Strike",
+			description: "Let's get lucky...",
+			clan: "Gambler Fever"
+		},
+		{
+			name: "Gambler Fever: Random Rush!",
+			description: "Perish!",
+			clan: "Gambler Fever"
+		},
+		{
+			name: "Gambler Fever: Cargo Rush",
+			description: "Take this!",
+			clan: "Gambler Fever"
+		}
+	],
+	"Okkotsu": [
+		{
+			name: "MAXIMUM: BLACK FLASH",
+			description: "....",
+			clan: "Okkotsu"
+		},
+		{
+			name: "Pure Love: Unleashed Fury",
+			description: "Perish!",
+			clan: "Okkotsu"
+		},
+		{
+			name: "Steel Arm: Freezing Strike",
+			description: "Take this!",
+			clan: "Okkotsu"
+		}
+	]
+}
+
+export interface Item1 {
+	itemName: string
+	description?: string // Optional description
+	effect: (interaction: ChatInputCommandInteraction) => Promise<void>
+	imageUrl?: string
+	rarity?: "Common" | "Rare" | "Special" // If you want a system for rarity
+}
+
+export const items1: Item1[] = [
+	{
+		itemName: "Heavenly Restricted Blood",
+		description: "A cursed blood said to unleash hidden potential... or bring ruin.",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Cursed Choice...")
+				.setDescription("Your fingers close around the blood vial")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000)) // Shorter delay
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the blood, feeling an overwhelming power surge within..."
+				)
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await removeItemFromUserInventory(interaction.user.id, "Heavenly Restricted Blood", 1)
+			await updateUserHeavenlyRestriction(interaction.user.id)
+			await updateUserAchievements(interaction.user.id, "unlockHeavenlyRestriction")
+			await updateUserMaxHealth(interaction.user.id, 25)
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"As the blood enters your body, You feel your cursed energy depleting.. What have you done?"
+				)
+				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+	{
+		itemName: "Sukuna Finger",
+		description: "A cursed finger of the legendary demon, Sukuna. Consuming it carries a grave risk...",
+		rarity: "Special",
+		imageUrl:
+			"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Cursed Choice...")
+				.setDescription(
+					"Your fingers close around the Sukuna Finger, its cursed energy pulsing against your skin..."
+				)
+				.setImage(
+					"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
+				)
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			const randomNumber = Math.floor(Math.random() * 100) + 1
+			let isDemonVessel = false
+
+			await removeItemFromUserInventory(interaction.user.id, "Sukuna Finger", 1)
+
+			if (randomNumber <= 20) {
+				await updateUserClan(interaction.user.id, "Demon Vessel")
+				await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
+				await addUserTechnique(interaction.user.id, "World Cutting Slash")
+				await addUserQuestProgress(interaction.user.id, "Curse King", 1)
+				await updateUserMaxHealth(interaction.user.id, 25)
+				isDemonVessel = true
+			}
+
+			await new Promise(resolve => setTimeout(resolve, 2000)) // Delay
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription("With a decisive motion, you consume the finger.")
+				.setImage("https://media1.tenor.com/m/av-cF54e6TAAAAAC/itadori-jujutsu-kaisen.gif")
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await new Promise(resolve => setTimeout(resolve, 4000)) // Delay
+
+			let embedFinal
+			if (isDemonVessel) {
+				const gains =
+					"You have gained:\n" +
+					"• Clan: Demon Vessel\n" +
+					"• Achievement: becursedDemonVessel\n" +
+					"• Technique: World Cutting Slash\n" +
+					"• Quest Progress: Curse King +1\n" +
+					"• Max Health +25"
+				embedFinal = new EmbedBuilder()
+					.setColor("#4b0082")
+					.setTitle("A 1000 Year Curse...")
+					.setDescription(
+						`Hmm, there might be some use for you yet, human. That flicker of potential... I haven't felt that in centuries. For now you are my vessel.\n\n${gains}`
+					)
+					.setImage(
+						"https://64.media.tumblr.com/68ff493cf57ea889123c25330aa4f150/e506879043dea017-7c/s1280x1920/f5c94f377afcfc48ef33f99019793677938c70fe.gif"
+					)
+			} else {
+				embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("A Cursed Power... Or Not?")
+					.setDescription(
+						"You consume the finger. For a moment, you fear the worst... or the best. Instead, a wave of energy courses through you. You gain 125 experience. Perhaps it wasn't so potent after all."
+					)
+					.setImage(
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1225192293812928512/ezgif-7-b8e5336c85.gif?ex=66203c3d&is=660dc73d&hm=e21bd44a60c7187652d02ff44a9d2ec81017ed2446d88468044c3ccfbed99f8e&"
+					)
+			}
+			await interaction.editReply({ embeds: [embedFinal] })
+		}
+	},
+	{
+		itemName: "Six Eyes",
+		description: "A rare cursed technique that allows the user to see the flow of cursed energy.",
+		rarity: "Special",
+		imageUrl:
+			"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Mystical Choice...")
+				.setDescription(
+					"You stare into the Six Eyes, its cursed energy pulsing against your skin... And the uneasy feeling of infinity."
+				)
+				.setImage(
+					"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless"
+				)
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			const randomNumber = Math.floor(Math.random() * 100) + 1
+			let isLimitless = false
+
+			await removeItemFromUserInventory(interaction.user.id, "Six Eyes", 1)
+			await updateUserExperience(interaction.user.id, 125)
+
+			if (randomNumber <= 30) {
+				await updateUserClan(interaction.user.id, "Limitless")
+				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
+				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
+				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
+				await updateUserMaxHealth(interaction.user.id, 30)
+				isLimitless = true
+			}
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"As you stare into the Six Eyes, you feel an overwhelming power surge within... The uneasy feeling of limitless thoughts.."
+				)
+				.setImage("https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif")
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			let embedFinal
+			if (isLimitless) {
+				const gains =
+					"You have gained:\n" +
+					"• Clan: Demon Vessel\n" +
+					"• Achievement: becursedDemonVessel\n" +
+					"• Technique: World Cutting Slash\n" +
+					"• Quest Progress: Curse King +1\n" +
+					"• Max Health +25"
+				embedFinal = new EmbedBuilder()
+					.setColor("#4b0082")
+					.setTitle("Re-Awoken Potential")
+					.setDescription(
+						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you.\n\n${gains}`
+					)
+					.setImage("hhttps://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
+			} else {
+				embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("A Mystical Power... Or Not?")
+					.setDescription(
+						"The Six Eyes yield little information, but you gain 125 experience. Perhaps a book would be more helpful.."
+					)
+					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif")
+			}
+			await interaction.editReply({ embeds: [embedFinal] })
+		}
 	}
 ]
