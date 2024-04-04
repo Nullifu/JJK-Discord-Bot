@@ -3092,3 +3092,23 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 }
+export async function handleViewTechniquesCommand(interaction) {
+	const userId = interaction.user.id
+
+	try {
+		const userTechniques = await getUserTechniques(userId)
+
+		if (userTechniques.length === 0) {
+			return await interaction.reply({ content: "You do not own any techniques.", ephemeral: true })
+		}
+
+		const embed = new EmbedBuilder()
+			.setTitle(`${interaction.user.username}'s Techniques`)
+			.setDescription(userTechniques.join("\n"))
+
+		await interaction.reply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Error fetching user techniques:", error)
+		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
+	}
+}

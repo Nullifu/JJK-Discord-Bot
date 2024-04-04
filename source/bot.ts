@@ -52,6 +52,7 @@ import {
 	handleTradeCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
+	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
 	handleequiptechniquecommand,
@@ -232,6 +233,7 @@ const commands = [
 			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(true)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
+	new SlashCommandBuilder().setName("viewtechniques").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("techniqueshop").setDescription("Aquire a technique!"),
@@ -536,6 +538,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "selectjob":
 			await handleJobSelection(chatInputInteraction)
+			break
+		case "viewtechniques":
+			await handleViewTechniquesCommand(chatInputInteraction)
 			break
 		case "selectitle":
 			await handleTitleSelectCommand(chatInputInteraction)
