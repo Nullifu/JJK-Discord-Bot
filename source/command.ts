@@ -1743,7 +1743,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 5,
+					damageMultiplier: 16,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1224830505686532146/FAG.png?ex=661eeb4c&is=660c764c&hm=ade3b67e94899e4c951f42269c6b95ee88046e727357d58b2900cccbc691577c&",
 					description: "**You move to the rythem of your opponent.. This truly is a terryfying technique**",
