@@ -2596,37 +2596,30 @@ export async function claimQuestsCommand(interaction) {
 		})
 
 		if (completedQuests.length === 0) {
-			return "You have no completed quests to claim."
+			await interaction.reply("You have no completed quests to claim.")
+			return
 		}
-
-		const claimResults = []
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+			const { coins, experience, items, item, itemQuantity } = questDetails
 
-			const { coins, experience, items } = questDetails
+			await updateBalance(userId, coins)
+			await updateUserExperience(userId, experience)
 
-			const balanceUpdateResult = await updateBalance(userId, coins)
-			const experienceUpdateResult = await updateUserExperience(userId, experience)
-
+			// Handle multiple items
 			if (items && typeof items === "object") {
 				for (const [itemName, quantity] of Object.entries(items)) {
-					const addItemResult = await addItemToUserInventory(userId, itemName, quantity)
-					// Consider adding some error handling or result checking here
+					await addItemToUserInventory(userId, itemName, quantity)
 				}
 			}
+			// Handle single item
+			else if (item) {
+				await addItemToUserInventory(userId, item, itemQuantity || 1)
+			}
 
-			const playerGradeUpdateResult = await updatePlayerGrade(userId)
-			const questRemovalResult = await removeUserQuest(userId, completedQuest.id)
-
-			// Add results to claimResults
-			claimResults.push({
-				questId: completedQuest.id,
-				balanceUpdateResult,
-				experienceUpdateResult,
-				playerGradeUpdateResult,
-				questRemovalResult
-			})
+			await updatePlayerGrade(userId)
+			await removeUserQuest(userId, completedQuest.id)
 		}
 
 		const embed = new EmbedBuilder()
@@ -2634,8 +2627,8 @@ export async function claimQuestsCommand(interaction) {
 			.setTitle("Quest Rewards Claimed")
 			.setDescription("You have successfully claimed your rewards for the following quests:")
 
-		// Add fields for each completed quest and its rewards, adjusted for multiple items
-		completedQuests.forEach(completedQuest => {
+		// Construct fields for the embed message, accommodating both single and multiple items
+		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
 
 			if (questDetails) {
@@ -2643,21 +2636,28 @@ export async function claimQuestsCommand(interaction) {
 					`• **Coins**: ${questDetails.coins} :coin:\n` +
 					`• **Experience**: ${questDetails.experience} :star:\n`
 
+				// Handle multiple items
 				if (questDetails.items && typeof questDetails.items === "object") {
 					for (const [itemName, quantity] of Object.entries(questDetails.items)) {
 						rewardsText += `• **Item**: ${itemName} x${quantity} :package:\n`
 					}
 				}
+				// Handle single item
+				else if (questDetails.item) {
+					rewardsText += `• **Item**: ${questDetails.item} x${questDetails.itemQuantity || 1} :package:\n`
+				}
 
-				// Add a field for each completed quest with its rewards
 				embed.addFields({ name: completedQuest.id, value: rewardsText, inline: false })
 			}
-		})
+		}
 
 		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
 		console.error("Error claiming quests:", error)
-		throw new Error("An error occurred while claiming quests.")
+		await interaction.reply({
+			content: "An error occurred while claiming quests.",
+			ephemeral: true
+		})
 	}
 }
 
