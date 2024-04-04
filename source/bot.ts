@@ -239,6 +239,13 @@ const commands = [
 		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
 		.addIntegerOption(option => option.setName("quantity").setDescription("How many to sell").setRequired(false)),
 	new SlashCommandBuilder()
+		.setName("donate")
+		.setDescription("Donate to the poor!")
+		.addStringOption(option => option.setName("user").setDescription("The user to donate to").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("amount").setDescription("How much you want to donate").setRequired(true)
+		),
+	new SlashCommandBuilder()
 		.setName("leaderboard")
 		.setDescription("View the global leaderboard!")
 		.addStringOption(option =>

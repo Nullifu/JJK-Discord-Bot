@@ -2955,3 +2955,30 @@ async function paginateTrades(interaction, trades, title) {
 		reaction.users.remove(interaction.user.id) // Avoid reacting multiple times
 	})
 }
+
+// handle donate command to donate coins to another user
+export async function handleDonateCommand(interaction) {
+	const targetUser = interaction.options.getUser("user")
+	const amount = interaction.options.getInteger("amount")
+
+	if (amount <= 0) {
+		await interaction.reply({ content: "You must donate a positive amount of coins.", ephemeral: true })
+		return
+	}
+
+	const userId = interaction.user.id
+	const userBalance = await getBalance(userId)
+
+	if (amount > userBalance) {
+		await interaction.reply({ content: "You do not have enough coins to donate.", ephemeral: true })
+		return
+	}
+
+	await updateBalance(userId, -amount)
+	await updateBalance(targetUser.id, amount)
+
+	await interaction.reply({
+		content: `You have donated ${amount} coins to ${targetUser.username}.`,
+		ephemeral: true
+	})
+}
