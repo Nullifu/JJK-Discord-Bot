@@ -322,7 +322,8 @@ const commands = [
 					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
 					{ name: "Six Eyes", value: "Six Eyes" },
 					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
-					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" }
+					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
+					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" }
 				)
 		),
 	new SlashCommandBuilder()

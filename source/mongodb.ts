@@ -1576,3 +1576,17 @@ export async function getActiveTrades(userId: string): Promise<TradeRequest[]> {
 		throw error
 	}
 }
+
+// reset betlimit for user
+export async function resetBetLimit(userId: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { betLimit: 0 } })
+	} catch (error) {
+		console.error("Error resetting bet limit:", error)
+		throw error
+	}
+}

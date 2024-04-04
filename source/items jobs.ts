@@ -3,6 +3,7 @@ import {
 	addUserQuestProgress,
 	addUserTechnique,
 	removeItemFromUserInventory,
+	resetBetLimit,
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
@@ -704,8 +705,10 @@ export const questsArray = [
 		description: "Get Cursed By Sukuna....",
 		coins: 23000,
 		experience: 320,
-		item: "Special-Grade Geo Locator",
-		itemQuantity: 3,
+		items: {
+			"Special-Grade Geo Locator": 3,
+			"Hakari Kinji's Token": 1
+		},
 		task: "Get Cursed By Sukuna.",
 		totalProgress: 1
 	},
@@ -1090,6 +1093,42 @@ export const items1: Item1[] = [
 					await interaction.editReply({ embeds: [embedSecond] })
 				}
 			}, 4000)
+		}
+	},
+	{
+		itemName: "Hakari Kinji's Token",
+		description: "A Token bestowed by Hakari Kinji, the Gambler King.",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Gamblers Choice...")
+				.setDescription("You stare at the token...")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000)) // Shorter delay
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription("With a decisive motion, You flip the coin..")
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await resetBetLimit(interaction.user.id)
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"As the coin flips.. YOU HIT BIG Your daily gamble limit has been reset! [ MORE STUFF TO COME ]"
+				)
+				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
 		}
 	}
 ]
