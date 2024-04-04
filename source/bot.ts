@@ -30,6 +30,7 @@ import {
 	handleDailyCommand,
 	handleDigCommand,
 	handleDomainSelection,
+	handleDonateCommand,
 	handleFightCommand,
 	handleGambleCommand,
 	handleGuideCommand,
@@ -538,6 +539,9 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "activetrades":
 			await handleActiveTradesCommand(chatInputInteraction)
+			break
+		case "donate":
+			await handleDonateCommand(chatInputInteraction)
 			break
 		// Handle more commands as needed
 		default:
