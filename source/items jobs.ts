@@ -926,8 +926,6 @@ export const items1: Item1[] = [
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isDemonVessel = false
 
-			await removeItemFromUserInventory(interaction.user.id, "Sukuna Finger", 1)
-
 			if (randomNumber <= 20) {
 				await updateUserClan(interaction.user.id, "Demon Vessel")
 				await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
@@ -1092,8 +1090,6 @@ export const items1: Item1[] = [
 					await interaction.editReply({ embeds: [embedSecond] })
 				}
 			}, 4000)
-
-			await removeItemFromUserInventory(interaction.user.id, "Special-Grade Geo Locator", 1)
 		}
 	}
 ]

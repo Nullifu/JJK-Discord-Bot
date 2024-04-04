@@ -2607,7 +2607,7 @@ export async function claimQuestsCommand(interaction) {
 			const { coins, item, experience } = questDetails
 
 			const balanceUpdateResult = await updateBalance(userId, coins)
-			const addItemResult = await addItemToUserInventory(userId, item, 1)
+			const addItemResult = await addItemToUserInventory(userId, item, questDetails.itemQuantity || 1)
 			const experienceUpdateResult = await updateUserExperience(userId, experience)
 			const playerGradeUpdateResult = await updatePlayerGrade(userId)
 
