@@ -688,7 +688,7 @@ export const questsArray = [
 		item: "Hakari Kinji's Token",
 		itemQuantity: 1,
 		task: "Defeat Hakari Kinji",
-		totalProgress: 5
+		totalProgress: 1
 	},
 	{
 		name: "Nature of Curses",
@@ -707,7 +707,7 @@ export const questsArray = [
 		experience: 320,
 		items: {
 			"Special-Grade Geo Locator": 3,
-			"Hakari Kinji's Token": 1
+			"Sukuna Finger": 1
 		},
 		task: "Get Cursed By Sukuna.",
 		totalProgress: 1
