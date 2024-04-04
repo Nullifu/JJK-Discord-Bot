@@ -242,7 +242,7 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("donate")
 		.setDescription("Donate to the poor!")
-		.addStringOption(option => option.setName("user").setDescription("The user to donate to").setRequired(true))
+		.addUserOption(option => option.setName("user").setDescription("The user to donate to").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("amount").setDescription("How much you want to donate").setRequired(true)
 		),
