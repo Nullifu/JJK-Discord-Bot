@@ -1392,7 +1392,7 @@ export async function updateUserMaxHealth(userId: string, incrementAmount: numbe
 	}
 }
 
-// get user max health
+// get user max health if maxhealth doesnt exist then create it as 100
 export async function getUserMaxHealth(userId: string): Promise<number> {
 	try {
 		await client.connect()
@@ -1401,12 +1401,15 @@ export async function getUserMaxHealth(userId: string): Promise<number> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.maxHealth : 100
+		return user ? user.maxHealth || 100 : 100
 	} catch (error) {
 		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
 		throw error
+	} finally {
+		// await client.close()
 	}
 }
+
 // create trade request
 export async function createTradeRequest(
 	initiatorId: string,
