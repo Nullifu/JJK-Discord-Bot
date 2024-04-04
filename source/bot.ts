@@ -231,6 +231,9 @@ const commands = [
 		)
 		.addStringOption(option =>
 			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(true)
+		)
+		.addStringOption(option =>
+			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(true)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("viewtechniques").setDescription("Displays your achievements."),
@@ -250,7 +253,12 @@ const commands = [
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
 	new SlashCommandBuilder().setName("questclaim").setDescription("Claim Quest Rewards!"),
 	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
-	new SlashCommandBuilder().setName("balance").setDescription("User Balance"),
+	new SlashCommandBuilder()
+		.setName("balance")
+		.setDescription("User Balance")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to display the balance for").setRequired(false)
+		),
 	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
@@ -389,17 +397,6 @@ async function doApplicationCommands() {
 }
 doApplicationCommands()
 
-async function equipTechniqueAutocomplete(interaction) {
-	if (!(interaction instanceof AutocompleteInteraction)) return
-
-	const focusedValue = interaction.options.getFocused()
-	const userTechniques = await getUserTechniques(interaction.user.id)
-
-	const filteredTechniques = userTechniques.filter(tech => tech.startsWith(focusedValue))
-
-	await interaction.respond(filteredTechniques.slice(0, 25).map(tech => ({ name: tech, value: tech })))
-}
-
 // --------------------------------------------------------------------------------------------------------------------------\\
 //
 // --------------------------------------------------------------------------------------------------------------------------\\
@@ -486,7 +483,6 @@ client.on("interactionCreate", async interaction => {
 		return
 	}
 
-	// For other commands, proceed with the middleware check
 	const shouldProceed = await checkRegistrationMiddleware(interaction)
 	if (!shouldProceed) return
 
@@ -595,7 +591,6 @@ client.on("interactionCreate", async interaction => {
 	}
 	client.on("interactionCreate", async interaction => {
 		console.log("Interaction received") // Debug log
-		// Handle Select Menu Interactions
 		if (interaction.isStringSelectMenu()) {
 			console.log("Select menu interaction detected") // Debug log
 			const selectMenuInteraction = interaction as SelectMenuInteraction
@@ -606,5 +601,13 @@ client.on("interactionCreate", async interaction => {
 		}
 	})
 })
+
+async function equipTechniqueAutocomplete(interaction) {
+	if (!(interaction instanceof AutocompleteInteraction)) return
+	const focusedValue = interaction.options.getFocused()
+	const userTechniques = await getUserTechniques(interaction.user.id)
+	const filteredTechniques = userTechniques.filter(tech => tech.startsWith(focusedValue))
+	await interaction.respond(filteredTechniques.slice(0, 25).map(tech => ({ name: tech, value: tech })))
+}
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

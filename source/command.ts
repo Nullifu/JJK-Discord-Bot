@@ -2973,12 +2973,12 @@ async function paginateTrades(interaction, trades, title) {
 
 	collector.on("collect", reaction => {
 		if (reaction.emoji.name === "⬅️") {
-			page = (page - 1 + maxPages + 1) % (maxPages + 1) // Loop pages
+			page = (page - 1 + maxPages + 1) % (maxPages + 1)
 		} else {
 			page = (page + 1) % (maxPages + 1)
 		}
 		msg.edit({ embeds: [generateEmbed(page)] })
-		reaction.users.remove(interaction.user.id) // Avoid reacting multiple times
+		reaction.users.remove(interaction.user.id)
 	})
 }
 
@@ -2986,20 +2986,16 @@ async function paginateTrades(interaction, trades, title) {
 export async function handleDonateCommand(interaction) {
 	const targetUser = interaction.options.getUser("user")
 	const amount = interaction.options.getInteger("amount")
-
 	if (amount <= 0) {
 		await interaction.reply({ content: "You must donate a positive amount of coins.", ephemeral: true })
 		return
 	}
-
 	const userId = interaction.user.id
 	const userBalance = await getBalance(userId)
-
 	if (amount > userBalance) {
 		await interaction.reply({ content: "You do not have enough coins to donate.", ephemeral: true })
 		return
 	}
-
 	await updateBalance(userId, -amount)
 	await updateBalance(targetUser.id, amount)
 
@@ -3016,7 +3012,7 @@ export async function handleequiptechniquecommand(interaction) {
 	for (let i = 1; i <= 5; i++) {
 		const name = interaction.options.getString(`technique-${i}`)
 		if (name) techniqueNames.push(name)
-		else break // Stop if no more techniques provided
+		else break
 	}
 
 	try {
@@ -3044,11 +3040,22 @@ export async function handleequiptechniquecommand(interaction) {
 			})
 		}
 
-		// 5. Add the techniques to the active set
-		const newActiveTechniques = [...activeTechniques, ...techniqueNames]
+		const newActiveTechniques = [...activeTechniques]
+		for (const techniqueName of techniqueNames) {
+			if (!newActiveTechniques.includes(techniqueName)) {
+				newActiveTechniques.push(techniqueName)
+			}
+		}
 
-		// 6. Update the Database
-		await updateUserActiveTechniques(userId, newActiveTechniques)
+		// 6. Update the Database (only if changes were made)
+		if (newActiveTechniques.length !== activeTechniques.length) {
+			await updateUserActiveTechniques(userId, newActiveTechniques)
+			await interaction.reply(
+				`Techniques equipped: ${techniqueNames.filter(name => !activeTechniques.includes(name)).join(", ")}`
+			)
+		} else {
+			await interaction.reply("All provided techniques were already active.")
+		}
 
 		await interaction.reply(`Techniques equipped: ${techniqueNames.join(", ")}`)
 	} catch (error) {
