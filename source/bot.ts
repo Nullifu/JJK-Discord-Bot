@@ -221,13 +221,15 @@ const commands = [
 		),
 	new SlashCommandBuilder()
 		.setName("equiptechnique")
-		.setDescription("Equips a technique to your active set")
+		.setDescription("Equips techniques to your active set")
 		.addStringOption(option =>
-			option
-				.setName("technique-name")
-				.setDescription("The name of the technique to equip")
-				.setRequired(true)
-				.setAutocomplete(true)
+			option.setName("technique-1").setDescription("First technique").setRequired(true).setAutocomplete(true)
+		)
+		.addStringOption(option =>
+			option.setName("technique-2").setDescription("Second technique").setRequired(false).setAutocomplete(true)
+		)
+		.addStringOption(option =>
+			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(true)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),

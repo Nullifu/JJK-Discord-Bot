@@ -3010,16 +3010,24 @@ export async function handleDonateCommand(interaction) {
 }
 export async function handleequiptechniquecommand(interaction) {
 	const userId = interaction.user.id
-	const techniqueName = interaction.options.getString("technique-name")
+
+	// Collect technique names (up to 5)
+	const techniqueNames = []
+	for (let i = 1; i <= 5; i++) {
+		const name = interaction.options.getString(`technique-${i}`)
+		if (name) techniqueNames.push(name)
+		else break // Stop if no more techniques provided
+	}
 
 	try {
 		// 1. Retrieve User's Techniques
 		const userTechniques = await getUserTechniques(userId)
 
-		// 2. Check if the technique exists in the user's inventory
-		if (!userTechniques.includes(techniqueName)) {
+		// 2. Check if the techniques exist in the user's inventory
+		const invalidTechniques = techniqueNames.filter(name => !userTechniques.includes(name))
+		if (invalidTechniques.length > 0) {
 			return await interaction.reply({
-				content: "You don't own that technique!",
+				content: `You don't own the following techniques: ${invalidTechniques.join(", ")}`,
 				ephemeral: true
 			})
 		}
@@ -3028,24 +3036,25 @@ export async function handleequiptechniquecommand(interaction) {
 		const activeTechniques = await getUserActiveTechniques(userId)
 
 		// 4. Check if there's space in the active set
-		if (activeTechniques.length >= 20) {
+		if (activeTechniques.length + techniqueNames.length > 20) {
+			// Assuming a max limit of 20
 			return await interaction.reply({
 				content: "You cannot have more than 20 active techniques.",
 				ephemeral: true
 			})
 		}
 
-		// 5. Add the technique to the active set
-		const newActiveTechniques = [...activeTechniques, techniqueName]
+		// 5. Add the techniques to the active set
+		const newActiveTechniques = [...activeTechniques, ...techniqueNames]
 
 		// 6. Update the Database
 		await updateUserActiveTechniques(userId, newActiveTechniques)
 
-		await interaction.reply(`Technique '${techniqueName}' equipped!`)
+		await interaction.reply(`Techniques equipped: ${techniqueNames.join(", ")}`)
 	} catch (error) {
-		console.error("Error equipping technique:", error)
+		console.error("Error equipping techniques:", error)
 		await interaction.reply({
-			content: "There was an error equipping your technique. Please try again later.",
+			content: "There was an error equipping your techniques. Please try again later.",
 			ephemeral: true
 		})
 	}
