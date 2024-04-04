@@ -2604,20 +2604,25 @@ export async function claimQuestsCommand(interaction) {
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
 
-			const { coins, item, experience } = questDetails
+			const { coins, experience, items } = questDetails
 
 			const balanceUpdateResult = await updateBalance(userId, coins)
-			const addItemResult = await addItemToUserInventory(userId, item, questDetails.itemQuantity || 1)
 			const experienceUpdateResult = await updateUserExperience(userId, experience)
-			const playerGradeUpdateResult = await updatePlayerGrade(userId)
 
+			if (items && typeof items === "object") {
+				for (const [itemName, quantity] of Object.entries(items)) {
+					const addItemResult = await addItemToUserInventory(userId, itemName, quantity)
+					// Consider adding some error handling or result checking here
+				}
+			}
+
+			const playerGradeUpdateResult = await updatePlayerGrade(userId)
 			const questRemovalResult = await removeUserQuest(userId, completedQuest.id)
 
 			// Add results to claimResults
 			claimResults.push({
 				questId: completedQuest.id,
 				balanceUpdateResult,
-				addItemResult,
 				experienceUpdateResult,
 				playerGradeUpdateResult,
 				questRemovalResult
@@ -2629,16 +2634,20 @@ export async function claimQuestsCommand(interaction) {
 			.setTitle("Quest Rewards Claimed")
 			.setDescription("You have successfully claimed your rewards for the following quests:")
 
-		// Add fields for each completed quest and its rewards
+		// Add fields for each completed quest and its rewards, adjusted for multiple items
 		completedQuests.forEach(completedQuest => {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
 
 			if (questDetails) {
-				// Constructing the reward text
-				const rewardsText =
+				let rewardsText =
 					`• **Coins**: ${questDetails.coins} :coin:\n` +
-					`• **Item**: ${questDetails.item} x1 :package:\n` +
-					`• **Experience**: ${questDetails.experience} :star:`
+					`• **Experience**: ${questDetails.experience} :star:\n`
+
+				if (questDetails.items && typeof questDetails.items === "object") {
+					for (const [itemName, quantity] of Object.entries(questDetails.items)) {
+						rewardsText += `• **Item**: ${itemName} x${quantity} :package:\n`
+					}
+				}
 
 				// Add a field for each completed quest with its rewards
 				embed.addFields({ name: completedQuest.id, value: rewardsText, inline: false })
