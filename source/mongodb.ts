@@ -1368,27 +1368,22 @@ export async function removeUserQuest(userId, questName) {
 	}
 }
 
-// update user max health
-export async function updateUserMaxHealth(userId: string, incrementAmount: number): Promise<void> {
+// update user max health max out at 275
+export async function updateUserMaxHealth(userId: string, newMaxHealth: number): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Attempt to find the user's document
-		const user = await usersCollection.findOne({ id: userId })
+		// Ensure the new max health does not exceed 275
+		const maxHealth = Math.min(newMaxHealth, 275)
 
-		let newMaxHealth = 100
-		if (user && user.maxHealth) {
-			newMaxHealth = user.maxHealth + incrementAmount
-		} else {
-			newMaxHealth += incrementAmount
-		}
-
-		await usersCollection.updateOne({ id: userId }, { $set: { maxHealth: newMaxHealth } }, { upsert: true })
+		await usersCollection.updateOne({ id: userId }, { $set: { maxHealth } })
 	} catch (error) {
 		console.error("Error updating user max health:", error)
 		throw error
+	} finally {
+		// await client.close()
 	}
 }
 
