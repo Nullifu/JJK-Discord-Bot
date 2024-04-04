@@ -83,13 +83,15 @@ export async function addUser(
 			unlockedTitles: [],
 			inventory: [],
 			achievements: [],
-			lastAlertedVersion: [],
 			heavenlyrestriction: null,
 			cursedEnergy: 100,
 			clan: null,
 			techniques: [],
+			activeTechniques: [],
 			heavenlytechniques: [],
-			quests: []
+			activeheavenlytechniques: [],
+			quests: [],
+			betCount: 0
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -99,6 +101,43 @@ export async function addUser(
 		return { error: "Failed to add user." }
 	} finally {
 		await client.close()
+	}
+}
+
+export async function initializeDatabase() {
+	try {
+		console.log("Connecting to database...")
+		await client.connect()
+		const database = client.db(mongoDatabase)
+
+		console.log("Initializing database...")
+		await ensureUserDocumentsHaveActiveTechniques(database)
+		// ... add more initialization functions as needed ...
+	} catch (error) {
+		console.error("Database initialization failed:", error)
+	} finally {
+		await client.close()
+		console.log("Database connection closed.")
+	}
+}
+
+async function ensureUserDocumentsHaveActiveTechniques(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		const usersWithoutActiveTechniques = await usersCollection
+			.find({ activeTechniques: { $exists: false } })
+			.toArray()
+
+		if (usersWithoutActiveTechniques.length > 0) {
+			await usersCollection.updateMany(
+				{ activeTechniques: { $exists: false } },
+				{ $set: { activeTechniques: [] } }
+			)
+			console.log("Added 'activeTechniques' array to existing user documents")
+		}
+	} catch (error) {
+		console.error("Error initializing activeTechniques:", error)
 	}
 }
 
@@ -1583,5 +1622,128 @@ export async function resetBetLimit(userId: string): Promise<void> {
 	} catch (error) {
 		console.error("Error resetting bet limit:", error)
 		throw error
+	}
+}
+
+// get user active techniques if it doesnt exist create it
+export async function getUserActiveTechniques(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.activeTechniques : []
+	} catch (error) {
+		console.error(`Error when retrieving active techniques for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// get user active heavenly techniques
+export async function getUserActiveHeavenlyTechniques(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.activeHeavenlyTechniques : []
+	} catch (error) {
+		console.error(`Error when retrieving active heavenly techniques for user with ID: ${userId}`, error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// update user active techniques limit of 10 if it doesnt exist create it
+export async function updateUserActiveTechniques(userId: string, newActiveTechniques: string[]): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Ensure the new active techniques do not exceed 10
+		const activeTechniques = newActiveTechniques.slice(0, 20)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques } })
+	} catch (error) {
+		console.error("Error updating user active techniques:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+//
+// update user active heavenly techniques if it doesnt exist create it
+export async function updateUserActiveHeavenlyTechniques(
+	userId: string,
+	newActiveHeavenlyTechniques: string[]
+): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Ensure the new active heavenly techniques do not exceed 10
+		const activeHeavenlyTechniques = newActiveHeavenlyTechniques.slice(0, 10)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { activeHeavenlyTechniques } })
+	} catch (error) {
+		console.error("Error updating user active heavenly techniques:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+export async function updateGamblersData(userId, wagerAmount, winnings, losses) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const result = await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$inc: {
+					"gamblersData.amountGambled": wagerAmount,
+					"gamblersData.amountWon": winnings,
+					"gamblersData.amountLost": losses
+				}
+			}
+		)
+
+		if (result.modifiedCount === 1) {
+			console.log("Gamblers data updated successfully.")
+		} else {
+			console.warn("User with specified ID not found for gamblers data update.")
+		}
+	} catch (error) {
+		console.error("Error updating gamblers data:", error)
+	} finally {
+		await client.close()
+	}
+}
+
+// get gamblers data
+export async function getGamblersData(userId) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { gamblersData: 1 } })
+
+		return user ? user.gamblersData : null
+	} catch (error) {
+		console.error("Error getting gamblers data:", error)
+	} finally {
+		await client.close()
 	}
 }

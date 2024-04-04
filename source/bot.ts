@@ -2,6 +2,7 @@
 import { ActionRowBuilder, EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
+	AutocompleteInteraction,
 	ButtonBuilder,
 	ButtonStyle,
 	ChannelType,
@@ -53,12 +54,13 @@ import {
 	handleUseItemCommand,
 	handleVoteCommand,
 	handleWorkCommand,
+	handleequiptechniquecommand,
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import { handleToggleHeavenlyRestrictionCommand } from "./mongodb.js"
+import { getUserTechniques, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
 
 dotenv()
 
@@ -84,26 +86,33 @@ let activities = [
 ]
 let index = 0
 
-client.on("ready", () => {
+client.on("ready", async () => {
 	console.log(`Logged in as ${client.user.tag}!`)
 	client.guilds.cache.forEach(guild => {
 		console.log(`${guild.name} (ID: ${guild.id})`)
 	})
 
-	setInterval(async () => {
-		// Dynamically update the activities list with current member and server counts
-		await updateDynamicActivities()
-
-		// Cycle through the updated activities array
-		if (index === activities.length) index = 0 // Reset index if it's at the end of the array
-		const activity = activities[index]
-		client.user.setPresence({
-			activities: [{ name: activity.name, type: activity.type }],
-			status: "online"
-		})
-		index++
-	}, 60000) // Update every 25 seconds
+	try {
+		await initializeDatabase()
+		console.log("Database initialization completed.")
+	} catch (error) {
+		console.error("Error initializing database:", error)
+	}
 })
+
+setInterval(async () => {
+	// Dynamically update the activities list with current member and server counts
+	await updateDynamicActivities()
+
+	// Cycle through the updated activities array
+	if (index === activities.length) index = 0 // Reset index if it's at the end of the array
+	const activity = activities[index]
+	client.user.setPresence({
+		activities: [{ name: activity.name, type: activity.type }],
+		status: "online"
+	})
+	index++
+}, 60000) // Update every 25 seconds
 
 async function updateDynamicActivities() {
 	let totalMembers = 0
@@ -176,7 +185,7 @@ cron.schedule("*/5 * * * *", async () => {
 	}
 })
 
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -209,6 +218,16 @@ const commands = [
 		.setDescription("User Profile")
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
+		),
+	new SlashCommandBuilder()
+		.setName("equiptechnique")
+		.setDescription("Equips a technique to your active set")
+		.addStringOption(option =>
+			option
+				.setName("technique-name")
+				.setDescription("The name of the technique to equip")
+				.setRequired(true)
+				.setAutocomplete(true)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
@@ -365,6 +384,18 @@ async function doApplicationCommands() {
 	}
 }
 doApplicationCommands()
+
+async function equipTechniqueAutocomplete(interaction) {
+	if (!(interaction instanceof AutocompleteInteraction)) return
+
+	const focusedValue = interaction.options.getFocused()
+	const userTechniques = await getUserTechniques(interaction.user.id)
+
+	const filteredTechniques = userTechniques.filter(tech => tech.startsWith(focusedValue))
+
+	await interaction.respond(filteredTechniques.slice(0, 25).map(tech => ({ name: tech, value: tech })))
+}
+
 // --------------------------------------------------------------------------------------------------------------------------\\
 //
 // --------------------------------------------------------------------------------------------------------------------------\\
@@ -542,6 +573,13 @@ client.on("interactionCreate", async interaction => {
 			break
 		case "donate":
 			await handleDonateCommand(chatInputInteraction)
+			break
+		case "equiptechnique":
+			if (interaction.isAutocomplete()) {
+				await equipTechniqueAutocomplete(interaction)
+			} else {
+				await handleequiptechniquecommand(interaction)
+			}
 			break
 		// Handle more commands as needed
 		default:

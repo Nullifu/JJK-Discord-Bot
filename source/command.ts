@@ -30,6 +30,7 @@ import {
 import { executeSpecialTechnique, handleBossDeath } from "./fight.js"
 import {
 	BossData,
+	buildGamblersProfile,
 	buildQuestEmbed,
 	determineDomainAchievements,
 	formatDomainExpansion,
@@ -68,6 +69,8 @@ import {
 	getBosses,
 	getPreviousTrades,
 	getUserAchievements,
+	getUserActiveHeavenlyTechniques,
+	getUserActiveTechniques,
 	getUserClan,
 	getUserCursedEnergy,
 	getUserDailyData,
@@ -75,7 +78,6 @@ import {
 	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
-	getUserHeavenlyTechniques,
 	getUserInventory,
 	getUserMaxHealth,
 	getUserProfile,
@@ -87,8 +89,10 @@ import {
 	removeItemFromUserInventory,
 	removeUserQuest,
 	updateBalance,
+	updateGamblersData,
 	updatePlayerGrade,
 	updateUserAchievements,
+	updateUserActiveTechniques,
 	updateUserCooldown,
 	updateUserDailyData,
 	updateUserDomainExpansion,
@@ -1215,8 +1219,8 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const userEnergy = await getUserCursedEnergy(userId)
 		let userTechniques: string[] = await (userHeavenlyRestriction
-			? getUserHeavenlyTechniques(userId)
-			: getUserTechniques(userId))
+			? getUserActiveHeavenlyTechniques(userId)
+			: getUserActiveTechniques(userId))
 		const userDomain = await getUserDomain(userId)
 		const userMaxHealth = await getUserMaxHealth(userId)
 		// Ensure userTechniques is an array
@@ -1289,6 +1293,11 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 					label: "Active Quests",
 					description: "View your active quests",
 					value: "activeQuests"
+				},
+				{
+					label: "Gamblers Profile",
+					description: "View your gambling data!",
+					value: "gamblerProfile"
 				}
 			])
 
@@ -1308,6 +1317,9 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				} else if (selectedOption === "activeQuests") {
 					const questEmbed = await buildQuestEmbed(userId, interaction)
 					await i.update({ embeds: [questEmbed] }) // Display the main profile embed
+				} else if (selectedOption === "gamblerProfile") {
+					const gamblerEmbed = await buildGamblersProfile(userId, interaction)
+					await i.update({ embeds: [gamblerEmbed] })
 				}
 			}
 		})
@@ -1492,8 +1504,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	// Fetch techniques based on whether the user has Heavenly Restriction
 	const userTechniques = hasHeavenlyRestriction
-		? await getUserHeavenlyTechniques(interaction.user.id)
-		: await getUserTechniques(interaction.user.id)
+		? await getUserActiveHeavenlyTechniques(interaction.user.id)
+		: await getUserActiveTechniques(interaction.user.id)
 
 	const battleOptions = [
 		{
@@ -2343,15 +2355,19 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		//
 		let resultMessage = ""
 		if (didWin) {
-			await updateBalance(userId, betAmount * 2) // Win: simply return the bet amount for demonstration
+			const winnings = betAmount * 2
+			await updateBalance(userId, winnings)
+			await updateGamblersData(userId, betAmount, winnings, 0) // Update gambling stats
 			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won $${formatNumberWithCommas(
-				betAmount * 2
+				winnings
 			)} coins!`
 		} else {
-			await updateBalance(userId, -betAmount)
+			const losses = betAmount
+			await updateBalance(userId, -losses)
+			await updateGamblersData(userId, betAmount, 0, losses) // Update gambling stats
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
-			}! You lost $${formatNumberWithCommas(betAmount)} coins.`
+			}! You lost $${formatNumberWithCommas(losses)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
@@ -2991,4 +3007,79 @@ export async function handleDonateCommand(interaction) {
 		content: `You have donated ${amount} coins to ${targetUser.username}.`,
 		ephemeral: true
 	})
+}
+export async function handleequiptechniquecommand(interaction) {
+	const userId = interaction.user.id
+	const techniqueName = interaction.options.getString("technique-name")
+
+	try {
+		// 1. Retrieve User's Techniques
+		const userTechniques = await getUserTechniques(userId)
+
+		// 2. Check if the technique exists in the user's inventory
+		if (!userTechniques.includes(techniqueName)) {
+			return await interaction.reply({
+				content: "You don't own that technique!",
+				ephemeral: true
+			})
+		}
+
+		// 3. Retrieve the current active techniques
+		const activeTechniques = await getUserActiveTechniques(userId)
+
+		// 4. Check if there's space in the active set
+		if (activeTechniques.length >= 20) {
+			return await interaction.reply({
+				content: "You cannot have more than 20 active techniques.",
+				ephemeral: true
+			})
+		}
+
+		// 5. Add the technique to the active set
+		const newActiveTechniques = [...activeTechniques, techniqueName]
+
+		// 6. Update the Database
+		await updateUserActiveTechniques(userId, newActiveTechniques)
+
+		await interaction.reply(`Technique '${techniqueName}' equipped!`)
+	} catch (error) {
+		console.error("Error equipping technique:", error)
+		await interaction.reply({
+			content: "There was an error equipping your technique. Please try again later.",
+			ephemeral: true
+		})
+	}
+}
+
+// handle unequip technique command
+export async function handleUnequipTechniqueCommand(interaction) {
+	const userId = interaction.user.id
+	const techniqueName = interaction.options.getString("technique-name")
+
+	try {
+		// 1. Retrieve User's Active Techniques
+		const activeTechniques = await getUserActiveTechniques(userId)
+
+		// 2. Check if the technique is already equipped
+		if (!activeTechniques.includes(techniqueName)) {
+			return await interaction.reply({
+				content: "That technique is not currently equipped.",
+				ephemeral: true
+			})
+		}
+
+		// 3. Remove the technique from the active set
+		const newActiveTechniques = activeTechniques.filter(technique => technique !== techniqueName)
+
+		// 4. Update the Database
+		await updateUserActiveTechniques(userId, newActiveTechniques)
+
+		await interaction.reply(`Technique '${techniqueName}' unequipped!`)
+	} catch (error) {
+		console.error("Error unequipping technique:", error)
+		await interaction.reply({
+			content: "There was an error unequipping your technique. Please try again later.",
+			ephemeral: true
+		})
+	}
 }

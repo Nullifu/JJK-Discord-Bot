@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js"
 import { ObjectId } from "mongodb"
 import { questsArray } from "./items jobs.js"
-import { getUserQuests } from "./mongodb.js"
+import { getGamblersData, getUserQuests } from "./mongodb.js"
 
 export interface Item {
 	id: number
@@ -161,4 +161,29 @@ function createProgressBar(current, total) {
 	const progressChars = "█".repeat(progressLength)
 	const emptyChars = "░".repeat(emptyLength)
 	return progressChars + emptyChars
+}
+
+// export async build gamblers profile
+export async function buildGamblersProfile(userId, interaction) {
+	const gamblersData = await getGamblersData(userId)
+
+	const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Gambler Stats`).setColor("#FFD700") // Gold-ish color associated with gambling
+		.setDescription(`
+            Total Amount Gambled: $${formatNumberWithCommas(gamblersData.amountGambled)}
+            Total Amount Won: $${formatNumberWithCommas(gamblersData.amountWon)}
+            Total Amount Lost: $${formatNumberWithCommas(gamblersData.amountLost)}
+
+            **Win/Loss Ratio:** ${calculateWinLossRatio(gamblersData.amountWon, gamblersData.amountLost)} 
+        `)
+
+	return embed
+}
+
+function calculateWinLossRatio(amountWon, amountLost) {
+	if (amountLost === 0) return "∞" // Avoid division by zero
+	return (amountWon / amountLost).toFixed(2)
+}
+
+function formatNumberWithCommas(number) {
+	return number.toLocaleString("en-US") // Formats with commas for US locale
 }
