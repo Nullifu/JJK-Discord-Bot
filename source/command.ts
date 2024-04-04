@@ -925,19 +925,29 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 
 				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
 			} else {
-				const coinsFound = userSearching.get(inter.user.id).coinsFound
-				const itemFound = getRandomItem().name
+				const coinsFound = userSearching.get(inter.user.id)?.coinsFound ?? 0 // Handle if userSearching.get(...) is null
+				const itemFound = getRandomItem()
 
-				// final embed but not so final
+				// Embed description handling
+				let itemDescription = "You've finished your searching. You gathered a total of "
+				itemDescription += `${coinsFound} coins`
+
+				if (itemFound) {
+					itemDescription += `, You also found a ${itemFound.name}!`
+				} else {
+					itemDescription += ", but you didn't find any items this time."
+				}
+
 				const finalEmbed = new EmbedBuilder()
 					.setColor("#0099ff")
 					.setTitle("Search Completed")
-					.setDescription(
-						`You've finished your searching. You gathered a total of ${coinsFound} coins, You also found a ${itemFound}!`
-					)
+					.setDescription(itemDescription)
 					.setTimestamp()
 
 				updateBalance(inter.user.id, coinsFound)
+				if (itemFound) {
+					addItemToUserInventory(inter.user.id, itemFound.name, 1) // Only add if the item exists
+				}
 
 				await inter.editReply({
 					content: "Your search has concluded.",
