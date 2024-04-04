@@ -542,7 +542,7 @@ client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
 			console.log("Select menu interaction detected") // Debug log
 			const selectMenuInteraction = interaction as SelectMenuInteraction
-			if (selectMenuInteraction.customId === "accept_trade_select") {
+			if (interaction.customId.startsWith("accept_trade_select_")) {
 				console.log("Handling trade selection...") // Debug log
 				await processTradeSelection(selectMenuInteraction)
 			}

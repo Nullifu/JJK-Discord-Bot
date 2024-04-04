@@ -2783,10 +2783,8 @@ export async function handleTradeCommand(interaction) {
 					"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
 				inline: false
 			}
-			// Expiration Notice
 		)
 		.setFooter({ text: "Trade requests are time-sensitive and subject to item availability." })
-		.setTimestamp() // Sets the current timestamp
 
 	// --- Send to the Target User ---
 	try {
@@ -2823,7 +2821,7 @@ export async function handleAcceptTrade(interaction) {
 
 		// Construct the select menu
 		const selectMenu = new SelectMenuBuilder()
-			.setCustomId("accept_trade_select")
+			.setCustomId(`accept_trade_select_${Date.now()}`) // Modified line
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
@@ -2847,17 +2845,18 @@ export async function handleAcceptTrade(interaction) {
 
 export async function processTradeSelection(interaction) {
 	const selectedTradeId = interaction.values[0]
+	await interaction.deferReply()
 
 	try {
 		// Assume you have a function to handle the trade acceptance logic
 		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
-		await interaction.update({
+		await interaction.editReply({
 			content: "Trade request accepted successfully!",
 			components: []
 		})
 	} catch (error) {
 		console.error("Error handling trade acceptance:", error)
-		await interaction.update({
+		await interaction.editReply({
 			content: "An error occurred while trying to accept the trade request.",
 			components: []
 		})

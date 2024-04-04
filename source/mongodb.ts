@@ -1457,9 +1457,15 @@ export async function viewTradeRequests(userId: string): Promise<TradeRequest[]>
 		const database = client.db(mongoDatabase)
 		const tradeRequestsCollection = database.collection(tradeCollectionName)
 
-		const tradeRequests = await tradeRequestsCollection.find({ targetUserId: userId }).toArray()
+		const tradeRequests = await tradeRequestsCollection
+			.find({
+				targetUserId: userId,
+				status: "pending"
+			})
+			.toArray()
 
 		return tradeRequests.map(doc => ({
+			// Keep your mapping logic
 			_id: doc._id,
 			initiatorName: doc.initiatorName,
 			initiatorId: doc.initiatorId,
@@ -1490,7 +1496,6 @@ export async function validateTradeRequest(tradeRequestId: string): Promise<bool
 		throw error
 	}
 }
-
 export async function handleTradeAcceptance(tradeRequestId: string, userId: string): Promise<void> {
 	const database = client.db(mongoDatabase)
 	const tradeRequestsCollection = database.collection(tradeCollectionName)
@@ -1508,11 +1513,10 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 		}
 
 		// Decrement the quantity of the item from the initiator's inventory
-		await removeItemFromUserInventory(tradeRequest.initiatorId, tradeRequest.item, tradeRequest.quantity)
+		await removeItemFromUserInventory(tradeRequest.initiatorId, tradeRequest.item, Number(tradeRequest.quantity))
 
 		// Increment the quantity of the item for the acceptor's inventory
-		await addItemToUserInventory(tradeRequest.targetUserId, tradeRequest.item, tradeRequest.quantity)
-
+		await addItemToUserInventory(tradeRequest.targetUserId, tradeRequest.item, Number(tradeRequest.quantity))
 		// Update the trade request's status to 'accepted'
 		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
 	} catch (error) {
@@ -1520,7 +1524,6 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 		throw error // Consider more specific error handling
 	}
 }
-
 // getPreviousTrades
 export async function getPreviousTrades(userId: string): Promise<TradeRequest[]> {
 	try {
