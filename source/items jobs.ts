@@ -7,8 +7,7 @@ import {
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
-	updateUserHeavenlyRestriction,
-	updateUserMaxHealth
+	updateUserHeavenlyRestriction
 } from "./mongodb.js"
 
 export const digitems = [
@@ -905,7 +904,6 @@ export const items1: Item1[] = [
 			await removeItemFromUserInventory(interaction.user.id, "Heavenly Restricted Blood", 1)
 			await updateUserHeavenlyRestriction(interaction.user.id)
 			await updateUserAchievements(interaction.user.id, "unlockHeavenlyRestriction")
-			await updateUserMaxHealth(interaction.user.id, 25)
 
 			await new Promise(resolve => setTimeout(resolve, 4000))
 
@@ -947,7 +945,6 @@ export const items1: Item1[] = [
 				await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
 				await addUserTechnique(interaction.user.id, "World Cutting Slash")
 				await addUserQuestProgress(interaction.user.id, "Curse King", 1)
-				await updateUserMaxHealth(interaction.user.id, 25)
 				isDemonVessel = true
 			}
 
@@ -969,8 +966,7 @@ export const items1: Item1[] = [
 					"• Clan: Demon Vessel\n" +
 					"• Achievement: becursedDemonVessel\n" +
 					"• Technique: World Cutting Slash\n" +
-					"• Quest Progress: Curse King +1\n" +
-					"• Max Health +25"
+					"• Quest Progress: Curse King +1\n"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("A 1000 Year Curse...")
@@ -1025,7 +1021,6 @@ export const items1: Item1[] = [
 				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
 				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
-				await updateUserMaxHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 
@@ -1095,7 +1090,6 @@ export const items1: Item1[] = [
 				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
-				await updateUserMaxHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 
