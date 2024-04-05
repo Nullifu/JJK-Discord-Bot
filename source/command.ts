@@ -3126,7 +3126,7 @@ export async function handleUnequipTechniqueCommand(interaction) {
 	}
 }
 //view techniques command gorup them by clan like the jujutsustats command
-export async function handleViewTechniquesCommand	(interaction: ChatInputCommandInteraction) {
+export async function handleViewTechniquesCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
 
 	try {

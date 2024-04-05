@@ -224,16 +224,46 @@ const commands = [
 		.setName("equiptechnique")
 		.setDescription("Equips techniques to your active set")
 		.addStringOption(option =>
-			option.setName("technique-1").setDescription("First technique").setRequired(true).setAutocomplete(true)
+			option.setName("technique-1").setDescription("First technique").setRequired(true).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-2").setDescription("Second technique").setRequired(false).setAutocomplete(true)
+			option.setName("technique-2").setDescription("Second technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(true)
+			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(true)
+			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-5").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-6").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-7").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-8").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-9").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-10").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-11").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-12").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+		)
+		.addStringOption(option =>
+			option.setName("technique-13").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("viewtechniques").setDescription("Displays your achievements."),
