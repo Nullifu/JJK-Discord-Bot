@@ -35,7 +35,7 @@ import {
 	getRandomAmount,
 	getRandomLocation
 } from "./calculate.js"
-import { executeSpecialTechnique, generateHealthBar, handleBossDeath } from "./fight.js"
+import { executeSpecialTechnique, generateHealthBar, getJujutsuFlavorText, handleBossDeath } from "./fight.js"
 import {
 	BossData,
 	buildGamblersProfile,
@@ -60,7 +60,6 @@ import {
 	lookupItems,
 	questsArray
 } from "./items jobs.js"
-import { getJujutsuFlavorText } from "./jujutsuFlavor.js"
 import {
 	addItemToUserInventory,
 	addUser,
@@ -1812,7 +1811,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
-					imageUrl: "https://media1.tenor.com/m/4Sks7q4iU8UAAAAC/sukuna-jogo.gif",
+					imageUrl:
+						"https://media.tenor.com/dxCqtMk5iEIAAAAC/jujutsu-kaisen-shibuya-arc-sukuna-flame-arrow.gif",
 					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
 					fieldValue: selectedValue,
 					userTechniques,

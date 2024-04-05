@@ -1057,7 +1057,7 @@ export const items1: Item1[] = [
 					.setDescription(
 						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you.\n\n${gains}`
 					)
-					.setImage("hhttps://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
+					.setImage("https://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
 			} else {
 				embedFinal = new EmbedBuilder()
 					.setColor("#006400")
@@ -1123,7 +1123,7 @@ export const items1: Item1[] = [
 					.setColor("#4b0082")
 					.setTitle("Holy Power")
 					.setDescription(`Unleash the destructive potential of your Six Eyes... \n\n${gains}`)
-					.setImage("hhttps://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
+					.setImage("https://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
 			} else {
 				embedFinal = new EmbedBuilder()
 					.setColor("#006400")

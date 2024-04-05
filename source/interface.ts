@@ -42,8 +42,8 @@ export interface TradeRequest {
 }
 
 export const healthMultipliersByGrade = {
-	"special grade": 2.5, // Boss health is doubled for the highest grade
-	"grade 1": 2.0,
+	"special grade": 3.0, // Boss health is doubled for the highest grade
+	"grade 1": 2.5,
 	"semi-grade 1": 1.7,
 	"grade 2": 1.6,
 	"grade 3": 1.3,

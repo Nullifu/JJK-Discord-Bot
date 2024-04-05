@@ -186,7 +186,7 @@ cron.schedule("*/5 * * * *", async () => {
 	}
 })
 
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -392,7 +392,8 @@ const commands = [
 					{ name: "Six Eyes", value: "Six Eyes" },
 					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
 					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
-					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" }
+					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
+					{ name: "Sacred Eye", value: "Sacred Eye" }
 				)
 		),
 	new SlashCommandBuilder()

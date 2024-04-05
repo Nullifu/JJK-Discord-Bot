@@ -91,8 +91,7 @@ export async function addUser(
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
 			quests: [],
-			betCount: 0,
-			statusEffects: []
+			betCount: 0
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -133,9 +132,7 @@ async function ensureUserDocumentsHaveActiveTechniques(database) {
 		if (usersWithoutActiveTechniques.length > 0) {
 			await usersCollection.updateMany(
 				{ activeTechniques: { $exists: false } },
-				{ $set: { activeTechniques: [] } },
-				{ statusEffects: { $exists: false } },
-				{ $set: { statusEffects: [] } }
+				{ $set: { activeTechniques: [] } }
 			)
 			console.log("Added 'activeTechniques' array to existing user documents")
 		}

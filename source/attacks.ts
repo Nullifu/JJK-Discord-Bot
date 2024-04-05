@@ -279,12 +279,7 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Adapted: Blast",
 			probability: 20,
 			baseDamage: 30,
-			embedUpdate: embed =>
-				embed
-					.setImage(
-						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
-					)
-					.setDescription("......")
+			embedUpdate: embed => embed.setDescription("......")
 		}
 	],
 
@@ -354,8 +349,6 @@ export const attacks: Record<string, Attack[]> = {
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	]
-
-	// ... Add the other attacks for Gojo, Todo, and Megumi ...
 }
 
 export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): Attack {
@@ -366,7 +359,6 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 	}
 	const scaledRandomNumber = Math.random() * totalProbability
 
-	// 2. Find the choice where the cumulative probability exceeds the 'scaled' random number
 	let cumulativeProbability = 0
 	for (const attack of attacks) {
 		cumulativeProbability += attack.probability
@@ -380,13 +372,9 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 }
 
 const statusEffectsDescriptions = {
-	"Prayer Song": {
-		description: "Reduces incoming damage by 20%",
-		effect: "20% REDUC"
-	},
 	"Gamblers Limit": {
-		description: "Inc. dmg taken & dealt by 30%",
-		effect: "20% REDUC"
+		description: "Gamble for a chance to increase or decrease damage!",
+		effect: "? ? ?"
 	},
 	"Curse King": {
 		description: "Dismantles the enemy from within..",
@@ -400,10 +388,11 @@ const statusEffectsDescriptions = {
 		description: "You adapt to the enemy...",
 		effect: "15% INC 25% REDUC"
 	},
-	"World Cutting Slash": {
-		description: "Bleed effect on the enemy!",
-		effect: "25% Bleed"
+	"Prayer Song": {
+		description: "Reduces incoming damage by 20%",
+		effect: "20% REDUC"
 	}
+
 	// Define other status effects here
 }
 
@@ -420,43 +409,42 @@ export async function applyPrayerSongEffect(userId) {
 
 export async function applyIdleDeathsGamble(userId) {
 	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+	const currentEffects = await getUserStatusEffects(userId)
 
 	// Check if "Prayer Song" is already active to avoid duplication
-	if (!currentEffects.includes("Idle Deaths Gamble")) {
-		const updatedEffects = [...currentEffects, "Idle Deaths Gamble"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	if (!currentEffects.includes("Gamblers Limit")) {
+		const updatedEffects = [...currentEffects, "Gamblers Limit"]
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 export async function applyAdaption(userId) {
 	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+	const currentEffects = await getUserStatusEffects(userId)
 
 	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Adaption")) {
 		const updatedEffects = [...currentEffects, "Adaption"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 
 export async function applyWorldCuttingSlash(userId) {
 	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("World Cutting Slash")) {
 		const updatedEffects = [...currentEffects, "World Cutting Slash"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 
 export async function fetchAndFormatStatusEffects(userId) {
-	const statusEffects = await getUserStatusEffects(userId) // Returns array of effect names
+	const statusEffects = await getUserStatusEffects(userId)
 	const formattedEffects = statusEffects.map(effect => {
 		if (statusEffectsDescriptions[effect]) {
 			return `${effect} (${statusEffectsDescriptions[effect].description})`
 		}
-		return effect // Fallback in case the effect is not found
+		return effect
 	})
 
 	return formattedEffects.length > 0 ? formattedEffects.join(", ") : "None"
@@ -467,23 +455,46 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 	let damageReduction = 1 // No reduction initially
 	let damageIncrease = 1 // No increase initially
 
-	if (statusEffects.includes("Prayer Song")) {
-		damageReduction *= 0.2 // Apply 20% damage reduction
+	// DOMAIN EFFECTS
+	if (statusEffects.includes("Curse King")) {
+		damageReduction *= 0.2
+		damageIncrease *= 1.2
+	}
+	if (statusEffects.includes("Limitless")) {
+		damageReduction *= 0.2
+		damageIncrease *= 1.2
 	}
 	if (statusEffects.includes("Gamblers Limit")) {
-		damageReduction *= 0.2 // Apply 20% damage reduction
-		damageIncrease *= 1.5 // Assuming Gamblers Limit also increases damage taken by 50%
+		const gambleOutcome = Math.random()
+		if (gambleOutcome < 0.5) {
+			damageReduction *= 0.3
+			damageIncrease *= 1.3
+		} else {
+			damageReduction *= 1.1
+			damageIncrease *= 0.7
+		}
 	}
-	if (statusEffects.includes("Adaption")) {
-		// Assuming you handle health increase elsewhere or adjust here directly
-		damageReduction *= 0.75 // Apply 25% damage reduction
-	}
-	// Apply damageIncrease before damageReduction for demonstration; adjust as needed
-	damage *= damageIncrease
-	damage *= damageReduction
+	if (statusEffects.includes("Beach Bum")) {
+		damageReduction *= 0.2
+		damageIncrease *= 1.2
 
-	// Handle effects like "World Cutting Slash" separately, as they may not directly affect damage calculation
-	return damage
+		//
+		//
+		// TECHNIQUE EFFECTS
+		if (statusEffects.includes("Adaption")) {
+			damageReduction *= 0.85
+			damageIncrease *= 1.2
+		}
+		if (statusEffects.includes("Prayer Song")) {
+			damageReduction *= 0.2
+		}
+		// Apply damageIncrease before damageReduction for demonstration; adjust as needed
+		damage *= damageIncrease
+		damage *= damageReduction
+
+		// Handle effects like "World Cutting Slash" separately, as they may not directly affect damage calculation
+		return damage
+	}
 }
 
 export async function applyStatusEffect(userId, effectName) {
