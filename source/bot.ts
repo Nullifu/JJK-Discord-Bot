@@ -236,31 +236,31 @@ const commands = [
 			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-5").setDescription("4 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-5").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-6").setDescription("5 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-6").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-6").setDescription("6 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-7").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-7").setDescription("7 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-8").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-8").setDescription("8 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-9").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-9").setDescription("9 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-10").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-10").setDescription("10 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-11").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-11").setDescription("11 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-12").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-12").setDescription("12 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
 			option.setName("technique-13").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)

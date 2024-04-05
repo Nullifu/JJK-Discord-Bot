@@ -111,7 +111,7 @@ export async function initializeDatabase() {
 		const database = client.db(mongoDatabase)
 
 		console.log("Initializing database...")
-		await ensureUserDocumentsHaveActiveTechniques(database)
+		await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		// ... add more initialization functions as needed ...
 	} catch (error) {
 		console.error("Database initialization failed:", error)
@@ -121,23 +121,33 @@ export async function initializeDatabase() {
 	}
 }
 
-async function ensureUserDocumentsHaveActiveTechniques(database) {
+async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database) {
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		const usersWithoutActiveTechniques = await usersCollection
-			.find({ activeTechniques: { $exists: false } })
+		// Find users without activeTechniques or statusEffect arrays
+		const usersToUpdate = await usersCollection
+			.find({
+				$or: [{ activeTechniques: { $exists: false } }, { statusEffect: { $exists: false } }]
+			})
 			.toArray()
 
-		if (usersWithoutActiveTechniques.length > 0) {
+		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
-				{ activeTechniques: { $exists: false } },
-				{ $set: { activeTechniques: [] } }
+				{
+					$or: [{ activeTechniques: { $exists: false } }, { statusEffect: { $exists: false } }]
+				},
+				{
+					$set: {
+						activeTechniques: { $exists: true, $ne: [] }, // Ensures activeTechniques is added if missing
+						statusEffect: { $exists: true, $ne: [] } // Ensures statusEffect is added if missing
+					}
+				}
 			)
-			console.log("Added 'activeTechniques' array to existing user documents")
+			console.log("Added 'activeTechniques' and 'statusEffect' arrays to existing user documents")
 		}
 	} catch (error) {
-		console.error("Error initializing activeTechniques:", error)
+		console.error("Error initializing activeTechniques and statusEffect:", error)
 	}
 }
 
