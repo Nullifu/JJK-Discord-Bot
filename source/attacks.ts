@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "discord.js"
+import { getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
 
 export interface Attack {
 	name: string
@@ -376,4 +377,122 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 
 	// If this point is reached, fallback to the last item
 	return attacks[attacks.length - 1]
+}
+
+const statusEffectsDescriptions = {
+	"Prayer Song": {
+		description: "Reduces incoming damage by 20%",
+		effect: "20% REDUC"
+	},
+	"Gamblers Limit": {
+		description: "Inc. dmg taken & dealt by 30%",
+		effect: "20% REDUC"
+	},
+	"Curse King": {
+		description: "Dismantles the enemy from within..",
+		effect: "Dismantle"
+	},
+	"Limitless Info": {
+		description: "Reduces incoming damage by 35%",
+		effect: "35% REDUC"
+	},
+	"Adaption": {
+		description: "You adapt to the enemy...",
+		effect: "15% INC 25% REDUC"
+	},
+	"World Cutting Slash": {
+		description: "Bleed effect on the enemy!",
+		effect: "25% Bleed"
+	}
+	// Define other status effects here
+}
+
+export async function applyPrayerSongEffect(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+
+	// Check if "Prayer Song" is already active to avoid duplication
+	if (!currentEffects.includes("Prayer Song")) {
+		const updatedEffects = [...currentEffects, "Prayer Song"]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
+
+export async function applyIdleDeathsGamble(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+
+	// Check if "Prayer Song" is already active to avoid duplication
+	if (!currentEffects.includes("Idle Deaths Gamble")) {
+		const updatedEffects = [...currentEffects, "Idle Deaths Gamble"]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
+export async function applyAdaption(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+
+	// Check if "Prayer Song" is already active to avoid duplication
+	if (!currentEffects.includes("Adaption")) {
+		const updatedEffects = [...currentEffects, "Adaption"]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
+
+export async function applyWorldCuttingSlash(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+
+	// Check if "Prayer Song" is already active to avoid duplication
+	if (!currentEffects.includes("World Cutting Slash")) {
+		const updatedEffects = [...currentEffects, "World Cutting Slash"]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
+
+export async function fetchAndFormatStatusEffects(userId) {
+	const statusEffects = await getUserStatusEffects(userId) // Returns array of effect names
+	const formattedEffects = statusEffects.map(effect => {
+		if (statusEffectsDescriptions[effect]) {
+			return `${effect} (${statusEffectsDescriptions[effect].description})`
+		}
+		return effect // Fallback in case the effect is not found
+	})
+
+	return formattedEffects.length > 0 ? formattedEffects.join(", ") : "None"
+}
+
+export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
+	let damage = baseDamage
+	let damageReduction = 1 // No reduction initially
+	let damageIncrease = 1 // No increase initially
+
+	if (statusEffects.includes("Prayer Song")) {
+		damageReduction *= 0.2 // Apply 20% damage reduction
+	}
+	if (statusEffects.includes("Gamblers Limit")) {
+		damageReduction *= 0.2 // Apply 20% damage reduction
+		damageIncrease *= 1.5 // Assuming Gamblers Limit also increases damage taken by 50%
+	}
+	if (statusEffects.includes("Adaption")) {
+		// Assuming you handle health increase elsewhere or adjust here directly
+		damageReduction *= 0.75 // Apply 25% damage reduction
+	}
+	// Apply damageIncrease before damageReduction for demonstration; adjust as needed
+	damage *= damageIncrease
+	damage *= damageReduction
+
+	// Handle effects like "World Cutting Slash" separately, as they may not directly affect damage calculation
+	return damage
+}
+
+export async function applyStatusEffect(userId, effectName) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId)
+
+	// Check if the status effect is already active to avoid duplication
+	if (!currentEffects.includes(effectName)) {
+		const updatedEffects = [...currentEffects, effectName]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
 }

@@ -95,6 +95,10 @@ export function getRandomLocation() {
 	]
 	return locations[Math.floor(Math.random() * locations.length)]
 }
+export function getRandomFight() {
+	const locations = ["Prepare Yourself", "Get Ready", "Get Set", "Ready?", "Fight!"]
+	return locations[Math.floor(Math.random() * locations.length)]
+}
 
 export function getRandomEarnings(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1) + min)

@@ -194,32 +194,45 @@ export const DOMAIN_EXPANSIONS = [
 	{
 		name: "Idle Deaths Gamble",
 		description: "Turn up the volume..",
-		image_URL: "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+		image_URL: "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif",
+		open_image_URL: "https://media1.tenor.com/m/oHYuFbvLxiEAAAAC/hakari-kinji-kinji-hakari.gif",
+		statusEffect: "Gamblers Limit"
 	},
 	{
 		name: "Unlimited Void",
 		description: "Considered one of the most powerful techniques in Jujutsu",
-		image_URL: "https://media1.tenor.com/m/GXV82xs5pFgAAAAC/jujutsu-kaisen-satoru-gojo.gif"
+		image_URL: "https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif",
+		open_image_URL: "https://media1.tenor.com/m/fwRP3JXVRisAAAAC/infinite-void-jujutsu-kaisen.gif",
+		statusEffect: "Limitless Info"
 	},
 	{
 		name: "Malevolent Shrine",
 		description: "Embodiment of true fear and terror",
-		image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif"
+		image_URL: "https://media1.tenor.com/m/NiiOh24vaJIAAAAC/domain-expansion-sukuna.gif",
+		open_image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif",
+		statusEffect: "Curse King"
 	},
 	{
 		name: "Coffin of the Iron Mountain",
 		description: "This domain resembles the inside of an active volcano.",
-		image_URL: "https://media1.tenor.com/m/dNMYzPN4wF0AAAAC/jogo-jjk-jogoat.gif"
+		image_URL: "https://media1.tenor.com/m/dNMYzPN4wF0AAAAC/jogo-jjk-jogoat.gif",
+		open_image_URL: "https://media1.tenor.com/m/qZ7Lpc3upLoAAAAd/domain-expansion-jogo-jjk.gif",
+		statusEffect: "Burning Volcano"
 	},
 	{
 		name: "Self-Embodiment of Perfection",
 		description: "The true nature of the soul.",
-		image_URL: "https://media1.tenor.com/m/419YEH3WEwIAAAAC/jujutsu-kaisen-mahito.gif"
+		image_URL: "https://media1.tenor.com/m/419YEH3WEwIAAAAC/jujutsu-kaisen-mahito.gif",
+		open_image_URL: "https://media1.tenor.com/m/uHtT8X1azEwAAAAd/mahito-mechamaru.gif",
+		statusEffect: "Nature of the Soul"
 	},
 	{
 		name: "Horizon of the Captivating Skandha",
 		description: "This domain resembles a beach",
-		image_URL: "https://media1.tenor.com/m/K_3LZ71V7s0AAAAd/nanami-nanamin.gif"
+		image_URL: "https://media1.tenor.com/m/K_3LZ71V7s0AAAAd/nanami-nanamin.gif",
+		open_image_URL:
+			"https://cdn.discordapp.com/attachments/1186763190835613748/1225701628141895702/ezgif-2-ce4a35009a.gif?ex=66221698&is=660fa198&hm=b74ba35be1175ae166624f1efbc90b502c8b636b60410d807799673f9d821c88&",
+		statusEffect: "Beach Bum"
 	}
 ]
 
@@ -682,7 +695,7 @@ export const benefactors = [
 export const questsArray = [
 	{
 		name: "Gamblers Fever",
-		description: "Defeat Hakari Kinji 5 Times!",
+		description: "Defeat Hakari Kinji 3 Times!",
 		coins: 45000,
 		experience: 470,
 		item: "Hakari Kinji's Token",
@@ -706,7 +719,7 @@ export const questsArray = [
 		coins: 23000,
 		experience: 320,
 		items: {
-			"Special-Grade Geo Locator": 3,
+			"Special-Grade Geo Locator": 2,
 			"Sukuna Finger": 1
 		},
 		task: "Get Cursed By Sukuna.",
@@ -1058,6 +1071,72 @@ export const items1: Item1[] = [
 		}
 	},
 	{
+		itemName: "Sacred Eye",
+		description: "? ? ?",
+		rarity: "Special",
+		imageUrl:
+			"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Mystical Choice...")
+				.setDescription(
+					"Following your recent encounter with the Six Eyes, you find yourself drawn to a new power... The Sacred Eye."
+				)
+
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			const randomNumber = Math.floor(Math.random() * 100) + 1
+			let isLimitless = false
+
+			if (randomNumber <= 30) {
+				await updateUserClan(interaction.user.id, "Limitless")
+				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
+				await addUserTechnique(interaction.user.id, "Prayer Song")
+				await updateUserMaxHealth(interaction.user.id, 30)
+				isLimitless = true
+			}
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"Your commitment to the Sacred Eye is unwavering. You feel an overwhelming power surge within... The uneasy feeling of limitless thoughts.."
+				)
+				.setImage("https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif")
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			let embedFinal
+			if (isLimitless) {
+				const gains =
+					"You have gained:\n" +
+					"• Technique: Hollow Purple: Nuke\n" +
+					"• Technique: Prayer Song\n" +
+					"• Max Health +30"
+				embedFinal = new EmbedBuilder()
+					.setColor("#4b0082")
+					.setTitle("Holy Power")
+					.setDescription(`Unleash the destructive potential of your Six Eyes... \n\n${gains}`)
+					.setImage("hhttps://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
+			} else {
+				embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("A Mystical Power... Or Not?")
+					.setDescription(
+						"The Six Eyes arent ready to be improved, but you gain 125 experience. Perhaps trying again would help.."
+					)
+					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif")
+			}
+			await interaction.editReply({ embeds: [embedFinal] })
+		}
+	},
+	{
 		itemName: "Special-Grade Geo Locator",
 		description: "A mystical device used to locate cursed objects and individuals.",
 		rarity: "Special",
@@ -1103,31 +1182,33 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			const embedFirst = new EmbedBuilder()
-				.setColor("#4b0082")
-				.setTitle("A Gamblers Choice...")
-				.setDescription("You stare at the token...")
-			await interaction.followUp({ embeds: [embedFirst] })
-
-			await new Promise(resolve => setTimeout(resolve, 2000)) // Shorter delay
-
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000")
-				.setTitle("Power or Peril?")
-				.setDescription("With a decisive motion, You flip the coin..")
-			await interaction.editReply({ embeds: [embedSecond] })
-
 			await resetBetLimit(interaction.user.id)
-
-			await new Promise(resolve => setTimeout(resolve, 4000))
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
-				.setTitle("Power Unleashed")
+				.setTitle("Gamblers Potential")
 				.setDescription(
 					"As the coin flips.. YOU HIT BIG Your daily gamble limit has been reset! [ MORE STUFF TO COME ]"
 				)
-				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+	{
+		itemName: "Jogos (Fixed) Balls",
+		description: "Jogos (Fixed) Balls",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addUserTechnique(interaction.user.id, "Disaster Flames: Full Fire Formation")
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("BALLS!")
+				.setDescription(
+					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!  [ MORE STUFF TO COME ]\n+Disaster Flames: Full Fire Formation"
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
 		}
 	}

@@ -91,7 +91,8 @@ export async function addUser(
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
 			quests: [],
-			betCount: 0
+			betCount: 0,
+			statusEffects: []
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -132,7 +133,9 @@ async function ensureUserDocumentsHaveActiveTechniques(database) {
 		if (usersWithoutActiveTechniques.length > 0) {
 			await usersCollection.updateMany(
 				{ activeTechniques: { $exists: false } },
-				{ $set: { activeTechniques: [] } }
+				{ $set: { activeTechniques: [] } },
+				{ statusEffects: { $exists: false } },
+				{ $set: { statusEffects: [] } }
 			)
 			console.log("Added 'activeTechniques' array to existing user documents")
 		}
@@ -1745,5 +1748,51 @@ export async function getGamblersData(userId) {
 		console.error("Error getting gamblers data:", error)
 	} finally {
 		await client.close()
+	}
+}
+
+// update user status effects array of multiple status effects
+export async function updateUserStatusEffects(userId: string, statusEffects: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Ensure the new status effects do not exceed 10
+		const effects = statusEffects.slice(0, 5)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: effects } })
+	} catch (error) {
+		console.error("Error updating user status effects:", error)
+		throw error
+	} finally {
+		// await client.close()
+	}
+}
+
+// GET USER STATUSEFFECTS
+export async function getUserStatusEffects(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.statusEffects : []
+	} catch (error) {
+		console.error(`Error when retrieving status effects for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// remove all status effects
+export async function removeAllStatusEffects(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: [] } })
+	} catch (error) {
+		console.error("Error removing all status effects:", error)
+		throw error
 	}
 }

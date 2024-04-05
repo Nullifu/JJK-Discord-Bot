@@ -10,6 +10,7 @@ import {
 	addItemToUserInventory,
 	addUserQuestProgress,
 	getUserGrade,
+	removeAllStatusEffects,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserExperience,
@@ -59,7 +60,7 @@ export async function handleBossDeath(
 	await updateUserHealth(interaction.user.id, 100)
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
-	await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+	await removeAllStatusEffects(interaction.user.id)
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
@@ -109,4 +110,11 @@ export async function executeSpecialTechnique({
 	await new Promise(resolve => setTimeout(resolve, 2000))
 
 	return damage
+}
+
+export function generateHealthBar(current, max) {
+	const totalBars = 10
+	const filledBars = Math.round((current / max) * totalBars)
+	const emptyBars = totalBars - filledBars
+	return "▮".repeat(filledBars) + "▯".repeat(emptyBars)
 }
