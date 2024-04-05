@@ -239,7 +239,7 @@ const commands = [
 			option.setName("technique-5").setDescription("4 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
-			option.setName("technique-6").setDescription("5 technique").setRequired(false).setAutocomplete(false)
+			option.setName("technique-63123").setDescription("5 technique").setRequired(false).setAutocomplete(false)
 		)
 		.addStringOption(option =>
 			option.setName("technique-6").setDescription("6 technique").setRequired(false).setAutocomplete(false)
