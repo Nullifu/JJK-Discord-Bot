@@ -125,29 +125,55 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		// Find users without activeTechniques or statusEffect arrays
+		// Find users without activeTechniques or statusEffects arrays
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ activeTechniques: { $exists: false } }, { statusEffect: { $exists: false } }]
+				$or: [
+					{ activeTechniques: { $exists: false } },
+					{ statusEffects: { $exists: false } } // Check for documents missing statusEffects
+				]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [{ activeTechniques: { $exists: false } }, { statusEffect: { $exists: false } }]
+					$or: [
+						{ activeTechniques: { $exists: false } },
+						{ statusEffects: { $exists: false } } // Include statusEffects in the condition
+					]
 				},
 				{
 					$set: {
-						activeTechniques: { $exists: true, $ne: [] }, // Ensures activeTechniques is added if missing
-						statusEffect: { $exists: true, $ne: [] } // Ensures statusEffect is added if missing
+						activeTechniques: [], // Initialize as empty array if missing
+						statusEffects: [] // Initialize statusEffects as empty array if missing
 					}
 				}
 			)
-			console.log("Added 'activeTechniques' and 'statusEffect' arrays to existing user documents")
+			console.log("Added 'activeTechniques' and 'statusEffects' arrays to existing user documents")
 		}
 	} catch (error) {
-		console.error("Error initializing activeTechniques and statusEffect:", error)
+		console.error("Error initializing activeTechniques and statusEffects:", error)
+	}
+}
+
+async function removeIncorrectStatusEffectField(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		// This operation will remove the statusEffect field from all documents where it exists
+		const updateResult = await usersCollection.updateMany(
+			{ statusEffect: { $exists: true } },
+			{ $unset: { statusEffect: "" } } // The empty string "" indicates that the field should be removed
+		)
+
+		if (updateResult.modifiedCount > 0) {
+			console.log(`Removed 'statusEffect' field from ${updateResult.modifiedCount} documents.`)
+		} else {
+			console.log("No documents had the 'statusEffect' field or it was already removed.")
+		}
+	} catch (error) {
+		console.error("Error removing the 'statusEffect' field:", error)
 	}
 }
 
@@ -1427,12 +1453,23 @@ export async function updateUserMaxHealth(userId: string, newMaxHealth: number):
 		// Ensure the new max health does not exceed 275
 		const maxHealth = Math.min(newMaxHealth, 275)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { maxHealth } })
+		// Get the current health of the user
+		const user = await usersCollection.findOne({ id: userId })
+		if (user) {
+			let { currentHealth } = user
+			// Ensure current health does not exceed the new max health
+			if (currentHealth > maxHealth) {
+				currentHealth = maxHealth
+			}
+
+			// Update the user's maxHealth and currentHealth if necessary
+			await usersCollection.updateOne({ id: userId }, { $set: { maxHealth, currentHealth } })
+		}
 	} catch (error) {
 		console.error("Error updating user max health:", error)
 		throw error
 	} finally {
-		// await client.close()
+		// await client.close(); // Close the connection if necessary
 	}
 }
 
