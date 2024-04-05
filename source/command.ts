@@ -3125,58 +3125,24 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 }
-//view techniques command gorup them by clan like the jujutsustats command
-export async function handleViewTechniquesCommand(interaction: ChatInputCommandInteraction) {
+// get all user techniques and display them in fancy embed discord.js v14
+export async function handleViewTechniquesCommand(interaction) {
 	const userId = interaction.user.id
 
 	try {
-		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
-		let userTechniques: string[] = await (userHeavenlyRestriction
-			? getUserActiveHeavenlyTechniques(userId)
-			: getUserActiveTechniques(userId))
+		const userTechniques = await getUserTechniques(userId)
 
-		// Ensure userTechniques is an array
-		userTechniques = Array.isArray(userTechniques) ? userTechniques : []
+		if (userTechniques.length === 0) {
+			return await interaction.reply({ content: "You do not own any techniques.", ephemeral: true })
+		}
 
-		// Enrich techniques with clan information
-		const userTechniquesWithClan = userTechniques.map(technique => {
-			return {
-				name: technique,
-				clan: findTechniqueClan(technique) || "Unknown"
-			}
-		})
-
-		// Group techniques by clan
-		const techniquesByClan = userTechniquesWithClan.reduce((acc, technique) => {
-			acc[technique.clan] = acc[technique.clan] || []
-			acc[technique.clan].push(technique.name)
-			return acc
-		}, {})
-
-		// Sort clans and techniques alphabetically and create the display string
-		const techniquesDisplay = Object.keys(techniquesByClan)
-			.sort()
-			.map(clan => {
-				const techniques = techniquesByClan[clan]
-					.sort()
-					.map(technique => `> • ${simplifyTechniqueName(technique)}`) // Using block quote for indentation
-				return `**${clan}**\n${techniques.join("\n")}` // Clan name in bold
-			})
-			.join("\n\n")
-
-		// Construct the embed
 		const embed = new EmbedBuilder()
-			.setTitle(`${interaction.user.username}'s Jujutsu Profile`)
-			.setColor("#4B0082")
-			.setDescription("TECHNIQUES")
-			.addFields({ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay, inline: false })
+			.setTitle(`${interaction.user.username}'s Techniques`)
+			.setDescription(userTechniques.join("\n"))
 
 		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
-		console.error("Error handling JujutsuStatsCommand:", error)
-		await interaction.reply({
-			content: "An unexpected error occurred while retrieving your Jujutsu profile. Please try again later.",
-			ephemeral: true
-		})
+		console.error("Error fetching user techniques:", error)
+		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
 	}
 }
