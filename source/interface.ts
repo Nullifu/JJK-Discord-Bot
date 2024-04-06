@@ -56,6 +56,7 @@ export interface BossData {
 	max_health: number
 	current_health: number // Note the underscore and lowercase
 	image_url: string // Note the underscore and lowercase
+	grade: string
 }
 
 export interface Item {

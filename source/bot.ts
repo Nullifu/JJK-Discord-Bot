@@ -2,7 +2,6 @@
 import { ActionRowBuilder, EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
-	AutocompleteInteraction,
 	ButtonBuilder,
 	ButtonStyle,
 	ChannelType,
@@ -32,8 +31,10 @@ import {
 	handleDigCommand,
 	handleDomainSelection,
 	handleDonateCommand,
+	handleEquipTechniqueCommand,
 	handleFightCommand,
 	handleGambleCommand,
+	handleGiveItemCommand,
 	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
@@ -50,18 +51,18 @@ import {
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
+	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
-	handleequiptechniquecommand,
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import { getUserTechniques, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
+import { handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
 
 dotenv()
 
@@ -78,9 +79,6 @@ const client = new Client({
 
 let activities = [
 	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
-	{ name: "Gojo’s explanations", type: ActivityType.Listening },
-	{ name: "with Sukuna’s fingers", type: ActivityType.Playing },
-	{ name: "Domain Expansion theories", type: ActivityType.Watching },
 	{ name: "The Shibuya Incident", type: ActivityType.Playing },
 	{ name: "Exchange Event", type: ActivityType.Competing },
 	{ name: "/register", type: ActivityType.Listening }
@@ -186,7 +184,7 @@ cron.schedule("*/5 * * * *", async () => {
 	}
 })
 
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -220,56 +218,9 @@ const commands = [
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
 		),
-	new SlashCommandBuilder()
-		.setName("equiptechnique")
-		.setDescription("Equips techniques to your active set")
-		.addStringOption(option =>
-			option.setName("technique-1").setDescription("First technique").setRequired(true).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-2").setDescription("Second technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-3").setDescription("Third technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-4").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-5").setDescription("4 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-63123").setDescription("5 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-6").setDescription("6 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-7").setDescription("7 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-8").setDescription("8 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-9").setDescription("9 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-10").setDescription("10 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-11").setDescription("11 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-12").setDescription("12 technique").setRequired(false).setAutocomplete(false)
-		)
-		.addStringOption(option =>
-			option.setName("technique-13").setDescription("Fourth technique").setRequired(false).setAutocomplete(false)
-		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
-	new SlashCommandBuilder().setName("viewtechniques").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
-	new SlashCommandBuilder().setName("techniqueshop").setDescription("Aquire a technique!"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
@@ -281,8 +232,6 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
-	new SlashCommandBuilder().setName("questclaim").setDescription("Claim Quest Rewards!"),
-	new SlashCommandBuilder().setName("domainselection").setDescription("Manifest your Domain!"),
 	new SlashCommandBuilder()
 		.setName("balance")
 		.setDescription("User Balance")
@@ -293,8 +242,6 @@ const commands = [
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
-	new SlashCommandBuilder().setName("quest").setDescription("Get a quest!"),
-	new SlashCommandBuilder().setName("activequests").setDescription("View your active quests."),
 	new SlashCommandBuilder()
 		.setName("sell")
 		.setDescription("Sell an item from your inventory.")
@@ -351,35 +298,34 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("lookup")
 		.setDescription("Looks up an item and displays information about it.")
-		.addStringOption(
-			option =>
-				option
-					.setName("name")
-					.setDescription("The name of the item to lookup")
-					.setRequired(true)
-					.addChoices(...itemChoices) // Add choices dynamically
+		.addStringOption(option =>
+			option
+				.setName("name")
+				.setDescription("The name of the item to lookup")
+				.setRequired(true)
+				.addChoices(...itemChoices)
 		),
 
 	new SlashCommandBuilder()
 		.setName("craft")
 		.setDescription("Craft an item using components in your inventory.")
 		.addStringOption(option =>
-			option
-				.setName("item")
-				.setDescription("The item you want to craft")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Prison Realm", value: "prison_realm" },
-					{ name: "Six Eyes", value: "six_eyes" },
-					{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
-					{ name: "Domain Token", value: "domain_token" },
-					{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" },
-					{ name: "Special-Grade Geo Locator", value: "special_locator" }
-				)
+			option.setName("item").setDescription("The item you want to craft").setRequired(true).addChoices(
+				{ name: "Prison Realm", value: "prison_realm" },
+				{ name: "Six Eyes", value: "six_eyes" },
+				{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
+				{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" },
+				//
+				{ name: "Limitless Token", value: "limitless_token" },
+				{ name: "Malevolent Token", value: "malevolent_token" },
+				{ name: "Dagon's Token", value: "dagon_token" },
+				{ name: "Volcano Token", value: "volcano_token" },
+				{ name: "Mutual Token", value: "mutual_token" }
+			)
 		)
 		.addIntegerOption(option => option.setName("quantity").setDescription("How many to craft.").setRequired(false)),
 	new SlashCommandBuilder()
-		.setName("useitem") // Command name as it will appear in Discord
+		.setName("useitem")
 		.setDescription("Use an item from your inventory")
 		.addStringOption(option =>
 			option
@@ -398,19 +344,136 @@ const commands = [
 		),
 	new SlashCommandBuilder()
 		.setName("trade")
-		.setDescription("Initiate a trade with another user")
-		.addUserOption(option =>
-			option.setName("user").setDescription("The user you want to trade with").setRequired(true)
-		)
+		.setDescription("Trading Command.")
 		.addStringOption(option =>
-			option.setName("item").setDescription("The item you want to trade").setRequired(true)
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
 		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
 		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		),
-	new SlashCommandBuilder().setName("acceptrade").setDescription("Accept a pending trade request"),
-	new SlashCommandBuilder().setName("previoustrades").setDescription("Shows your history of completed trades"),
-	new SlashCommandBuilder().setName("activetrades").setDescription("View details of a pending trade request")
+	new SlashCommandBuilder()
+		.setName("quests")
+		.setDescription("Manage your quests.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Get", value: "get" },
+					{ name: "View", value: "view" },
+					{ name: "Claim", value: "claim" }
+				)
+		),
+	new SlashCommandBuilder()
+		.setName("technique")
+		.setDescription("Manage your techniques.")
+		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View your equipped techniques."))
+		.addSubcommand(subcommand => subcommand.setName("unequip").setDescription("Unequip a technique."))
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("equip")
+				.setDescription("Equip a technique.")
+				.addStringOption(option =>
+					option
+						.setName("technique")
+						.setDescription("The technique to equip")
+						.setRequired(true)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique2")
+						.setDescription("Second technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique10")
+						.setDescription("Tenth technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique3")
+						.setDescription("Third technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique4")
+						.setDescription("Fourth technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique5")
+						.setDescription("Fifth technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique7")
+						.setDescription("Seventh technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique8")
+						.setDescription("Eight technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique9")
+						.setDescription("Ninth technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("shop")
+				.setDescription("View the technique shop.")
+				.addStringOption(option =>
+					option
+						.setName("category")
+						.setDescription("The shop category to view")
+						.setRequired(true)
+						.addChoices({ name: "Domains", value: "domains" }, { name: "Techniques", value: "skills" })
+				)
+		),
+
+	// ADMIN ONLY COMMANDS
+	new SlashCommandBuilder()
+		.setName("giveitem")
+		.setDescription("Gives an item to a specified user (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("ID of the user to give the item to").setRequired(true)
+		)
+		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
+		)
 ].map(command => command.toJSON())
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
@@ -470,17 +533,6 @@ client.on("interactionCreate", async interaction => {
 
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
-	if (interaction.commandName === "ping") {
-		const before = Date.now()
-		await interaction.deferReply()
-		const latency = Date.now() - before
-		await interaction.editReply(`Pong! Latency is ${latency}ms. API Latency is ${Math.round(client.ws.ping)}ms.`)
-		return
-	}
-})
-
-client.on("interactionCreate", async interaction => {
-	if (!interaction.isChatInputCommand()) return
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
@@ -516,129 +568,149 @@ client.on("interactionCreate", async interaction => {
 
 	const shouldProceed = await checkRegistrationMiddleware(interaction)
 	if (!shouldProceed) return
+	else if (commandName === "technique") {
+		const subcommand = interaction.options.getSubcommand()
 
-	switch (commandName) {
-		case "balance":
-			await handleBalanceCommand(chatInputInteraction)
-			break
-		case "sell":
-			await handleSellCommand(chatInputInteraction)
-			break
-		case "trade":
-			await handleTradeCommand(chatInputInteraction)
-			break
-		case "profile":
-			await handleProfileCommand(chatInputInteraction)
-			break
-		case "techniqueshop":
-			await handleTechniqueShopCommand(chatInputInteraction)
-			break
-		case "activequests":
-			await viewQuestsCommand(chatInputInteraction)
-			break
-		case "inventory":
-			await handleInventoryCommand(chatInputInteraction)
-			break
-		case "dig":
-			await handleDigCommand(chatInputInteraction)
-			break
-		case "work":
-			await handleWorkCommand(chatInputInteraction)
-			break
-		case "daily":
-			await handleDailyCommand(chatInputInteraction)
-			break
-		case "craft":
-			await handleCraftCommand(chatInputInteraction)
-			break
-		case "domainselection":
-			await handleDomainSelection(chatInputInteraction)
-			break
-		case "quest":
-			await handleQuestCommand(chatInputInteraction)
-			break
-		case "fight":
-			await handleFightCommand(chatInputInteraction)
-			break
-		case "questclaim":
-			await claimQuestsCommand(chatInputInteraction)
-			break
-		case "selectjob":
-			await handleJobSelection(chatInputInteraction)
-			break
-		case "viewtechniques":
-			await handleViewTechniquesCommand(chatInputInteraction)
-			break
-		case "selectitle":
-			await handleTitleSelectCommand(chatInputInteraction)
-			break
-		case "search":
-			await handleSearchCommand(chatInputInteraction)
-			break
-		case "useitem":
-			await handleUseItemCommand(chatInputInteraction)
-			break
-		case "achievements":
-			await handleAchievementsCommand(chatInputInteraction)
-			break
-		case "jujutsustatus":
-			await handleJujutsuStatsCommand(chatInputInteraction)
-			break
-		case "leaderboard":
-			await handleLeaderBoardCommand(chatInputInteraction)
-			break
-		case "toggleheavenlyrestriction":
-			await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
-			break
-		case "gamble":
-			await handleGambleCommand(chatInputInteraction)
-			break
-		case "beg":
-			await handleBegCommand(chatInputInteraction)
-			break
-		case "acceptrade":
-			await handleAcceptTrade(chatInputInteraction)
-			break
-		case "previoustrades":
-			await handlePreviousTradesCommand(chatInputInteraction)
-			break
-		case "activetrades":
-			await handleActiveTradesCommand(chatInputInteraction)
-			break
-		case "donate":
-			await handleDonateCommand(chatInputInteraction)
-			break
-		case "equiptechnique":
-			if (interaction.isAutocomplete()) {
-				await equipTechniqueAutocomplete(interaction)
-			} else {
-				await handleequiptechniquecommand(interaction)
-			}
-			break
-		// Handle more commands as needed
-		default:
-			// Optional: Handle unknown commands
-			break
-	}
-	client.on("interactionCreate", async interaction => {
-		console.log("Interaction received") // Debug log
-		if (interaction.isStringSelectMenu()) {
-			console.log("Select menu interaction detected") // Debug log
-			const selectMenuInteraction = interaction as SelectMenuInteraction
-			if (interaction.customId.startsWith("accept_trade_select_")) {
-				console.log("Handling trade selection...") // Debug log
-				await processTradeSelection(selectMenuInteraction)
-			}
+		switch (subcommand) {
+			case "view":
+				await handleViewTechniquesCommand(interaction)
+				break
+			case "unequip":
+				await handleUnequipTechniqueCommand(interaction)
+				break
+			case "equip":
+				await handleEquipTechniqueCommand(interaction) // Make sure to correct this to use the appropriate function
+				break
+			case "shop":
+				const category = interaction.options.getString("category") // This is how you correctly access a subcommand option
+				if (category === "domains") {
+					await handleDomainSelection(interaction)
+				} else if (category === "skills") {
+					await handleTechniqueShopCommand(interaction)
+				}
+				break
+			default:
+				await interaction.reply({ content: "Unknown subcommand.", ephemeral: true })
 		}
-	})
-})
+	} else if (commandName === "trade") {
+		const action = interaction.options.getString("action")
 
-async function equipTechniqueAutocomplete(interaction) {
-	if (!(interaction instanceof AutocompleteInteraction)) return
-	const focusedValue = interaction.options.getFocused()
-	const userTechniques = await getUserTechniques(interaction.user.id)
-	const filteredTechniques = userTechniques.filter(tech => tech.startsWith(focusedValue))
-	await interaction.respond(filteredTechniques.slice(0, 25).map(tech => ({ name: tech, value: tech })))
-}
+		switch (action) {
+			case "initiate":
+				await handleTradeCommand(interaction)
+				break
+			case "accept":
+				await handleAcceptTrade(interaction)
+				break
+			case "previous":
+				await handlePreviousTradesCommand(interaction)
+				break
+			case "view":
+				await handleActiveTradesCommand(interaction)
+				break
+			default:
+				await interaction.reply({ content: "Unknown action.", ephemeral: true })
+		}
+	} else if (commandName === "quests") {
+		const action = interaction.options.getString("action")
+
+		switch (action) {
+			case "get":
+				await handleQuestCommand(interaction)
+				break
+			case "view":
+				await viewQuestsCommand(interaction)
+				break
+			case "claim":
+				await claimQuestsCommand(interaction)
+				break
+			default:
+		}
+	} else {
+		// Handling other commands based on their commandName
+		switch (commandName) {
+			case "balance":
+				await handleBalanceCommand(chatInputInteraction)
+				break
+			case "sell":
+				await handleSellCommand(chatInputInteraction)
+				break
+			case "profile":
+				await handleProfileCommand(chatInputInteraction)
+				break
+
+			case "inventory":
+				await handleInventoryCommand(chatInputInteraction)
+				break
+			case "dig":
+				await handleDigCommand(chatInputInteraction)
+				break
+			case "work":
+				await handleWorkCommand(chatInputInteraction)
+				break
+			case "daily":
+				await handleDailyCommand(chatInputInteraction)
+				break
+			case "craft":
+				await handleCraftCommand(chatInputInteraction)
+				break
+
+			case "fight":
+				await handleFightCommand(chatInputInteraction)
+				break
+
+			case "selectjob":
+				await handleJobSelection(chatInputInteraction)
+				break
+
+			case "selectitle":
+				await handleTitleSelectCommand(chatInputInteraction)
+				break
+			case "search":
+				await handleSearchCommand(chatInputInteraction)
+				break
+			case "useitem":
+				await handleUseItemCommand(chatInputInteraction)
+				break
+			case "achievements":
+				await handleAchievementsCommand(chatInputInteraction)
+				break
+			case "jujutsustatus":
+				await handleJujutsuStatsCommand(chatInputInteraction)
+				break
+			case "leaderboard":
+				await handleLeaderBoardCommand(chatInputInteraction)
+				break
+			case "toggleheavenlyrestriction":
+				await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
+				break
+			case "gamble":
+				await handleGambleCommand(chatInputInteraction)
+				break
+			case "beg":
+				await handleBegCommand(chatInputInteraction)
+				break
+			case "donate":
+				await handleDonateCommand(chatInputInteraction)
+				break
+			case "giveitem":
+				await handleGiveItemCommand(chatInputInteraction)
+				break
+		}
+		// Handle Autocomplete Interactions for technique command getusertechniques
+
+		client.on("interactionCreate", async interaction => {
+			console.log("Interaction received") // Debug log
+			if (interaction.isStringSelectMenu()) {
+				console.log("Select menu interaction detected") // Debug log
+				const selectMenuInteraction = interaction as SelectMenuInteraction
+				if (interaction.customId.startsWith("accept_trade_select_")) {
+					console.log("Handling trade selection...") // Debug log
+					await processTradeSelection(selectMenuInteraction)
+				}
+			}
+		})
+	}
+})
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

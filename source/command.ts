@@ -15,10 +15,12 @@ import {
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
+	InteractionResponse,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder
 } from "discord.js"
 import {
+	DOMAIN_INFORMATION,
 	applyAdaption,
 	applyPrayerSongEffect,
 	applyStatusEffect,
@@ -65,7 +67,6 @@ import {
 	addUser,
 	addUserQuest,
 	addUserTechnique,
-	awardTitlesForAchievements,
 	checkUserHasHeavenlyRestriction,
 	createTradeRequest,
 	getActiveTrades,
@@ -118,7 +119,7 @@ const domainActivationState = new Map()
 const bossHealthMap = new Map() // Create a Map to store boss health per user
 
 export const searchCooldowns = new Map()
-export const searchCooldown = 60 * 1000 // 60 seconds in milliseconds
+export const searchCooldown = 60 * 1000
 export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
 //
 
@@ -135,12 +136,9 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 			return
 		}
 
-		// Since user does not exist, try to add the new user
 		const result = await addUser(discordId)
 
-		// 'addUser' will return an object with 'insertedId' if insertion was successful
 		if (result && "insertedId" in result) {
-			// User was successfully added, create and send the welcome embed
 			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
@@ -154,7 +152,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 			await interaction.reply({ embeds: [welcomeEmbed] })
 		} else {
-			// Some other issue occurred, send an error message
 			await interaction.reply({
 				content: "There was an unexpected issue with your registration.",
 				ephemeral: true
@@ -173,16 +170,14 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 	await interaction.deferReply()
 	const user = interaction.user
 
-	// Assuming getUserBankBalance and getBalance are async functions returning numbers
 	const balance = await getBalance(user.id)
 
-	// Convert to strings with commas for thousands, millions, etc.
 	const cursedCoins = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
 
 	const balanceEmbed = new EmbedBuilder()
 		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
 		.setTitle(`${user.username}'s Cursed Wallet`)
-		.setThumbnail(user.displayAvatarURL()) // Ideally, a thematic image here
+		.setThumbnail(user.displayAvatarURL())
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
 		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
 		.setTimestamp()
@@ -207,7 +202,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 		}
 
 		return new EmbedBuilder()
-			.setColor(0x1f6b4e) // Changed to a dark green for thematic consistency
+			.setColor(0x1f6b4e)
 			.setTitle(`Jujutsu Profile: ${targetUser.username} 🌀`)
 			.setThumbnail(targetUser.displayAvatarURL())
 			.addFields(
@@ -238,10 +233,9 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 export async function handleInventoryCommand(interaction) {
 	await interaction.deferReply()
 
-	// Check for mentioned user in the command, use command issuer if no user is mentioned
 	const mentionedUser = interaction.options.getUser("user") || interaction.user
 	const inventoryItems = await getUserInventory(mentionedUser.id)
-	const itemsPerPage = 10 // Number of items to show per page
+	const itemsPerPage = 10
 	let pageIndex = 0
 
 	// Send the initial page
@@ -261,10 +255,8 @@ export async function handleInventoryCommand(interaction) {
 
 	const message = await interaction.editReply({ embeds: [embed], components: [row] })
 
-	// Button collector for page navigation
 	const collector = message.createMessageComponentCollector({ time: 60000 })
 	collector.on("collect", async i => {
-		// Check if the interaction user is the command issuer or the mentioned user's inventory they are viewing
 		if (i.user.id === interaction.user.id || (mentionedUser && i.user.id === mentionedUser.id)) {
 			if (i.customId === "next" && (pageIndex + 1) * itemsPerPage < inventoryItems.length) {
 				pageIndex++
@@ -288,7 +280,6 @@ export async function handleInventoryCommand(interaction) {
 
 			await i.update({ embeds: [newEmbed], components: [newRow] })
 		} else {
-			// If someone else tries to interact who is not the command issuer or the mentioned user, inform them.
 			await i.reply({ content: "You cannot control this inventory navigation.", ephemeral: true })
 		}
 	})
@@ -301,7 +292,6 @@ export async function handleDigCommand(interaction) {
 	const authorId = interaction.user.id
 	const timestamp = digCooldowns.get(authorId)
 
-	// Check cooldown, incorporating a themed message
 	if (timestamp) {
 		const expirationTime = timestamp + digCooldown
 		if (currentTime < expirationTime && !digCooldownBypassIDs.includes(authorId)) {
@@ -316,26 +306,21 @@ export async function handleDigCommand(interaction) {
 					)}:R>.`
 				)
 			await interaction.editReply({ embeds: [digCooldownEmbed] })
-			return // Stop further execution to prevent cooldown reset
+			return
 		}
 	}
 
-	// User is not on cooldown, or has bypassed it; update the cooldown
 	digCooldowns.set(authorId, currentTime)
 
-	// Determine if an item is found based on a chance
 	const itemDiscoveryChance = 0.7 // 50% chance to discover an item
 	const doesDiscoverItem = Math.random() < itemDiscoveryChance
 
-	// The command logic for finding coins
 	const coinsFound = Math.floor(Math.random() * 20000) + 1
 	await updateBalance(interaction.user.id, coinsFound)
 
 	if (doesDiscoverItem) {
-		// Attempt to find an item
-		const itemFound = getRandomItem() // This function needs to handle the logic of item discovery chance internally
+		const itemFound = getRandomItem()
 		if (itemFound) {
-			// An item was found
 			await addItemToUserInventory(authorId, itemFound.name, 1)
 			const digEmbed = new EmbedBuilder()
 				.setColor(0x00ff00) // Success color
@@ -344,7 +329,6 @@ export async function handleDigCommand(interaction) {
 				.setTimestamp()
 			await interaction.editReply({ embeds: [digEmbed] })
 		} else {
-			// No item was found, even though an attempt was made
 			const digEmbed = new EmbedBuilder()
 				.setColor(0x00ff00) // Success color
 				.setTitle("Digging Results")
@@ -353,7 +337,6 @@ export async function handleDigCommand(interaction) {
 			await interaction.editReply({ embeds: [digEmbed] })
 		}
 	} else {
-		// No attempt to find an item was made
 		const digEmbed = new EmbedBuilder()
 			.setColor(0x00ff00) // Success color
 			.setTitle("Digging Results")
@@ -714,7 +697,6 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 	})
 }
 
-// command to get your domain expansion!
 export async function handleDomainSelection(interaction) {
 	const domainOptions = DOMAIN_EXPANSIONS.map(domain => ({
 		label: domain.name,
@@ -735,85 +717,120 @@ export async function handleDomainSelection(interaction) {
 
 	await interaction.reply({ embeds: [embed], components: [row], ephemeral: false })
 
-	const filter = i => i.customId === "select-domain" && i.user.id === interaction.user.id
-	const collector = interaction.channel.createMessageComponentCollector({
-		filter,
-		componentType: ComponentType.StringSelect
-	})
+	const filter = i => i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({ filter })
 
 	collector.on("collect", async collectedInteraction => {
-		await collectedInteraction.deferUpdate()
-		const selectedDomainName = collectedInteraction.values[0]
+		if (collectedInteraction.isSelectMenu() && collectedInteraction.customId === "select-domain") {
+			const selectedDomainName = collectedInteraction.values[0]
 
-		// 1. Get User Data (using your getUserInventory function)
-		const userInventory = await getUserInventory(interaction.user.id)
+			// Find Domain Information
+			const selectedDomain = DOMAIN_INFORMATION.find(domain => domain.name === selectedDomainName)
 
-		// Domain Token Check
-		const domainToken = userInventory.find(item => item.name === "Domain Token")
-		if (!domainToken) {
-			// Handle the case where the user doesn't have a Domain Token (update with error embed)
-			await collectedInteraction.followUp({
-				embeds: [
-					new EmbedBuilder()
-						.setTitle("Requirements Not Met")
-						.setDescription("You do not have a Domain Token.")
-				],
-				components: []
-			})
-			return // Stop further execution if the user doesn't have the token
-		}
-
-		// Continue with existing logic
-		const userGrade = await getUserGrade(interaction.user.id)
-		console.log("User Grade:", userGrade)
-
-		// 2. Check Requirements
-		const gradeLevel = userGrade.toLowerCase() // Normalize for comparison
-		if (gradeMappings[gradeLevel] <= 3) {
-			await updateUserAchievements(interaction.user.id, "unlockedDomain")
-			await removeItemFromUserInventory(interaction.user.id, "Domain Token", 1)
-			console.log("User has a Domain Token and is Grade 3 or higher.")
-
-			await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
-
-			console.log(`User ${interaction.user.id} has unlocked the domain: ${selectedDomainName}`)
-			// 3. Update Achievements and Titles
-			const domainAchievements = determineDomainAchievements(selectedDomainName)
-			const newlyUnlockedAchievements = domainAchievements.filter(achievement => {
-				return !userInventory.some(item => item.name === achievement)
-			})
-			// Update user's achievement data
-			for (const achievement of newlyUnlockedAchievements) {
-				await updateUserAchievements(interaction.user.id, achievement /* or name */)
+			if (!selectedDomain) {
+				console.error("Domain not found:", selectedDomainName)
+				await collectedInteraction.followUp({
+					embeds: [
+						new EmbedBuilder().setTitle("Error").setDescription("Domain information could not be found.")
+					],
+					components: []
+				})
+				return
 			}
 
-			await awardTitlesForAchievements(interaction.user.id)
+			// Create the updated embed with information
+			const infoEmbed = new EmbedBuilder()
+				.setTitle(selectedDomain.name)
+				.setDescription(selectedDomain.description)
+				.setColor("#552288")
 
-			// 4. Send Success Embed
-			await collectedInteraction.followUp({
-				embeds: [
-					new EmbedBuilder()
-						.setTitle("Cursed Energy Manifested!")
-						.setDescription("You have unlocked the " + selectedDomainName + " Domain Expansion!")
-						.setColor("#552288")
-				],
-				components: []
-			})
-		} else {
-			await collectedInteraction.followUp({
-				embeds: [
-					new EmbedBuilder()
-						.setTitle("Requirements Not Met")
-						.setDescription("You do not have a Domain Token or are not a high enough grade.")
-				],
-				components: []
-			})
+			if (selectedDomain.image) {
+				infoEmbed.setImage(selectedDomain.image)
+			}
+			if (selectedDomain.effects) {
+				infoEmbed.addFields({ name: "•  Effects", value: selectedDomain.effects })
+			}
+
+			// Add the "Buy" button
+			const buyRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder().setCustomId("buy-domain").setLabel("Buy").setStyle(ButtonStyle.Success)
+			)
+
+			await collectedInteraction.update({ embeds: [infoEmbed], components: [buyRow, row] })
+		} else if (collectedInteraction.isButton() && collectedInteraction.customId === "buy-domain") {
+			await collectedInteraction.deferUpdate()
+
+			const selectedDomainName = collectedInteraction.message.embeds[0].title
+			const userInventory = await getUserInventory(interaction.user.id)
+
+			// Find the selected domain's requirement
+			const selectedDomain = DOMAIN_INFORMATION.find(domain => domain.name === selectedDomainName)
+			if (!selectedDomain) {
+				console.error("Domain not found:", selectedDomainName)
+				return
+			}
+
+			const requiredItem = userInventory.find(item => item.name === selectedDomain.requirement)
+
+			if (!requiredItem) {
+				await collectedInteraction.followUp({
+					embeds: [
+						new EmbedBuilder()
+							.setTitle("Requirements Not Met")
+							.setDescription(`You do not have the required ${selectedDomain.requirement}.`)
+					],
+					components: []
+				})
+				return
+			}
+
+			const userGrade = await getUserGrade(interaction.user.id)
+			const gradeLevel = userGrade.toLowerCase()
+
+			if (gradeMappings[gradeLevel] <= 3) {
+				try {
+					await updateUserAchievements(interaction.user.id, "unlockedDomain")
+					await removeItemFromUserInventory(interaction.user.id, "Domain Token", 1)
+					await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
+
+					const domainAchievements = determineDomainAchievements(selectedDomainName)
+					// ... (Award achievement Logic - Same as before)
+
+					await collectedInteraction.followUp({
+						embeds: [
+							new EmbedBuilder()
+								.setTitle("Cursed Energy Manifested!")
+								.setDescription(`You have unlocked the ${selectedDomainName} Domain Expansion!`)
+						]
+					})
+				} catch (error) {
+					console.error("Error during domain purchase:", error)
+					await collectedInteraction.followUp({
+						embeds: [
+							new EmbedBuilder()
+								.setTitle("Error")
+								.setDescription("An error occurred while purchasing the domain.")
+						],
+						components: []
+					})
+				}
+			} else {
+				await collectedInteraction.followUp({
+					embeds: [
+						new EmbedBuilder()
+							.setTitle("Requirements Not Met")
+							.setDescription("You do not have a Domain Token or are not a high enough grade.")
+					],
+					components: []
+				})
+			}
+
+			collector.stop()
 		}
+	})
 
-		collector.stop()
-		collector.on("end", collected => {
-			console.log(`Collected ${collected.size} items`)
-		})
+	collector.on("end", collected => {
+		console.log(`Collected ${collected.size} items`)
 	})
 }
 
@@ -1460,24 +1477,33 @@ export async function handleLeaderBoardCommand(interaction) {
 }
 
 export async function handleVoteCommand(interaction) {
-	// Creating an embed message for the vote command
+	// Enhanced embed message
 	const voteEmbed = new EmbedBuilder()
-		.setColor("#00FFFF") // Cyan color
-		.setTitle("Vote for Our Bot!")
-		.setDescription("Support us by voting on the following sites:")
+		.setColor("#55AAFF") // A slightly softer blue
+		.setTitle("⭐ Vote for Our Bot! ⭐")
+		.setDescription("Help us grow and improve by voting:") // Concise focus
+		.setThumbnail(
+			"https://cdn.discordapp.com/attachments/1094302755960664255/1225954487739355176/helpprofile.jpg?ex=66230217&is=66108d17&hm=9f851af9539aee1912faece3236d4c222617bec567b5bf952448abe7881a36fb&"
+		) // Replace with a relevant bot icon
 		.setTimestamp()
-		.setFooter({ text: "Thank you for your support!" })
+		.setFooter({ text: "Your vote matters!" })
 
-	// Creating buttons for each voting site
+	// Buttons with external emojis for attention
 	const voteButtonTopGG = new ButtonBuilder()
-		.setLabel("Vote on Top.gg")
+		.setLabel("🚀 Vote on Top.gg")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://top.gg/bot/991443928790335518/vote")
+		.setEmoji("🚀") // Emoji!
+	const discordbotlistme = new ButtonBuilder()
+		.setLabel("👍 Vote on Botlist.me")
+		.setStyle(ButtonStyle.Link)
+		.setURL("https://botlist.me/bots/991443928790335518/vote")
+		.setEmoji("👍") // Emoji!
 
-	// Creating an action row and adding the buttons to it
-	const row = new ActionRowBuilder().addComponents(voteButtonTopGG)
+	// Action row - no changes needed
+	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme)
 
-	// Replying to the /vote command with the embed message and the buttons
+	// Reply with the updated components
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
 }
 async function delay(ms) {
@@ -1546,6 +1572,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.setImage(randomOpponent.image_url)
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
+			{ name: "Grade", value: `${randomOpponent.grade}`, inline: true },
 			{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true }
 		)
 		.addFields(
@@ -2260,7 +2287,7 @@ export function generateStatsEmbed(client: Client): EmbedBuilder {
 	const statsEmbed = new EmbedBuilder()
 		.setColor("#0099FF")
 		.setTitle("🤖 Bot Stats")
-		.setDescription("Current bot stats, updated every minute.")
+		.setDescription("Current bot stats, updated every 5 minutes.")
 		.addFields(
 			{ name: "Uptime", value: uptime, inline: true },
 			{ name: "API Latency", value: `${apiLatency}ms`, inline: true },
@@ -2790,7 +2817,6 @@ export async function handleTradeCommand(interaction) {
 	const item = interaction.options.getString("item")
 	const quantity = interaction.options.getInteger("quantity")
 
-	// --- Check initiator's inventory ---
 	const initiatorInventory = await getUserInventory(interaction.user.id)
 	const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
 
@@ -2799,11 +2825,7 @@ export async function handleTradeCommand(interaction) {
 		return
 	}
 
-	// --- Check target user's inventory ---
 	const targetUserInventory = await getUserInventory(targetUser.id)
-
-	// **Insert additional logic to check if the target user has the item that would be part of the trade.**
-	// You will need to determine how you want to handle the expected item for the trade
 
 	if (!targetUserInventory) {
 		await interaction.reply({
@@ -2813,12 +2835,10 @@ export async function handleTradeCommand(interaction) {
 		return
 	}
 
-	// --- Create a trade request (database) ---
 	await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
 
-	// --- Construct Trade Request Embed---
 	const tradeEmbed = new EmbedBuilder()
-		.setColor("Aqua") // Your color choice
+		.setColor("Aqua")
 		.setTitle("🔄 Trade Request")
 		.setDescription(
 			`You have received a trade request from ${interaction.user.username}. Please review the details below:`
@@ -2871,25 +2891,21 @@ export async function handleAcceptTrade(interaction) {
 			return
 		}
 
-		// Map trade requests to select menu options
 		const options = tradeRequests.map(request => {
 			return {
-				label: request.item, // Or use a more descriptive label
+				label: request.item,
 				description: `From: ${request.initiatorId} (Qty: ${request.quantity})`, // Replace ID with usernames if possible
 				value: request._id.toString()
 			}
 		})
 
-		// Construct the select menu
 		const selectMenu = new SelectMenuBuilder()
 			.setCustomId(`accept_trade_select_${Date.now()}`) // Modified line
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
-		// Construct the message action row
 		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
 
-		// Reply to the interaction with the select menu
 		await interaction.reply({
 			content: "Choose a trade request to accept:",
 			components: [actionRow],
@@ -2909,7 +2925,6 @@ export async function processTradeSelection(interaction) {
 	await interaction.deferReply()
 
 	try {
-		// Assume you have a function to handle the trade acceptance logic
 		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
 		await interaction.editReply({
 			content: "Trade request accepted successfully!",
@@ -2971,7 +2986,7 @@ async function paginateTrades(interaction, trades, title) {
 		const pageTrades = trades.slice(start, end)
 
 		return new EmbedBuilder()
-			.setColor("Aqua") // Your chosen color
+			.setColor("Aqua")
 			.setTitle(title)
 			.setDescription(
 				pageTrades
@@ -3008,7 +3023,6 @@ async function paginateTrades(interaction, trades, title) {
 	})
 }
 
-// handle donate command to donate coins to another user
 export async function handleDonateCommand(interaction) {
 	const targetUser = interaction.options.getUser("user")
 	const amount = interaction.options.getInteger("amount")
@@ -3030,10 +3044,9 @@ export async function handleDonateCommand(interaction) {
 		ephemeral: true
 	})
 }
-export async function handleequiptechniquecommand(interaction) {
+export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 
-	// Collect technique names (up to 5)
 	const techniqueNames = []
 	for (let i = 1; i <= 5; i++) {
 		const name = interaction.options.getString(`technique-${i}`)
@@ -3042,10 +3055,8 @@ export async function handleequiptechniquecommand(interaction) {
 	}
 
 	try {
-		// 1. Retrieve User's Techniques
 		const userTechniques = await getUserTechniques(userId)
 
-		// 2. Check if the techniques exist in the user's inventory
 		const invalidTechniques = techniqueNames.filter(name => !userTechniques.includes(name))
 		if (invalidTechniques.length > 0) {
 			return await interaction.reply({
@@ -3054,12 +3065,9 @@ export async function handleequiptechniquecommand(interaction) {
 			})
 		}
 
-		// 3. Retrieve the current active techniques
 		const activeTechniques = await getUserActiveTechniques(userId)
 
-		// 4. Check if there's space in the active set
 		if (activeTechniques.length + techniqueNames.length > 20) {
-			// Assuming a max limit of 20
 			return await interaction.reply({
 				content: "You cannot have more than 20 active techniques.",
 				ephemeral: true
@@ -3073,7 +3081,6 @@ export async function handleequiptechniquecommand(interaction) {
 			}
 		}
 
-		// 6. Update the Database (only if changes were made)
 		if (newActiveTechniques.length !== activeTechniques.length) {
 			await updateUserActiveTechniques(userId, newActiveTechniques)
 			await interaction.reply(
@@ -3093,16 +3100,13 @@ export async function handleequiptechniquecommand(interaction) {
 	}
 }
 
-// handle unequip technique command
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	const techniqueName = interaction.options.getString("technique-name")
 
 	try {
-		// 1. Retrieve User's Active Techniques
 		const activeTechniques = await getUserActiveTechniques(userId)
 
-		// 2. Check if the technique is already equipped
 		if (!activeTechniques.includes(techniqueName)) {
 			return await interaction.reply({
 				content: "That technique is not currently equipped.",
@@ -3110,10 +3114,8 @@ export async function handleUnequipTechniqueCommand(interaction) {
 			})
 		}
 
-		// 3. Remove the technique from the active set
 		const newActiveTechniques = activeTechniques.filter(technique => technique !== techniqueName)
 
-		// 4. Update the Database
 		await updateUserActiveTechniques(userId, newActiveTechniques)
 
 		await interaction.reply(`Technique '${techniqueName}' unequipped!`)
@@ -3125,7 +3127,6 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 }
-// get all user techniques and display them in fancy embed discord.js v14
 export async function handleViewTechniquesCommand(interaction) {
 	const userId = interaction.user.id
 
@@ -3144,5 +3145,34 @@ export async function handleViewTechniquesCommand(interaction) {
 	} catch (error) {
 		console.error("Error fetching user techniques:", error)
 		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
+	}
+}
+
+export async function handleGiveItemCommand(
+	interaction: ChatInputCommandInteraction
+): Promise<InteractionResponse<boolean>> {
+	if (interaction.user.id !== "292385626773258240") {
+		return interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true })
+	}
+	const targetUserId = interaction.options.getString("userid")
+	const itemName = interaction.options.getString("item")
+	const quantity = interaction.options.getInteger("quantity")
+
+	if (!targetUserId || !itemName || !quantity) {
+		return await interaction.reply({
+			content: "Please provide a target user ID, item name, and quantity.",
+			ephemeral: true
+		})
+	}
+
+	try {
+		await addItemToUserInventory(targetUserId, itemName, quantity)
+		return interaction.reply({
+			content: `Successfully added ${quantity}x ${itemName} to user ${targetUserId}`,
+			ephemeral: true
+		})
+	} catch (error) {
+		console.error("Error in giveitem command", error)
+		return interaction.reply({ content: "...", ephemeral: true })
 	}
 }

@@ -116,8 +116,7 @@ export async function initializeDatabase() {
 	} catch (error) {
 		console.error("Database initialization failed:", error)
 	} finally {
-		await client.close()
-		console.log("Database connection closed.")
+		// await client.close()
 	}
 }
 
@@ -323,7 +322,6 @@ export async function addItemToUserInventory(userId: string, itemName: string, q
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection<User>(usersCollectionName)
 
-		// Check if the item already exists in the inventory
 		const existingItem = await usersCollection.findOne({ "id": userId, "inventory.name": itemName })
 
 		if (existingItem) {
@@ -496,7 +494,6 @@ export async function getUserHealth(userId: string): Promise<number> {
 	}
 }
 
-// get bosses from bosses collection also get the health and current health
 export async function getBosses(userGrade: string): Promise<BossData[]> {
 	try {
 		// Find the health multiplier based on the user's grade
@@ -512,7 +509,7 @@ export async function getBosses(userGrade: string): Promise<BossData[]> {
 			max_health: Math.round(boss.max_health * healthMultiplier),
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL, // Ensure the property name matches your database
-			difficulty_tier: boss.difficulty_tier // Assuming this is the correct property and type
+			grade: boss.grade // Assuming this is the correct property and type
 		}))
 
 		return bosses

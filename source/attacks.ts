@@ -348,6 +348,46 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 30,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
+	],
+	"Dagon": [
+		{
+			name: "Jackpot: Strike",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Gamblers Strike",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Jackpot: Cargo Rush",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Yuta": [
+		{
+			name: "Jackpot: Strike",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Gamblers Strike",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Jackpot: Cargo Rush",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
 	]
 }
 
@@ -391,6 +431,10 @@ const statusEffectsDescriptions = {
 	"Prayer Song": {
 		description: "Reduces incoming damage by 20%",
 		effect: "20% REDUC"
+	},
+	"Mutual Love": {
+		description: "Reduces incoming damage by 20%",
+		effect: "20% REDUC"
 	}
 
 	// Define other status effects here
@@ -403,6 +447,16 @@ export async function applyPrayerSongEffect(userId) {
 	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Prayer Song")) {
 		const updatedEffects = [...currentEffects, "Prayer Song"]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
+export async function applyMutualLoveEffect(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+
+	// Check if "Prayer Song" is already active to avoid duplication
+	if (!currentEffects.includes("Mutual Love")) {
+		const updatedEffects = [...currentEffects, "Mutual Love"]
 		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
 	}
 }
@@ -464,6 +518,10 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 		damageReduction *= 0.2
 		damageIncrease *= 1.2
 	}
+	if (statusEffects.includes("Mutual Love")) {
+		damageReduction *= 0.3
+		damageIncrease *= 1.4
+	}
 	if (statusEffects.includes("Gamblers Limit")) {
 		const gambleOutcome = Math.random()
 		if (gambleOutcome < 0.5) {
@@ -488,11 +546,9 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 		if (statusEffects.includes("Prayer Song")) {
 			damageReduction *= 0.2
 		}
-		// Apply damageIncrease before damageReduction for demonstration; adjust as needed
 		damage *= damageIncrease
 		damage *= damageReduction
 
-		// Handle effects like "World Cutting Slash" separately, as they may not directly affect damage calculation
 		return damage
 	}
 }
@@ -507,3 +563,57 @@ export async function applyStatusEffect(userId, effectName) {
 		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
 	}
 }
+
+export const DOMAIN_INFORMATION = [
+	{
+		name: "Malevolent Shrine",
+		description:
+			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
+		effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+		requirement: "Malevolent Token"
+	},
+	{
+		name: "Unlimited Void",
+		description: "This domain overwhelms the target with an infinite thought, rendering them powerless...",
+		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
+		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
+		requirement: "Limitless Token"
+	},
+	{
+		name: "Coffin of the Iron Mountain",
+		description: "A domain expansion that traps the target in a Volcano...",
+		image: "https://pbs.twimg.com/media/EmuPKcNVkAE5Kbm.jpg:large",
+		effects: "Volcano Head, 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+		requirement: "Volcano Token"
+	},
+	{
+		name: "Horizon of the Captivating Skandha",
+		description: "blorp glorp (fish noise).",
+		image: "https://pbs.twimg.com/media/GIE88o0WAAAJyeh.jpg",
+		effects: "Beach Bum, 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+		requirement: "Dagon's Token"
+	},
+	{
+		name: "Idle Deaths Gamble",
+		description: "A Gamble With Fate....",
+		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226005623372775426/Idle_Death_Gamble.png?ex=662331b6&is=6610bcb6&hm=a8eeb6acc464dbe6f44b686d5fc32fca2950bbb61a6f426fffce6a4066123e6b&",
+		effects:
+			"Gamblers Limit, 50/50 Chance to do 30% more damage And 10% DMG Reduction, or 25% Less Damage and 10% Damage Taken Increase [ MORE SOON ]",
+		requirement: "Hakari Kinji's Token"
+	},
+	{
+		name: "Self-Embodiment of Perfection",
+		description: "The true nature of the soul..",
+		image: "https://static.wikia.nocookie.net/jujutsu-kaisen/images/2/23/Mahito%27s_Territorial_Expansion_Mahayana_Prison.png/revision/latest?cb=20190601212135",
+		effects: "Soul Touch: 20% Damage Increase, 20% Damage Reduction. [ MORE SOON ]",
+		requirement: "Soul Token"
+	},
+	{
+		name: "True and Mutual Love",
+		description: "How rude, This is pure love.",
+		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226022659700297748/main-qimg-677cba957d89c255d384c0778fc9af97.jpg?ex=66234194&is=6610cc94&hm=22163f50298e2e83a729e448ec619eb9079af3a5c9b2064d34ca28d3a81cefa6&",
+		effects: "Mutual Love: 30% Damage Increase, 25% Damage Reduction. [ MORE SOON ]",
+		requirement: "Mutual Token"
+	}
+]

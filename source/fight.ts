@@ -145,6 +145,10 @@ function getJujutsuFlavorText(bossName: string): FlavorText | null {
 		return { name: "Mahito's Challenge", value: "I'll show you the true nature of the soul." }
 	} else if (bossName === "Suguru Geto") {
 		return { name: "Geto's Challenge", value: "Filthy Monkey" }
+	} else if (bossName === "Dagon") {
+		return { name: "Dagon's Instincts", value: "blorp blorg (fish noises)" }
+	} else if (bossName === "Yuta") {
+		return { name: "Yutas Curse", value: "Rika.." }
 	}
 
 	// Add a default case if you'd like

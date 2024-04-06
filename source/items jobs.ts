@@ -64,7 +64,9 @@ export interface BossDrop {
 export const bossDrops: Record<string, BossDrop[]> = {
 	"Sukuna": [
 		{ name: "Sukuna Finger", rarity: "common" },
-		{ name: "Cursed Shard", rarity: "rare" }
+		{ name: "Malevolent Shrine (Skull)", rarity: "rare" },
+		{ name: "Malevolent Shrine (Blood Vial)", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
@@ -76,11 +78,14 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Satoru Gojo": [
 		{ name: "Rikugan Eye", rarity: "rare" },
-		{ name: "Go//Jo", rarity: "ultra rare" }
+		{ name: "Go//Jo", rarity: "ultra rare" },
+		{ name: "Fraud Poster", rarity: "ultra rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
 	"Itadori": [
 		{ name: "Tailsman", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "ultra rare" }
+		{ name: "Sukuna Finger", rarity: "ultra rare" },
+		{ name: "Fraud Poster", rarity: "ultra rare" }
 	],
 	"Aoi Todo & Itadori": [
 		{ name: "Brotherly Bracelet", rarity: "rare" },
@@ -89,11 +94,13 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Jogo": [
 		{ name: "Jogos left testicle", rarity: "rare" },
-		{ name: "Jogos right testicle", rarity: "rare" }
+		{ name: "Jogos right testicle", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
 	"Mahito (Transfigured)": [
 		{ name: "Transfigured Soul", rarity: "ultra rare" },
-		{ name: "Cursed Shard", rarity: "rare" }
+		{ name: "Junpei", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
 	"Suguru Geto": [
 		{ name: "Prison Realm Fragment", rarity: "rare" },
@@ -117,14 +124,24 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Hakari Kinji": [
 		{ name: "Gambler Token", rarity: "rare" },
-		{ name: "Tailsman", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "ultra rare" }
+		{ name: "Bet Slip", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
 
 	"Kashimo": [
 		{ name: "(Broken) Electrical Staff", rarity: "rare" },
 		{ name: "Tailsman", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" }
+	],
+	"Dagon": [
+		{ name: "Blue Fish", rarity: "rare" },
+		{ name: "Green Fish", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
+	],
+	"Yuta": [
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	]
 }
 
@@ -149,6 +166,51 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Prison Realm"
 	},
+	malevolent_token: {
+		requiredItems: [
+			{ name: "Malevolent Shrine (Skull)", quantity: 1 },
+			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 1 }
+		],
+		craftedItemName: "Malevolent Token"
+	},
+	limitless_token: {
+		requiredItems: [
+			{ name: "Go//Jo", quantity: 1 },
+			{ name: "Fraud Poster", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 1 }
+		],
+		craftedItemName: "Limitless Token"
+	},
+	hakari_kinjis_token: {
+		requiredItems: [
+			{ name: "Gambler Token", quantity: 2 },
+			{ name: "Bet Slip", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 1 }
+		],
+		craftedItemName: "Hakari Kinji's Token"
+	},
+	dagon_token: {
+		requiredItems: [
+			{ name: "Blue Fish", quantity: 1 },
+			{ name: "Green Fish", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 1 }
+		],
+		craftedItemName: "Dagon's Token"
+		//
+		//
+		//
+	},
+	mutual_token: {
+		requiredItems: [
+			{ name: "Yuta's Token", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 1 }
+		],
+		craftedItemName: "Mutual Token"
+		//
+		//
+		//
+	},
 	special_locator: {
 		requiredItems: [
 			{ name: "Prison Realm Fragment", quantity: 6 },
@@ -170,15 +232,7 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Jogos (Fixed) Balls"
 	},
-	domain_token: {
-		requiredItems: [
-			{ name: "Six Eyes", quantity: 1 },
-			{ name: "Prison Realm", quantity: 1 },
-			{ name: "Heavenly Chain", quantity: 1 },
-			{ name: "Sukuna Finger", quantity: 1 }
-		],
-		craftedItemName: "Domain Token"
-	},
+
 	heavenly_restricted_blood: {
 		requiredItems: [
 			{ name: "Six Eyes", quantity: 1 },
@@ -207,7 +261,7 @@ export const DOMAIN_EXPANSIONS = [
 	{
 		name: "Malevolent Shrine",
 		description: "Embodiment of true fear and terror",
-		image_URL: "https://media1.tenor.com/m/NiiOh24vaJIAAAAC/domain-expansion-sukuna.gif",
+		image_URL: "https://media1.tenor.com/m/8x3juyL02isAAAAC/sukuna-malevolent-shrine.gif",
 		open_image_URL: "https://media1.tenor.com/m/Nwwk0JIGr28AAAAC/sukuna-domain-expansion.gif",
 		statusEffect: "Curse King"
 	},
@@ -232,6 +286,14 @@ export const DOMAIN_EXPANSIONS = [
 		open_image_URL:
 			"https://cdn.discordapp.com/attachments/1186763190835613748/1225701628141895702/ezgif-2-ce4a35009a.gif?ex=66221698&is=660fa198&hm=b74ba35be1175ae166624f1efbc90b502c8b636b60410d807799673f9d821c88&",
 		statusEffect: "Beach Bum"
+	},
+	{
+		name: "True and Mutual Love",
+		description: "This domain resembles a everlasting field of infinite katanas, Representing Infinite Techniques/",
+		image_URL:
+			"https://cdn.discordapp.com/attachments/1094302755960664255/1226022659700297748/main-qimg-677cba957d89c255d384c0778fc9af97.jpg?ex=66234194&is=6610cc94&hm=22163f50298e2e83a729e448ec619eb9079af3a5c9b2064d34ca28d3a81cefa6&",
+		open_image_URL: "https://media1.tenor.com/m/_LJMlVI4QJcAAAAC/jujutsu-kaisen-yuta-okkotsu.gif",
+		statusEffect: "Mutual Love"
 	}
 ]
 
