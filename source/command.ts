@@ -1488,7 +1488,7 @@ async function delay(ms) {
 }
 export const activeCollectors = new Map()
 
-const specialBosses = ["Yuta Okkotsu"]
+const specialBosses = ["Yuta Okkotsu", "Disaster Curses"]
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	// Get the user's maximum health and set their current health to max
