@@ -88,6 +88,7 @@ export async function addUser(
 			cursedEnergy: 100,
 			clan: null,
 			techniques: [],
+			unlockedBosses: [],
 			activeTechniques: [],
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
@@ -129,8 +130,7 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		const usersToUpdate = await usersCollection
 			.find({
 				$or: [
-					{ activeTechniques: { $exists: false } },
-					{ statusEffects: { $exists: false } } // Check for documents missing statusEffects
+					{ unlockedBosses: { $exists: false } } // Check for documents missing statusEffects
 				]
 			})
 			.toArray()
@@ -138,15 +138,11 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [
-						{ activeTechniques: { $exists: false } },
-						{ statusEffects: { $exists: false } } // Include statusEffects in the condition
-					]
+					$or: [{ unlockedBosses: { $exists: false } }]
 				},
 				{
 					$set: {
-						activeTechniques: [], // Initialize as empty array if missing
-						statusEffects: [] // Initialize statusEffects as empty array if missing
+						unlockedBosses: [] // Initialize statusEffects as empty array if missing
 					}
 				}
 			)

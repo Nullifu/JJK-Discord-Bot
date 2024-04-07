@@ -1586,14 +1586,14 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			},
 			{
 				name: "Player Health Status",
-				value: generateHealthBar(playerHealth, playerHealth),
+				value: generateHealthBar(playerHealth, playerHealth1),
 				inline: false
 			}
 		)
 		.addFields(
 			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
 			{ name: "Status Effect Enemy", value: "None", inline: true },
-			{ name: "Status Effect Player", value: "None", inline: true } // Assume statusEffectsValue is dynamic.
+			{ name: "Status Effect Player", value: "None", inline: true }
 		)
 
 	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
