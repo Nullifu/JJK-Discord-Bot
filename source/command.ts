@@ -2754,11 +2754,23 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 export async function claimQuestsCommand(interaction) {
 	try {
 		const userId = interaction.user.id // Get the user's ID from the interaction
-		const userQuests = await getUserQuests(userId)
+		const userQuests = await getUserQuests(userId) // Fetch user quests
 
-		const completedQuests = userQuests.quests.filter(q => {
-			const questDetails = questsArray.find(quest => quest.name === q.id)
-			return questDetails && q.progress >= questDetails.totalProgress
+		const completedQuests = userQuests.quests.filter(userQuest => {
+			const questDetails = questsArray.find(quest => quest.name === userQuest.id)
+			if (!questDetails) return false
+
+			// Check if the quest has multiple tasks
+			if (Array.isArray(questDetails.tasks) && questDetails.tasks.length > 0) {
+				// For each task, check if the user's progress meets the totalProgress
+				return questDetails.tasks.every(task => {
+					const userTask = userQuest.tasks.find(t => t.description === task.description)
+					return userTask && userTask.progress >= task.totalProgress
+				})
+			} else {
+				// If it's a single task quest
+				return userQuest.progress >= questDetails.totalProgress
+			}
 		})
 
 		if (completedQuests.length === 0) {
@@ -2768,65 +2780,46 @@ export async function claimQuestsCommand(interaction) {
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+			if (!questDetails) continue
+
 			const { coins, experience, items, item, itemQuantity } = questDetails
 
+			// Add coins and experience
 			await updateBalance(userId, coins)
 			await updateUserExperience(userId, experience)
 
-			// Handle multiple items
+			// Handle items for quests with multiple items
 			if (items && typeof items === "object") {
 				for (const [itemName, quantity] of Object.entries(items)) {
 					await addItemToUserInventory(userId, itemName, quantity)
 				}
 			}
+
 			// Handle single item
 			else if (item) {
 				await addItemToUserInventory(userId, item, itemQuantity || 1)
 			}
 
+			// Update the player's grade and remove the completed quest
 			await updatePlayerGrade(userId)
 			await removeUserQuest(userId, completedQuest.id)
 		}
 
+		// Prepare the embed with claimed rewards
 		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("Quest Rewards Claimed")
-			.setDescription("You have successfully claimed your rewards for the following quests:")
-
-		// Construct fields for the embed message, accommodating both single and multiple items
-		for (const completedQuest of completedQuests) {
-			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
-
-			if (questDetails) {
-				let rewardsText =
-					`• **Coins**: ${questDetails.coins} :coin:\n` +
-					`• **Experience**: ${questDetails.experience} :star:\n`
-
-				// Handle multiple items
-				if (questDetails.items && typeof questDetails.items === "object") {
-					for (const [itemName, quantity] of Object.entries(questDetails.items)) {
-						rewardsText += `• **Item**: ${itemName} x${quantity} :package:\n`
-					}
-				}
-				// Handle single item
-				else if (questDetails.item) {
-					rewardsText += `• **Item**: ${questDetails.item} x${questDetails.itemQuantity || 1} :package:\n`
-				}
-
-				embed.addFields({ name: completedQuest.id, value: rewardsText, inline: false })
-			}
-		}
+			.setDescription(completedQuests.map(quest => `**${quest.id}**`).join("\n"))
 
 		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
 		console.error("Error claiming quests:", error)
 		await interaction.reply({
 			content: "An error occurred while claiming quests.",
-			ephemeral: true
+			ephmeral: true
 		})
 	}
 }
-
 // view all active quests using getuserquest
 export async function viewQuestsCommand(interaction) {
 	const userId = interaction.user.id
@@ -3341,4 +3334,51 @@ export async function handleGiveItemCommand(
 		console.error("Error in giveitem command", error)
 		return interaction.reply({ content: "...", ephemeral: true })
 	}
+}
+
+// handle unequip quests command dropdown menu embed but instead of giving quest it takes it away
+export async function handleUnequipQuestCommand(interaction) {
+	const userId = interaction.user.id
+	const userQuests = await getUserQuests(userId)
+
+	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+		await interaction.reply("You have no active quests to unequip.")
+		return
+	}
+
+	const options = userQuests.quests.map(quest => ({
+		label: quest.id,
+		value: quest.id
+	}))
+
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("unequip_quest")
+		.setPlaceholder("Select a Quest to Unequip")
+		.addOptions(options)
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+	await interaction.reply({
+		content: "Select a quest to unequip.",
+		components: [row],
+		ephemeral: true
+	})
+
+	const filter = i => i.customId === "unequip_quest" && i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector.on("collect", async i => {
+		if (i.isStringSelectMenu()) {
+			const questId = i.values[0]
+			await removeUserQuest(userId, questId)
+			await i.update({ content: `You have unequipped the quest: ${questId}`, components: [] })
+		}
+	})
+
+	collector.on("end", collected => {
+		if (collected.size === 0) {
+			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
+		}
+		collector.stop()
+	})
 }

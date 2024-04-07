@@ -813,7 +813,7 @@ export const questsArray = [
 	},
 	{
 		name: "Disaster Curses",
-		description: "Use all of the disaster curses items!",
+		description: "Defeat all of the Disaster Curses!",
 		coins: 45000,
 		experience: 470,
 		item: "Combined Disaster Curses Soul",

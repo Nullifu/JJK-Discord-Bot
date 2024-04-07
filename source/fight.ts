@@ -55,6 +55,9 @@ export async function handleBossDeath(
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
 	}
+	if (opponent.name === "Hakari (Jackpot)") {
+		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+	}
 	if (opponent.name === "Dagon") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Dagon")
 	}
@@ -185,7 +188,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 			)
 		await interaction.editReply({ embeds: [fakeDeathEmbed], components: [] })
 
-		await new Promise(resolve => setTimeout(resolve, 3000)) // 5 seconds delay
+		await new Promise(resolve => setTimeout(resolve, 4000)) // 5 seconds delay
 
 		const reawakeningEmbed = new EmbedBuilder()
 			.setDescription("Yo... It's been awhile.")
@@ -198,7 +201,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 
 		await interaction.editReply({ embeds: [reawakeningEmbed], components: [] })
 
-		await new Promise(resolve => setTimeout(resolve, 2000)) // 3 seconds delay
+		await new Promise(resolve => setTimeout(resolve, 3000)) // 3 seconds delay
 
 		randomOpponent.name = "The Honored One"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
@@ -283,7 +286,9 @@ export async function exportTheFraud(interaction, randomOpponent, primaryEmbed, 
 		primaryEmbed.setDescription(
 			"It seems sukuna has taken over the body of Yuji Itadori! Bring him down before he takes over!"
 		)
-		primaryEmbed.setImage("https://media1.tenor.com/m/G7xtK5NuoKsAAAAC/sukuna-ryomen-sukuna.gif")
+		primaryEmbed.setImage(
+			"https://cdn.discordapp.com/attachments/1186763190835613748/1226436754970640405/ezgif-5-83a420d6b1.gif?ex=6624c33c&is=66124e3c&hm=8f8b3de15fabf874eada713edce48052e0579fd414dee8398c65b0bf20802cc3&"
+		)
 		primaryEmbed.setFields(
 			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 			{ name: "Player Health", value: playerHealth.toString() }

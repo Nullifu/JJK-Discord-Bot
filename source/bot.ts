@@ -49,6 +49,7 @@ import {
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
+	handleUnequipQuestCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
@@ -372,7 +373,8 @@ const commands = [
 				.addChoices(
 					{ name: "Get", value: "get" },
 					{ name: "View", value: "view" },
-					{ name: "Claim", value: "claim" }
+					{ name: "Claim", value: "claim" },
+					{ name: "Abandon", value: "abandon" }
 				)
 		),
 	new SlashCommandBuilder()
@@ -699,6 +701,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "claim":
 				await claimQuestsCommand(interaction)
+				break
+			case "abandon":
+				await handleUnequipQuestCommand(interaction)
 				break
 			default:
 		}

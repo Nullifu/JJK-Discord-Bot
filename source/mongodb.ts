@@ -102,7 +102,7 @@ export async function addUser(
 		console.error(`Error when adding user with ID: ${id}`, error)
 		return { error: "Failed to add user." }
 	} finally {
-		await client.close()
+		// await client.close()
 	}
 }
 
@@ -1484,7 +1484,7 @@ export async function getUserQuests(userId) {
 		console.error(`Error when retrieving quests for user with ID: ${userId}:`, error.stack)
 		throw error
 	} finally {
-		await client.close()
+		// await client.close()
 	}
 }
 
@@ -1845,7 +1845,7 @@ export async function updateGamblersData(userId, wagerAmount, winnings, losses) 
 	} catch (error) {
 		console.error("Error updating gamblers data:", error)
 	} finally {
-		await client.close()
+		// await client.close()
 	}
 }
 
@@ -1862,7 +1862,7 @@ export async function getGamblersData(userId) {
 	} catch (error) {
 		console.error("Error getting gamblers data:", error)
 	} finally {
-		await client.close()
+		// await client.close()
 	}
 }
 
