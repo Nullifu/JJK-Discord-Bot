@@ -176,6 +176,11 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
+	"Disaster Curses": [
+		{ name: "Dagons Soul", rarity: "rare" },
+		{ name: "Jogos Soul", rarity: "rare" },
+		{ name: "Hanamis Soul", rarity: "ultra rare" }
+	],
 	"Yuta Okkotsu & Curse Queen Rika": [
 		{ name: "Fraud Poster", rarity: "rare" },
 		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
