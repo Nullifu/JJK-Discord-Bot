@@ -3,11 +3,11 @@ import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient, ObjectId } from "mongodb"
 import { BossData, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
-import { titles } from "./items jobs.js"
+import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
+const bossCollectionName = "devboss"
 const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
@@ -78,6 +78,7 @@ export async function addUser(
 			experience: initialExperience,
 			health: initialHealth,
 			maxhealth: initialmaxhealth,
+			owneddomains: [],
 			domain: null,
 			activeTitle: null,
 			unlockedTitles: [],
@@ -1366,31 +1367,108 @@ export async function updateUserVoteRewardStatus(userId: string): Promise<void> 
 }
 
 // addUserQuest
-export async function addUserQuest(userId: string, questId: string): Promise<void> {
+export async function addUserQuest(userId: string, questName: string): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $addToSet: { quests: { id: questId, progress: 0 } } })
+		// Find the quest details from questsArray by questName
+		const questToAdd = questsArray.find(quest => quest.name === questName)
+
+		// Check if the quest was found and has the correct structure
+		if (questToAdd) {
+			let questData
+			if (questToAdd.tasks) {
+				// For quests with multiple tasks, copy the tasks structure
+				questData = {
+					id: questName,
+					tasks: questToAdd.tasks.map(task => ({
+						description: task.description,
+						progress: 0,
+						totalProgress: task.totalProgress
+					}))
+				}
+			} else {
+				// For quests with a single task, maintain the single progress structure
+				questData = {
+					id: questName,
+					progress: 0,
+					task: questToAdd.task,
+					totalProgress: questToAdd.totalProgress
+				}
+			}
+
+			await usersCollection.updateOne({ id: userId }, { $addToSet: { quests: questData } })
+		} else {
+			throw new Error("Quest not found: " + questName)
+		}
 	} catch (error) {
 		console.error("Error adding user quest:", error)
 		throw error
 	}
 }
+
 // addUserQuestProgress
-export async function addUserQuestProgress(userId, questName, progress) {
+export async function addUserQuestProgress(userId, questId, increment, taskDescription = null) {
 	try {
-		await client.connect()
+		// Assuming client is an instance of MongoClient that has been initialized previously.
+		// You should connect to the client outside of this function and reuse the connection.
+		// Connect to the MongoDB client and select the database and collection.
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ "id": userId, "quests.id": questName }, { $set: { "quests.$.progress": 1 } })
+		let updateResult
+
+		// Check if a taskDescription is provided for quests with multiple tasks.
+		if (taskDescription) {
+			// Update logic for quests with multiple tasks.
+			// Use "quests.id" to match the quests by their id and "tasks.description" to find the specific task.
+			updateResult = await usersCollection.updateOne(
+				{
+					"id": userId,
+					"quests.id": questId, // Make sure this matches the id field in the quests objects in the database.
+					"quests.tasks.description": taskDescription
+				},
+				{
+					$inc: { "quests.$.tasks.$[task].progress": increment }
+				},
+				{
+					arrayFilters: [{ "task.description": taskDescription }]
+				}
+			)
+		} else {
+			// Update logic for quests with a single task or no specific task provided.
+			// This branch assumes that if no task description is given, the quest only has an overall progress to update.
+			updateResult = await usersCollection.updateOne(
+				{
+					"id": userId,
+					"quests.id": questId // Use "quests.id" to match the quest by id.
+				},
+				{
+					$inc: { "quests.$.progress": increment }
+				}
+			)
+		}
+
+		// Error handling and logging
+		if (updateResult.matchedCount === 0) {
+			console.error("Quest not found for user:", userId)
+			// Handle the case where the quest is not found for the user. You might want to send a message back or take some action.
+		} else if (updateResult.modifiedCount === 0) {
+			console.error("Quest progress was not updated for user:", userId)
+			// Handle the case where the quest progress is not updated. This could be because the quest is already at total progress.
+		} else {
+			console.log("Quest progress updated successfully for user:", userId)
+			// Optionally, you can handle post-update logic here, such as informing the user of their updated progress.
+		}
 	} catch (error) {
-		console.error("Error adding user quest progress:", error)
-		throw error
+		console.error("Error updating user quest progress:", error)
+		// Depending on your application's structure, you might want to handle the error, such as rolling back changes, retrying, etc.
+		throw error // Re-throwing the error is a valid approach if you want the calling function to handle it.
 	}
 }
+
 // getUserQuests
 export async function getUserQuests(userId) {
 	try {
@@ -1834,6 +1912,34 @@ export async function removeAllStatusEffects(userId: string): Promise<void> {
 		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: [] } })
 	} catch (error) {
 		console.error("Error removing all status effects:", error)
+		throw error
+	}
+}
+
+// update unlocked bosses string of arrays
+export async function updateUserUnlockedBosses(userId: string, unlockedBosses: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { unlockedBosses } })
+	} catch (error) {
+		console.error("Error updating user unlocked bosses:", error)
+		throw error
+	}
+}
+
+// get user unlocked bosses
+export async function getUserUnlockedBosses(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.unlockedBosses : []
+	} catch (error) {
+		console.error(`Error when retrieving unlocked bosses for user with ID: ${userId}`, error)
 		throw error
 	}
 }

@@ -37,15 +37,20 @@ import {
 	getRandomAmount,
 	getRandomLocation
 } from "./calculate.js"
-import { executeSpecialTechnique, generateHealthBar, getJujutsuFlavorText, handleBossDeath } from "./fight.js"
 import {
-	BossData,
-	buildGamblersProfile,
-	buildQuestEmbed,
-	determineDomainAchievements,
-	formatDomainExpansion,
-	gradeMappings
-} from "./interface.js"
+	executeSpecialTechnique,
+	exportCrashOut,
+	exportGambler,
+	exportReincarnation,
+	exportRika,
+	exportTheCursedOne,
+	exportTheFraud,
+	exportTheHonoredOne,
+	generateHealthBar,
+	getJujutsuFlavorText,
+	handleBossDeath
+} from "./fight.js"
+import { BossData, buildGamblersProfile, buildQuestEmbed, formatDomainExpansion, gradeMappings } from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -91,6 +96,7 @@ import {
 	getUserQuests,
 	getUserStatusEffects,
 	getUserTechniques,
+	getUserUnlockedBosses,
 	getUserUnlockedTitles,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
@@ -167,17 +173,17 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 }
 
 export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
+	const targetUser = interaction.options.getUser("user") || interaction.user
 	await interaction.deferReply()
-	const user = interaction.user
 
-	const balance = await getBalance(user.id)
+	const balance = await getBalance(targetUser.id)
 
 	const cursedCoins = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
 
 	const balanceEmbed = new EmbedBuilder()
 		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
-		.setTitle(`${user.username}'s Cursed Wallet`)
-		.setThumbnail(user.displayAvatarURL())
+		.setTitle(`${targetUser.username}'s Cursed Wallet`)
+		.setThumbnail(targetUser.displayAvatarURL())
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
 		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
 		.setTimestamp()
@@ -713,14 +719,14 @@ export async function handleDomainSelection(interaction) {
 
 	const embed = new EmbedBuilder()
 		.setTitle("Domain Expansion Selection")
-		.setDescription("Choose your domain technique wisely.")
+		.setDescription("Click on one of the domains below to view more information.")
 
 	await interaction.reply({ embeds: [embed], components: [row], ephemeral: false })
 
 	const filter = i => i.user.id === interaction.user.id
-	const collector = interaction.channel.createMessageComponentCollector({ filter })
+	const domaincollector = interaction.channel.createMessageComponentCollector({ filter })
 
-	collector.on("collect", async collectedInteraction => {
+	domaincollector.on("collect", async collectedInteraction => {
 		if (collectedInteraction.isSelectMenu() && collectedInteraction.customId === "select-domain") {
 			const selectedDomainName = collectedInteraction.values[0]
 
@@ -790,11 +796,8 @@ export async function handleDomainSelection(interaction) {
 			if (gradeMappings[gradeLevel] <= 3) {
 				try {
 					await updateUserAchievements(interaction.user.id, "unlockedDomain")
-					await removeItemFromUserInventory(interaction.user.id, "Domain Token", 1)
+					await removeItemFromUserInventory(interaction.user.id, selectedDomain.requirement, 1)
 					await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
-
-					const domainAchievements = determineDomainAchievements(selectedDomainName)
-					// ... (Award achievement Logic - Same as before)
 
 					await collectedInteraction.followUp({
 						embeds: [
@@ -819,17 +822,19 @@ export async function handleDomainSelection(interaction) {
 					embeds: [
 						new EmbedBuilder()
 							.setTitle("Requirements Not Met")
-							.setDescription("You do not have a Domain Token or are not a high enough grade.")
+							.setDescription(
+								`You do not have a ${selectedDomain.requirement} or are not a high enough grade.`
+							)
 					],
 					components: []
 				})
 			}
 
-			collector.stop()
+			domaincollector.stop()
 		}
 	})
 
-	collector.on("end", collected => {
+	domaincollector.on("end", collected => {
 		console.log(`Collected ${collected.size} items`)
 	})
 }
@@ -1103,32 +1108,32 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 3.0", // Replace with your actual version number
-			date: "2024-04-04", // Adjust the date as needed
+			version: "Update 3.5", // Replace with your actual version number
+			date: "07-04-24", // Adjust the date as needed
 			changes: [
 				{
-					name: "**TRADING SYSTEM BETA RELEASE**",
-					value: "This trading system is still highly experimental and may have bugs. Please report any issues.\nCurrently you can only give items not request any."
+					name: "**Fight Command [ SEMI REWORK ]**",
+					value: "Reworked domains, added new techniques, and Added **Status Effects** Currently only domains and some skills apply these."
 				},
 				{
-					name: "Trading System Usage:",
-					value: "Use `/trade @user item quantity` to give an item to another user. Example: `/trade @JohnDoe sukuna finger 1` You can also use /previoustrades to see your trade history. Or /activetrades to see your active trades."
+					name: "New Boss System",
+					value: "Now you can unlock certain bosses when you use an item, So if you use **Special-Grade Geo Locator** It unlocks yuta boss, And if you do the disaster curses quest line you can fight them."
 				},
 				{
-					name: "Useitem Command Rework..",
-					value: "Reworked it to be more streamline and explained better."
+					name: "Quest And Technique Commands",
+					value: "Reworked these commands to be more user friendly and added more information."
 				},
 				{
 					name: "New Techniques",
-					value: "Added Okkotsu + Hakari + More!"
+					value: "New Secret Skills. Get them with useitem - Sacred Eye, "
 				},
 				{
 					name: "Grade System Rework",
-					value: "Bosses scale with your grade. And you can increase YOUR health by using the items like sukuna finger, six eyes."
+					value: "Bosses scale with your grade, Readded boss transformation and awakenings."
 				},
 				{
-					name: "Interaction failed bug",
-					value: "Still working on this bug, if you get this error please try again. Sorry!"
+					name: "Bug Fixes",
+					value: "Interaction failed, and some other bugs fixed. < HP Bug has not been fixed yet so ive removed it for now. >"
 				},
 				{
 					name: "Found a bug? Report it!",
@@ -1181,36 +1186,6 @@ export async function handleLookupCommand(interaction) {
 	}
 
 	await interaction.reply({ embeds: [embed], ephemeral: true })
-}
-
-// clan information embed
-export async function handleClanInfoCommand(interaction: ChatInputCommandInteraction) {
-	const clanEmbed = new EmbedBuilder()
-		.setTitle("Clan Information")
-		.setDescription(
-			"Here is some info about the clans. Each come with their own unique abilities and perks. [ WIP Still, when the fight command gets reworked they'll be used and for future stuff. ]"
-		)
-		.setColor("#0099ff")
-		.addFields(
-			{
-				name: "Demon Vessel",
-				value: "Access to Cleave, Dismantle, Fire Arrow."
-			},
-			{
-				name: "Fushiguro",
-				value: "Access to Ten Shadows Technique, Including Mahoraga."
-			},
-			{
-				name: "Limitless User",
-				value: "Throughout heaven and earth..."
-			},
-			{
-				name: "Zenin",
-				value: "Access to zenin style etc."
-			}
-		)
-
-	await interaction.reply({ embeds: [clanEmbed], ephemeral: true })
 }
 
 // Function to find a technique's clan
@@ -1290,6 +1265,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			.addFields(
 				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
 				{ name: "🔥 Clan", value: userClan || "None", inline: true },
+
 				{
 					name: "🤫 Cursed Energy",
 					value: `${userEnergy.toString()} units ${userEnergy > 1000 ? "🔥" : ""}`,
@@ -1348,6 +1324,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				}
 			}
 		})
+		collector.stop
 	} catch (error) {
 		console.error("Error handling JujutsuStatsCommand:", error)
 		await interaction.reply({
@@ -1511,26 +1488,53 @@ async function delay(ms) {
 }
 export const activeCollectors = new Map()
 
+const specialBosses = ["Yuta Okkotsu"]
+
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
-	//
-	const playerHealth1 = await getUserMaxHealth(interaction.user.id) // Get the user's maximum health
-	await updateUserHealth(interaction.user.id, playerHealth1) // Set the user's current health to their maximum health
-	//
+	// Get the user's maximum health and set their current health to max
+	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+	await updateUserHealth(interaction.user.id, playerHealth1)
+
+	// Defer the reply while processing
 	await interaction.deferReply()
-	console.log("one")
 
-	const usergrade = await getUserGrade(interaction.user.id)
-	const allBosses = await getBosses(usergrade)
+	// Fetch the user's grade and all bosses associated with that grade
+	const userGrade = await getUserGrade(interaction.user.id)
+	const allBosses = await getBosses(userGrade)
 
-	//
+	// Fetch the list of bosses the user has unlocked
+	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
+
 	if (allBosses.length === 0) {
 		console.error("No bosses found in the database.")
+		await interaction.editReply({ content: "No bosses found for your grade." })
 		return
 	}
 
-	// Select random opponent
-	const randomIndex = Math.floor(Math.random() * allBosses.length)
-	const randomOpponent = allBosses[randomIndex]
+	let randomOpponent
+	let attempts = 0
+	do {
+		// Select a random boss
+		const randomIndex = Math.floor(Math.random() * allBosses.length)
+		randomOpponent = allBosses[randomIndex]
+
+		// If the selected boss is special and not unlocked, loop will try again
+		// Define special bosses that need to be unlocked to fight
+		// Example: If specialBosses includes randomOpponent.name and it's not in unlockedBosses, loop continues
+		attempts++
+	} while (
+		specialBosses.includes(randomOpponent.name) &&
+		!unlockedBosses.includes(randomOpponent.name) &&
+		attempts < allBosses.length
+	)
+
+	if (!randomOpponent || attempts >= allBosses.length) {
+		// Handle case where a suitable boss couldn't be found
+		await interaction.editReply({
+			content: "Couldn't find a suitable boss for you to fight. Try unlocking more bosses!"
+		})
+		return
+	}
 
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
@@ -1572,15 +1576,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.setImage(randomOpponent.image_url)
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
-			{ name: "Grade", value: `${randomOpponent.grade}`, inline: true },
 			{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true }
 		)
 		.addFields(
 			{
-				name: "Health Status",
-				value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+				name: "Boss Health Status",
+				value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health),
+				inline: false
 			},
-			{ name: "\u200B", value: "\u200B" }
+			{
+				name: "Player Health Status",
+				value: generateHealthBar(playerHealth, playerHealth),
+				inline: false
+			}
 		)
 		.addFields(
 			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
@@ -1695,7 +1703,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						},
 						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
 						{
-							name: "Health Status",
+							name: "Boss Health Status",
 							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
 						},
 						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
@@ -1726,6 +1734,20 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				// is boss dead?
 				if (randomOpponent.current_health <= 0) {
+					if (randomOpponent.name === "Satoru Gojo") {
+						await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					} else if (randomOpponent.name === "Sukuna") {
+						await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					} else if (randomOpponent.name === "Itadori") {
+						await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					} else if (randomOpponent.name === "Yuta Okkotsu") {
+						await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					} else if (randomOpponent.name === "Hakari Kinji") {
+						await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					} else if (randomOpponent.name === "Zenin Toji") {
+						await exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					}
+
 					domainActivationState.set(contextKey, false)
 					activeCollectors.delete(interaction.user.id)
 
@@ -1781,11 +1803,35 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-			} else if (selectedValue === "Hollow Purple: Nuke") {
+			} else if (selectedValue === "Disaster Curses: Full Flux") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif",
+					description: "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux.",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Chiyo") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 5,
+					imageUrl: "https://media1.tenor.com/m/mUWaK2ogJ1AAAAAC/azumanga-daioh-azumanga.gif",
+					description: "You're a good kid. I'll make sure you don't suffer.",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Hollow Purple: Nuke") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 6,
 					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
 					description:
 						"Nine point.. Polarized light. Crow and Shomyo chant. The gap between within and without. Hollow Technique: PURPLE!",
@@ -1839,7 +1885,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
 					imageUrl:
-						"https://media.tenor.com/dxCqtMk5iEIAAAAC/jujutsu-kaisen-shibuya-arc-sukuna-flame-arrow.gif",
+						"https://cdn.discordapp.com/attachments/1186763190835613748/1226088236397629562/ezgif-2-b2f2996757.gif?ex=66237ea7&is=661109a7&hm=e7eeb0b3305213ae20f0fee49b77dbfc873ca875e61dbd22e629543b33f2c0bf&",
 					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
 					fieldValue: selectedValue,
 					userTechniques,
@@ -1850,7 +1896,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 2,
+					damageMultiplier: 4,
 					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
 					description: `I'm going to lose huh? ${randomOpponent.name}`,
 					fieldValue: selectedValue,
@@ -1965,7 +2011,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
 				{
-					name: "Health Status",
+					name: "Boss Health Status",
 					value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
 				}
 			)
@@ -1974,15 +2020,44 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			} catch (err: unknown) {
 				console.error(err?.toString())
 			}
-			console.log("12", randomOpponent.name)
 			// is boss dead?
 			if (randomOpponent.current_health <= 0) {
-				console.log("13", randomOpponent.name)
-				domainActivationState.set(contextKey, false)
-				activeCollectors.delete(interaction.user.id)
-				bossHealthMap.delete(interaction.user.id)
+				let transformed = false
+				if (randomOpponent.name === "Satoru Gojo") {
+					transformed = await exportTheHonoredOne(
+						interaction,
+						randomOpponent,
+						primaryEmbed,
+						row,
+						playerHealth
+					)
+				} else if (randomOpponent.name === "Sukuna") {
+					transformed = await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Itadori") {
+					transformed = await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Zenin Toji") {
+					transformed = await exportReincarnation(
+						interaction,
+						randomOpponent,
+						primaryEmbed,
+						row,
+						playerHealth
+					)
+				} else if (randomOpponent.name === "Yuta Okkotsu") {
+					transformed = await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Hakari Kinji") {
+					transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				}
+				if (!transformed) {
+					console.log("Boss is defeated and no transformation occurred.")
+					domainActivationState.set(contextKey, false)
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
 
-				await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+				}
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
@@ -2026,6 +2101,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					//
 					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
 					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 				}
@@ -2594,17 +2670,21 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 	console.log(questsArray)
 	const userId = interaction.user.id
 
-	if (questsArray.length === 0) {
+	const userActiveQuests = await getUserQuests(userId) // Fetch the user's active quests
+	const activeQuestNames = userActiveQuests.quests.map(q => q.id) // Extract the active quest names
+
+	const availableQuests = questsArray.filter(quest => !activeQuestNames.includes(quest.name)) // Filter out active quests
+
+	if (availableQuests.length === 0) {
 		throw new Error("There are no available quests.")
 	}
 
-	const questOptions = questsArray.map(quest => ({
+	const questOptions = availableQuests.map(quest => ({
 		label: quest.name,
 		value: quest.name,
-		description: quest.description
+		description: quest.description.substring(0, 100) // Description is truncated to fit within the 100 character limit
 	}))
 
-	// Ensure questOptions has between 1 and 25 elements
 	if (questOptions.length === 0) {
 		throw new Error("No quests available for this user.")
 	} else if (questOptions.length > 25) {
@@ -2634,7 +2714,14 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 	questCollector.on("collect", async i => {
 		if (i.isStringSelectMenu()) {
 			const selectedquestname = i.values[0]
-			console.log(selectedquestname)
+			if (activeQuestNames.includes(selectedquestname)) {
+				await i.update({
+					content: "You are already on this quest!",
+					embeds: [],
+					components: []
+				})
+				return
+			}
 			const selectedQuest = questsArray.find(quest => quest.name === selectedquestname)
 
 			await addUserQuest(userId, selectedQuest.name)
@@ -2745,8 +2832,9 @@ export async function viewQuestsCommand(interaction) {
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
 
-	if (userQuests.quests.length === 0) {
-		return "You have no active quests."
+	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+		await interaction.reply("You have no active quests.")
+		return
 	}
 
 	const embed = new EmbedBuilder()
@@ -2756,15 +2844,33 @@ export async function viewQuestsCommand(interaction) {
 
 	userQuests.quests.forEach(quest => {
 		const questDetails = questsArray.find(q => q.name === quest.id)
-		if (questDetails) {
-			const progress = quest.progress
-			const totalProgress = questDetails.totalProgress
+		if (questDetails && Array.isArray(questDetails.tasks)) {
+			const userTasks = Array.isArray(quest.tasks) ? quest.tasks : []
 
-			const progressText = `${progress}/${totalProgress}`
+			const taskList = questDetails.tasks
+				.map((task, index) => {
+					const userTask = userTasks.find(t => t.description === task.description)
+					const taskProgress = userTask ? userTask.progress : 0
+					const isComplete = taskProgress >= task.totalProgress
+					const taskDescription = isComplete ? `~~${task.description}~~` : task.description
+					const progressText = isComplete
+						? `~~${taskProgress}/${task.totalProgress}~~ ✅`
+						: `${taskProgress}/${task.totalProgress}`
+					return `**Task ${index + 1}**: ${taskDescription} - Progress: ${progressText}`
+				})
+				.join("\n")
 
+			embed.addFields({ name: questDetails.name, value: taskList, inline: false })
+		} else if (questDetails) {
+			const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
+			const isComplete = userTask >= questDetails.totalProgress
+			const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
+			const progressText = isComplete
+				? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
+				: `${userTask}/${questDetails.totalProgress}`
 			embed.addFields({
-				name: quest.id,
-				value: `**Progress**: ${progressText}\n**Task**: ${questDetails.task}`,
+				name: questDetails.name,
+				value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
 				inline: false
 			})
 		}
@@ -2772,7 +2878,52 @@ export async function viewQuestsCommand(interaction) {
 
 	await interaction.reply({ embeds: [embed] })
 }
+// abandon quest with dropdown menu using getuserquest
+export async function abandonQuestCommand(interaction) {
+	const userId = interaction.user.id
+	const userQuests = await getUserQuests(userId)
 
+	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+		await interaction.reply("You have no active quests to abandon.")
+		return
+	}
+
+	const options = userQuests.quests.map(quest => ({
+		label: quest.id,
+		value: quest.id
+	}))
+
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("abandon_quest")
+		.setPlaceholder("Select a Quest to Abandon")
+		.addOptions(options)
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+	await interaction.reply({
+		content: "Select a quest to abandon.",
+		components: [row],
+		ephemeral: true
+	})
+
+	const filter = i => i.customId === "abandon_quest" && i.user.id === interaction.user.id
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector.on("collect", async i => {
+		if (i.isStringSelectMenu()) {
+			const questId = i.values[0]
+			await removeUserQuest(userId, questId)
+			await i.update({ content: `You have abandoned the quest: ${questId}`, components: [] })
+		}
+	})
+
+	collector.on("end", collected => {
+		if (collected.size === 0) {
+			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
+		}
+		collector.stop()
+	})
+}
 export async function handleUseItemCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	console.log("useCommand function initiated.")
 
@@ -2882,12 +3033,13 @@ export async function handleTradeCommand(interaction) {
 
 export async function handleAcceptTrade(interaction) {
 	const userId = interaction.user.id
+	await interaction.deferReply()
 
 	try {
 		const tradeRequests = await viewTradeRequests(userId)
 
 		if (tradeRequests.length === 0) {
-			await interaction.reply({ content: "You have no pending trade requests.", ephemeral: true })
+			await interaction.followUp({ content: "You have no pending trade requests.", ephemeral: true })
 			return
 		}
 
@@ -2900,42 +3052,44 @@ export async function handleAcceptTrade(interaction) {
 		})
 
 		const selectMenu = new SelectMenuBuilder()
-			.setCustomId(`accept_trade_select_${Date.now()}`) // Modified line
+			.setCustomId("accept_trade_select_") // Modified line
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
 		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
 
-		await interaction.reply({
+		return interaction.followUp({
 			content: "Choose a trade request to accept:",
 			components: [actionRow],
 			ephemeral: true
 		})
 	} catch (error) {
 		console.error("Error in handleAcceptTrade:", error)
-		await interaction.reply({
+		return interaction.followUp({
 			content: "An error occurred while trying to process trade requests.",
 			ephemeral: true
 		})
 	}
 }
-
 export async function processTradeSelection(interaction) {
 	const selectedTradeId = interaction.values[0]
-	await interaction.deferReply()
 
 	try {
 		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
-		await interaction.editReply({
+		console.log("Trade request accepted successfully!")
+		await interaction.followUp({
 			content: "Trade request accepted successfully!",
 			components: []
 		})
+		return
 	} catch (error) {
 		console.error("Error handling trade acceptance:", error)
-		await interaction.editReply({
-			content: "An error occurred while trying to accept the trade request.",
+		console.log("An error occurred while trying to accept the trade request.")
+		await interaction.followUp({
+			content: "Confirmed.",
 			components: []
 		})
+		return
 	}
 }
 
@@ -3047,17 +3201,25 @@ export async function handleDonateCommand(interaction) {
 export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 
-	const techniqueNames = []
-	for (let i = 1; i <= 5; i++) {
-		const name = interaction.options.getString(`technique-${i}`)
-		if (name) techniqueNames.push(name)
-		else break
+	const inputTechniqueNames = []
+	for (let i = 1; i <= 10; i++) {
+		const optionName = `technique${i === 1 ? "" : i}`
+		const techniqueName = interaction.options.getString(optionName)
+		if (techniqueName) {
+			inputTechniqueNames.push(techniqueName)
+		}
 	}
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
+		const activeTechniques = await getUserActiveTechniques(userId)
 
-		const invalidTechniques = techniqueNames.filter(name => !userTechniques.includes(name))
+		const userTechniquesLowercaseMap = new Map(userTechniques.map(name => [name.toLowerCase(), name]))
+		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
+
+		const invalidTechniques = inputTechniqueNames.filter(
+			name => !userTechniquesLowercaseMap.has(name.toLowerCase())
+		)
 		if (invalidTechniques.length > 0) {
 			return await interaction.reply({
 				content: `You don't own the following techniques: ${invalidTechniques.join(", ")}`,
@@ -3065,63 +3227,67 @@ export async function handleEquipTechniqueCommand(interaction) {
 			})
 		}
 
-		const activeTechniques = await getUserActiveTechniques(userId)
+		const techniquesToActivate = inputTechniqueNames
+			.filter(name => !activeTechniquesLowercaseMap.has(name.toLowerCase()))
+			.map(name => userTechniquesLowercaseMap.get(name.toLowerCase()))
 
-		if (activeTechniques.length + techniqueNames.length > 20) {
-			return await interaction.reply({
-				content: "You cannot have more than 20 active techniques.",
-				ephemeral: true
-			})
-		}
+		if (techniquesToActivate.length > 0) {
+			const updatedActiveTechniques = [...activeTechniques, ...techniquesToActivate]
+			await updateUserActiveTechniques(userId, updatedActiveTechniques)
 
-		const newActiveTechniques = [...activeTechniques]
-		for (const techniqueName of techniqueNames) {
-			if (!newActiveTechniques.includes(techniqueName)) {
-				newActiveTechniques.push(techniqueName)
-			}
-		}
-
-		if (newActiveTechniques.length !== activeTechniques.length) {
-			await updateUserActiveTechniques(userId, newActiveTechniques)
-			await interaction.reply(
-				`Techniques equipped: ${techniqueNames.filter(name => !activeTechniques.includes(name)).join(", ")}`
-			)
+			const techniquesToActivateDisplay = techniquesToActivate.join(", ")
+			return await interaction.reply(`Techniques equipped: ${techniquesToActivateDisplay}`)
 		} else {
-			await interaction.reply("All provided techniques were already active.")
+			return await interaction.reply("The techniques you tried to equip are already active.")
 		}
-
-		await interaction.reply(`Techniques equipped: ${techniqueNames.join(", ")}`)
 	} catch (error) {
 		console.error("Error equipping techniques:", error)
-		await interaction.reply({
+		return await interaction.reply({
 			content: "There was an error equipping your techniques. Please try again later.",
 			ephemeral: true
 		})
 	}
 }
-
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
-	const techniqueName = interaction.options.getString("technique-name")
+	const techniqueNameInput = interaction.options.getString("technique-name") // Technique name as input by the user
+
+	// Ensure that techniqueNameInput is not null or empty
+	if (!techniqueNameInput) {
+		return await interaction.reply({
+			content: "You must specify a technique to unequip.",
+			ephemeral: true
+		})
+	}
 
 	try {
-		const activeTechniques = await getUserActiveTechniques(userId)
+		const activeTechniques = await getUserActiveTechniques(userId) // Presumed to return original casing
 
-		if (!activeTechniques.includes(techniqueName)) {
+		// Create a lowercase map for case-insensitive comparison.
+		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
+
+		// Check if the technique is equipped using a case-insensitive comparison.
+		const techniqueNameLowercase = techniqueNameInput.toLowerCase()
+		if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
 			return await interaction.reply({
 				content: "That technique is not currently equipped.",
 				ephemeral: true
 			})
 		}
 
-		const newActiveTechniques = activeTechniques.filter(technique => technique !== techniqueName)
+		// Filter out the unequipped technique while preserving original casing for others.
+		const newActiveTechniques = activeTechniques.filter(
+			technique => technique.toLowerCase() !== techniqueNameLowercase
+		)
 
 		await updateUserActiveTechniques(userId, newActiveTechniques)
 
-		await interaction.reply(`Technique '${techniqueName}' unequipped!`)
+		// Get the original case name for the technique being unequipped for the response.
+		const originalCaseName = activeTechniquesLowercaseMap.get(techniqueNameLowercase)
+		await interaction.reply(`Technique '${originalCaseName}' unequipped!`)
 	} catch (error) {
 		console.error("Error unequipping technique:", error)
-		await interaction.reply({
+		return await interaction.reply({
 			content: "There was an error unequipping your technique. Please try again later.",
 			ephemeral: true
 		})

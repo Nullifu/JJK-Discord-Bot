@@ -49,7 +49,7 @@ function getGradeDamageBonus(grade: string): number {
 	}
 }
 
-export function getRandomXPGain(min = 10, max = 70) {
+export function getRandomXPGain(min = 150, max = 320) {
 	// The maximum is inclusive and the minimum is inclusive
 	return Math.floor(Math.random() * (max - min + 1)) + min
 }

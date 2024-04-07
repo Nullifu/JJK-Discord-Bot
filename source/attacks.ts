@@ -15,7 +15,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Cleave", // Simple attack, no special embed changes
 			probability: 60,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed
 		},
 		{
@@ -30,7 +30,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Flame Arrow",
 			probability: 20,
-			baseDamage: 20,
+			baseDamage: 40,
 			embedUpdate: embed => {
 				embed.setImage("https://i.pinimg.com/originals/80/8a/92/808a927200ed3552e01bf77b6349d2b8.gif")
 				embed.setDescription("Fuga... Never seen this one before have you?")
@@ -44,19 +44,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Black Flash",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 40,
 			embedUpdate: embed => embed.setDescription("A surge of cursed energy... BLACK FLASH!")
 		},
 		{
 			name: "Divergent Fist: Hundred Folds!",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed
 		},
 		{
 			name: "Divergent Fist: Collapsing Spear",
 			probability: 20,
-			baseDamage: 20,
+			baseDamage: 25,
 			embedUpdate: embed => embed
 		}
 	],
@@ -65,20 +65,20 @@ export const attacks: Record<string, Attack[]> = {
 	"Satoru Gojo": [
 		{
 			name: "Limitless: Blue!",
-			probability: 50,
-			baseDamage: 10,
+			probability: 40,
+			baseDamage: 35,
 			embedUpdate: embed => embed.setColor("#0000FF")
 		},
 		{
 			name: "Reversal: Red",
-			probability: 50,
-			baseDamage: 20,
+			probability: 40,
+			baseDamage: 30,
 			embedUpdate: embed => embed.setColor("#0000FF")
 		},
 		{
 			name: "Hollow: PURPLE!",
-			probability: 50,
-			baseDamage: 20,
+			probability: 20,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setColor("#0000FF")
 		}
 	],
@@ -87,13 +87,13 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Brotherly Bond: Chain Blitz!",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Let's go BROTHER!")
 		},
 		{
 			name: "Unison Impact",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed
 		}
 	],
@@ -102,13 +102,13 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Divine Dogs: Shadow Pursuit",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Demon Dogs!")
 		},
 		{
 			name: "Domain Expansion: Chimera Shadow Garden",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => {
 				embed.setImage("https://i.imgur.com/eGaZjlO.gif")
 				embed.setDescription("HAHAHAHA WHY THE HELL NOT!")
@@ -118,7 +118,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Shikigami Fusion: Shadow Behemoth",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Let's ramp this up!")
 		}
 	],
@@ -127,13 +127,13 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Soul Severance",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 30,
 			embedUpdate: embed => embed.setDescription("Slice!")
 		},
 		{
 			name: "Chain Snare",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 35,
 			embedUpdate: embed => {
 				embed.setImage("https://www.icegif.com/wp-content/uploads/2023/12/icegif-997.gif")
 				embed.setDescription("I'm going to lose huh?")
@@ -143,7 +143,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Null Strike",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 20,
 			embedUpdate: embed => embed.setDescription("This fight's not over.")
 		}
 	],
@@ -152,19 +152,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Fire Manipulation (Weakened)",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 20,
 			embedUpdate: embed => embed.setDescription("BURN!")
 		},
 		{
 			name: "Barrage of punches",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Pathetic!")
 		},
 		{
 			name: "Null Strike",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("This fight's not over.")
 		}
 	],
@@ -173,19 +173,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Cursed Spirit Manipulation",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Cursed Spirit Manipulation!")
 		},
 		{
 			name: "Cursed Energy Blast",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 14,
 			embedUpdate: embed => embed.setDescription("Cursed Energy Blast!")
 		},
 		{
 			name: "Cursed Energy Barrier",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("Cursed Energy Barrier!")
 		}
 	],
@@ -194,19 +194,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Fire Manipulation",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 19,
 			embedUpdate: embed => embed.setDescription("Fire Manipulation!")
 		},
 		{
 			name: "Fireball",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 18,
 			embedUpdate: embed => embed.setDescription("Fireball!")
 		},
 		{
 			name: "MAXIMUM TECHNIQUE: METEOR!!!!",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 30,
 			embedUpdate: embed => {
 				embed.setImage("https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif")
 				embed.setDescription("I'LL BURN YOU TO A CRISP! ")
@@ -219,19 +219,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Transfiguration",
 			probability: 50,
-			baseDamage: 10,
+			baseDamage: 15,
 			embedUpdate: embed => embed.setDescription("Transfiguration!")
 		},
 		{
 			name: "Polymorphic Soul Isomer",
 			probability: 20,
-			baseDamage: 10,
+			baseDamage: 15,
 			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
 		},
 		{
 			name: "Instant Spirit Body of Distorted Killing...",
 			probability: 30,
-			baseDamage: 10,
+			baseDamage: 15,
 			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
 		}
 	],
@@ -331,7 +331,7 @@ export const attacks: Record<string, Attack[]> = {
 	// Mahito
 	"Hakari Kinji": [
 		{
-			name: "Jackpot: Strike",
+			name: "Barrage",
 			probability: 50,
 			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("BLAST!")
@@ -346,46 +346,187 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Jackpot: Cargo Rush",
 			probability: 20,
 			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Hakari (Jackpot)": [
+		{
+			name: "Jackpot: Fleeting Rush",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Private Pure Love Train: Pachinko Rush",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Private Pure Love Train: Cargo Rush",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Finger Bearer": [
+		{
+			name: "Strike",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Cursed Energy Blast",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Explosion",
+			probability: 20,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+
+	"Yuta Okkotsu": [
+		{
+			name: "Black Flash",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Steel Arm: Freeze Flash",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Vengeance: Executioner's Blade",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Yuta Okkotsu & Curse Queen Rika": [
+		{
+			name: "Combined Attack: Black Flash",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Curse Queen: Rika's Rampage",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Pure Love: Rika's Embrace",
+			probability: 20,
+			baseDamage: 70,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Sukuna (Heian Era)": [
+		{
+			name: "Kamutoke",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Spiderweb",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "World Cutting Slash",
+			probability: 20,
+			baseDamage: 70,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Zenin Toji (Reincarnated)": [
+		{
+			name: "Purgatory",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Bloodlusted: Skull Crush",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Racism: World Cutting Slash",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Disaster Curses": [
+		{
+			name: "Combined: Stream",
+			probability: 50,
+			baseDamage: 25,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Combined: Waterfall",
+			probability: 30,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Combined: Fluxing Stream",
+			probability: 20,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	],
 	"Dagon": [
 		{
-			name: "Jackpot: Strike",
+			name: "Oceanic: Stream",
 			probability: 50,
 			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("BLAST!")
 		},
 		{
-			name: "Gamblers Strike",
+			name: "Disaster Tides: Death Swarm",
 			probability: 30,
 			baseDamage: 17,
 			embedUpdate: embed => embed.setDescription("Strike!")
 		},
 		{
-			name: "Jackpot: Cargo Rush",
+			name: "Horizon of the Captivating Skandha",
 			probability: 20,
-			baseDamage: 30,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	],
-	"Yuta": [
+	"Hanami": [
 		{
-			name: "Jackpot: Strike",
+			name: "Flower Garden",
 			probability: 50,
 			baseDamage: 25,
 			embedUpdate: embed => embed.setDescription("BLAST!")
 		},
 		{
-			name: "Gamblers Strike",
+			name: "Cursed Bud",
 			probability: 30,
 			baseDamage: 17,
 			embedUpdate: embed => embed.setDescription("Strike!")
 		},
 		{
-			name: "Jackpot: Cargo Rush",
+			name: "World of Cursed Blossoms",
 			probability: 20,
-			baseDamage: 30,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	]
@@ -435,6 +576,10 @@ const statusEffectsDescriptions = {
 	"Mutual Love": {
 		description: "Reduces incoming damage by 20%",
 		effect: "20% REDUC"
+	},
+	"Osakian": {
+		description: "You smell!",
+		effect: "Chiyo does 20% more damage"
 	}
 
 	// Define other status effects here
@@ -518,6 +663,7 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 		damageReduction *= 0.2
 		damageIncrease *= 1.2
 	}
+
 	if (statusEffects.includes("Mutual Love")) {
 		damageReduction *= 0.3
 		damageIncrease *= 1.4

@@ -12,7 +12,6 @@ import {
 	PermissionFlagsBits,
 	REST,
 	Routes,
-	SelectMenuInteraction,
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
@@ -25,7 +24,6 @@ import {
 	handleActiveTradesCommand,
 	handleBalanceCommand,
 	handleBegCommand,
-	handleClanInfoCommand,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -184,7 +182,7 @@ cron.schedule("*/5 * * * *", async () => {
 	}
 })
 
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(40) // Set it to a reasonable value based on your use case
 export const workCooldowns = new Map<string, number>()
 export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
@@ -339,7 +337,8 @@ const commands = [
 					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
 					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
 					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
-					{ name: "Sacred Eye", value: "Sacred Eye" }
+					{ name: "Sacred Eye", value: "Sacred Eye" },
+					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" }
 				)
 		),
 	new SlashCommandBuilder()
@@ -380,7 +379,67 @@ const commands = [
 		.setName("technique")
 		.setDescription("Manage your techniques.")
 		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View your equipped techniques."))
-		.addSubcommand(subcommand => subcommand.setName("unequip").setDescription("Unequip a technique."))
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("unequip")
+				.setDescription("Unequip a technique.")
+				.addStringOption(option =>
+					option
+						.setName("technique2")
+						.setDescription("Second technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique10")
+						.setDescription("Tenth technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique3")
+						.setDescription("Third technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique4")
+						.setDescription("Fourth technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique5")
+						.setDescription("Fifth technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique7")
+						.setDescription("Seventh technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique8")
+						.setDescription("Eight technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique9")
+						.setDescription("Ninth technique to unequip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+		)
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName("equip")
@@ -394,15 +453,15 @@ const commands = [
 				)
 				.addStringOption(option =>
 					option
-						.setName("technique2")
-						.setDescription("Second technique to equip")
+						.setName("technique1")
+						.setDescription("First technique to equip")
 						.setRequired(false)
 						.setAutocomplete(false)
 				)
 				.addStringOption(option =>
 					option
-						.setName("technique10")
-						.setDescription("Tenth technique to equip")
+						.setName("technique2")
+						.setDescription("Second technique to equip")
 						.setRequired(false)
 						.setAutocomplete(false)
 				)
@@ -424,6 +483,13 @@ const commands = [
 					option
 						.setName("technique5")
 						.setDescription("Fifth technique to equip")
+						.setRequired(false)
+						.setAutocomplete(false)
+				)
+				.addStringOption(option =>
+					option
+						.setName("technique6")
+						.setDescription("Sixth technique to equip")
 						.setRequired(false)
 						.setAutocomplete(false)
 				)
@@ -541,10 +607,6 @@ client.on("interactionCreate", async interaction => {
 		return
 	}
 
-	if (commandName === "claninfo") {
-		await handleClanInfoCommand(chatInputInteraction)
-		return
-	}
 	if (commandName === "vote") {
 		await handleVoteCommand(chatInputInteraction)
 		return
@@ -565,6 +627,20 @@ client.on("interactionCreate", async interaction => {
 		await handleUpdateCommand(chatInputInteraction)
 		return
 	}
+	client.on("interactionCreate", async interaction => {
+		if (interaction.isStringSelectMenu()) {
+			console.log("Select menu interaction detected")
+			if (interaction.customId.startsWith("accept_trade_select_")) {
+				console.log("Handling trade selection...")
+				await interaction
+					.deferReply({ ephemeral: false })
+					.catch(error => console.error("Error deferring reply:", error))
+				await processTradeSelection(interaction).catch(error =>
+					console.error("Error during trade selection processing:", error)
+				)
+			}
+		}
+	})
 
 	const shouldProceed = await checkRegistrationMiddleware(interaction)
 	if (!shouldProceed) return
@@ -697,19 +773,6 @@ client.on("interactionCreate", async interaction => {
 				await handleGiveItemCommand(chatInputInteraction)
 				break
 		}
-		// Handle Autocomplete Interactions for technique command getusertechniques
-
-		client.on("interactionCreate", async interaction => {
-			console.log("Interaction received") // Debug log
-			if (interaction.isStringSelectMenu()) {
-				console.log("Select menu interaction detected") // Debug log
-				const selectMenuInteraction = interaction as SelectMenuInteraction
-				if (interaction.customId.startsWith("accept_trade_select_")) {
-					console.log("Handling trade selection...") // Debug log
-					await processTradeSelection(selectMenuInteraction)
-				}
-			}
-		})
 	}
 })
 

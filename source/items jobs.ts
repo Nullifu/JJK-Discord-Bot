@@ -7,7 +7,8 @@ import {
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
-	updateUserHeavenlyRestriction
+	updateUserHeavenlyRestriction,
+	updateUserUnlockedBosses
 } from "./mongodb.js"
 
 export const digitems = [
@@ -17,7 +18,8 @@ export const digitems = [
 	{ name: "Super Glue", rarity: "Super Rare", chance: 0.07 },
 	{ name: "Sukuna Finger", rarity: "Special Grade", chance: 0.05 },
 	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.03 },
-	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1 }
+	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1 },
+	{ name: "(Shattered) Domain Remnants", rarity: "Special Grade", chance: 0.1 }
 ]
 export const items = [
 	{ name: "Tailsman", rarity: "Super Rare", chance: 0.07, price: 0 },
@@ -28,6 +30,7 @@ export const items = [
 	{ name: "(Broken) Divine General Wheel", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "(Broken) Playful Cloud", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07, price: 0 },
+	{ name: "(Shattered) Domain Remnants", rarity: "Special Grade", price: 50000 },
 
 	// ^ Easy to find
 	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07, price: 2500 },
@@ -50,9 +53,10 @@ export const items = [
 	//
 	{ name: "(Fixed) Divine General Wheel", rarity: "Special Grade", chance: 0.1, price: 125000 },
 	{ name: "Six Eyes", rarity: "Special Grade", chance: 0.1, price: 175000 },
-	{ name: "Domain Token", rarity: "Special Grade", chance: 0.1, price: 275000 },
+	{ name: "Yuta's Token", rarity: "Special Grade", chance: 0.1, price: 275000 },
 	{ name: "Heavenly Restricted Blood", rarity: "Special Grade", chance: 0.1, price: 275000 },
-	{ name: "Special-Grade Geo Locator", rarity: "Special Grade", chance: 0.1, price: 500000 }
+	{ name: "Special-Grade Geo Locator", rarity: "Special Grade", chance: 0.1, price: 300000 }
+
 	// ^ Hard to find // Difficult crafted items
 ]
 
@@ -68,7 +72,23 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Malevolent Shrine (Blood Vial)", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
+	"Sukuna (Suppressed)": [
+		{ name: "Sukuna Finger", rarity: "common" },
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "Bet Slip", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
+	],
+	"Sukuna (Heian Era)": [
+		{ name: "Sukuna Finger", rarity: "common" },
+		{ name: "Go//Jo", rarity: "rare" },
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "Malevolent Shrine (Upgrade", rarity: "rare" }
+	],
 	"Zenin Toji": [
+		{ name: "(Broken) Split Soul Katana", rarity: "common" },
+		{ name: "Fractured Chain", rarity: "ultra rare" }
+	],
+	"Zenin Toji (Reincarnation)": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
 		{ name: "Fractured Chain", rarity: "ultra rare" }
 	],
@@ -110,7 +130,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	"The Honored One": [
 		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "rare" },
-		{ name: "Rikugan Eye", rarity: "ultra rare" }
+		{ name: "Six Eyes", rarity: "ultra rare" }
 	],
 	"Mahoraga": [
 		{ name: "(Broken) Divine General Wheel", rarity: "rare" },
@@ -127,6 +147,14 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Bet Slip", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
+	"Hakari (Jackpot)": [
+		{ name: "Gambler Token", rarity: "rare" },
+		{ name: "Bet Slip", rarity: "rare" },
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "Sukuna Finger", rarity: "rare" },
+		{ name: "Rikugan Eye", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
+	],
 
 	"Kashimo": [
 		{ name: "(Broken) Electrical Staff", rarity: "rare" },
@@ -138,10 +166,23 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Green Fish", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
-	"Yuta": [
+	"Hanami": [
+		{ name: "Wood Chippins", rarity: "rare" },
+		{ name: "Cursed Bud", rarity: "rare" },
+		{ name: "Jogos (Fixed) Balls", rarity: "ultra rare" }
+	],
+	"Yuta Okkotsu": [
 		{ name: "Fraud Poster", rarity: "rare" },
 		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
+	],
+	"Yuta Okkotsu & Curse Queen Rika": [
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" },
+		{ name: "Rikugan Eye", rarity: "ultra rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" },
+		{ name: "Six Eyes", rarity: "ultra rare" }
 	]
 }
 
@@ -251,6 +292,7 @@ export const DOMAIN_EXPANSIONS = [
 		open_image_URL: "https://media1.tenor.com/m/oHYuFbvLxiEAAAAC/hakari-kinji-kinji-hakari.gif",
 		statusEffect: "Gamblers Limit"
 	},
+
 	{
 		name: "Unlimited Void",
 		description: "Considered one of the most powerful techniques in Jujutsu",
@@ -756,13 +798,39 @@ export const benefactors = [
 export const questsArray = [
 	{
 		name: "Gamblers Fever",
-		description: "Defeat Hakari Kinji 3 Times!",
+		description: "Defeat Hakari Kinji 5 Times!",
 		coins: 45000,
 		experience: 470,
 		item: "Hakari Kinji's Token",
 		itemQuantity: 1,
 		task: "Defeat Hakari Kinji",
-		totalProgress: 1
+		totalProgress: 5
+	},
+	{
+		name: "Disaster Curses",
+		description: "Use all of the disaster curses items!",
+		coins: 45000,
+		experience: 470,
+		item: "Combined Disaster Curses Soul",
+		itemQuantity: 1,
+
+		tasks: [
+			{
+				description: "Defeat Jogo",
+				progress: 0,
+				totalProgress: 1
+			},
+			{
+				description: "Defeat Hanami",
+				progress: 0,
+				totalProgress: 1
+			},
+			{
+				description: "Defeat Dagon",
+				progress: 0,
+				totalProgress: 1
+			}
+		]
 	},
 	{
 		name: "Nature of Curses",
@@ -770,7 +838,7 @@ export const questsArray = [
 		coins: 23000,
 		experience: 320,
 		item: "Junpei",
-		itemQuantity: 1,
+		itemQuantity: 2,
 		task: "Defeat Reborn Mahito",
 		totalProgress: 1
 	},
@@ -781,7 +849,7 @@ export const questsArray = [
 		experience: 320,
 		items: {
 			"Special-Grade Geo Locator": 2,
-			"Sukuna Finger": 1
+			"Sukuna Finger": 3
 		},
 		task: "Get Cursed By Sukuna.",
 		totalProgress: 1
@@ -791,7 +859,10 @@ export const questsArray = [
 		description: "Locate Yuta Okkotsu!",
 		coins: 34000,
 		experience: 250,
-		item: "Yuta's Token",
+		items: {
+			"Yuta's Token": 2,
+			"Fraud Poster": 1
+		},
 		itemQuantity: 2,
 		task: "Find this fraud!",
 		totalProgress: 1
@@ -802,7 +873,7 @@ export const questsArray = [
 		coins: 20000,
 		experience: 320,
 		item: "Sacred Eye",
-		itemQuantity: 1,
+		itemQuantity: 2,
 		task: "Be blessed with the limitless technique...",
 		totalProgress: 1
 	}
@@ -1211,14 +1282,17 @@ export const items1: Item1[] = [
 				const chanceToFindYuta = 0.2
 
 				if (findChance <= chanceToFindYuta) {
+					const gains =
+						"You have gained:\n" + "• Boss Unlock: Yuta Okkotsu\n" + "• Quest Progress: Find Yuta! +1\n"
 					const embedSecond = new EmbedBuilder()
 						.setColor("#006400")
 						.setTitle("LOCATED YUTA OKKOTSU")
-						.setDescription("He's right there, get him!")
+						.setDescription(`He's right there, get him!\n\n${gains}`)
 						.setImage("https://i.ytimg.com/vi/1mTM_tWt1eA/maxresdefault.jpg")
 
 					await interaction.editReply({ embeds: [embedSecond] })
 					await addUserQuestProgress(interaction.user.id, "Find Yuta!", 1)
+					await updateUserUnlockedBosses(interaction.user.id, ["Yuta Okkotsu"])
 				} else {
 					const embedSecond = new EmbedBuilder()
 						.setColor("#8b0000")
@@ -1266,6 +1340,65 @@ export const items1: Item1[] = [
 					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!  [ MORE STUFF TO COME ]\n+Disaster Flames: Full Fire Formation"
 				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+
+	{
+		itemName: "Combined Disaster Curses Soul",
+		description: "Combined Disaster Curses Soul",
+		rarity: "Special",
+		imageUrl:
+			"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("???")
+				.setDescription(
+					"Following your recent encounter with the disaster curses, you find yourself with a new item... The Combined Disaster Curses Soul."
+				)
+
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription("You consume the soul and are transported to a new realm.")
+
+			await addUserTechnique(interaction.user.id, "Disaster Curses: Full Flux")
+			await updateUserUnlockedBosses(interaction.user.id, ["Disaster Curses"])
+			await updateUserExperience(interaction.user.id, 925)
+
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Silent Farewell")
+				.setDescription(
+					"In the quiet of a solemn realm, you stand before Hanami, Dagon, Jogo. Their gaze holds a silent conversation of respect. '**Stand proud... You are strong**,' you acknowledge their strength, and a subtle smile crosses their visage."
+				)
+				.setImage(
+					"https://cdn.discordapp.com/attachments/831182053156061214/1226390493823242301/ezgif-3-e503b36f27.gif?ex=66249826&is=66122326&hm=cd952f67984a961b96868c4e8033eb4c4c4f66c4fdd444f0d3c3e7a475c12f1f&"
+				)
+
+			await interaction.editReply({ embeds: [embedFinal] })
+
+			// Additional delay before adding the new field
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			// Add the new field to the existing embed
+			embedFinal.addFields({
+				name: "Gift of the Curses",
+				value: "Power surges within you as 'Disaster Curses: Full Flux' awakens. The legacy of the fallen fuels your ascent. Gain 925 experience, There spirits now roam free you may encounter them again..."
+			})
+
+			// Update the embed with the new field
+			await interaction.editReply({ embeds: [embedFinal] })
 		}
 	}
 ]
