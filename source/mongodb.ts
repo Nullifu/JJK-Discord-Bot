@@ -7,7 +7,7 @@ import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "devboss"
+const bossCollectionName = "bosses"
 const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
