@@ -2,7 +2,7 @@
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient, ObjectId } from "mongodb"
-import { BossData, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
+import { BossData, TradeRequest, User, UserProfile } from "./interface.js"
 import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
@@ -494,7 +494,6 @@ export async function getUserHealth(userId: string): Promise<number> {
 export async function getBosses(userGrade: string): Promise<BossData[]> {
 	try {
 		// Find the health multiplier based on the user's grade
-		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
 
 		const database = client.db(mongoDatabase) // Assuming the client is already connected
 		const domainsCollection = database.collection(bossCollectionName)
@@ -503,8 +502,8 @@ export async function getBosses(userGrade: string): Promise<BossData[]> {
 			id: boss._id.toString(), // Convert MongoDB ObjectId to string
 			name: boss.name,
 			// Apply the multiplier to the max_health and current_health
-			max_health: Math.round(boss.max_health * healthMultiplier),
-			current_health: Math.round(boss.current_health * healthMultiplier),
+			max_health: Math.round(boss.max_health),
+			current_health: Math.round(boss.current_health),
 			image_url: boss.image_URL, // Ensure the property name matches your database
 			grade: boss.grade // Assuming this is the correct property and type
 		}))
