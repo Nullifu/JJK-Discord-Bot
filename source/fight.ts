@@ -229,7 +229,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 
 export async function exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.3) {
+	if (random < 0.9) {
 		randomOpponent.name = "Sukuna (Heian Era)"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
@@ -284,7 +284,7 @@ export async function exportTheFraud(interaction, randomOpponent, primaryEmbed, 
 		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
 
 		primaryEmbed.setDescription(
-			"It seems sukuna has taken over the body of Yuji Itadori! Bring him down before he takes over!"
+			"Hmph, pathetic brat. Look at the state you've gotten yourself into, **SUKUNA HAS TAKEN OVER YUJI ITADORI'S BODY AND IS NOW IN CONTROL! DEFEAT HIM BEFORE HE FULLY TAKES OVER**"
 		)
 		primaryEmbed.setImage(
 			"https://cdn.discordapp.com/attachments/1186763190835613748/1226436754970640405/ezgif-5-83a420d6b1.gif?ex=6624c33c&is=66124e3c&hm=8f8b3de15fabf874eada713edce48052e0579fd414dee8398c65b0bf20802cc3&"
@@ -302,7 +302,7 @@ export async function exportTheFraud(interaction, randomOpponent, primaryEmbed, 
 }
 export async function exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.3) {
+	if (random < 0.9) {
 		randomOpponent.name = "Zenin Toji (Reincarnated)"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
@@ -326,7 +326,7 @@ export async function exportReincarnation(interaction, randomOpponent, primaryEm
 }
 export async function exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.2) {
+	if (random < 0.9) {
 		randomOpponent.name = "Yuta Okkotsu & Curse Queen Rika"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
@@ -369,6 +369,30 @@ export async function exportCrashOut(interaction, randomOpponent, primaryEmbed, 
 	return false
 }
 
-// Return false to indicate no transformation occurred
+export async function exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
+	const random = Math.random()
+	if (random < 0.9) {
+		randomOpponent.name = "Sukuna (Heian Era)"
+		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		const usermaxhealth = getUserMaxHealth(interaction.user.id)
+
+		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+
+		primaryEmbed.setDescription(
+			`HAHHAHAHAHAHAHAHAHAHAHAH YOU CAN SEE IT ${interaction.user.username}! YOU CAN SEE MY CURSED TECHNIQUE!`
+		)
+		primaryEmbed.setImage("https://media1.tenor.com/m/I1g7hhwKGbkAAAAd/sukuna-ryomen.gif")
+		primaryEmbed.setFields(
+			{ name: "SUKUNA HAS ENTERED STAGE TWO!", value: "" },
+			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+			{ name: "Player Health", value: playerHealth.toString() }
+		)
+
+		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		return true
+	}
+	return false
+}
 
 export { getJujutsuFlavorText }

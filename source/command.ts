@@ -17,10 +17,12 @@ import {
 	Interaction,
 	InteractionResponse,
 	SelectMenuInteraction,
-	StringSelectMenuBuilder
+	StringSelectMenuBuilder,
+	StringSelectMenuInteraction
 } from "discord.js"
 import {
 	DOMAIN_INFORMATION,
+	TRANSFORMATIONS,
 	applyAdaption,
 	applyPrayerSongEffect,
 	applyStatusEffect,
@@ -43,6 +45,7 @@ import {
 	exportGambler,
 	exportReincarnation,
 	exportRika,
+	exportSukuna2,
 	exportTheCursedOne,
 	exportTheFraud,
 	exportTheHonoredOne,
@@ -83,21 +86,23 @@ import {
 	getUserAchievements,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
-	getUserClan,
 	getUserCursedEnergy,
 	getUserDailyData,
 	getUserDomain,
 	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
+	getUserInateClan,
 	getUserInventory,
 	getUserMaxHealth,
 	getUserProfile,
 	getUserQuests,
 	getUserStatusEffects,
 	getUserTechniques,
+	getUserTransformation,
 	getUserUnlockedBosses,
 	getUserUnlockedTitles,
+	getUserUnlockedTransformations,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
 	removeAllStatusEffects,
@@ -117,11 +122,13 @@ import {
 	updateUserHeavenlyTechniques,
 	updateUserJob,
 	updateUserTitle,
+	updateUserTransformation,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
 
 const domainActivationState = new Map()
+const transformationState = new Map()
 const bossHealthMap = new Map() // Create a Map to store boss health per user
 
 export const searchCooldowns = new Map()
@@ -528,118 +535,120 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	await interaction.reply({ embeds: [dailyEmbed] })
 }
 
-export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>): Promise<void> {
-	const selectedItem = interaction.options.getString("item")
-	const quantity = interaction.options.getInteger("quantity") || 1 // Default to 1 if not provided
-
+export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>) {
 	try {
-		const userInventory = await getUserInventory(interaction.user.id)
-		const selectedItemRecipe = craftingRecipes[selectedItem.replace(" ", "_").toLowerCase()] // Adjust as necessary for key naming conventions
-
-		if (!selectedItemRecipe) {
-			await interaction.reply({ content: "Invalid item selected.", ephemeral: true })
-			return
-		}
-
-		const missingItems = selectedItemRecipe.requiredItems.filter(requiredItem => {
-			const inventoryItem = userInventory.find(invItem => invItem.name === requiredItem.name)
-			return !inventoryItem || inventoryItem.quantity < requiredItem.quantity
-		})
-
-		if (missingItems.length > 0) {
-			// Construct a message listing all missing items
-			const missingItemsMessage = missingItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
-			await interaction.reply(`You do not have enough of the following items: ${missingItemsMessage}`)
-			return
-		}
-
-		const craftEmbed = new EmbedBuilder()
-			.setColor(0x00ff00)
-			.setTitle(`Crafting ${selectedItem.replace("_", " ")}`)
-			.setDescription(`Do you want to craft **${selectedItem.replace("_", " ")}**?`)
-			.addFields(
-				selectedItemRecipe.requiredItems.map(item => ({
-					name: item.name,
-					value: `Quantity: ${item.quantity}`,
-					inline: true
-				}))
-			)
-			.setTimestamp()
-			.setFooter({ text: "Make sure you have all the required items before crafting!" })
-
-		const confirmButton = new ButtonBuilder()
-			.setCustomId("confirmCraft")
-			.setLabel("Confirm")
-			.setStyle(ButtonStyle.Success)
-			.setEmoji("✅")
-
-		const cancelButton = new ButtonBuilder()
-			.setCustomId("cancelCraft")
-			.setLabel("Cancel")
-			.setStyle(ButtonStyle.Danger)
-			.setEmoji("❌")
-
-		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)
-
-		// Send the embed with buttons
-		await interaction.reply({ embeds: [craftEmbed], components: [row] })
-
-		// ... (create collector and handle button interactions as previously shown)
-		// Create a collector and filter to listen for button interaction
-		const filter = (i: { customId: string; user: { id: string } }) =>
-			["confirmCraft", "cancelCraft"].includes(i.customId) && i.user.id === interaction.user.id
-		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 }) // Adjust time as needed (60000ms = 60s)
-
-		collector.on("collect", async buttonInteraction => {
-			if (!buttonInteraction.deferred) await buttonInteraction.deferUpdate()
-
-			if (buttonInteraction.customId === "confirmCraft") {
-				try {
-					console.log("Starting item removal for ITEM!")
-
-					for (const requiredItem of selectedItemRecipe.requiredItems) {
-						console.log("Removing item:", requiredItem)
-						await removeItemFromUserInventory(interaction.user.id, requiredItem.name, requiredItem.quantity)
-						console.log("Item removed!")
+		// Assuming craftingRecipes is an object where the key is the item identifier and it contains all necessary details
+		const craftableItemsMenu = new SelectMenuBuilder()
+			.setCustomId("selectCraftItem")
+			.setPlaceholder("Select an item to craft")
+			.addOptions(
+				Object.keys(craftingRecipes).map(key => {
+					const recipe = craftingRecipes[key]
+					// Check if emoji exists and is in correct format, otherwise set to undefined
+					const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
+					return {
+						label: recipe.craftedItemName,
+						value: key,
+						emoji: emojiId ? { id: emojiId } : undefined
 					}
-					await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
-					console.log("Item added! ", selectedItemRecipe.craftedItemName)
-
-					// Confirm to the user that the crafting was successful
-					await buttonInteraction.editReply({
-						content: `You have successfully crafted ${selectedItem.replace("_", " ")}!`,
-						components: []
-					})
-				} catch (error) {
-					console.error("Error during crafting:", error)
-					// Inform the user about the error in a generic way
-					await buttonInteraction.editReply({
-						content: "There was an error during the crafting process. Please try again.",
-						components: []
-					})
-				}
-			} else if (buttonInteraction.customId === "cancelCraft") {
-				// If they clicked cancel, let them know the crafting was canceled
-				await buttonInteraction.editReply({ content: "Crafting canceled.", components: [] })
-			}
-
-			collector.on("end", () => {
-				// Disable the buttons after interaction
-				confirmButton.setDisabled(true)
-				cancelButton.setDisabled(true)
-				interaction.editReply({
-					components: [new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)]
 				})
-			})
+			)
 
-			collector.stop()
+		const row1 = new ActionRowBuilder<SelectMenuBuilder>().addComponents(craftableItemsMenu)
+
+		await interaction.reply({ content: "", components: [row1] })
+
+		const menuFilter = i => i.customId === "selectCraftItem" && i.user.id === interaction.user.id
+		const menuCollector = interaction.channel.createMessageComponentCollector({ filter: menuFilter, time: 60000 })
+
+		menuCollector.on("collect", async interaction => {
+			if (interaction.isStringSelectMenu()) {
+				await interaction.deferUpdate()
+
+				const selectedItemKey = interaction.values[0]
+				const selectedItemRecipe = craftingRecipes[selectedItemKey]
+
+				const craftEmbed = new EmbedBuilder()
+					.setColor(0x00ff00)
+					.setTitle(`${selectedItemRecipe.emoji} ${selectedItemRecipe.craftedItemName}`)
+					.addFields({
+						name: "Requirements",
+						value: selectedItemRecipe.requiredItems
+							.map(item => `${item.quantity}x ${item.name}`)
+							.join("\n"),
+						inline: false
+					})
+
+				const confirmButton = new ButtonBuilder()
+					.setCustomId("confirmCraft")
+					.setLabel("Confirm")
+					.setStyle(ButtonStyle.Success)
+					.setEmoji("✅")
+
+				const cancelButton = new ButtonBuilder()
+					.setCustomId("cancelCraft")
+					.setLabel("Cancel")
+					.setStyle(ButtonStyle.Danger)
+					.setEmoji("❌")
+
+				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, cancelButton)
+
+				await interaction.editReply({
+					embeds: [craftEmbed],
+					components: [row, row1]
+				})
+
+				const buttonFilter = i =>
+					["confirmCraft", "cancelCraft"].includes(i.customId) && i.user.id === interaction.user.id
+
+				const buttonCollector = interaction.channel.createMessageComponentCollector({
+					filter: buttonFilter,
+					time: 20000 // Collector will last for 15 seconds
+				})
+
+				buttonCollector.on("collect", async buttonInteraction => {
+					await buttonInteraction.deferUpdate()
+
+					if (buttonInteraction.customId === "confirmCraft") {
+						try {
+							console.log("Starting item removal for ITEM!")
+
+							for (const requiredItem of selectedItemRecipe.requiredItems) {
+								console.log("Removing item:", requiredItem)
+								await removeItemFromUserInventory(
+									interaction.user.id,
+									requiredItem.name,
+									requiredItem.quantity
+								)
+								console.log("Item removed!")
+							}
+							await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
+							console.log("Item added! ", selectedItemRecipe.craftedItemName)
+
+							await buttonInteraction.editReply({
+								content: `You have successfully crafted ${selectedItemRecipe.craftedItemName}!`,
+								components: []
+							})
+						} catch (error) {
+							console.error("Error during crafting:", error)
+							await buttonInteraction.editReply({
+								content: "There was an error during the crafting process. Please try again.",
+								components: []
+							})
+						}
+					} else if (buttonInteraction.customId === "cancelCraft") {
+						await buttonInteraction.editReply({ content: "Crafting canceled.", components: [] })
+					}
+
+					buttonCollector.stop()
+				})
+			}
 		})
 	} catch (error) {
-		console.error("Error in crafting or inventory process:", error)
+		console.error("Error in crafting command:", error)
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
 }
-
 export async function handleTitleSelectCommand(interaction: ChatInputCommandInteraction) {
 	console.log("Title selection command received.")
 
@@ -1215,7 +1224,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	const userId = interaction.user.id
 
 	try {
-		const userClan = await getUserClan(userId)
+		const userClan = await getUserInateClan(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const userEnergy = await getUserCursedEnergy(userId)
 		let userTechniques: string[] = await (userHeavenlyRestriction
@@ -1260,26 +1269,25 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		// Construct the embed
 		const embed = new EmbedBuilder()
 			.setTitle(`${interaction.user.username}'s Jujutsu Profile`)
-			.setColor("#4B0082")
+			.setColor("#4B0082") // Purple color
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
 				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
-				{ name: "🔥 Clan", value: userClan || "None", inline: true },
-
 				{
 					name: "🤫 Cursed Energy",
 					value: `${userEnergy.toString()} units ${userEnergy > 1000 ? "🔥" : ""}`,
 					inline: true
 				},
-
 				{
 					name: "⚖️ Heavenly Restriction",
 					value: userHeavenlyRestriction ? "Active" : "Inactive",
 					inline: true
 				},
-				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay, inline: false }
+				{ name: "🔥 Clan", value: userClan.clan || "None", inline: false },
+				{ name: "🌟 Experience", value: userClan.experience?.toString() || "0", inline: false },
+				{ name: "🎚️ Tier", value: `Tier ${userClan.tier?.toString() || "0"}`, inline: false },
+				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay || "None", inline: false }
 			)
-
 		const selectMenu = new StringSelectMenuBuilder() // Note: StringSelectMenuBuilder
 			.setCustomId("selectMenu")
 			.setPlaceholder("Select an option")
@@ -1350,22 +1358,16 @@ export async function handleGuideCommand(interaction) {
 
 	switch (topic) {
 		case "crafting":
-			guideEmbed
-				.setTitle("Crafting Guide")
-				.setDescription("Here's how you can craft items in the Jujutsu Kaisen Bot...")
-				.addFields({
-					name: "Basic Crafting",
-					value: "To start crafting, use `/craft [item]`. You'll need the right materials."
-				})
+			guideEmbed.setTitle("Crafting Guide").setDescription("Here's how you can craft items.").addFields({
+				name: "Basic Crafting",
+				value: "To start crafting, use `/craft [item]`. You can find item materials by using /beg /dig /search /fight /quest"
+			})
 			break
 		case "technique":
-			guideEmbed
-				.setTitle("Technique Guide")
-				.setDescription("Here's how you can aquire techniques in the Jujutsu Kaisen Bot...")
-				.addFields({
-					name: "Techniques",
-					value: "To start learning techniques, use `/techniqueshop`. You'll need the right materials. And money."
-				})
+			guideEmbed.setTitle("Technique Guide").setDescription("Here's how you can aquire techniques.").addFields({
+				name: "Techniques",
+				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command."
+			})
 			break
 		case "jobs":
 			guideEmbed.setTitle("Jobs Information").setDescription("All info on jobs")
@@ -1491,18 +1493,14 @@ export const activeCollectors = new Map()
 const specialBosses = ["Yuta Okkotsu", "Disaster Curses"]
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
-	// Get the user's maximum health and set their current health to max
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
 	await updateUserHealth(interaction.user.id, playerHealth1)
 
-	// Defer the reply while processing
 	await interaction.deferReply()
 
-	// Fetch the user's grade and all bosses associated with that grade
 	const userGrade = await getUserGrade(interaction.user.id)
 	const allBosses = await getBosses(userGrade)
 
-	// Fetch the list of bosses the user has unlocked
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
 	if (allBosses.length === 0) {
@@ -1514,7 +1512,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	let randomOpponent
 	let attempts = 0
 	do {
-		// Select a random boss
 		const randomIndex = Math.floor(Math.random() * allBosses.length)
 		randomOpponent = allBosses[randomIndex]
 
@@ -1540,10 +1537,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 
-	// Fetch techniques based on whether the user has Heavenly Restriction
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
+	const transformname = await getUserTransformation(interaction.user.id)
+	const domainname = await getUserDomain(interaction.user.id)
 
 	const battleOptions = [
 		{
@@ -1552,6 +1550,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			emoji: {
 				name: "1564maskedgojode", // Replace with your emoji's name
 				id: "1220626413141622794" // Replace with your emoji's ID
+			}
+		},
+		{
+			label: "Transform",
+			value: "transform",
+			description: transformname,
+			emoji: {
+				name: "a:blueflame", // Replace with your emoji's name
+				id: "990539090418098246" // Replace with your emoji's ID
 			}
 		},
 		...userTechniques.map(techniqueName => ({
@@ -1616,7 +1623,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
-		time: 100000 // 60 seconds
+		time: 300000 // 60 seconds
 	})
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
@@ -1665,8 +1672,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				// embed here
 				const domainEmbed = new EmbedBuilder()
 					.setColor("Blue")
-					.setTitle(`${randomOpponent.name}  I'll show you real jujutsu.. Ryouki Tenkai!`)
-					.setDescription(`Domain: ${domainInfo}`)
+					.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
+					.setDescription(`Domain Expansion... ${domainInfo}`)
 					.addFields({
 						name: `${interaction.user.username}`,
 						value: "USES THERE DOMAIN EXPANSION!",
@@ -1763,6 +1770,99 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					ephemeral: true
 				})
 			}
+		} else if (selectedValue === "transform") {
+			console.log("Transformation selected.")
+			if (transformationState.get(contextKey)) {
+				await collectedInteraction.followUp({
+					content: "You can only transform once per fight.",
+					ephemeral: true
+				})
+				return
+			}
+
+			try {
+				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
+
+				if (hasHeavenlyRestriction) {
+					await collectedInteraction.followUp({
+						content: "Your Heavenly Restriction negates the use of transformation.",
+						ephemeral: true
+					})
+					return // Exit if Heavenly Restriction is present, or adjust as needed
+				}
+
+				const transformationInfo = await getUserTransformation(interaction.user.id)
+				if (!transformationInfo) {
+					await collectedInteraction.followUp({
+						content: "You do not have a transformation unlocked yet.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const transformationObject = TRANSFORMATIONS.find(
+					transformation => transformation.name === transformationInfo
+				)
+				if (!transformationObject) {
+					console.error("Invalid transformation found in the database.")
+					return
+				}
+				transformationState.set(contextKey, true)
+				// embed here
+				const transformationEmbed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle("Transformation!")
+					.setDescription(`Transformation: ${transformationInfo}`)
+					.addFields({
+						name: `${interaction.user.username}`,
+						value: "USES THERE TRANSFORMATION!",
+						inline: false
+					})
+					//add image
+					.setImage(transformationObject.image)
+				await collectedInteraction.editReply({ embeds: [transformationEmbed], components: [] })
+				//
+				await new Promise(resolve => setTimeout(resolve, 2000))
+
+				if (transformationObject && transformationObject.effects) {
+					await applyStatusEffect(collectedInteraction.user.id, transformationObject.effects)
+				}
+				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+
+				const nutembed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle("The battle continues!")
+					.setDescription(`${interaction.user.username} has transformed into ${transformationInfo}!`)
+					.addFields(
+						{
+							name: "Boss Health",
+							value: `:heart: ${randomOpponent.current_health.toString()}`,
+							inline: true
+						},
+						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+						{ name: "Transformation: ", value: `${transformationInfo}`, inline: true },
+
+						{
+							name: "Boss Health Status",
+							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+						},
+						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+						{ name: "Status Effect Player", value: statusEffectsValue, inline: false }
+					)
+				if (transformationObject.image) {
+					nutembed.setImage(transformationObject.image)
+				}
+				transformationState.set(contextKey, false)
+
+				//
+				await collectedInteraction.editReply({ embeds: [nutembed], components: [row] })
+			} catch (error) {
+				console.error("Error during fight command:", error)
+				await collectedInteraction.followUp({
+					content: "An error occurred during the fight. Please try again later.",
+					ephemeral: true
+				})
+			}
 		} else {
 			const userTechniques = new Map()
 			// Get player's health
@@ -1807,7 +1907,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 8,
+					damageMultiplier: 7,
 					imageUrl: "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif",
 					description: "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux.",
 					fieldValue: selectedValue,
@@ -2049,6 +2149,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Megumi Fushiguro") {
 					transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Sukuna (Heian Era)") {
+					transformed = await exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				}
 				if (!transformed) {
 					console.log("Boss is defeated and no transformation occurred.")
@@ -2099,8 +2201,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 					//
 					//
-					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}!`
+					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
 					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+					primaryEmbed.addFields({
+						name: "Player Health",
+						value: `:blue_heart: ${playerHealth.toString()}`,
+						inline: true
+					})
 
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
@@ -3297,7 +3404,7 @@ export async function handleViewTechniquesCommand(interaction) {
 		}
 
 		const embed = new EmbedBuilder()
-			.setTitle(`${interaction.user.username}'s Techniques`)
+			.setTitle("THESE ARE YOUR OWNED TECHNIQUES NOT YOUR ACTIVE ONES. USE /TECHNIQUE EQUIP TO EQUIP THEM")
 			.setDescription(userTechniques.join("\n"))
 
 		await interaction.reply({ embeds: [embed] })
@@ -3381,4 +3488,72 @@ export async function handleUnequipQuestCommand(interaction) {
 		}
 		collector.stop()
 	})
+}
+
+export async function handleEquipTransformationCommand(interaction: ChatInputCommandInteraction) {
+	try {
+		// 1. Fetch user's unlocked transformations
+		const unlockedtransformations = await getUserUnlockedTransformations(interaction.user.id)
+
+		// 2. Filter out the currently equipped transformation
+		const currentTransformation = await getUserTransformation(interaction.user.id) // Assuming this still returns a single string
+		const availableTransformations = unlockedtransformations.filter(transformationName => {
+			return transformationName && transformationName.trim() !== currentTransformation
+		})
+
+		// 3. Create a dropdown menu
+		const selectMenu = createTransformationSelectMenu(availableTransformations)
+
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+		// 4. Send initial message with the dropdown
+		await interaction.reply({
+			content: "Choose a transformation to equip:",
+			components: [row]
+		})
+
+		// 5. Handle dropdown interaction
+		const selectMenuInteraction = await interaction.channel.awaitMessageComponent({
+			filter: i => i.user.id === interaction.user.id && i.isStringSelectMenu(),
+			time: 60000 // Example timeout of 60 seconds
+		})
+
+		// 6. Get the selected transformation name
+		const selectedTransformationName = (selectMenuInteraction as StringSelectMenuInteraction).values[0]
+
+		// 7. Update the user's equipped transformation
+		await updateUserTransformation(interaction.user.id, selectedTransformationName)
+
+		// 8. Send confirmation message
+		await selectMenuInteraction.update({
+			content: `You have equipped ${selectedTransformationName}!`,
+			components: [] // Remove the dropdown
+		})
+	} catch (error) {
+		console.error("Error handling equip transformation command:", error)
+		await interaction.reply({
+			content: "You don't own any more transformations to equip.",
+			ephemeral: true
+		})
+	}
+}
+
+function createTransformationSelectMenu(transformations) {
+	const selectMenu = new SelectMenuBuilder()
+		.setCustomId("equip_transformation_menu")
+		.setPlaceholder("Select a Transformation")
+
+	transformations.forEach(transformationName => {
+		// Ensure the transformation name is a string and not empty
+		if (typeof transformationName === "string" && transformationName.trim() !== "") {
+			selectMenu.addOptions({
+				label: transformationName.substring(0, 100),
+				value: transformationName.substring(0, 100)
+			})
+		} else {
+			console.log("Invalid transformation name:", transformationName)
+		}
+	})
+
+	return selectMenu
 }

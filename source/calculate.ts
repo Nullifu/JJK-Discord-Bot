@@ -95,9 +95,15 @@ export function getRandomLocation() {
 	]
 	return locations[Math.floor(Math.random() * locations.length)]
 }
-export function getRandomFight() {
-	const locations = ["Prepare Yourself", "Get Ready", "Get Set", "Ready?", "Fight!"]
-	return locations[Math.floor(Math.random() * locations.length)]
+export function getrandomsukuna() {
+	const wordinggg = [
+		"Keep going.",
+		"Oh? Just a little more.",
+		"Nearly there..",
+		"Impossible.",
+		"Is this brat from that time..?"
+	]
+	return wordinggg[Math.floor(Math.random() * wordinggg.length)]
 }
 
 export function getRandomEarnings(min: number, max: number): number {

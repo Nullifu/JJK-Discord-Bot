@@ -41,15 +41,6 @@ export interface TradeRequest {
 	createdAt: Date
 }
 
-export const healthMultipliersByGrade = {
-	"special grade": 3.0, // Boss health is doubled for the highest grade
-	"grade 1": 2.5,
-	"semi-grade 1": 1.7,
-	"grade 2": 1.6,
-	"grade 3": 1.3,
-	"grade 4": 1.0 // No change for the lowest grade
-}
-
 export interface BossData {
 	id?: string // Making `id` optional if it's not always available
 	name: string
@@ -90,6 +81,8 @@ export interface User {
 	heavenlyrestriction: string
 	clan?: string | null
 	quests: Quest[]
+	unlockedTransformations: string[]
+	statusEffects: string[]
 }
 
 export interface Item {

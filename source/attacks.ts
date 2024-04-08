@@ -576,10 +576,6 @@ const statusEffectsDescriptions = {
 	"Mutual Love": {
 		description: "Reduces incoming damage by 20%",
 		effect: "20% REDUC"
-	},
-	"Osakian": {
-		description: "You smell!",
-		effect: "Chiyo does 20% more damage"
 	}
 
 	// Define other status effects here
@@ -637,6 +633,16 @@ export async function applyWorldCuttingSlash(userId) {
 	}
 }
 
+export async function applytransformation(userId) {
+	// Fetch current status effects
+	const currentEffects = await getUserStatusEffects(userId)
+
+	if (!currentEffects.includes("1000 Year Curse")) {
+		const updatedEffects = [...currentEffects, "1000 Year Curse"]
+		await updateUserStatusEffects(userId, updatedEffects)
+	}
+}
+
 export async function fetchAndFormatStatusEffects(userId) {
 	const statusEffects = await getUserStatusEffects(userId)
 	const formattedEffects = statusEffects.map(effect => {
@@ -658,6 +664,10 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 	if (statusEffects.includes("Curse King")) {
 		damageReduction *= 0.2
 		damageIncrease *= 1.2
+	}
+	if (statusEffects.includes("1000 Year Curse")) {
+		damageReduction *= 0.4
+		damageIncrease *= 1.4
 	}
 	if (statusEffects.includes("Limitless")) {
 		damageReduction *= 0.2
@@ -757,9 +767,41 @@ export const DOMAIN_INFORMATION = [
 	},
 	{
 		name: "True and Mutual Love",
-		description: "How rude, This is pure love.",
+		description: "Rika, Lend me your strength! and i'll be yours forever!",
 		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226022659700297748/main-qimg-677cba957d89c255d384c0778fc9af97.jpg?ex=66234194&is=6610cc94&hm=22163f50298e2e83a729e448ec619eb9079af3a5c9b2064d34ca28d3a81cefa6&",
 		effects: "Mutual Love: 30% Damage Increase, 25% Damage Reduction. [ MORE SOON ]",
 		requirement: "Mutual Token"
+	}
+]
+
+export const TRANSFORMATIONS = [
+	{
+		name: "Curse King",
+		description:
+			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		image: "https://media.discordapp.net/attachments/681985000521990179/1226844171827154965/sukuna-evil-laugh.gif?ex=66263eac&is=6613c9ac&hm=0799274885b6078cf77283a04a31491e6c8d41c190a427f47cc8ed6dddfac181&",
+		effects: "1000 Year Curse, 25% Damage Increase, 5% Damage Reduction"
+	},
+	{
+		name: "Six Eyes Release",
+		description:
+			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		image: "https://media1.tenor.com/m/T8RWNLn_aIUAAAAd/jjk-jujutsu-kaisen.gif",
+		effects: "1000 Year Curse, 18% Damage Increase, 16% Damage Reduction"
+	},
+	{
+		name: "Curse Queen",
+		description:
+			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		image: "https://64.media.tumblr.com/33cacf2a119115bcdb869f76c68e16d9/df6ff4dc29f5c53a-f9/s540x810/71e5c78b6b6ed34d000aee942ff70641e18414f6.gif",
+		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction",
+		time: "3 Minutes"
+	},
+	{
+		name: "Cursed Energy Reinforcement",
+		description:
+			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		image: "https://media1.tenor.com/m/QZAfD8Pdb2wAAAAC/itadori-yuji-cursed-energy.gif",
+		effects: "Reinforcement, 15% Damage Reduction"
 	}
 ]
