@@ -185,9 +185,8 @@ cron.schedule("*/5 * * * *", async () => {
 })
 
 const clientId = "1216889497980112958"
-client.setMaxListeners(40) // Set it to a reasonable value based on your use case
+client.setMaxListeners(50)
 export const workCooldowns = new Map<string, number>()
-export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000 // 30 seconds in milliseconds
 export const digCooldownBypassIDs = ["917146454940844103"] // IDs that can bypass cooldown

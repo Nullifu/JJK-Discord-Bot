@@ -7,8 +7,8 @@ import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const bossCollectionName = "devboss"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 
@@ -97,6 +97,7 @@ export async function addUser(
 			inateclan: [],
 			activeinateclan: null,
 			quests: [],
+			permEffects: [],
 			statusEffects: [],
 			betCount: 0
 		})
@@ -611,13 +612,16 @@ function calculateGrade(experience) {
 	else return "Grade 4"
 }
 function calculateTier(experience) {
-	if (experience >= 2250) return "Tier 1"
-	else if (experience >= 1750) return "Tier 2"
-	else if (experience >= 750) return "Tier 3"
-	else if (experience >= 500) return "Tier 4"
-	else if (experience >= 250) return "Tier 5"
-	else return "Tier 6"
+	if (experience >= 2250) return 1
+	else if (experience >= 1750) return 2
+	else if (experience >= 750) return 3
+	else if (experience >= 500) return 4
+	else if (experience >= 250) return 5
+	else return 6
 }
+
+// Test the calculateTier function with 625 experience
+console.log(calculateTier(625)) // Should log 4 based on your tier system
 
 // Main function to update the player's grade based on experience
 export async function updatePlayerGrade(userId) {
@@ -654,32 +658,36 @@ export async function updatePlayerGrade(userId) {
 export async function updatePlayerClanTier(userId) {
 	try {
 		await client.connect()
+
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Retrieve the current clan information of the player
-		const player = await usersCollection.findOne({ id: userId }, { projection: { inateClan: 1 } })
-		if (!player || !player.inateClan) {
-			console.log("No user or clan information found with the specified ID in the users collection.")
+		const player = await usersCollection.findOne({ id: userId }, { projection: { inateclan: 1 } })
+		if (!player || !player.inateclan) {
+			console.log("No user or clan information found with the specified ID.")
 			return
 		}
 
-		// Assuming calculateTier is a function that calculates the tier based on experience
-		const newTier = calculateTier(player.inateClan.experience)
+		const newTier = calculateTier(player.inateclan.experience)
 
-		// Update the player's clan tier in the database if it has changed
-		if (newTier !== player.inateClan.tier) {
-			await usersCollection.updateOne({ id: userId }, { $set: { "inateClan.tier": newTier } })
-			console.log(`Tier updated to ${newTier} for user ${userId} in the users collection.`)
+		if (newTier !== player.inateclan.tier) {
+			const result = await usersCollection.updateOne({ id: userId }, { $set: { "inateclan.tier": newTier } })
+
+			// Log the result of the update operation
+			if (result.matchedCount === 0) {
+				console.log(`No document found for user ${userId} to update.`)
+			} else if (result.modifiedCount === 0) {
+				console.log(`Document for user ${userId} was found but not modified.`)
+			} else {
+				console.log(`Clan tier updated to ${newTier} for user ${userId}.`)
+			}
 		} else {
-			console.log(`No tier update needed for user ${userId} in the users collection.`)
+			console.log(`No clan tier update needed for user ${userId}. Current tier is already ${newTier}.`)
 		}
 	} catch (error) {
-		console.error(`Error updating tier for user ${userId} in the users collection:`, error)
+		console.error(`Error updating clan tier for user ${userId}:`, error)
 	} finally {
-		// Consider the best strategy for handling your MongoDB client connection here.
-		// Keeping the connection open may be beneficial if this function is called frequently.
-		// Otherwise, consider closing it after the operation is complete.
+		// If this operation is not frequent, you might close the connection here. Otherwise, keep it open.
 		// await client.close();
 	}
 }
@@ -1548,32 +1556,33 @@ export async function removeUserQuest(userId, questName) {
 }
 
 // update user max health max out at 275
-export async function updateUserMaxHealth(userId: string, newMaxHealth: number): Promise<void> {
+export async function updateUserMaxHealth(userId: string, healthIncrement: number): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the new max health does not exceed 275
-		const maxHealth = Math.min(newMaxHealth, 275)
-
-		// Get the current health of the user
+		// Get the current health and max health of the user
 		const user = await usersCollection.findOne({ id: userId })
 		if (user) {
-			let { currentHealth } = user
+			let { health, maxhealth } = user
+
+			// Increment the max health by the healthIncrement value, not exceeding 300
+			maxhealth = Math.min(maxhealth + healthIncrement, 300)
+
 			// Ensure current health does not exceed the new max health
-			if (currentHealth > maxHealth) {
-				currentHealth = maxHealth
-			}
+			health = Math.min(health, maxhealth)
 
 			// Update the user's maxHealth and currentHealth if necessary
-			await usersCollection.updateOne({ id: userId }, { $set: { maxHealth, currentHealth } })
+			await usersCollection.updateOne({ id: userId }, { $set: { maxhealth, health } })
 		}
 	} catch (error) {
 		console.error("Error updating user max health:", error)
 		throw error
 	} finally {
-		// await client.close(); // Close the connection if necessary
+		// If you're calling this function frequently, you might not want to close the client after each call.
+		// Determine if you should close the client based on your application's needs.
+		// await client.close();
 	}
 }
 
@@ -1586,7 +1595,7 @@ export async function getUserMaxHealth(userId: string): Promise<number> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.maxHealth || 100 : 100
+		return user ? user.maxhealth || 100 : 100
 	} catch (error) {
 		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
 		throw error
@@ -2089,6 +2098,60 @@ export async function getUserUnlockedTransformations(userId: string): Promise<st
 		return user ? user.unlockedtransformations : []
 	} catch (error) {
 		console.error(`Error when retrieving unlocked transformations for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user permEffects
+export async function updateUserPermEffects(userId: string, permEffects: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { permEffects } })
+	} catch (error) {
+		console.error("Error updating user perm effects:", error)
+		throw error
+	}
+}
+// get user permEffects
+export async function getUserPermEffects(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.permEffects : []
+	} catch (error) {
+		console.error(`Error when retrieving perm effects for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update users honours array
+export async function updateUserHonours(userId: string, honours: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { honours } })
+	} catch (error) {
+		console.error("Error updating user honours:", error)
+		throw error
+	}
+}
+// get user honours
+export async function getUserHonours(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.honours : []
+	} catch (error) {
+		console.error(`Error when retrieving honours for user with ID: ${userId}`, error)
 		throw error
 	}
 }

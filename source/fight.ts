@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-const userTechniques = new Map()
 import { ActionRowBuilder, SelectMenuBuilder } from "@discordjs/builders"
 import { CacheType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
 import { calculateDamage, getBossDrop, getRandomXPGain } from "./calculate.js"
@@ -11,11 +10,13 @@ import {
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
+	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserExperience,
-	updateUserHealth
+	updateUserHealth,
+	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
 export async function handleBossDeath(
@@ -28,13 +29,6 @@ export async function handleBossDeath(
 	const victoryMessage = "You won"
 	embed.setDescription(victoryMessage)
 
-	// Check if the boss is Mahito (Transfigured)
-	if (opponent.name === "Mahito (Transfigured)") {
-		embed.setDescription("I admit it, Mahito i am you.")
-		embed.setImage(
-			"https://cdn.discordapp.com/attachments/681985000521990179/1222162641620041798/ezgif-2-cc9a6b6268.gif?ex=661536a8&is=6602c1a8&hm=591265d694ffde07b30eef7cfc538c2055643d8e349500cd4fd9be4484ffe4e7&f"
-		)
-	}
 	if (opponent.name === "Mahito Instant Spirit Body of Distorted Killing") {
 		embed.setDescription("I admit it, Mahito i am you.")
 		embed.setImage(
@@ -54,6 +48,12 @@ export async function handleBossDeath(
 
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+	}
+	if (opponent.name === "Itadori") {
+		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
+	}
+	if (opponent.name === "Mahito Instant Spirit Body of Distorted Killing") {
+		await addUserQuestProgress(interaction.user.id, "Nature of Curses", 1)
 	}
 	if (opponent.name === "Hakari (Jackpot)") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
@@ -229,7 +229,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 
 export async function exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.9) {
+	if (random < 0.5) {
 		randomOpponent.name = "Sukuna (Heian Era)"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
@@ -302,7 +302,7 @@ export async function exportTheFraud(interaction, randomOpponent, primaryEmbed, 
 }
 export async function exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.9) {
+	if (random < 0.5) {
 		randomOpponent.name = "Zenin Toji (Reincarnated)"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
@@ -326,26 +326,46 @@ export async function exportReincarnation(interaction, randomOpponent, primaryEm
 }
 export async function exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.9) {
-		randomOpponent.name = "Yuta Okkotsu & Curse Queen Rika"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
-		const usermaxhealth = getUserMaxHealth(interaction.user.id)
+	if (random < 0.7) {
+		// Check if the user has the 'Curse Queen' transformation unlocked
+		const unlockedTransformations = await getUserUnlockedTransformations(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		if (!unlockedTransformations.includes("Curse Queen")) {
+			await updateUserUnlockedTransformations(interaction.user.id, ["Curse Queen"])
 
-		primaryEmbed.setDescription("Rika.. Lend me your strength. ** CURSE QUEEN RIKA HAS JOINED THE BATTLE!**")
+			// Customize your message to indicate the new transformation has been unlocked
+			primaryEmbed.setImage("https://i.ytimg.com/vi/dwdsYVRpocc/maxresdefault.jpg")
+			primaryEmbed.setDescription(
+				`${interaction.user.username} You're pretty strong... I'll lend you some of my power. Unlocked the **Curse Queen** transformation!`
+			)
+			await interaction.editReply({ embeds: [primaryEmbed] })
+			return true
+		} else {
+			// If they already have the transformation, proceed as normal
+			primaryEmbed.setDescription("Rika.. Lend me your strength. **CURSE QUEEN RIKA HAS JOINED THE BATTLE!**")
+		}
+
+		// Reset health for both the opponent and player
+		randomOpponent.current_health = randomOpponent.max_health // Reset opponent's health to max
+		const userMaxHealth = await getUserMaxHealth(interaction.user.id)
+		await updateUserHealth(interaction.user.id, userMaxHealth) // Reset player's health to max
+
+		// Set the image and health fields in the embed
 		primaryEmbed.setImage("https://media1.tenor.com/m/BhgnUENmzrkAAAAC/jujutsu-kaisen0-yuta-okkotsu.gif")
 		primaryEmbed.setFields(
 			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 			{ name: "Player Health", value: playerHealth.toString() }
 		)
 
+		// Send the updated reply
 		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 		return true
 	}
-	return false
+
+	return false // If the battle doesn't result in defeating Yuta, continue with existing logic
 }
+
 export async function exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
 	if (random < 0.4) {
@@ -371,8 +391,8 @@ export async function exportCrashOut(interaction, randomOpponent, primaryEmbed, 
 
 export async function exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.9) {
-		randomOpponent.name = "Sukuna (Heian Era)"
+	if (random < 0.3) {
+		randomOpponent.name = "Sukuna Full Power"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
@@ -393,6 +413,107 @@ export async function exportSukuna2(interaction, randomOpponent, primaryEmbed, r
 		return true
 	}
 	return false
+}
+export async function exportMahito(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
+	const random = Math.random()
+	if (random < 0.3) {
+		randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
+		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		const usermaxhealth = getUserMaxHealth(interaction.user.id)
+
+		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+
+		primaryEmbed.setDescription("Ahhh the nature of the soul TRULY FASCINATING!")
+		primaryEmbed.setImage("https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif")
+		primaryEmbed.setFields(
+			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+			{ name: "Player Health", value: playerHealth.toString() }
+		)
+
+		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		return true
+	}
+	return false
+}
+
+export async function export120(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
+	const random = Math.random()
+	if (random < 0.9) {
+		randomOpponent.name = "Mahito (120%)"
+		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		const usermaxhealth = getUserMaxHealth(interaction.user.id)
+
+		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+
+		primaryEmbed.setDescription(
+			`BROTHER! This cursed spirit successfully used Black Flash, now the person whos' left behind is me. You have become stronger, ${interaction.user.username} Are you willing to maintain the status quo, AOI TODO? ARE YOU GOING TO LEAVE ${interaction.user.username} ALONE AGAIN, AOI TODO? **KOKUSEN!**`
+		)
+		primaryEmbed.setImage("https://media1.tenor.com/m/Y1BZYqq9NVoAAAAd/todo-black-flash-jujutsu-kaisen.gif")
+		primaryEmbed.setFields({ name: "Boss Health", value: "???" }, { name: "Player Health", value: "???" })
+		//
+		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		await new Promise(resolve => setTimeout(resolve, 4000)) // 3 seconds delay
+
+		primaryEmbed.setDescription("However, from now on, all three of them... have reached 120% of their potential.")
+		primaryEmbed.setImage("https://media1.tenor.com/m/oydgFq051r8AAAAC/todo-itadori.gif")
+		primaryEmbed.setFields(
+			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+			{ name: "Player Health", value: playerHealth.toString() }
+		)
+
+		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		return true
+	}
+	return false
+}
+
+export async function handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth) {
+	const userMaxHealth = await getUserMaxHealth(interaction.user.id)
+	//
+	await updateUserHealth(interaction.user.id, userMaxHealth) // Reset player health to max
+	//
+	randomOpponent.name = "Mahito"
+	randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+
+	// Customize the message and image for Aoi Todo's revival
+	primaryEmbed.setDescription(
+		"My power reveals a fascinating truth... the shape of the soul, the essence of a curse. Perhaps I embody it all!"
+	)
+	primaryEmbed.setImage("https://media1.tenor.com/m/z3Itmn4rSLUAAAAd/jujutsu-kaisen-shibuya-arc-mahito.gif")
+
+	primaryEmbed.setFields(
+		{
+			name: "Enemys Technique",
+			value: "Mahito (Transfigured) dealt **?$!~@:!12** damage to you with Black FLASH!"
+		},
+		{ name: "Player Health", value: "????????" }
+	)
+
+	await interaction.editReply({
+		embeds: [primaryEmbed]
+	})
+
+	await new Promise(resolve => setTimeout(resolve, 5000)) // 3 seconds delay
+
+	// Customize the message and image for Aoi Todo's revival
+	primaryEmbed.setDescription(
+		"The sound of the Gion Shoja bells... echoes the impermanence of all things. The color of the sala flowers...reveals the truth the prosperous must decline. But, we are the exceptions. \n\n**Get up, brother! Our battle is just beginning!**"
+	)
+	primaryEmbed.setImage("https://media1.tenor.com/m/pZsZJOyat-AAAAAC/todo-jjk.gif")
+
+	primaryEmbed.setFields(
+		{ name: "AOI TODO JOINS THE FIGHT", value: `Let's do this, ${interaction.user.username}` },
+		{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+		{ name: "Player Health", value: playerHealth.toString() }
+	)
+
+	await interaction.editReply({
+		embeds: [primaryEmbed],
+		components: row ? [row] : [] // Ensure row exists, otherwise pass an empty array
+	})
 }
 
 export { getJujutsuFlavorText }

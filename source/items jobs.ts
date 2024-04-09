@@ -15,6 +15,7 @@ import {
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
 	updateUserInateClanExperience,
+	updateUserMaxHealth,
 	updateUserUnlockedBosses,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
@@ -95,7 +96,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
-		{ name: "Fractured Chain", rarity: "ultra rare" }
+		{ name: "Zenin Toji's Blood", rarity: "ultra rare" }
 	],
 	"Zenin Toji (Reincarnation)": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
@@ -207,6 +208,15 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Rikugan Eye", rarity: "ultra rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" },
 		{ name: "Six Eyes", rarity: "ultra rare" }
+	],
+
+	"Mahito": [
+		{ name: "Transfigured Soul", rarity: "rare" },
+		{ name: "(Broken) Vengeance Katana", rarity: "rare" }
+	],
+	"Mahito (120%)": [
+		{ name: "Transfigured Soul", rarity: "rare" },
+		{ name: "Junpei", rarity: "rare" }
 	]
 }
 
@@ -308,9 +318,8 @@ export const craftingRecipes = {
 
 	heavenly_restricted_blood: {
 		requiredItems: [
-			{ name: "Six Eyes", quantity: 1 },
-			{ name: "Sukuna Finger", quantity: 1 },
-			{ name: "Domain Token", quantity: 1 }
+			{ name: "Sukuna Finger Bundle", quantity: 1 },
+			{ name: "Zenin Toji's Blood", quantity: 1 }
 		],
 		craftedItemName: "Heavenly Restricted Blood",
 		emoji: "<a:wflameblue15:1226787880710705275>"
@@ -858,7 +867,7 @@ export const benefactors = [
 export const questsArray = [
 	{
 		name: "Gamblers Fever",
-		description: "Defeat Hakari Kinji 5 Times!",
+		description: "Defeat Hakari Kinji 5 times and earn his token.",
 		coins: 45000,
 		experience: 470,
 		item: "Hakari Kinji's Token",
@@ -867,79 +876,76 @@ export const questsArray = [
 		totalProgress: 5
 	},
 	{
+		name: "Training with Itadori",
+		description: "Train With Itadori!",
+		coins: 45000,
+		experience: 470,
+		items: { "Cursed Energy Reinforcement": 1 },
+		itemQuantity: 1,
+		task: "Training",
+		totalProgress: 3
+	},
+	{
 		name: "Disaster Curses",
-		description: "Defeat all of the Disaster Curses!",
+		description:
+			"The land is plagued by Disaster Curses, spreading chaos and destruction. Journey through perilous locations to confront and defeat Jogo, Hanami, and Dagon.",
 		coins: 45000,
 		experience: 470,
 		item: "Combined Disaster Curses Soul",
 		itemQuantity: 1,
-
 		tasks: [
-			{
-				description: "Defeat Jogo",
-				progress: 0,
-				totalProgress: 1
-			},
-			{
-				description: "Defeat Hanami",
-				progress: 0,
-				totalProgress: 1
-			},
-			{
-				description: "Defeat Dagon",
-				progress: 0,
-				totalProgress: 1
-			}
+			{ description: "Defeat Jogo", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Hanami", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Dagon", progress: 0, totalProgress: 1 }
 		]
 	},
 	{
 		name: "Nature of Curses",
-		description: "Defeat Mahito In His True Form.",
+		description:
+			"Mahito, in his true form, threatens the balance between our world and the supernatural. Defeating him will not only require strength but the will to overcome the twisted nature of curses.",
 		coins: 23000,
 		experience: 320,
-		item: "Junpei",
+		item: "Mahito's Soul",
 		itemQuantity: 2,
 		task: "Defeat Reborn Mahito",
 		totalProgress: 1
 	},
 	{
 		name: "Curse King",
-		description: "Get acknowledged by Sukuna!",
+		description:
+			"Sukuna, the King of Curses, demands acknowledgment. Prove your worth and be bestowed with Sukuna Fingers, a testament to your courage and strength in the face of ancient power.",
 		coins: 23000,
 		experience: 320,
-		items: {
-			"Sukuna Finger": 3
-		},
+		items: { "Sukuna Finger": 3 },
 		task: "Get acknowledged by Sukuna!",
 		totalProgress: 1
 	},
 	{
 		name: "Curse King's Task",
-		description: "Round up all of the Sukuna Fingers!",
+		description:
+			"The quest for Sukuna's Fingers is not for the faint of heart. Collect all twenty to achieve an unprecedented feat, securing a place among legends with Sukuna's Honour.",
 		coins: 100000,
 		experience: 850,
-		items: {
-			"Sukuna Finger": 3
-		},
+		items: { "Sukuna's Honour": 1 },
 		task: "Round up all of the Sukuna Fingers!",
-		totalProgress: 20
+		totalProgress: 20,
+		special: true
 	},
 	{
 		name: "Find Yuta!",
-		description: "Locate Yuta Okkotsu!",
+		description:
+			"Yuta Okkotsu remains elusive, hidden away by deceptive magic and trickery. Unveil the truth, confront the fraud, and claim Yuta's Token along with a Fraud Poster as evidence of your deed.",
 		coins: 34000,
 		experience: 250,
-		items: {
-			"Yuta's Token": 2,
-			"Fraud Poster": 1
-		},
+		items: { "Yuta's Token": 2, "Fraud Poster": 1 },
 		itemQuantity: 2,
 		task: "Find this fraud!",
 		totalProgress: 1
 	},
 	{
 		name: "The Honored One",
-		description: "Be blessed with the six eyes..",
+		description:
+			"The sacred six eyes, a technique limitless in power, awaits. Embark on this divine quest to be anointed with the Sacred Eye, marking you as the chosen wielder of the ancient and revered technique.",
 		coins: 20000,
 		experience: 320,
 		item: "Sacred Eye",
@@ -1139,23 +1145,26 @@ export const items1: Item1[] = [
 				.setImage(
 					"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
 				)
+			//
 			await interaction.followUp({ embeds: [embedFirst] })
 
 			const userClanData = await getUserInateClan(interaction.user.id)
 			console.log("userClanData: ", userClanData) // Log for debugging
+			await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
+			await updateUserInateClanExperience(userId, 125, "Demon Vessel")
+			await updatePlayerClanTier(userId)
+			//
 			if (userClanData.clan === "Demon Vessel") {
-				const userActiveQuests = await getUserQuests(interaction.user.id)
-				const curseKingsTaskQuest = userActiveQuests.quests.find(quest => quest.id === "Curse King's Task")
-
+				const curseKingsTaskQuest = (await getUserQuests(userId)).quests.find(
+					quest => quest.id === "Curse King's Task"
+				)
 				let progressMessage
 				let progressFraction
 
 				if (curseKingsTaskQuest) {
 					progressFraction = curseKingsTaskQuest.progress / curseKingsTaskQuest.totalProgress
 
-					if (progressFraction === 0) {
-						progressMessage = "Brat, you haven't even started. Get to work."
-					} else if (progressFraction < 0.25) {
+					if (progressFraction < 0.25) {
 						progressMessage = "You have barely scratched the surface."
 					} else if (progressFraction < 0.5) {
 						progressMessage = "Hmph.. You're making some progress. Keep it up."
@@ -1188,10 +1197,10 @@ export const items1: Item1[] = [
 					}
 
 					await new Promise(resolve => setTimeout(resolve, 2000))
+					//
 
-					await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
-					await updateUserInateClanExperience(userId, 125, "Demon Vessel")
-					await updatePlayerClanTier("Demon Vessel")
+					//
+					//
 					const embedClanAndQuest = new EmbedBuilder()
 						.setTitle("Curse King's Task")
 						.setDescription(dialogueWithProgress)
@@ -1242,7 +1251,8 @@ export const items1: Item1[] = [
 						"• Inate Clan: Demon Vessel\n" +
 						"• Technique: World Cutting Slash\n" +
 						"• Quest Progress: Curse King +1\n"
-
+					//
+					await addUserQuestProgress(interaction.user.id, "Curse King", 1)
 					const embedFinalClanAcquired = new EmbedBuilder()
 						.setColor("#4b0082")
 						.setTitle("A 1000 Year Curse...")
@@ -1292,11 +1302,9 @@ export const items1: Item1[] = [
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isLimitless = false
 
-			await removeItemFromUserInventory(interaction.user.id, "Six Eyes", 1)
 			await updateUserExperience(interaction.user.id, 125)
 
 			if (randomNumber <= 30) {
-				await updateUserClan(interaction.user.id, "Limitless")
 				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
 				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
@@ -1320,7 +1328,6 @@ export const items1: Item1[] = [
 			if (isLimitless) {
 				const gains =
 					"You have gained:\n" +
-					"• Clan: Limitless\n" +
 					"• Achievement: behonoredLimitless\n" +
 					"• Technique: Imaginary Technique: Purple\n" +
 					"• Quest Progress: The Honored One +1\n" +
@@ -1369,6 +1376,7 @@ export const items1: Item1[] = [
 				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
+				await updateUserMaxHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 

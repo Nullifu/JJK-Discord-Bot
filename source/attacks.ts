@@ -1,5 +1,5 @@
 import { EmbedBuilder } from "discord.js"
-import { getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
+import { getUserPermEffects, getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
 
 export interface Attack {
 	name: string
@@ -219,19 +219,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Transfiguration",
 			probability: 50,
-			baseDamage: 15,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setDescription("Transfiguration!")
 		},
 		{
 			name: "Polymorphic Soul Isomer",
 			probability: 20,
-			baseDamage: 15,
+			baseDamage: 60,
 			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
 		},
 		{
-			name: "Instant Spirit Body of Distorted Killing...",
+			name: "Mewetenpen",
 			probability: 30,
-			baseDamage: 15,
+			baseDamage: 100,
 			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
 		}
 	],
@@ -288,19 +288,19 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Soul Multiplicity",
 			probability: 50,
-			baseDamage: 25,
+			baseDamage: 56,
 			embedUpdate: embed => embed.setDescription("Transfiguration!")
 		},
 		{
 			name: "Soul Snatch",
 			probability: 30,
-			baseDamage: 17,
+			baseDamage: 45,
 			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
 		},
 		{
 			name: "Domain Expansion: Self Embodiment of Perfection",
 			probability: 20,
-			baseDamage: 30,
+			baseDamage: 110,
 			embedUpdate: embed =>
 				embed
 					.setImage("https://media1.tenor.com/m/J_g_1B1HK0oAAAAC/koogender.gif")
@@ -440,7 +440,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Spiderweb",
 			probability: 30,
-			baseDamage: 17,
+			baseDamage: 30,
 			embedUpdate: embed => embed.setDescription("Strike!")
 		},
 		{
@@ -527,6 +527,47 @@ export const attacks: Record<string, Attack[]> = {
 			name: "World of Cursed Blossoms",
 			probability: 20,
 			baseDamage: 50,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+
+	"Mahito": [
+		{
+			name: "Transfiguration",
+			probability: 50,
+			baseDamage: 14,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Soul Touch",
+			probability: 30,
+			baseDamage: 41,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Cloning Technique",
+			probability: 20,
+			baseDamage: 26,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Mahito (120%)": [
+		{
+			name: "Limit-Broken: Transfiguration",
+			probability: 50,
+			baseDamage: 32,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "120% Soul Touch",
+			probability: 30,
+			baseDamage: 28,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "120% Cloning Technique",
+			probability: 20,
+			baseDamage: 42,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	]
@@ -665,6 +706,9 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 		damageReduction *= 0.2
 		damageIncrease *= 1.2
 	}
+	if (statusEffects.includes("Sukuna's Honour")) {
+		damageReduction *= 0.1
+	}
 	if (statusEffects.includes("1000 Year Curse")) {
 		damageReduction *= 0.4
 		damageIncrease *= 1.4
@@ -720,6 +764,17 @@ export async function applyStatusEffect(userId, effectName) {
 	}
 }
 
+// apply permanent status effect its always in the perm effects but apply it in battle
+export async function applyPermanentStatusEffect(userId, effectName) {
+	// Fetch current status effects
+	const currentEffects = await getUserPermEffects(userId)
+
+	// Check if the status effect is already active to avoid duplication
+	if (!currentEffects.includes(effectName)) {
+		const updatedEffects = [...currentEffects, effectName]
+		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+	}
+}
 export const DOMAIN_INFORMATION = [
 	{
 		name: "Malevolent Shrine",
@@ -777,30 +832,26 @@ export const DOMAIN_INFORMATION = [
 export const TRANSFORMATIONS = [
 	{
 		name: "Curse King",
-		description:
-			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		description: "AH I KNEW IT THE LIGHT FEELS BEST IN THE FLESH!",
 		image: "https://media.discordapp.net/attachments/681985000521990179/1226844171827154965/sukuna-evil-laugh.gif?ex=66263eac&is=6613c9ac&hm=0799274885b6078cf77283a04a31491e6c8d41c190a427f47cc8ed6dddfac181&",
 		effects: "1000 Year Curse, 25% Damage Increase, 5% Damage Reduction"
 	},
 	{
 		name: "Six Eyes Release",
-		description:
-			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		description: "Come on, let's get serious.",
 		image: "https://media1.tenor.com/m/T8RWNLn_aIUAAAAd/jjk-jujutsu-kaisen.gif",
 		effects: "1000 Year Curse, 18% Damage Increase, 16% Damage Reduction"
 	},
 	{
 		name: "Curse Queen",
-		description:
-			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		description: "Rika.. Lend me your strength.",
 		image: "https://64.media.tumblr.com/33cacf2a119115bcdb869f76c68e16d9/df6ff4dc29f5c53a-f9/s540x810/71e5c78b6b6ed34d000aee942ff70641e18414f6.gif",
 		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction",
 		time: "3 Minutes"
 	},
 	{
 		name: "Cursed Energy Reinforcement",
-		description:
-			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
+		description: "Reinforce your cursed energy to increase your power!",
 		image: "https://media1.tenor.com/m/QZAfD8Pdb2wAAAAC/itadori-yuji-cursed-energy.gif",
 		effects: "Reinforcement, 15% Damage Reduction"
 	}

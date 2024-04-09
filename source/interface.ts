@@ -181,3 +181,30 @@ function calculateWinLossRatio(amountWon, amountLost) {
 function formatNumberWithCommas(number) {
 	return number.toLocaleString("en-US") // Formats with commas for US locale
 }
+
+export const specialMessages = [
+	"Sukuna smirks, 'You carry my honour, mortal. Show me your worth.'",
+	"Sukuna's eyes narrow, 'A bearer of my honour? Entertain me!'",
+	"With a sly grin, Sukuna says, 'So you've been touched by my power... Let's see if it's enough.'",
+	"Sukuna laughs, 'Ah, my honour rides with you. Don't disappoint me!'",
+	"Sukuna's presence weighs heavy, 'Honoured one, prove your mettle!'"
+]
+export const tojiMessages = [
+	"Toji smirks, 'Hmph, you seem strong... Don't prove me wrong.'",
+	"Toji's gaze is calculating, 'So you're carrying that honour? Show me if it's more than just a trinket.'",
+	"With a cold smile, Toji says, 'You've got a scent of power about you. Let's see if it's anything worthwhile.'",
+	"Toji scoffs, 'Carrying Sukuna's Honour? That doesn't mean you can match me.'",
+	"Toji seems unimpressed, 'An honourable one, huh? Don't expect any favours in this fight.'"
+]
+export const itadoriMessages = [
+	"Itadori gives you a knowing look, 'You're just like me, huh? Bearing Sukuna's Honour. Let's give this fight our all!'",
+	"Itadori nods in understanding, 'Carrying Sukuna's weight is tough. You and I are in this together.'",
+	"Itadori's expression is earnest, 'You remind me of myself, bearing Sukuna's Honour. Let's fight with honour!'"
+]
+export const gojoMessages = [
+	"Gojo smirks with his eyes covered, 'Sukuna's Honour, huh? Let's see if you can impress me.'",
+	"Gojo's casual stance hides his keen interest, 'Interesting... You have his honour. This should be fun.'",
+	"With a lazy smile, Gojo teases, 'Sukuna finds you worthy? Guess I'll have to take you seriously.'",
+	"Gojo laughs, 'You've caught Sukuna's eye? I'm curious now—don't let me down.'",
+	"Gojo seems intrigued, 'You bear Sukuna's Honour? Show me its worth in action.'"
+]

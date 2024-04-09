@@ -41,8 +41,10 @@ import {
 } from "./calculate.js"
 import {
 	executeSpecialTechnique,
+	export120,
 	exportCrashOut,
 	exportGambler,
+	exportMahito,
 	exportReincarnation,
 	exportRika,
 	exportSukuna2,
@@ -50,10 +52,20 @@ import {
 	exportTheFraud,
 	exportTheHonoredOne,
 	generateHealthBar,
-	getJujutsuFlavorText,
-	handleBossDeath
+	handleBossDeath,
+	handlePlayerRevival
 } from "./fight.js"
-import { BossData, buildGamblersProfile, buildQuestEmbed, formatDomainExpansion, gradeMappings } from "./interface.js"
+import {
+	BossData,
+	buildGamblersProfile,
+	buildQuestEmbed,
+	formatDomainExpansion,
+	gojoMessages,
+	gradeMappings,
+	itadoriMessages,
+	specialMessages,
+	tojiMessages
+} from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -92,9 +104,11 @@ import {
 	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
+	getUserHonours,
 	getUserInateClan,
 	getUserInventory,
 	getUserMaxHealth,
+	getUserPermEffects,
 	getUserProfile,
 	getUserQuests,
 	getUserStatusEffects,
@@ -1224,7 +1238,9 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	const userId = interaction.user.id
 
 	try {
+		const honors = (await getUserHonours(userId)) || [] // Ensure honors is never undefined
 		const userClan = await getUserInateClan(userId)
+		const transform = await getUserTransformation(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const userEnergy = await getUserCursedEnergy(userId)
 		let userTechniques: string[] = await (userHeavenlyRestriction
@@ -1272,17 +1288,14 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			.setColor("#4B0082") // Purple color
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
+				{ name: "🏅 Honours", value: honors.toString() || "None", inline: true },
 				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
-				{
-					name: "🤫 Cursed Energy",
-					value: `${userEnergy.toString()} units ${userEnergy > 1000 ? "🔥" : ""}`,
-					inline: true
-				},
 				{
 					name: "⚖️ Heavenly Restriction",
 					value: userHeavenlyRestriction ? "Active" : "Inactive",
 					inline: true
 				},
+				{ name: "🔪 Transformation", value: transform || "None", inline: false },
 				{ name: "🔥 Clan", value: userClan.clan || "None", inline: false },
 				{ name: "🌟 Experience", value: userClan.experience?.toString() || "0", inline: false },
 				{ name: "🎚️ Tier", value: `Tier ${userClan.tier?.toString() || "0"}`, inline: false },
@@ -1366,7 +1379,7 @@ export async function handleGuideCommand(interaction) {
 		case "technique":
 			guideEmbed.setTitle("Technique Guide").setDescription("Here's how you can aquire techniques.").addFields({
 				name: "Techniques",
-				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command."
+				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command, And unequip it with /unequip [TECHNIQUE NAME]"
 			})
 			break
 		case "jobs":
@@ -1463,7 +1476,7 @@ export async function handleVoteCommand(interaction) {
 		.setDescription("Help us grow and improve by voting:") // Concise focus
 		.setThumbnail(
 			"https://cdn.discordapp.com/attachments/1094302755960664255/1225954487739355176/helpprofile.jpg?ex=66230217&is=66108d17&hm=9f851af9539aee1912faece3236d4c222617bec567b5bf952448abe7881a36fb&"
-		) // Replace with a relevant bot icon
+		)
 		.setTimestamp()
 		.setFooter({ text: "Your vote matters!" })
 
@@ -1472,12 +1485,12 @@ export async function handleVoteCommand(interaction) {
 		.setLabel("🚀 Vote on Top.gg")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://top.gg/bot/991443928790335518/vote")
-		.setEmoji("🚀") // Emoji!
+		.setEmoji("🚀")
 	const discordbotlistme = new ButtonBuilder()
 		.setLabel("👍 Vote on Botlist.me")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://botlist.me/bots/991443928790335518/vote")
-		.setEmoji("👍") // Emoji!
+		.setEmoji("👍")
 
 	// Action row - no changes needed
 	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme)
@@ -1526,7 +1539,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	)
 
 	if (!randomOpponent || attempts >= allBosses.length) {
-		// Handle case where a suitable boss couldn't be found
 		await interaction.editReply({
 			content: "Couldn't find a suitable boss for you to fight. Try unlocking more bosses!"
 		})
@@ -1536,7 +1548,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
-
+	const honoureffects = (await getUserPermEffects(interaction.user.id)) || []
+	const specialHonour = "Sukuna's Honour"
+	const bossName = randomOpponent.name // Assuming randomOpponent.name holds the name of the boss
+	const playerHasSpecialHonour = honoureffects.includes(specialHonour)
+	//
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
@@ -1547,6 +1563,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		{
 			label: "Domain Expansion",
 			value: "domain",
+			description: domainname || "🔒 Domain Not Unlocked", // Default value if undefined
 			emoji: {
 				name: "1564maskedgojode", // Replace with your emoji's name
 				id: "1220626413141622794" // Replace with your emoji's ID
@@ -1555,7 +1572,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		{
 			label: "Transform",
 			value: "transform",
-			description: transformname,
+			description: transformname || "No transformation available", // Default value if undefined
 			emoji: {
 				name: "a:blueflame", // Replace with your emoji's name
 				id: "990539090418098246" // Replace with your emoji's ID
@@ -1574,12 +1591,29 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.addOptions(battleOptions)
 
 	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+	const getRandomMessage = messages => messages[Math.floor(Math.random() * messages.length)]
+
+	let bossMessage
+
+	if (bossName === "Zenin Toji" && playerHasSpecialHonour) {
+		bossMessage = getRandomMessage(tojiMessages)
+	} else if (bossName === "Sukuna" && playerHasSpecialHonour) {
+		bossMessage = getRandomMessage(specialMessages)
+	} else if (bossName === "Satoru Gojo" && playerHasSpecialHonour) {
+		bossMessage = getRandomMessage(gojoMessages)
+	} else if (bossName === "Itadori" && playerHasSpecialHonour) {
+		bossMessage = getRandomMessage(itadoriMessages)
+	} else if (playerHasSpecialHonour) {
+		bossMessage = "The boss senses the aura of Sukuna's Honour within you and pauses momentarily."
+	} else {
+		bossMessage = `Your opponent is **${bossName}**! Prepare yourself.`
+	}
 
 	// Create embed
 	const primaryEmbed = new EmbedBuilder()
 		.setColor(cursedEnergyPurple)
 		.setTitle("Cursed Battle!")
-		.setDescription(`Your opponent is **${randomOpponent.name}**! Prepare yourself.`)
+		.setDescription(`You're facing **${randomOpponent.name}**! Choose your technique wisely.`)
 		.setImage(randomOpponent.image_url)
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
@@ -1600,18 +1634,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.addFields(
 			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
 			{ name: "Status Effect Enemy", value: "None", inline: true },
-			{ name: "Status Effect Player", value: "None", inline: true }
+			{ name: "Status Effect Player", value: "None", inline: true },
+			{
+				name: "Honour Effects",
+				value: honoureffects.length > 0 ? honoureffects.join(", ") : "None",
+				inline: true
+			},
+			{ name: `${randomOpponent.name}`, value: bossMessage, inline: false }
 		)
 
 	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
 	if (remainingHealthPercentage < 0.5) {
 		primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
-	}
-
-	// Add JJK Flavor Text based for this boss
-	const flavorText = getJujutsuFlavorText(randomOpponent.name)
-	if (flavorText) {
-		primaryEmbed.addFields([flavorText])
 	}
 
 	await interaction.editReply({
@@ -2132,7 +2166,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						playerHealth
 					)
 				} else if (randomOpponent.name === "Sukuna") {
-					transformed = await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					transformed = await exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Itadori") {
 					transformed = await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Zenin Toji") {
@@ -2149,8 +2183,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Megumi Fushiguro") {
 					transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-				} else if (randomOpponent.name === "Sukuna (Heian Era)") {
-					transformed = await exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Sukuna Full Power") {
+					transformed = await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Mahito" || randomOpponent.name === "Mahito (Transfigured)") {
+					transformed = await export120(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Mahito (120%)") {
+					transformed = await exportMahito(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				}
 				if (!transformed) {
 					console.log("Boss is defeated and no transformation occurred.")
@@ -2179,22 +2217,26 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				//did bro die?
 				if (clampedPlayerHealth <= 0) {
-					const bossAttackMessage = `${randomOpponent.name} killed you!`
-					primaryEmbed.setFooter({ text: bossAttackMessage })
+					if (randomOpponent.name === "Mahito (Transfigured)") {
+						// Call the Aoi Todo revival function
+						await handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth)
+					} else {
+						const bossAttackMessage = `${randomOpponent.name} killed you!`
+						primaryEmbed.setFooter({ text: bossAttackMessage })
 
-					// Reset player health in the database.
-					activeCollectors.delete(interaction.user.id)
-					bossHealthMap.delete(interaction.user.id)
-					//
-					await updateUserHealth(interaction.user.id, 100)
-					await removeAllStatusEffects(interaction.user.id)
-					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-					await collectedInteraction.followUp({
-						content: `${randomOpponent.name} killed you!`,
-						ephemeral: true
-					})
-					//
-					battleOptionSelectMenuCollector.stop()
+						// Reset player health in the database.
+						activeCollectors.delete(interaction.user.id)
+						bossHealthMap.delete(interaction.user.id)
+						//
+						await updateUserHealth(interaction.user.id, 100)
+						await removeAllStatusEffects(interaction.user.id)
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+						await collectedInteraction.followUp({
+							content: `${randomOpponent.name} killed you!`,
+							ephemeral: true
+						})
+						battleOptionSelectMenuCollector.stop()
+					}
 				} else {
 					// Update to new player health after damage dealt
 					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
@@ -2772,6 +2814,18 @@ export async function handleSellCommand(interaction) {
 		}
 	})
 }
+
+function getRewardString(quest) {
+	let rewards = ""
+	if (quest.item) rewards += `${quest.item} (x${quest.itemQuantity})\n`
+	if (quest.items) {
+		// Handle multiple items
+		Object.entries(quest.items).forEach(([itemName, quantity]) => {
+			rewards += `${itemName} (x${quantity})\n`
+		})
+	}
+	return rewards || "None" // If no rewards, display "None"
+}
 // Ban...KAI!
 export async function handleQuestCommand(interaction: ChatInputCommandInteraction) {
 	console.log(questsArray)
@@ -2780,7 +2834,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 	const userActiveQuests = await getUserQuests(userId) // Fetch the user's active quests
 	const activeQuestNames = userActiveQuests.quests.map(q => q.id) // Extract the active quest names
 
-	const availableQuests = questsArray.filter(quest => !activeQuestNames.includes(quest.name)) // Filter out active quests
+	const availableQuests = questsArray.filter(quest => !activeQuestNames.includes(quest.name) && !quest.special)
 
 	if (availableQuests.length === 0) {
 		throw new Error("There are no available quests.")
@@ -2807,8 +2861,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 
 	await interaction.reply({
 		content: "Select a quest to begin your adventure.",
-		components: [row],
-		ephemeral: true
+		components: [row]
 	})
 
 	console.log("before menu")
@@ -2834,15 +2887,32 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 			await addUserQuest(userId, selectedQuest.name)
 
 			console.log("before embed")
-
 			const questEmbed = new EmbedBuilder()
 				.setTitle(selectedQuest.name)
 				.setDescription(selectedQuest.description)
-				.setColor("#0099ff")
-				.setFooter({ text: "Task: " + selectedQuest.task })
+				.setColor("#0099ff") // Adjust color as needed
+
+				// Basic Quest Info
+				.addFields(
+					{ name: "Coins", value: selectedQuest.coins.toString(), inline: true },
+					{ name: "EXP", value: selectedQuest.experience.toString(), inline: true },
+					{ name: "Task", value: selectedQuest.task, inline: false } // Wider field
+				)
+
+				// Rewards
+				.addFields({ name: "Rewards", value: getRewardString(selectedQuest), inline: false })
+
+			// Multi-Task Quests
+			if (selectedQuest.tasks) {
+				selectedQuest.tasks.forEach((task, index) => {
+					questEmbed.addFields({
+						name: `Task ${index + 1}`,
+						value: `${task.description} (${task.progress}/${task.totalProgress})`
+					})
+				})
+			}
 
 			await i.update({
-				content: "Your quest has begun!",
 				embeds: [questEmbed],
 				components: []
 			})
@@ -2862,20 +2932,21 @@ export async function claimQuestsCommand(interaction) {
 	try {
 		const userId = interaction.user.id // Get the user's ID from the interaction
 		const userQuests = await getUserQuests(userId) // Fetch user quests
+		if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+			await interaction.reply("You have no active quests to claim.")
+			return
+		}
 
 		const completedQuests = userQuests.quests.filter(userQuest => {
 			const questDetails = questsArray.find(quest => quest.name === userQuest.id)
 			if (!questDetails) return false
 
-			// Check if the quest has multiple tasks
 			if (Array.isArray(questDetails.tasks) && questDetails.tasks.length > 0) {
-				// For each task, check if the user's progress meets the totalProgress
 				return questDetails.tasks.every(task => {
 					const userTask = userQuest.tasks.find(t => t.description === task.description)
 					return userTask && userTask.progress >= task.totalProgress
 				})
 			} else {
-				// If it's a single task quest
 				return userQuest.progress >= questDetails.totalProgress
 			}
 		})
@@ -2885,48 +2956,92 @@ export async function claimQuestsCommand(interaction) {
 			return
 		}
 
+		let claimedSukunasHonour = false
+		let claimedReinforcement = false
+
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
 			if (!questDetails) continue
 
-			const { coins, experience, items, item, itemQuantity } = questDetails
+			const { coins, experience, items } = questDetails
 
-			// Add coins and experience
 			await updateBalance(userId, coins)
 			await updateUserExperience(userId, experience)
 
-			// Handle items for quests with multiple items
-			if (items && typeof items === "object") {
-				for (const [itemName, quantity] of Object.entries(items)) {
+			if (items) {
+				for (const itemName of Object.keys(items)) {
+					const quantity = items[itemName]
 					await addItemToUserInventory(userId, itemName, quantity)
+
+					if (itemName === "Sukuna's Honour") {
+						claimedSukunasHonour = true
+					} else if (itemName === "Cursed Energy Reinforcement") {
+						claimedReinforcement = true
+					}
 				}
 			}
 
-			// Handle single item
-			else if (item) {
-				await addItemToUserInventory(userId, item, itemQuantity || 1)
-			}
-
-			// Update the player's grade and remove the completed quest
 			await updatePlayerGrade(userId)
 			await removeUserQuest(userId, completedQuest.id)
 		}
 
-		// Prepare the embed with claimed rewards
-		const embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle("Quest Rewards Claimed")
-			.setDescription(completedQuests.map(quest => `**${quest.id}**`).join("\n"))
+		const specialEmbeds = []
 
-		await interaction.reply({ embeds: [embed] })
+		if (claimedSukunasHonour) {
+			const sukunasHonourEmbed = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("Sukuna's Honour Claimed!")
+				.setDescription(
+					"You have been acknowledged by the King of Curses himself. This is a rare achievement that marks you as one of the elite sorcerers."
+				)
+				.setImage("https://cdn.discordapp.com/attachments/.../82F48214-7925-47D3-BCD8-12D744A71F98.gif")
+				.addFields({ name: "New Awakening", value: "You now bear the curse of Sukuna. Use it wisely." })
+
+			specialEmbeds.push(sukunasHonourEmbed)
+		}
+
+		if (claimedReinforcement) {
+			const reinforcementEmbed = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("Power Released!")
+				.setDescription(
+					"One hell of a training session! You have unlocked the ability to reinforce your cursed energy."
+				)
+				.setImage("https://i.pinimg.com/originals/5f/3c/b9/5f3cb9d839aa38fef811289443488890.gif")
+				.addFields({
+					name: "New Power",
+					value: "You can now use the **Cursed Energy Reinforcement** Transformation!"
+				})
+
+			specialEmbeds.push(reinforcementEmbed)
+		}
+
+		// Reply with special embeds or a generic completion message
+		if (specialEmbeds.length > 0) {
+			await interaction.reply({ embeds: [specialEmbeds[0]] }) // Send the first embed
+			for (let i = 1; i < specialEmbeds.length; i++) {
+				await interaction.followUp({ embeds: [specialEmbeds[i]] })
+			}
+		} else {
+			const genericEmbed = new EmbedBuilder()
+				.setColor(0x0099ff)
+				.setTitle("Quest Rewards Claimed")
+				.setDescription(completedQuests.map(quest => `**${quest.id}**`).join("\n"))
+
+			await interaction.reply({ embeds: [genericEmbed] })
+		}
 	} catch (error) {
 		console.error("Error claiming quests:", error)
-		await interaction.reply({
-			content: "An error occurred while claiming quests.",
-			ephmeral: true
-		})
+		// Ensuring only a single reply is sent in case of an error
+		if (!interaction.replied && !interaction.deferred) {
+			await interaction.reply({
+				content: "An error occurred while claiming quests.",
+				ephemeral: true
+			})
+		}
 	}
 }
+
 // view all active quests using getuserquest
 export async function viewQuestsCommand(interaction) {
 	const userId = interaction.user.id
@@ -3349,42 +3464,62 @@ export async function handleEquipTechniqueCommand(interaction) {
 	}
 }
 export async function handleUnequipTechniqueCommand(interaction) {
+	console.log(interaction.options.data) // Log the options data to see what is received
 	const userId = interaction.user.id
-	const techniqueNameInput = interaction.options.getString("technique-name") // Technique name as input by the user
 
-	// Ensure that techniqueNameInput is not null or empty
-	if (!techniqueNameInput) {
+	// Gather all provided technique names
+	const techniqueNamesInput = []
+	for (let i = 1; i <= 10; i++) {
+		const optionName = `technique${i === 1 ? "" : i}`
+		const techniqueName = interaction.options.getString(optionName)
+		if (techniqueName) {
+			techniqueNamesInput.push(techniqueName.trim()) // Trim and add to the array
+		}
+	}
+
+	// Ensure at least one technique name was provided
+	if (techniqueNamesInput.length === 0) {
 		return await interaction.reply({
-			content: "You must specify a technique to unequip.",
+			content: "Please specify a technique name.",
 			ephemeral: true
 		})
 	}
 
 	try {
-		const activeTechniques = await getUserActiveTechniques(userId) // Presumed to return original casing
+		let activeTechniques = await getUserActiveTechniques(userId) // Presumed to return original casing
 
-		// Create a lowercase map for case-insensitive comparison.
-		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
+		// Ensure activeTechniques is an array and filter out null values
+		activeTechniques = Array.isArray(activeTechniques)
+			? activeTechniques.filter(name => name != null).map(name => name.trim())
+			: []
 
-		// Check if the technique is equipped using a case-insensitive comparison.
-		const techniqueNameLowercase = techniqueNameInput.toLowerCase()
-		if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
-			return await interaction.reply({
-				content: "That technique is not currently equipped.",
-				ephemeral: true
-			})
+		// The names of techniques that have been unequipped
+		const unequippedTechniques = []
+
+		for (const techniqueNameInput of techniqueNamesInput) {
+			// Create a lowercase map for case-insensitive comparison
+			const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
+
+			const techniqueNameLowercase = techniqueNameInput.toLowerCase()
+			if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
+				// If any of the techniques are not equipped, we return immediately
+				return await interaction.reply({
+					content: `The technique "${techniqueNameInput}" is not currently equipped.`,
+					ephemeral: true
+				})
+			}
+
+			// Filter out the unequipped technique while preserving original casing for others
+			activeTechniques = activeTechniques.filter(technique => technique.toLowerCase() !== techniqueNameLowercase)
+
+			// Store the original case name for the technique being unequipped
+			unequippedTechniques.push(activeTechniquesLowercaseMap.get(techniqueNameLowercase))
 		}
 
-		// Filter out the unequipped technique while preserving original casing for others.
-		const newActiveTechniques = activeTechniques.filter(
-			technique => technique.toLowerCase() !== techniqueNameLowercase
-		)
+		await updateUserActiveTechniques(userId, activeTechniques)
 
-		await updateUserActiveTechniques(userId, newActiveTechniques)
-
-		// Get the original case name for the technique being unequipped for the response.
-		const originalCaseName = activeTechniquesLowercaseMap.get(techniqueNameLowercase)
-		await interaction.reply(`Technique '${originalCaseName}' unequipped!`)
+		// Reply with a message that includes all the unequipped techniques
+		await interaction.reply(`Technique(s) '${unequippedTechniques.join(", ")}' unequipped!`)
 	} catch (error) {
 		console.error("Error unequipping technique:", error)
 		return await interaction.reply({
@@ -3393,6 +3528,7 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 }
+
 export async function handleViewTechniquesCommand(interaction) {
 	const userId = interaction.user.id
 
