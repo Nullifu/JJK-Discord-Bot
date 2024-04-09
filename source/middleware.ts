@@ -23,10 +23,10 @@ export async function checkRegistrationMiddleware(interaction: ChatInputCommandI
 				],
 				ephemeral: true
 			})
-			return false // Stop further execution if the user is unregistered
+			return false
 		}
 
-		return true // Continue with execution if all checks pass
+		return true
 	} catch (error) {
 		console.error("Error in middleware:", error)
 		// Only reply with an error message if a previous reply hasn't been sent

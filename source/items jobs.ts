@@ -1,17 +1,27 @@
 import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
 import {
+	addUserQuest,
 	addUserQuestProgress,
 	addUserTechnique,
+	getUserInateClan,
+	getUserQuests,
+	getUserUnlockedTransformations,
 	removeItemFromUserInventory,
 	resetBetLimit,
+	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
-	updateUserUnlockedBosses
+	updateUserInateClan,
+	updateUserInateClanExperience,
+	updateUserMaxHealth,
+	updateUserUnlockedBosses,
+	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
 export const digitems = [
+	{ name: "Tailsman", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07 },
 	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07 },
 	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07 },
@@ -52,7 +62,7 @@ export const items = [
 
 	//
 	{ name: "(Fixed) Divine General Wheel", rarity: "Special Grade", chance: 0.1, price: 125000 },
-	{ name: "Six Eyes", rarity: "Special Grade", chance: 0.1, price: 175000 },
+	{ name: "Six Eyes", rarity: "Special Grade", chance: 0.1, price: 325000 },
 	{ name: "Yuta's Token", rarity: "Special Grade", chance: 0.1, price: 275000 },
 	{ name: "Heavenly Restricted Blood", rarity: "Special Grade", chance: 0.1, price: 275000 },
 	{ name: "Special-Grade Geo Locator", rarity: "Special Grade", chance: 0.1, price: 300000 }
@@ -86,7 +96,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
-		{ name: "Fractured Chain", rarity: "ultra rare" }
+		{ name: "Zenin Toji's Blood", rarity: "ultra rare" }
 	],
 	"Zenin Toji (Reincarnation)": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
@@ -176,10 +186,20 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
+	"Finger Bearer": [
+		{ name: "Sukuna Finger", rarity: "rare" },
+		{ name: "Cursed Shard", rarity: "rare" },
+		{ name: "Junpei", rarity: "ultra rare" }
+	],
 	"Disaster Curses": [
 		{ name: "Dagons Soul", rarity: "rare" },
 		{ name: "Jogos Soul", rarity: "rare" },
 		{ name: "Hanamis Soul", rarity: "ultra rare" }
+	],
+	"Zenin Toji (Reincarnated)": [
+		{ name: "Rikugan Eye", rarity: "rare" },
+		{ name: "Sukuna Finger", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
 	"Yuta Okkotsu & Curse Queen Rika": [
 		{ name: "Fraud Poster", rarity: "rare" },
@@ -188,6 +208,15 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Rikugan Eye", rarity: "ultra rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" },
 		{ name: "Six Eyes", rarity: "ultra rare" }
+	],
+
+	"Mahito": [
+		{ name: "Transfigured Soul", rarity: "rare" },
+		{ name: "(Broken) Vengeance Katana", rarity: "rare" }
+	],
+	"Mahito (120%)": [
+		{ name: "Transfigured Soul", rarity: "rare" },
+		{ name: "Junpei", rarity: "rare" }
 	]
 }
 
@@ -210,7 +239,8 @@ export const craftingRecipes = {
 			{ name: "Prison Realm Fragment", quantity: 6 },
 			{ name: "Rikugan Eye", quantity: 2 }
 		],
-		craftedItemName: "Prison Realm"
+		craftedItemName: "Prison Realm",
+		emoji: "<:prison_realm:1193160559009484830>"
 	},
 	malevolent_token: {
 		requiredItems: [
@@ -218,7 +248,8 @@ export const craftingRecipes = {
 			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 },
 			{ name: "(Shattered) Domain Remnants", quantity: 1 }
 		],
-		craftedItemName: "Malevolent Token"
+		craftedItemName: "Malevolent Token",
+		emoji: "<:ezgif6382f647639:1226785963976556586>"
 	},
 	limitless_token: {
 		requiredItems: [
@@ -226,7 +257,8 @@ export const craftingRecipes = {
 			{ name: "Fraud Poster", quantity: 1 },
 			{ name: "(Shattered) Domain Remnants", quantity: 1 }
 		],
-		craftedItemName: "Limitless Token"
+		craftedItemName: "Limitless Token",
+		emoji: "<:ezgif6bfd16821f71:1226786739927122001>"
 	},
 	hakari_kinjis_token: {
 		requiredItems: [
@@ -234,7 +266,8 @@ export const craftingRecipes = {
 			{ name: "Bet Slip", quantity: 1 },
 			{ name: "(Shattered) Domain Remnants", quantity: 1 }
 		],
-		craftedItemName: "Hakari Kinji's Token"
+		craftedItemName: "Hakari Kinji's Token",
+		emoji: "<:ezgif69ebde5a49b1:1226789501662134302>"
 	},
 	dagon_token: {
 		requiredItems: [
@@ -242,7 +275,8 @@ export const craftingRecipes = {
 			{ name: "Green Fish", quantity: 1 },
 			{ name: "(Shattered) Domain Remnants", quantity: 1 }
 		],
-		craftedItemName: "Dagon's Token"
+		craftedItemName: "Dagon's Token",
+		emoji: "<:ezgif67fdc45e4d41:1226789943091920896>"
 		//
 		//
 		//
@@ -252,7 +286,8 @@ export const craftingRecipes = {
 			{ name: "Yuta's Token", quantity: 1 },
 			{ name: "(Shattered) Domain Remnants", quantity: 1 }
 		],
-		craftedItemName: "Mutual Token"
+		craftedItemName: "Mutual Token",
+		emoji: "<:ezgif6015811ef2e1:1226788144716845076>"
 		//
 		//
 		//
@@ -264,11 +299,13 @@ export const craftingRecipes = {
 			{ name: "Special Grade Cursed Object", quantity: 4 },
 			{ name: "Sukuna Finger", quantity: 1 }
 		],
-		craftedItemName: "Special-Grade Geo Locator"
+		craftedItemName: "Special-Grade Geo Locator",
+		emoji: "<:ezgif6b39e053d261:1226788874819207249>"
 	},
 	six_eyes: {
 		requiredItems: [{ name: "Rikugan Eye", quantity: 6 }],
-		craftedItemName: "Six Eyes"
+		craftedItemName: "Six Eyes",
+		emoji: "<:sixeye:1193159757515726919>"
 	},
 	jogos_fixed_balls: {
 		requiredItems: [
@@ -281,11 +318,19 @@ export const craftingRecipes = {
 
 	heavenly_restricted_blood: {
 		requiredItems: [
-			{ name: "Six Eyes", quantity: 1 },
-			{ name: "Sukuna Finger", quantity: 1 },
-			{ name: "Domain Token", quantity: 1 }
+			{ name: "Sukuna Finger Bundle", quantity: 1 },
+			{ name: "Zenin Toji's Blood", quantity: 1 }
 		],
-		craftedItemName: "Heavenly Restricted Blood"
+		craftedItemName: "Heavenly Restricted Blood",
+		emoji: "<a:wflameblue15:1226787880710705275>"
+	},
+	sukuna_bundle: {
+		requiredItems: [
+			{ name: "Sukuna Finger", quantity: 5 },
+			{ name: "Super Glue", quantity: 1 }
+		],
+		craftedItemName: "Sukuna Finger Bundle",
+		emoji: "<:ezgif69884ff9ecd1:1226787131956138077>"
 	}
 }
 
@@ -633,6 +678,7 @@ export const CLAN_SKILLS = {
 			clan: "Demon Vessel",
 			items: [{ name: "Sukuna Finger", quantity: 6 }]
 		},
+
 		{
 			name: "Dismantle",
 			description: "SLICE!",
@@ -643,9 +689,30 @@ export const CLAN_SKILLS = {
 		{
 			name: "Cleave",
 			description: "Embodiment of true fear and terror",
-			cost: "25000",
+			cost: "50000",
 			clan: "Demon Vessel",
 			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		},
+		{
+			name: "Black Flash",
+			description: "KOKU...SEN!",
+			cost: "35000",
+			clan: "Demon Vessel",
+			items: [{ name: "Tailsman", quantity: 5 }]
+		},
+		{
+			name: "Divergent Fist",
+			description: "A Two Hit Combo!",
+			cost: "12000",
+			clan: "Demon Vessel",
+			items: [{ name: "Tailsman", quantity: 1 }]
+		},
+		{
+			name: "Twin Dragon FIST",
+			description: "BAKURETSU KEN!",
+			cost: "24000",
+			clan: "Demon Vessel",
+			items: [{ name: "Tailsman", quantity: 1 }]
 		}
 	],
 	"Limitless": [
@@ -766,21 +833,18 @@ export const CLAN_SKILLS = {
 	"Okkotsu": [
 		{
 			name: "MAXIMUM: BLACK FLASH",
-			description: "....",
 			cost: "925000",
 			clan: "Okkotsu",
 			items: [{ name: "Yuta's Token", quantity: 1 }]
 		},
 		{
 			name: "Pure Love: Unleashed Fury",
-			description: "Perish!",
 			cost: "500000",
 			clan: "Okkotsu",
 			items: [{ name: "Yuta's Token", quantity: 1 }]
 		},
 		{
 			name: "Steel Arm: Freezing Strike",
-			description: "Take this!",
 			cost: "325000",
 			clan: "Okkotsu",
 			items: [{ name: "Yuta's Token", quantity: 1 }]
@@ -803,7 +867,7 @@ export const benefactors = [
 export const questsArray = [
 	{
 		name: "Gamblers Fever",
-		description: "Defeat Hakari Kinji 5 Times!",
+		description: "Defeat Hakari Kinji 5 times and earn his token.",
 		coins: 45000,
 		experience: 470,
 		item: "Hakari Kinji's Token",
@@ -812,69 +876,76 @@ export const questsArray = [
 		totalProgress: 5
 	},
 	{
+		name: "Training with Itadori",
+		description: "Train With Itadori!",
+		coins: 45000,
+		experience: 470,
+		items: { "Cursed Energy Reinforcement": 1 },
+		itemQuantity: 1,
+		task: "Training",
+		totalProgress: 3
+	},
+	{
 		name: "Disaster Curses",
-		description: "Defeat all of the Disaster Curses!",
+		description:
+			"The land is plagued by Disaster Curses, spreading chaos and destruction. Journey through perilous locations to confront and defeat Jogo, Hanami, and Dagon.",
 		coins: 45000,
 		experience: 470,
 		item: "Combined Disaster Curses Soul",
 		itemQuantity: 1,
-
 		tasks: [
-			{
-				description: "Defeat Jogo",
-				progress: 0,
-				totalProgress: 1
-			},
-			{
-				description: "Defeat Hanami",
-				progress: 0,
-				totalProgress: 1
-			},
-			{
-				description: "Defeat Dagon",
-				progress: 0,
-				totalProgress: 1
-			}
+			{ description: "Defeat Jogo", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Hanami", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Dagon", progress: 0, totalProgress: 1 }
 		]
 	},
 	{
 		name: "Nature of Curses",
-		description: "Defeat Mahito In His True Form.",
+		description:
+			"Mahito, in his true form, threatens the balance between our world and the supernatural. Defeating him will not only require strength but the will to overcome the twisted nature of curses.",
 		coins: 23000,
 		experience: 320,
-		item: "Junpei",
+		item: "Mahito's Soul",
 		itemQuantity: 2,
 		task: "Defeat Reborn Mahito",
 		totalProgress: 1
 	},
 	{
 		name: "Curse King",
-		description: "Get Cursed By Sukuna....",
+		description:
+			"Sukuna, the King of Curses, demands acknowledgment. Prove your worth and be bestowed with Sukuna Fingers, a testament to your courage and strength in the face of ancient power.",
 		coins: 23000,
 		experience: 320,
-		items: {
-			"Special-Grade Geo Locator": 2,
-			"Sukuna Finger": 3
-		},
-		task: "Get Cursed By Sukuna.",
+		items: { "Sukuna Finger": 3 },
+		task: "Get acknowledged by Sukuna!",
 		totalProgress: 1
 	},
 	{
+		name: "Curse King's Task",
+		description:
+			"The quest for Sukuna's Fingers is not for the faint of heart. Collect all twenty to achieve an unprecedented feat, securing a place among legends with Sukuna's Honour.",
+		coins: 100000,
+		experience: 850,
+		items: { "Sukuna's Honour": 1 },
+		task: "Round up all of the Sukuna Fingers!",
+		totalProgress: 20,
+		special: true
+	},
+	{
 		name: "Find Yuta!",
-		description: "Locate Yuta Okkotsu!",
+		description:
+			"Yuta Okkotsu remains elusive, hidden away by deceptive magic and trickery. Unveil the truth, confront the fraud, and claim Yuta's Token along with a Fraud Poster as evidence of your deed.",
 		coins: 34000,
 		experience: 250,
-		items: {
-			"Yuta's Token": 2,
-			"Fraud Poster": 1
-		},
+		items: { "Yuta's Token": 2, "Fraud Poster": 1 },
 		itemQuantity: 2,
 		task: "Find this fraud!",
 		totalProgress: 1
 	},
 	{
 		name: "The Honored One",
-		description: "Be blessed with the six eyes..",
+		description:
+			"The sacred six eyes, a technique limitless in power, awaits. Embark on this divine quest to be anointed with the Sacred Eye, marking you as the chosen wielder of the ancient and revered technique.",
 		coins: 20000,
 		experience: 320,
 		item: "Sacred Eye",
@@ -1063,6 +1134,7 @@ export const items1: Item1[] = [
 			"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif",
 		effect: async interaction => {
 			await interaction.deferReply()
+			const userId = interaction.user.id // Or however you get the user's ID in your context
 
 			const embedFirst = new EmbedBuilder()
 				.setColor("#4b0082")
@@ -1073,59 +1145,138 @@ export const items1: Item1[] = [
 				.setImage(
 					"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif"
 				)
+			//
 			await interaction.followUp({ embeds: [embedFirst] })
 
-			const randomNumber = Math.floor(Math.random() * 100) + 1
-			let isDemonVessel = false
+			const userClanData = await getUserInateClan(interaction.user.id)
+			console.log("userClanData: ", userClanData) // Log for debugging
+			await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
+			await updateUserInateClanExperience(userId, 125, "Demon Vessel")
+			await updatePlayerClanTier(userId)
+			//
+			if (userClanData.clan === "Demon Vessel") {
+				const curseKingsTaskQuest = (await getUserQuests(userId)).quests.find(
+					quest => quest.id === "Curse King's Task"
+				)
+				let progressMessage
+				let progressFraction
 
-			if (randomNumber <= 20) {
-				await updateUserClan(interaction.user.id, "Demon Vessel")
-				await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
-				await addUserTechnique(interaction.user.id, "World Cutting Slash")
-				await addUserQuestProgress(interaction.user.id, "Curse King", 1)
-				isDemonVessel = true
-			}
+				if (curseKingsTaskQuest) {
+					progressFraction = curseKingsTaskQuest.progress / curseKingsTaskQuest.totalProgress
 
-			await new Promise(resolve => setTimeout(resolve, 2000)) // Delay
+					if (progressFraction < 0.25) {
+						progressMessage = "You have barely scratched the surface."
+					} else if (progressFraction < 0.5) {
+						progressMessage = "Hmph.. You're making some progress. Keep it up."
+					} else if (progressFraction < 0.75) {
+						progressMessage = "What is this? You're actually trying? Interesting."
+					} else if (progressFraction < 1) {
+						progressMessage = "Impossible.. How?"
+					} else if (progressFraction === 1) {
+						progressMessage = "Is this brat from that time?.."
+					} else {
+						progressMessage = "Hm, something seems off with your progress."
+					}
 
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000")
-				.setTitle("Power or Peril?")
-				.setDescription("With a decisive motion, you consume the finger.")
-				.setImage("https://media1.tenor.com/m/av-cF54e6TAAAAAC/itadori-jujutsu-kaisen.gif")
-			await interaction.editReply({ embeds: [embedSecond] })
+					const dialogueWithProgress = `Hmph, You're still alive huh.. Maybe you're worth something after all. ${
+						progressMessage || "No progress to report."
+					}`
 
-			await new Promise(resolve => setTimeout(resolve, 4000)) // Delay
+					let gainsMessage = ""
+					const targetProgress = 12
+					if (curseKingsTaskQuest.progress === targetProgress) {
+						const currentTransformations = (await getUserUnlockedTransformations(interaction.user.id)) || []
 
-			let embedFinal
-			if (isDemonVessel) {
-				const gains =
-					"You have gained:\n" +
-					"• Clan: Demon Vessel\n" +
-					"• Achievement: becursedDemonVessel\n" +
-					"• Technique: World Cutting Slash\n" +
-					"• Quest Progress: Curse King +1\n"
-				embedFinal = new EmbedBuilder()
-					.setColor("#4b0082")
-					.setTitle("A 1000 Year Curse...")
-					.setDescription(
-						`Hmm, there might be some use for you yet, human. That flicker of potential... I haven't felt that in centuries. For now you are my vessel.\n\n${gains}`
-					)
-					.setImage(
-						"https://64.media.tumblr.com/68ff493cf57ea889123c25330aa4f150/e506879043dea017-7c/s1280x1920/f5c94f377afcfc48ef33f99019793677938c70fe.gif"
-					)
+						if (!currentTransformations.includes("Curse King")) {
+							const updatedTransformations = [...currentTransformations, "Curse King"]
+							await updateUserUnlockedTransformations(interaction.user.id, updatedTransformations)
+
+							gainsMessage =
+								"Hmph, you're still alive. I'll grant you a small gift. Use it well. [ CURSE KING TRANSFORMATION AQUIRED ]"
+						}
+					}
+
+					await new Promise(resolve => setTimeout(resolve, 2000))
+					//
+
+					//
+					//
+					const embedClanAndQuest = new EmbedBuilder()
+						.setTitle("Curse King's Task")
+						.setDescription(dialogueWithProgress)
+						.addFields({
+							name: "Quest Progress",
+							value:
+								gainsMessage ||
+								`Current progress: ${curseKingsTaskQuest.progress}/${curseKingsTaskQuest.totalProgress}`
+						})
+						.setImage("https://media1.tenor.com/m/OvmsFkMM2PwAAAAC/ryomen-sukuna-sukuna.gif")
+					await interaction.editReply({ embeds: [embedClanAndQuest] })
+				} else {
+					console.log("Quest Not Found") // Check if this message appears
+					await addUserQuest(interaction.user.id, "Curse King's Task")
+					const embedAlreadyDemonVessel = new EmbedBuilder()
+						.setColor("#8b0000")
+						.setTitle("Already Cursed..")
+						.setDescription(
+							"You again? You wish for more power? Hmph. Alright then. Collect all 20 of my fingers, and I'll consider it. "
+						)
+						.setImage("https://media1.tenor.com/m/GxDg4OD6TkwAAAAC/sukuna-ryomen.gif")
+					await interaction.editReply({ embeds: [embedAlreadyDemonVessel] })
+				}
 			} else {
-				embedFinal = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("A Cursed Power... Or Not?")
-					.setDescription(
-						"You consume the finger. For a moment, you fear the worst... or the best. Instead, a wave of energy courses through you. You gain 125 experience. Perhaps it wasn't so potent after all."
-					)
-					.setImage(
-						"https://cdn.discordapp.com/attachments/1094302755960664255/1225192293812928512/ezgif-7-b8e5336c85.gif?ex=66203c3d&is=660dc73d&hm=e21bd44a60c7187652d02ff44a9d2ec81017ed2446d88468044c3ccfbed99f8e&"
-					)
+				//
+				const randomNumber = Math.floor(Math.random() * 100) + 1
+
+				await new Promise(resolve => setTimeout(resolve, 2000)) // Delay
+
+				const embedSecond = new EmbedBuilder()
+					.setColor("#8b0000")
+					.setTitle("Power or Peril?")
+					.setDescription("With a decisive motion, you consume the finger.")
+					.setImage("https://media1.tenor.com/m/av-cF54e6TAAAAAC/itadori-jujutsu-kaisen.gif")
+
+				await interaction.editReply({ embeds: [embedSecond] })
+
+				await new Promise(resolve => setTimeout(resolve, 4000)) // Delay
+
+				if (randomNumber <= 20) {
+					await updateUserInateClan(interaction.user.id, "Demon Vessel")
+					await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
+					await addUserTechnique(interaction.user.id, "World Cutting Slash")
+					await addUserQuestProgress(interaction.user.id, "Curse King", 1)
+
+					const gains =
+						"You have gained:\n" +
+						"• Inate Clan: Demon Vessel\n" +
+						"• Technique: World Cutting Slash\n" +
+						"• Quest Progress: Curse King +1\n"
+					//
+					await addUserQuestProgress(interaction.user.id, "Curse King", 1)
+					const embedFinalClanAcquired = new EmbedBuilder()
+						.setColor("#4b0082")
+						.setTitle("A 1000 Year Curse...")
+						.setDescription(
+							`Hmm, there might be some use for you yet, human. That flicker of potential... I haven't felt that in centuries. For now you are my vessel.\n\n${gains}`
+						)
+						.setImage(
+							"https://64.media.tumblr.com/68ff493cf57ea889123c25330aa4f150/e506879043dea017-7c/s1280x1920/f5c94f377afcfc48ef33f99019793677938c70fe.gif"
+						)
+
+					await interaction.editReply({ embeds: [embedFinalClanAcquired] })
+				} else {
+					const sukunaNo = new EmbedBuilder()
+						.setColor("#006400")
+						.setTitle("A Cursed Power... Or Not?")
+						.setDescription(
+							"You consume the finger. For a moment, you fear the worst... or the best. Instead, a wave of energy courses through you. You gain 125 experience. Perhaps it wasn't so potent after all."
+						)
+						.setImage(
+							"https://cdn.discordapp.com/attachments/1094302755960664255/1225192293812928512/ezgif-7-b8e5336c85.gif?ex=66203c3d&is=660dc73d&hm=e21bd44a60c7187652d02ff44a9d2ec81017ed2446d88468044c3ccfbed99f8e&"
+						)
+					await interaction.editReply({ embeds: [sukunaNo] })
+				}
 			}
-			await interaction.editReply({ embeds: [embedFinal] })
 		}
 	},
 	{
@@ -1151,11 +1302,9 @@ export const items1: Item1[] = [
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isLimitless = false
 
-			await removeItemFromUserInventory(interaction.user.id, "Six Eyes", 1)
 			await updateUserExperience(interaction.user.id, 125)
 
 			if (randomNumber <= 30) {
-				await updateUserClan(interaction.user.id, "Limitless")
 				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
 				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
@@ -1179,7 +1328,6 @@ export const items1: Item1[] = [
 			if (isLimitless) {
 				const gains =
 					"You have gained:\n" +
-					"• Clan: Limitless\n" +
 					"• Achievement: behonoredLimitless\n" +
 					"• Technique: Imaginary Technique: Purple\n" +
 					"• Quest Progress: The Honored One +1\n" +
@@ -1228,6 +1376,7 @@ export const items1: Item1[] = [
 				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
+				await updateUserMaxHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 

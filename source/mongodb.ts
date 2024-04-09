@@ -7,8 +7,8 @@ import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const bossCollectionName = "devboss"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 
@@ -88,11 +88,17 @@ export async function addUser(
 			cursedEnergy: 100,
 			clan: null,
 			techniques: [],
+			transformation: null,
+			unlockedtransformations: [],
 			unlockedBosses: [],
 			activeTechniques: [],
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
+			inateclan: [],
+			activeinateclan: null,
 			quests: [],
+			permEffects: [],
+			statusEffects: [],
 			betCount: 0
 		})
 
@@ -130,46 +136,34 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		const usersToUpdate = await usersCollection
 			.find({
 				$or: [
-					{ unlockedBosses: { $exists: false } } // Check for documents missing statusEffects
+					{ activeinateclan: { $exists: false } },
+					{ unlockedtransformations: { $exists: false } },
+					{ transformation: { $exists: false } },
+					{ inateclan: { $exists: false } } // Check for documents missing statusEffects
 				]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
+			// Perform updates for each missing field individually
 			await usersCollection.updateMany(
-				{
-					$or: [{ unlockedBosses: { $exists: false } }]
-				},
-				{
-					$set: {
-						unlockedBosses: [] // Initialize statusEffects as empty array if missing
-					}
-				}
+				{ activeinateclan: { $exists: false } },
+				{ $set: { activeinateclan: null } } // Or [] for an array
 			)
+
+			await usersCollection.updateMany(
+				{ unlockedtransformations: { $exists: false } },
+				{ $set: { unlockedtransformations: [] } }
+			)
+
+			await usersCollection.updateMany({ transformation: { $exists: false } }, { $set: { transformation: null } })
+
+			await usersCollection.updateMany({ inateclan: { $exists: false } }, { $set: { inateclan: [] } })
+
 			console.log("Added 'activeTechniques' and 'statusEffects' arrays to existing user documents")
 		}
 	} catch (error) {
 		console.error("Error initializing activeTechniques and statusEffects:", error)
-	}
-}
-
-async function removeIncorrectStatusEffectField(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
-	try {
-		// This operation will remove the statusEffect field from all documents where it exists
-		const updateResult = await usersCollection.updateMany(
-			{ statusEffect: { $exists: true } },
-			{ $unset: { statusEffect: "" } } // The empty string "" indicates that the field should be removed
-		)
-
-		if (updateResult.modifiedCount > 0) {
-			console.log(`Removed 'statusEffect' field from ${updateResult.modifiedCount} documents.`)
-		} else {
-			console.log("No documents had the 'statusEffect' field or it was already removed.")
-		}
-	} catch (error) {
-		console.error("Error removing the 'statusEffect' field:", error)
 	}
 }
 
@@ -494,6 +488,7 @@ export async function getUserHealth(userId: string): Promise<number> {
 export async function getBosses(userGrade: string): Promise<BossData[]> {
 	try {
 		// Find the health multiplier based on the user's grade
+		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
 
 		const database = client.db(mongoDatabase) // Assuming the client is already connected
 		const domainsCollection = database.collection(bossCollectionName)
@@ -619,6 +614,17 @@ function calculateGrade(experience) {
 	else if (experience >= 250) return "Grade 3"
 	else return "Grade 4"
 }
+function calculateTier(experience) {
+	if (experience >= 2250) return 1
+	else if (experience >= 1750) return 2
+	else if (experience >= 750) return 3
+	else if (experience >= 500) return 4
+	else if (experience >= 250) return 5
+	else return 6
+}
+
+// Test the calculateTier function with 625 experience
+console.log(calculateTier(625)) // Should log 4 based on your tier system
 
 // Main function to update the player's grade based on experience
 export async function updatePlayerGrade(userId) {
@@ -651,6 +657,45 @@ export async function updatePlayerGrade(userId) {
 		// await client.close()
 	}
 }
+// update play inate clan tier based on inate clan experience
+export async function updatePlayerClanTier(userId) {
+	try {
+		await client.connect()
+
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const player = await usersCollection.findOne({ id: userId }, { projection: { inateclan: 1 } })
+		if (!player || !player.inateclan) {
+			console.log("No user or clan information found with the specified ID.")
+			return
+		}
+
+		const newTier = calculateTier(player.inateclan.experience)
+
+		if (newTier !== player.inateclan.tier) {
+			const result = await usersCollection.updateOne({ id: userId }, { $set: { "inateclan.tier": newTier } })
+
+			// Log the result of the update operation
+			if (result.matchedCount === 0) {
+				console.log(`No document found for user ${userId} to update.`)
+			} else if (result.modifiedCount === 0) {
+				console.log(`Document for user ${userId} was found but not modified.`)
+			} else {
+				console.log(`Clan tier updated to ${newTier} for user ${userId}.`)
+			}
+		} else {
+			console.log(`No clan tier update needed for user ${userId}. Current tier is already ${newTier}.`)
+		}
+	} catch (error) {
+		console.error(`Error updating clan tier for user ${userId}:`, error)
+	} finally {
+		// If this operation is not frequent, you might close the connection here. Otherwise, keep it open.
+		// await client.close();
+	}
+}
+
+// update inate clan experience
 
 // add achivements function
 export async function updateUserAchievements(userId, achievementId) {
@@ -1514,32 +1559,33 @@ export async function removeUserQuest(userId, questName) {
 }
 
 // update user max health max out at 275
-export async function updateUserMaxHealth(userId: string, newMaxHealth: number): Promise<void> {
+export async function updateUserMaxHealth(userId: string, healthIncrement: number): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the new max health does not exceed 275
-		const maxHealth = Math.min(newMaxHealth, 275)
-
-		// Get the current health of the user
+		// Get the current health and max health of the user
 		const user = await usersCollection.findOne({ id: userId })
 		if (user) {
-			let { currentHealth } = user
+			let { health, maxhealth } = user
+
+			// Increment the max health by the healthIncrement value, not exceeding 300
+			maxhealth = Math.min(maxhealth + healthIncrement, 300)
+
 			// Ensure current health does not exceed the new max health
-			if (currentHealth > maxHealth) {
-				currentHealth = maxHealth
-			}
+			health = Math.min(health, maxhealth)
 
 			// Update the user's maxHealth and currentHealth if necessary
-			await usersCollection.updateOne({ id: userId }, { $set: { maxHealth, currentHealth } })
+			await usersCollection.updateOne({ id: userId }, { $set: { maxhealth, health } })
 		}
 	} catch (error) {
 		console.error("Error updating user max health:", error)
 		throw error
 	} finally {
-		// await client.close(); // Close the connection if necessary
+		// If you're calling this function frequently, you might not want to close the client after each call.
+		// Determine if you should close the client based on your application's needs.
+		// await client.close();
 	}
 }
 
@@ -1552,7 +1598,7 @@ export async function getUserMaxHealth(userId: string): Promise<number> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.maxHealth || 100 : 100
+		return user ? user.maxhealth || 100 : 100
 	} catch (error) {
 		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
 		throw error
@@ -1911,6 +1957,19 @@ export async function removeAllStatusEffects(userId: string): Promise<void> {
 	}
 }
 
+// remove certain status effect from statuseffect array
+export async function removeStatusEffect(userId: string, statusEffect: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection: Collection<User> = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $pull: { statusEffects: statusEffect } })
+	} catch (error) {
+		console.error("Error removing status effect:", error)
+		throw error
+	}
+}
+
 // update unlocked bosses string of arrays
 export async function updateUserUnlockedBosses(userId: string, unlockedBosses: string[]): Promise<void> {
 	try {
@@ -1935,6 +1994,167 @@ export async function getUserUnlockedBosses(userId: string): Promise<string[]> {
 		return user ? user.unlockedBosses : []
 	} catch (error) {
 		console.error(`Error when retrieving unlocked bosses for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get users transformation
+export async function getUserTransformation(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.transformation : ""
+	} catch (error) {
+		console.error(`Error when retrieving transformation for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user trasnformation
+export async function updateUserTransformation(userId: string, transformation: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { transformation } })
+	} catch (error) {
+		console.error("Error updating user transformation:", error)
+		throw error
+	}
+}
+
+// update user inateclan experience, Clan name and experience
+export async function updateUserInateClanExperience(userId: string, experience: number, clan: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Increment the inateClan experience by the given amount and set the clan if it's provided
+		await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$inc: { "inateclan.experience": experience },
+				$set: { "inateclan.clan": clan }
+			}
+		)
+	} catch (error) {
+		console.error("Error updating user inate clan experience:", error)
+		throw error
+	}
+}
+
+// update user inateclan with new clan, experience 0 and tier 5
+export async function updateUserInateClan(userId: string, clan: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { inateclan: { clan, experience: 0, tier: 5 } } })
+	} catch (error) {
+		console.error("Error updating user inate clan:", error)
+		throw error
+	}
+}
+
+// get user inate clan
+export async function getUserInateClan(userId: string): Promise<{ clan: string; experience: number; tier: number }> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.inateclan : { clan: "", experience: 0, tier: 0 }
+	} catch (error) {
+		console.error(`Error when retrieving inate clan for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user unlocked transformations
+export async function updateUserUnlockedTransformations(
+	userId: string,
+	unlockedtransformations: string[]
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { unlockedtransformations } })
+	} catch (error) {
+		console.error("Error updating user unlocked transformations:", error)
+		throw error
+	}
+}
+
+// get user unlocked transformations
+export async function getUserUnlockedTransformations(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.unlockedtransformations : []
+	} catch (error) {
+		console.error(`Error when retrieving unlocked transformations for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user permEffects
+export async function updateUserPermEffects(userId: string, permEffects: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { permEffects } })
+	} catch (error) {
+		console.error("Error updating user perm effects:", error)
+		throw error
+	}
+}
+// get user permEffects
+export async function getUserPermEffects(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.permEffects : []
+	} catch (error) {
+		console.error(`Error when retrieving perm effects for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update users honours array
+export async function updateUserHonours(userId: string, honours: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { honours } })
+	} catch (error) {
+		console.error("Error updating user honours:", error)
+		throw error
+	}
+}
+// get user honours
+export async function getUserHonours(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.honours : []
+	} catch (error) {
+		console.error(`Error when retrieving honours for user with ID: ${userId}`, error)
 		throw error
 	}
 }

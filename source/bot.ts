@@ -30,6 +30,7 @@ import {
 	handleDomainSelection,
 	handleDonateCommand,
 	handleEquipTechniqueCommand,
+	handleEquipTransformationCommand,
 	handleFightCommand,
 	handleGambleCommand,
 	handleGiveItemCommand,
@@ -183,10 +184,9 @@ cron.schedule("*/5 * * * *", async () => {
 	}
 })
 
-const clientId = "991443928790335518"
-client.setMaxListeners(40) // Set it to a reasonable value based on your use case
+const clientId = "1216889497980112958"
+client.setMaxListeners(50)
 export const workCooldowns = new Map<string, number>()
-export const COOLDOWN_TIME = 60 * 60 * 1000 // 1 hour in milliseconds
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000 // 30 seconds in milliseconds
 export const digCooldownBypassIDs = ["917146454940844103"] // IDs that can bypass cooldown
@@ -305,24 +305,7 @@ const commands = [
 				.addChoices(...itemChoices)
 		),
 
-	new SlashCommandBuilder()
-		.setName("craft")
-		.setDescription("Craft an item using components in your inventory.")
-		.addStringOption(option =>
-			option.setName("item").setDescription("The item you want to craft").setRequired(true).addChoices(
-				{ name: "Prison Realm", value: "prison_realm" },
-				{ name: "Six Eyes", value: "six_eyes" },
-				{ name: "Jogos (Fixed) Balls", value: "jogos_fixed_balls" },
-				{ name: "Heavenly Restricted Blood", value: "heavenly_restricted_blood" },
-				//
-				{ name: "Limitless Token", value: "limitless_token" },
-				{ name: "Malevolent Token", value: "malevolent_token" },
-				{ name: "Dagon's Token", value: "dagon_token" },
-				{ name: "Volcano Token", value: "volcano_token" },
-				{ name: "Mutual Token", value: "mutual_token" }
-			)
-		)
-		.addIntegerOption(option => option.setName("quantity").setDescription("How many to craft.").setRequired(false)),
+	new SlashCommandBuilder().setName("craft").setDescription("Craft an item using components in your inventory."),
 	new SlashCommandBuilder()
 		.setName("useitem")
 		.setDescription("Use an item from your inventory")
@@ -528,7 +511,8 @@ const commands = [
 						.setRequired(true)
 						.addChoices({ name: "Domains", value: "domains" }, { name: "Techniques", value: "skills" })
 				)
-		),
+		)
+		.addSubcommand(subcommand => subcommand.setName("equipform").setDescription("Equip a transformation.")),
 
 	// ADMIN ONLY COMMANDS
 	new SlashCommandBuilder()
@@ -658,6 +642,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "equip":
 				await handleEquipTechniqueCommand(interaction) // Make sure to correct this to use the appropriate function
+				break
+			case "equipform":
+				await handleEquipTransformationCommand(interaction) // Make sure to correct this to use the appropriate function
 				break
 			case "shop":
 				const category = interaction.options.getString("category") // This is how you correctly access a subcommand option
