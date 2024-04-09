@@ -497,8 +497,8 @@ export async function getBosses(userGrade: string): Promise<BossData[]> {
 			id: boss._id.toString(), // Convert MongoDB ObjectId to string
 			name: boss.name,
 			// Apply the multiplier to the max_health and current_health
-			max_health: Math.round(boss.max_health),
-			current_health: Math.round(boss.current_health),
+			max_health: Math.round(boss.max_health * healthMultiplier),
+			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL, // Ensure the property name matches your database
 			grade: boss.grade // Assuming this is the correct property and type
 		}))
