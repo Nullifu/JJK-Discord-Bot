@@ -12,6 +12,7 @@ import {
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
+	updateUserHealth,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
 	updateUserInateClanExperience,
@@ -1153,6 +1154,7 @@ export const items1: Item1[] = [
 			await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
 			await updateUserInateClanExperience(userId, 125, "Demon Vessel")
 			await updatePlayerClanTier(userId)
+			await updateUserMaxHealth(userId, 30)
 			//
 			if (userClanData.clan === "Demon Vessel") {
 				const curseKingsTaskQuest = (await getUserQuests(userId)).quests.find(
@@ -1308,6 +1310,7 @@ export const items1: Item1[] = [
 				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
 				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
+				await updateUserHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 

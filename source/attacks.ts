@@ -231,7 +231,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Mewetenpen",
 			probability: 30,
-			baseDamage: 100,
+			baseDamage: 60,
 			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
 		}
 	],
