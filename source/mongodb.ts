@@ -2,7 +2,7 @@
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient, ObjectId } from "mongodb"
-import { BossData, TradeRequest, User, UserProfile } from "./interface.js"
+import { BossData, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { questsArray, titles } from "./items jobs.js"
 
 dotenv()

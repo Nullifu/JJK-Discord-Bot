@@ -208,3 +208,12 @@ export const gojoMessages = [
 	"Gojo laughs, 'You've caught Sukuna's eye? I'm curious now—don't let me down.'",
 	"Gojo seems intrigued, 'You bear Sukuna's Honour? Show me its worth in action.'"
 ]
+
+export const healthMultipliersByGrade = {
+	"special grade": 3.0, // Boss health is doubled for the highest grade
+	"grade 1": 2.5,
+	"semi-grade 1": 1.7,
+	"grade 2": 1.6,
+	"grade 3": 1.3,
+	"grade 4": 1.0 // No change for the lowest grade
+}
