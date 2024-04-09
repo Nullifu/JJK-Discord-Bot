@@ -7,8 +7,8 @@ import { questsArray, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "devboss"
-const usersCollectionName = "devuser"
+const bossCollectionName = "bosses"
+const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 
@@ -119,7 +119,7 @@ export async function initializeDatabase() {
 		const database = client.db(mongoDatabase)
 
 		console.log("Initializing database...")
-		await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
+		// await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		// ... add more initialization functions as needed ...
 	} catch (error) {
 		console.error("Database initialization failed:", error)
