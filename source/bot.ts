@@ -15,8 +15,8 @@ import {
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
-import { AutoPoster } from "topgg-autoposter"
 import cron from "node-cron"
+import { AutoPoster } from "topgg-autoposter"
 import {
 	claimQuestsCommand,
 	generateStatsEmbed,
@@ -174,7 +174,7 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const channelId = "1186763717778616363"
+const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 
 cron.schedule("*/5 * * * *", async () => {
