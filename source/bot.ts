@@ -179,7 +179,7 @@ const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 
 const channelId2 = "1228378327769808926"
-const shomessageId = "1228376398759202947"
+const shomessageId = "1228380084851703922"
 
 cron.schedule("*/5 * * * *", async () => {
 	const channel = await client.channels.fetch(channelId)
@@ -215,7 +215,7 @@ poster.on("posted", stats => {
 	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
 })
 
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(50)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
