@@ -197,7 +197,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		console.log("Initializing database...")
-		// await updateInateclanField(database)
+		// await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
 		//
 		//
 		//
@@ -236,26 +236,29 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		// Find users without activeTechniques or statusEffects arrays
+		// Find users without the fields or where 'gamblersData.limit' is missing
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ purchases: { $exists: false } }]
+				$or: [{ itemEffects: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
-			// Perform updates for each missing field individually
 			await usersCollection.updateMany(
-				{ purchases: { $exists: false } },
-				{ $set: { purchases: [] } } // Or [] for an array
+				{
+					$or: [{ itemEffects: { $exists: false } }]
+				},
+				{
+					$set: {
+						itemEffects: []
+					}
+				}
 			)
 
-			await usersCollection.updateMany({ honours: { $exists: false } }, { $set: { honours: [] } })
-
-			console.log("Added 'activeTechniques' and 'statusEffects' arrays to existing user documents")
+			console.log("Added missing fields to existing user documents")
 		}
 	} catch (error) {
-		console.error("Error initializing activeTechniques and statusEffects:", error)
+		console.error("Error initializing fields:", error)
 	}
 }
 
