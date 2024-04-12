@@ -197,7 +197,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		console.log("Initializing database...")
-		// await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
+		await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
 		//
 		//
 		//
@@ -239,18 +239,18 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		// Find users without the fields or where 'gamblersData.limit' is missing
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ itemEffects: { $exists: false } }]
+				$or: [{ purchases: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [{ itemEffects: { $exists: false } }]
+					$or: [{ purchases: { $exists: false } }]
 				},
 				{
 					$set: {
-						itemEffects: []
+						purchases: []
 					}
 				}
 			)

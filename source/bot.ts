@@ -357,29 +357,11 @@ const commands = [
 					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
 					{ name: "Sacred Eye", value: "Sacred Eye" },
 					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
-					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" }
+					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
+					{ name: "Cursed Chest", value: "Cursed Chest" }
 				)
 		),
-	new SlashCommandBuilder()
-		.setName("trade")
-		.setDescription("Trading Command.")
-		.addStringOption(option =>
-			option
-				.setName("action")
-				.setDescription("The action to perform")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Initiate", value: "initiate" },
-					{ name: "Accept", value: "accept" },
-					{ name: "View", value: "view" },
-					{ name: "Previous", value: "previous" }
-				)
-		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
-		),
+
 	new SlashCommandBuilder()
 		.setName("quests")
 		.setDescription("Manage your quests.")
