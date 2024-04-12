@@ -49,7 +49,6 @@ import {
 	exportMahito,
 	exportReincarnation,
 	exportRika,
-	exportSukuna2,
 	exportTheCursedOne,
 	exportTheFraud,
 	exportTheHonoredOne,
@@ -2180,8 +2179,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						row,
 						playerHealth
 					)
-				} else if (randomOpponent.name === "Sukuna") {
-					transformed = await exportSukuna2(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Itadori") {
 					transformed = await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Zenin Toji") {
@@ -2659,7 +2656,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			let winnings = betAmount * 2
 			// Apply the gambler bonus (if applicable)
 			if (gamblerEffect) {
-				winnings *= 5000 // Add an extra 5% to the winnings
+				winnings *= 1.25
 			}
 
 			await updateBalance(userId, winnings)
@@ -3321,8 +3318,8 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
-		.setDescription("Hi - from developer! This is an test alert message.")
-		.setFooter({ text: "This is an important announcement." })
+		.setDescription("Update 4.5, Is now out! if you get any bugs please lmk in the support server!")
+		.setFooter({ text: "hi - from dev" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
 }
