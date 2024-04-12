@@ -15,6 +15,7 @@ import {
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
+import { AutoPoster } from "topgg-autoposter"
 import cron from "node-cron"
 import {
 	claimQuestsCommand,
@@ -22,8 +23,10 @@ import {
 	handleAcceptTrade,
 	handleAchievementsCommand,
 	handleActiveTradesCommand,
+	handleAlertCommand,
 	handleBalanceCommand,
 	handleBegCommand,
+	handleClaimVoteRewards,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -46,6 +49,7 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
+	handleShopCommand,
 	handleSupportCommand,
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
@@ -54,6 +58,7 @@ import {
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
+	handleViewEffectsCommand,
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
@@ -62,7 +67,7 @@ import {
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import { handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
+import { getShopLastReset, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
 
 dotenv()
 
@@ -100,11 +105,9 @@ client.on("ready", async () => {
 })
 
 setInterval(async () => {
-	// Dynamically update the activities list with current member and server counts
 	await updateDynamicActivities()
 
-	// Cycle through the updated activities array
-	if (index === activities.length) index = 0 // Reset index if it's at the end of the array
+	if (index === activities.length) index = 0
 	const activity = activities[index]
 	client.user.setPresence({
 		activities: [{ name: activity.name, type: activity.type }],
@@ -132,7 +135,6 @@ async function updateDynamicActivities() {
 }
 
 client.on("guildCreate", guild => {
-	// Attempt to find a "general" channel or any suitable channel to send a welcome message
 	let defaultChannel = null
 	guild.channels.cache.forEach(channel => {
 		if (channel.type === ChannelType.GuildText && !defaultChannel) {
@@ -172,16 +174,30 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const channelId = "1222537263523696785"
+const channelId = "1186763717778616363"
 const statsMessageId = "1222537329378594951"
 
 cron.schedule("*/5 * * * *", async () => {
 	const channel = await client.channels.fetch(channelId)
 	if (channel.isTextBased()) {
 		const message = await channel.messages.fetch(statsMessageId)
-		const statsEmbed = generateStatsEmbed(client)
+
+		const lastResetTime = await getShopLastReset()
+		const resetIntervalMs = 1000 * 60 * 60 * 24
+		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+
+		// Pass the discordTimestamp to the generateStatsEmbed function
+		const statsEmbed = generateStatsEmbed(client, discordTimestamp)
+
 		await message.edit({ embeds: [statsEmbed] }).catch(console.error)
 	}
+})
+
+const poster = AutoPoster(process.env.TOPGG, client) // your discord.js or eris client
+
+poster.on("posted", stats => {
+	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
 })
 
 const clientId = "991443928790335518"
@@ -218,16 +234,19 @@ const commands = [
 			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
+	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
+	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
+	new SlashCommandBuilder().setName("alert").setDescription("Alert users about an update"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
+	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
-	new SlashCommandBuilder().setName("claninfo").setDescription("clan info!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
@@ -322,7 +341,8 @@ const commands = [
 					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
 					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
 					{ name: "Sacred Eye", value: "Sacred Eye" },
-					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" }
+					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
+					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" }
 				)
 		),
 	new SlashCommandBuilder()
@@ -597,6 +617,7 @@ client.on("interactionCreate", async interaction => {
 		await handleVoteCommand(chatInputInteraction)
 		return
 	}
+
 	if (commandName === "guide") {
 		await handleGuideCommand(chatInputInteraction)
 		return
@@ -700,6 +721,12 @@ client.on("interactionCreate", async interaction => {
 			case "balance":
 				await handleBalanceCommand(chatInputInteraction)
 				break
+			case "dailyshop":
+				await handleShopCommand(chatInputInteraction)
+				break
+			case "alert":
+				await handleAlertCommand(chatInputInteraction)
+				break
 			case "sell":
 				await handleSellCommand(chatInputInteraction)
 				break
@@ -722,6 +749,9 @@ client.on("interactionCreate", async interaction => {
 			case "craft":
 				await handleCraftCommand(chatInputInteraction)
 				break
+			case "activeffects":
+				await handleViewEffectsCommand(chatInputInteraction)
+				break
 
 			case "fight":
 				await handleFightCommand(chatInputInteraction)
@@ -729,6 +759,9 @@ client.on("interactionCreate", async interaction => {
 
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
+				break
+			case "voteclaim":
+				await handleClaimVoteRewards(chatInputInteraction)
 				break
 
 			case "selectitle":

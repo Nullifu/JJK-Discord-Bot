@@ -20,7 +20,7 @@
 		"declarationMap": true,
 
 		"removeComments": false,
-		"newLine": "crlf",
+		"newLine": "lf",
 
 		"checkJs": false,
 		"allowJs": false

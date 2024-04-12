@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "discord.js"
-import { BossDrop, bossDrops } from "./items jobs.js"
-import { checkUserHasHeavenlyRestriction } from "./mongodb.js"
+import { BossDrop, bossDrops, itemEffects } from "./items jobs.js"
+import { checkUserHasHeavenlyRestriction, getUserInateClan, getUserItemEffects } from "./mongodb.js"
 
 export function calculateDamage(
 	playerGrade: string,
@@ -61,15 +61,14 @@ export function createInventoryPage(items, startIndex, itemsPerPage, user) {
 	const currentPage = startIndex / itemsPerPage + 1 // Calculate the current page
 
 	const inventoryEmbed = new EmbedBuilder()
-		.setColor(0x1f8b4c) // Consider using a theme color that fits Jujutsu Kaisen
-		.setTitle(`${user.username}'s Cursed Inventory`) // Adding a thematic title
+		.setColor(0x1f8b4c)
+		.setTitle(`${user.username}'s Cursed Inventory`)
 		.setThumbnail(user.displayAvatarURL())
 		.setDescription(
 			pageItems.length ? "Your cursed items:" : "Your inventory is as empty as a void of cursed energy."
 		)
-		.setFooter({ text: `Page ${currentPage} of ${totalPages}` }) // Adding page info in the footer
+		.setFooter({ text: `Page ${currentPage} of ${totalPages}` })
 
-	// Add each inventory item to the embed with Jujutsu Kaisen flavor
 	pageItems.forEach(item => {
 		inventoryEmbed.addFields({
 			name: `🔮 ${item.name}`,
@@ -79,6 +78,68 @@ export function createInventoryPage(items, startIndex, itemsPerPage, user) {
 	})
 
 	return inventoryEmbed
+}
+// buildActiveEffectsEmbed get active effects using getuseractiveeffects
+export async function handleEffectEmbed(userId) {
+	const userEffects = await getUserItemEffects(userId)
+
+	const effectEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Active Item Effects")
+
+	if (userEffects.length === 0) {
+		effectEmbed.setDescription("You currently have no active item effects.")
+	} else {
+		effectEmbed.setDescription("Here are your currently active item effects:")
+
+		userEffects.forEach(effect => {
+			const effectDetails = itemEffects.find(e => e.name === effect.itemName)
+			if (effectDetails) {
+				// Calculate remaining time
+				const endTime = new Date(effect.endTime)
+				const now = new Date()
+				const remainingTime = endTime.getTime() - now.getTime()
+				const remainingMinutes = Math.round(remainingTime / 60000) // Convert milliseconds to minutes
+
+				let valueString = `• ${effectDetails.description}`
+				if (remainingTime > 0) {
+					valueString += `\n• Time remaining: ${remainingMinutes} minutes`
+				} else {
+					valueString += "\n• Effect expired"
+				}
+
+				effectEmbed.addFields({ name: effectDetails.name, value: valueString, inline: false })
+			}
+		})
+	}
+
+	return effectEmbed
+}
+
+// build clandata embed
+
+export async function handleClanDataEmbed(userId) {
+	const userClanData = await getUserInateClan(userId)
+
+	const clanEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Clan Information")
+
+	if (!userClanData || userClanData.clan === "") {
+		clanEmbed.setDescription("You are not a member of any clan.")
+	} else {
+		clanEmbed.setDescription(`You are a member of the ${userClanData.clan} clan.`)
+
+		if (userClanData.clan === "Demon Vessel") {
+			clanEmbed
+				.setDescription("You've got the mark of **Ryomen Sukuna** on you.")
+				.addFields({ name: "Innate Power", value: "The ability to become the **Curse King**\n" })
+		}
+
+		clanEmbed.addFields(
+			{ name: "Clan", value: userClanData.clan.toString(), inline: true },
+			{ name: "Experience", value: userClanData.experience.toString(), inline: true },
+			{ name: "Tier", value: userClanData.tier.toString(), inline: true }
+		)
+	}
+
+	return clanEmbed
 }
 
 export function getRandomLocation() {

@@ -1,13 +1,16 @@
 import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
 import {
+	addItemToUserInventory,
 	addUserQuest,
 	addUserQuestProgress,
 	addUserTechnique,
+	getGamblersData,
 	getUserInateClan,
 	getUserQuests,
 	getUserUnlockedTransformations,
 	removeItemFromUserInventory,
 	resetBetLimit,
+	updateGamblersData,
 	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserClan,
@@ -16,6 +19,7 @@ import {
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
 	updateUserInateClanExperience,
+	updateUserItemEffects,
 	updateUserMaxHealth,
 	updateUserUnlockedBosses,
 	updateUserUnlockedTransformations
@@ -58,7 +62,7 @@ export const items = [
 
 	// Semi hard to find^
 	{ name: "Jogos (Fixed) Balls", rarity: "Special Grade", chance: 0.1, price: 75000 },
-	{ name: "Sukuna Fingers", rarity: "Special Grade", chance: 0.1, price: 25000 },
+	{ name: "Sukuna Finger", rarity: "Special Grade", chance: 0.1, price: 25000 },
 	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.1, price: 25000 },
 
 	//
@@ -69,6 +73,11 @@ export const items = [
 	{ name: "Special-Grade Geo Locator", rarity: "Special Grade", chance: 0.1, price: 300000 }
 
 	// ^ Hard to find // Difficult crafted items
+]
+
+export const itemEffects = [
+	{ name: "Special-Grade Cursed Object", description: "**Cursed** Enemies are stronger!", time: 25 },
+	{ name: "Hakari Kinji's Token", description: "**Gambler** Bigger win from gambling!", time: 100 }
 ]
 
 export interface BossDrop {
@@ -873,7 +882,7 @@ export const questsArray = [
 		experience: 470,
 		item: "Hakari Kinji's Token",
 		itemQuantity: 1,
-		task: "Defeat Hakari Kinji",
+		task: "Defeat Hakari Kinji 5 times!",
 		totalProgress: 5
 	},
 	{
@@ -883,7 +892,7 @@ export const questsArray = [
 		experience: 470,
 		items: { "Cursed Energy Reinforcement": 1 },
 		itemQuantity: 1,
-		task: "Training",
+		task: "Fight Itadori 3 times!",
 		totalProgress: 3
 	},
 	{
@@ -970,6 +979,21 @@ export const INVENTORY_CLAN = {
 		},
 		{
 			name: "Cleave",
+			description: "Embodiment of true fear and terror",
+			clan: "Demon Vessel"
+		},
+		{
+			name: "Black Flash",
+			description: "Embodiment of true fear and terror",
+			clan: "Demon Vessel"
+		},
+		{
+			name: "Divergent Fist",
+			description: "Embodiment of true fear and terror",
+			clan: "Demon Vessel"
+		},
+		{
+			name: "Twin Dragon FIST",
 			description: "Embodiment of true fear and terror",
 			clan: "Demon Vessel"
 		}
@@ -1254,7 +1278,6 @@ export const items1: Item1[] = [
 						"• Technique: World Cutting Slash\n" +
 						"• Quest Progress: Curse King +1\n"
 					//
-					await addUserQuestProgress(interaction.user.id, "Curse King", 1)
 					const embedFinalClanAcquired = new EmbedBuilder()
 						.setColor("#4b0082")
 						.setTitle("A 1000 Year Curse...")
@@ -1469,15 +1492,38 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			await resetBetLimit(interaction.user.id)
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 60 * 60000) // Add 60 minutes (1 hour)
 
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400")
-				.setTitle("Gamblers Potential")
-				.setDescription(
-					"As the coin flips.. YOU HIT BIG Your daily gamble limit has been reset! [ MORE STUFF TO COME ]"
-				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			const itemEffect = {
+				itemName: "Hakari Kinji's Token",
+				effectTime: 100,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+			getGamblersData(interaction.user.id).then(async gamblersData => {
+				const limit = gamblersData.limit
+
+				const INCREASE_PERCENT = 10
+
+				// Call updateUserItemEffects function to update the user's document
+				try {
+					await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
+					await resetBetLimit(interaction.user.id)
+					await updateGamblersData(interaction.user.id, 0, 0, 0, limit, INCREASE_PERCENT)
+					const embedFinal = new EmbedBuilder()
+						.setColor("#006400")
+						.setTitle("Gamblers Potential")
+						.setDescription(
+							"As the coin flips.. YOU HIT BIG GAINS\n+15% Bet Limit INC, + Reset Bet Limit **SOME STUFF MAY BE BROKEN OR NOT ADDED THIS IS VERY WIP**"
+						)
+					await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+				} catch (error) {
+					console.error("Error applying item effect:", error)
+					await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+				}
+			})
 		}
 	},
 	{
@@ -1497,6 +1543,73 @@ export const items1: Item1[] = [
 					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!  [ MORE STUFF TO COME ]\n+Disaster Flames: Full Fire Formation"
 				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+
+	{
+		itemName: "Cursed Vote Chest",
+		description: "Cursed Vote Chest",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const possibleItems = [
+				"Sukuna Finger",
+				"Rikugan Eye",
+				"Special-Grade Cursed Object",
+				"Hakari Kinji's Token"
+			]
+			function getRandomItem() {
+				const randomIndex = Math.floor(Math.random() * possibleItems.length)
+				return possibleItems[randomIndex]
+			}
+
+			const chestitem = getRandomItem()
+
+			await addItemToUserInventory(interaction.user.id, chestitem, 1)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(`You open the cursed chest and get! ${chestitem}`)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+	{
+		itemName: "Special-Grade Cursed Object",
+		description: "Special-Grade Cursed Object",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const userId = interaction.user.id
+
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+
+			const itemEffect = {
+				itemName: "Special-Grade Cursed Object",
+				effectTime: 25,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+
+			// Call updateUserItemEffects function to update the user's document
+			try {
+				await updateUserItemEffects(userId, itemEffectsArray[0])
+
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Cursed Object")
+					.setDescription("You are now cursed for the next 25 minutes.")
+				await interaction.editReply({ embeds: [embedFinal] })
+			} catch (error) {
+				console.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
 		}
 	},
 
@@ -1558,4 +1671,21 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedFinal] })
 		}
 	}
+]
+
+// handle daily shop resets every 24 hours with a different cycle
+export const shopItems = [
+	{ name: "Tailsman", rarity: "Grade 4", price: 3200 },
+	{ name: "(Broken) Electrical Staff", rarity: "Grade 4", price: 10000 },
+	{ name: "(Broken) Split Soul Katana", rarity: "Grade 4", price: 12000 },
+	{ name: "(Broken) Divine General Wheel", rarity: "Grade 4", price: 15000 },
+	{ name: "(Broken) Playful Cloud", rarity: "Grade 2", price: 24000 },
+	{ name: "(Broken) Divine General Wheel", rarity: "Grade 1", price: 56000 },
+	{ name: "Prison Realm Fragment", rarity: "Grade 1", price: 95000 },
+	{ name: "(Shattered) Domain Remnants", rarity: "Grade 1", price: 125000 },
+	//
+	{ name: "Gamblers Token", rarity: "Special Grade", price: 250000, maxPurchases: 5 },
+	{ name: "Sukuna Finger", rarity: "Special Grade", price: 350000, maxPurchases: 8 },
+	{ name: "Rikugan Eye", rarity: "Special Grade", price: 1000000, maxPurchases: 2 },
+	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 }
 ]

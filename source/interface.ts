@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js"
 import { ObjectId } from "mongodb"
 import { questsArray } from "./items jobs.js"
-import { getGamblersData, getUserQuests } from "./mongodb.js"
+import { Purchase, getGamblersData, getUserQuests } from "./mongodb.js"
 
 export interface Item {
 	id: number
@@ -83,6 +83,21 @@ export interface User {
 	quests: Quest[]
 	unlockedTransformations: string[]
 	statusEffects: string[]
+	itemEffects: []
+	purchases: Purchase[]
+	gamblersData: {
+		limit: 5000000 // Default limit of 5 million
+		amountGambled: number
+		amountWon: number
+		amountLost: number
+	}
+}
+
+export interface ItemEffect {
+	itemName: string
+	effectTime: number
+	startTime: string
+	endTime: string
 }
 
 export interface Item {
@@ -126,12 +141,15 @@ export async function buildQuestEmbed(userId, interaction) {
 		.map(activeQuest => {
 			const questDetails = questsArray.find(quest => quest.name === activeQuest.id)
 			if (questDetails) {
+				const itemRewardText = questDetails.item
+					? `• **Item**: ${questDetails.item} x${questDetails.itemQuantity}`
+					: ""
 				const progressText =
 					`**${questDetails.name}**: ${activeQuest.progress}/${questDetails.totalProgress}\n` +
 					`• **Description**: ${questDetails.description}\n` +
 					`• **Coins**: ${questDetails.coins}\n` +
 					`• **Experience**: ${questDetails.experience}\n` +
-					`• **Item**: ${questDetails.item} x${questDetails.itemQuantity}`
+					itemRewardText
 				const progressBar = createProgressBar(activeQuest.progress, questDetails.totalProgress)
 				return `${progressText}\nProgress: ${progressBar}`
 			} else {
@@ -163,6 +181,7 @@ export async function buildGamblersProfile(userId, interaction) {
 
 	const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Gambler Stats`).setColor("#FFD700") // Gold-ish color associated with gambling
 		.setDescription(`
+			Gamble Limit: $${formatNumberWithCommas(gamblersData.limit)}
             Total Amount Gambled: $${formatNumberWithCommas(gamblersData.amountGambled)}
             Total Amount Won: $${formatNumberWithCommas(gamblersData.amountWon)}
             Total Amount Lost: $${formatNumberWithCommas(gamblersData.amountLost)}

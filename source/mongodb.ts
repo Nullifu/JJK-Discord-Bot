@@ -2,15 +2,18 @@
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
 import { Collection, MongoClient, ObjectId } from "mongodb"
-import { BossData, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
-import { questsArray, titles } from "./items jobs.js"
+import cron from "node-cron"
+import schedule from "node-schedule"
+import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
+import { questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
 const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
+const shopCollectionName = "shop"
 
 const mongoUser = process.env["MONGO_USER"]
 const mongoPassword = process.env["MONGO_PASSWORD"]
@@ -41,7 +44,30 @@ client.on("close", () => {
 })
 
 // LINK START! ---------------------------------------------------------------
-// Functions for interfacing with the 'users' table
+
+// Function to run both tasks
+async function runScheduledTasks() {
+	console.log("Running scheduled tasks...")
+	try {
+		await updateShop()
+		console.log("Shop update completed successfully.")
+	} catch (error) {
+		console.error("Error updating shop:", error)
+	}
+
+	try {
+		await resetBetCounts()
+		console.log("Bet counts reset completed successfully.")
+	} catch (error) {
+		console.error("Error resetting bet counts:", error)
+	}
+}
+
+// Schedule the tasks to run every day at 3 PM
+const job = schedule.scheduleJob("0 15 * * *", function () {
+	runScheduledTasks()
+})
+
 // ----------------------------------------------------------------------------
 
 export async function userExists(discordId: string): Promise<boolean> {
@@ -94,12 +120,21 @@ export async function addUser(
 			activeTechniques: [],
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
-			inateclan: [],
+			inateclan: {},
 			activeinateclan: null,
 			quests: [],
 			permEffects: [],
 			statusEffects: [],
-			betCount: 0
+			betCount: 0,
+			honours: [],
+			purchases: [],
+			itemEffects: [],
+			gamblersData: {
+				limit: 5000000,
+				amountGambled: 0,
+				amountLost: 0,
+				amountWon: 0
+			}
 		})
 
 		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
@@ -112,19 +147,88 @@ export async function addUser(
 	}
 }
 
+async function resetBetCounts() {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update all user documents, setting betCount to 0
+		const updateResult = await usersCollection.updateMany(
+			{}, // An empty filter selects all documents in the collection
+			{ $set: { betCount: 0 } } // Set betCount to 0 for all documents
+		)
+
+		console.log(`Bet counts reset for ${updateResult.modifiedCount} users.`)
+	} catch (error) {
+		console.error("Error resetting bet counts:", error)
+	}
+}
+
+// remove expired item effects every 60 seconds
+setInterval(removeExpiredItemEffects, 60000)
+async function removeExpiredItemEffects() {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection: Collection<UserDocument> = database.collection(usersCollectionName)
+
+		const currentTime = new Date().toISOString()
+
+		const updateResult = await usersCollection.updateMany(
+			{
+				"itemEffects.endTime": { $lt: currentTime }
+			},
+			{
+				$pull: { itemEffects: { endTime: { $lt: currentTime } } }
+			}
+		)
+
+		console.log(`Removed ${updateResult.modifiedCount} expired item effects`)
+	} catch (error) {
+		console.error("Error removing expired item effects:", error)
+	} finally {
+		// await client.close()
+	}
+}
+
 export async function initializeDatabase() {
 	try {
 		console.log("Connecting to database...")
 		await client.connect()
-		const database = client.db(mongoDatabase)
 
 		console.log("Initializing database...")
-		// await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
-		// ... add more initialization functions as needed ...
+		// await updateInateclanField(database)
+		//
+		//
+		//
 	} catch (error) {
 		console.error("Database initialization failed:", error)
 	} finally {
 		// await client.close()
+	}
+}
+
+///
+///
+///
+
+async function updateInateclanField(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		// Update documents where 'inateclan' is an array
+		const updateResult = await usersCollection.updateMany(
+			{ purchases: { $exists: true, $type: "array" } }, // Match only if 'inateclan' is an array
+			{ $set: { inateclan: {} } } // Set 'inateclan' to an empty object
+		)
+
+		if (updateResult.matchedCount > 0) {
+			console.log(`Converted 'inateclan' from array to object in ${updateResult.matchedCount} user documents`)
+		} else {
+			console.log("No user documents found with 'inateclan' as an array")
+		}
+	} catch (error) {
+		console.error("Error updating 'inateclan' fields:", error)
 	}
 }
 
@@ -135,35 +239,43 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		// Find users without activeTechniques or statusEffects arrays
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [
-					{ activeinateclan: { $exists: false } },
-					{ unlockedtransformations: { $exists: false } },
-					{ transformation: { $exists: false } },
-					{ inateclan: { $exists: false } } // Check for documents missing statusEffects
-				]
+				$or: [{ purchases: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			// Perform updates for each missing field individually
 			await usersCollection.updateMany(
-				{ activeinateclan: { $exists: false } },
-				{ $set: { activeinateclan: null } } // Or [] for an array
+				{ purchases: { $exists: false } },
+				{ $set: { purchases: [] } } // Or [] for an array
 			)
 
-			await usersCollection.updateMany(
-				{ unlockedtransformations: { $exists: false } },
-				{ $set: { unlockedtransformations: [] } }
-			)
-
-			await usersCollection.updateMany({ transformation: { $exists: false } }, { $set: { transformation: null } })
-
-			await usersCollection.updateMany({ inateclan: { $exists: false } }, { $set: { inateclan: [] } })
+			await usersCollection.updateMany({ honours: { $exists: false } }, { $set: { honours: [] } })
 
 			console.log("Added 'activeTechniques' and 'statusEffects' arrays to existing user documents")
 		}
 	} catch (error) {
 		console.error("Error initializing activeTechniques and statusEffects:", error)
+	}
+}
+
+async function renameUserDocumentFields(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		// Rename 'honours' to 'Honours' where it exists
+		const updateResult = await usersCollection.updateMany(
+			{ honours: { $exists: true } },
+			{ $rename: { honours: "Honours" } }
+		)
+
+		if (updateResult.matchedCount > 0) {
+			console.log(`Renamed 'honours' to 'Honours' in ${updateResult.matchedCount} user documents`)
+		} else {
+			console.log("No user documents found with 'honours' field")
+		}
+	} catch (error) {
+		console.error("Error renaming fields:", error)
 	}
 }
 
@@ -1298,15 +1410,6 @@ export async function updateUserGambleInfo(userId: string): Promise<void> {
 	}
 }
 
-function isNewDay(oldDate: Date, newDate: Date): boolean {
-	return (
-		oldDate.getFullYear() !== newDate.getFullYear() ||
-		oldDate.getMonth() !== newDate.getMonth() ||
-		oldDate.getDate() !== newDate.getDate() ||
-		oldDate.getHours() !== newDate.getHours() // Check for hour change
-	)
-}
-
 //update user gamble
 export async function updateUserGamble(userId: string, newGamble: number): Promise<void> {
 	try {
@@ -1338,7 +1441,6 @@ async function dailyReset() {
 }
 
 // Using node-cron for scheduling
-import cron from "node-cron"
 cron.schedule("0 0 * * *", dailyReset) // Runs at midnight every day
 
 // get user work cooldown
@@ -1865,22 +1967,37 @@ export async function updateUserActiveHeavenlyTechniques(
 	}
 }
 
-export async function updateGamblersData(userId, wagerAmount, winnings, losses) {
+export async function updateGamblersData(
+	userId,
+	wagerAmount,
+	winnings,
+	losses,
+	currentLimit,
+	increaseLimitByPercent = 0
+) {
 	try {
+		const DEFAULT_LIMIT = 5000000
+		const MAX_LIMIT = 25000000
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const result = await usersCollection.updateOne(
-			{ id: userId },
+		// Calculate new limit based on the percentage increase, if any.
+		let newLimit = currentLimit > 0 ? currentLimit : DEFAULT_LIMIT
+		if (increaseLimitByPercent > 0) {
+			newLimit = Math.min(currentLimit * (1 + increaseLimitByPercent / 100), MAX_LIMIT)
+		}
+
+		const result = await usersCollection.updateOne({ id: userId }, [
 			{
-				$inc: {
-					"gamblersData.amountGambled": wagerAmount,
-					"gamblersData.amountWon": winnings,
-					"gamblersData.amountLost": losses
+				$set: {
+					"gamblersData.amountGambled": { $add: ["$gamblersData.amountGambled", wagerAmount] },
+					"gamblersData.amountWon": { $add: ["$gamblersData.amountWon", winnings] },
+					"gamblersData.amountLost": { $add: ["$gamblersData.amountLost", losses] },
+					"gamblersData.limit": newLimit
 				}
 			}
-		)
+		])
 
 		if (result.modifiedCount === 1) {
 			console.log("Gamblers data updated successfully.")
@@ -1890,7 +2007,7 @@ export async function updateGamblersData(userId, wagerAmount, winnings, losses) 
 	} catch (error) {
 		console.error("Error updating gamblers data:", error)
 	} finally {
-		// await client.close()
+		// await client.close();
 	}
 }
 
@@ -1901,7 +2018,7 @@ export async function getGamblersData(userId) {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const user = await usersCollection.findOne({ id: userId }, { projection: { gamblersData: 1 } })
+		const user = await usersCollection.findOne({ id: userId }) // No projection
 
 		return user ? user.gamblersData : null
 	} catch (error) {
@@ -2155,6 +2272,244 @@ export async function getUserHonours(userId: string): Promise<string[]> {
 		return user ? user.honours : []
 	} catch (error) {
 		console.error(`Error when retrieving honours for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get lastAlertedVersion from users
+export async function getLastAlertedVersion(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.lastAlertedVersion : ""
+	} catch (error) {
+		console.error(`Error when retrieving last alerted version for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update lastAlertedVersion for user
+export async function updateLastAlertedVersion(userId: string, version: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { lastAlertedVersion: version } })
+	} catch (error) {
+		console.error("Error updating last alerted version:", error)
+		throw error
+	}
+}
+
+// get user item effects
+export async function getUserItemEffects(
+	userId: string
+): Promise<{ itemName: string; startTime: string; endTime: string }[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.itemEffects : []
+	} catch (error) {
+		console.error(`Error when retrieving item effects for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function updateUserItemEffects(userId: string, itemEffect: ItemEffect): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $addToSet: { itemEffects: itemEffect } })
+	} catch (error) {
+		console.error("Error adding item effect:", error)
+		throw error
+	}
+}
+
+// update shop items
+
+async function updateShop(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const shopsCollection = database.collection(shopCollectionName)
+
+		const resetInterval = 86400000 // 24 hours in milliseconds
+
+		let shopData = await shopsCollection.findOne({})
+		console.log("Shop data:", shopData)
+
+		const now = new Date()
+
+		// If no shop data is found or it's time to reset, generate new items
+		const shouldGenerateItems =
+			!shopData || now.getTime() - new Date(shopData.lastShopReset).getTime() >= resetInterval
+
+		if (shouldGenerateItems) {
+			await resetAllUserPurchases()
+			const newShopItems = await generateDailyShop()
+			console.log("New shop items:", newShopItems)
+
+			if (!shopData) {
+				shopData = {
+					_id: new ObjectId(),
+					shopItems: newShopItems,
+					lastShopReset: now
+				}
+				await shopsCollection.insertOne(shopData)
+				console.log("Shop created with items: ", shopData)
+			} else {
+				await shopsCollection.updateOne(
+					{ _id: shopData._id },
+					{
+						$set: {
+							shopItems: newShopItems, // newShopItems should be an array
+							lastShopReset: now
+						}
+					}
+				)
+
+				console.log("Shop reset successfully with new items!")
+			}
+		} else {
+			console.log("Shop does not need a reset yet.")
+		}
+	} catch (error) {
+		console.error("Error updating shop items:", error)
+		throw error
+	}
+}
+
+async function generateDailyShop() {
+	console.log("shopItems length", shopItems.length)
+	const dailyShopItems = []
+	const numItems = 5
+
+	if (shopItems.length === 0) {
+		console.log("No items available to add to the shop.")
+		return dailyShopItems
+	}
+
+	while (dailyShopItems.length < numItems) {
+		const randomIndex = Math.floor(Math.random() * shopItems.length)
+		const randomItem = shopItems[randomIndex]
+		console.log(`Selected item ${randomIndex}:`, randomItem)
+
+		if (!Object.prototype.hasOwnProperty.call(randomItem, "rarity")) {
+			console.log("Selected item does not have a 'rarity' property:", randomItem)
+			continue
+		}
+
+		if (randomItem.rarity !== "legendary" || Math.random() < 0.2) {
+			// Ensure no duplicates are added
+			if (!dailyShopItems.includes(randomItem)) {
+				dailyShopItems.push(randomItem)
+				console.log("Item added to daily shop:", randomItem) // Log the item being added
+			}
+		}
+	}
+
+	console.log("Daily shop items generated:", dailyShopItems) // Log the final array
+	return dailyShopItems
+}
+
+export async function getAllShopItems() {
+	try {
+		const database = client.db(mongoDatabase)
+		const shopsCollection = database.collection(shopCollectionName)
+
+		// This assumes each document has a 'shopItems' field that is an array of items.
+		const shopDocuments = await shopsCollection.find({}).toArray()
+		const allShopItems = shopDocuments.map(doc => doc.shopItems).flat()
+
+		console.log("Retrieved shop items:", allShopItems)
+		return allShopItems
+	} catch (error) {
+		console.error("Error retrieving shop items:", error)
+		throw error
+	}
+}
+
+export async function getShopLastReset(): Promise<Date> {
+	try {
+		const database = client.db(mongoDatabase)
+		const shopsCollection = database.collection(shopCollectionName)
+
+		const shopData = await shopsCollection.findOne({})
+		return shopData ? shopData.lastShopReset : new Date(0)
+	} catch (error) {
+		console.error("Error getting shop last reset time:", error)
+		throw error
+	}
+}
+
+export interface Purchase {
+	itemName: string
+	purchasedAmount: number
+}
+
+export async function getUserPurchases(userId: string): Promise<Purchase[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.purchases : []
+	} catch (error) {
+		console.error(`Error when retrieving purchases for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function addUserPurchases(userId: string, itemName: string, amount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			console.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const itemIndex = user.purchases.findIndex(p => p.itemName === itemName)
+
+		if (itemIndex !== -1) {
+			user.purchases[itemIndex].purchasedAmount += amount
+		} else {
+			user.purchases.push({ itemName, purchasedAmount: amount })
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { purchases: user.purchases } })
+	} catch (error) {
+		console.error(`Error when adding purchases for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+async function resetAllUserPurchases(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		// Update all user documents to reset their purchases
+		const result = await usersCollection.updateMany(
+			{}, // Filter for all documents
+			{ $set: { purchases: [] } } // Reset purchases array for all users
+		)
+
+		console.log(`Purchases reset for all users. Modified count: ${result.modifiedCount}`)
+	} catch (error) {
+		console.error("Error resetting user purchases:", error)
 		throw error
 	}
 }

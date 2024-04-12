@@ -37,7 +37,9 @@ import {
 	calculateEarnings,
 	createInventoryPage,
 	getRandomAmount,
-	getRandomLocation
+	getRandomLocation,
+	handleClanDataEmbed,
+	handleEffectEmbed
 } from "./calculate.js"
 import {
 	executeSpecialTechnique,
@@ -58,7 +60,6 @@ import {
 import {
 	BossData,
 	buildGamblersProfile,
-	buildQuestEmbed,
 	formatDomainExpansion,
 	gojoMessages,
 	gradeMappings,
@@ -76,40 +77,46 @@ import {
 	dailyitems,
 	getRandomItem,
 	heavenlyrestrictionskills,
+	itemEffects,
 	items,
 	items1,
 	jobs,
 	lookupItems,
 	questsArray
 } from "./items jobs.js"
+import { postCommandMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
 	addUser,
+	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
 	checkUserHasHeavenlyRestriction,
 	createTradeRequest,
 	getActiveTrades,
+	getAllShopItems,
 	getAllUserExperience,
 	getAllUsersBalance,
 	getBalance,
 	getBosses,
+	getGamblersData,
 	getPreviousTrades,
+	getShopLastReset,
 	getUserAchievements,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
-	getUserCursedEnergy,
 	getUserDailyData,
 	getUserDomain,
 	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
 	getUserHonours,
-	getUserInateClan,
 	getUserInventory,
+	getUserItemEffects,
 	getUserMaxHealth,
 	getUserPermEffects,
 	getUserProfile,
+	getUserPurchases,
 	getUserQuests,
 	getUserStatusEffects,
 	getUserTechniques,
@@ -371,6 +378,7 @@ export async function handleDigCommand(interaction) {
 			.setTimestamp()
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
+	await postCommandMiddleware(interaction)
 }
 
 export async function handleJobSelection(interaction: CommandInteraction) {
@@ -514,6 +522,7 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 			content: `You must wait before you can claim your daily reward again. You can claim it again <t:${nextAvailableTime}:R>.`,
 			ephemeral: true
 		})
+
 		return
 	}
 
@@ -547,6 +556,7 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 		.setTimestamp()
 
 	await interaction.reply({ embeds: [dailyEmbed] })
+	await postCommandMiddleware(interaction)
 }
 
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>) {
@@ -558,7 +568,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 			.addOptions(
 				Object.keys(craftingRecipes).map(key => {
 					const recipe = craftingRecipes[key]
-					// Check if emoji exists and is in correct format, otherwise set to undefined
 					const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
 					return {
 						label: recipe.craftedItemName,
@@ -1238,16 +1247,17 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	const userId = interaction.user.id
 
 	try {
+		const userDomain = await getUserDomain(userId)
+		const userMaxHealth = await getUserMaxHealth(userId)
 		const honors = (await getUserHonours(userId)) || [] // Ensure honors is never undefined
-		const userClan = await getUserInateClan(userId)
 		const transform = await getUserTransformation(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
-		const userEnergy = await getUserCursedEnergy(userId)
+
+		//
 		let userTechniques: string[] = await (userHeavenlyRestriction
 			? getUserActiveHeavenlyTechniques(userId)
 			: getUserActiveTechniques(userId))
-		const userDomain = await getUserDomain(userId)
-		const userMaxHealth = await getUserMaxHealth(userId)
+
 		// Ensure userTechniques is an array
 		userTechniques = Array.isArray(userTechniques) ? userTechniques : []
 
@@ -1296,9 +1306,6 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 					inline: true
 				},
 				{ name: "🔪 Transformation", value: transform || "None", inline: false },
-				{ name: "🔥 Clan", value: userClan.clan || "None", inline: false },
-				{ name: "🌟 Experience", value: userClan.experience?.toString() || "0", inline: false },
-				{ name: "🎚️ Tier", value: `Tier ${userClan.tier?.toString() || "0"}`, inline: false },
 				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay || "None", inline: false }
 			)
 		const selectMenu = new StringSelectMenuBuilder() // Note: StringSelectMenuBuilder
@@ -1308,18 +1315,22 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				{
 					label: "Main Profile",
 					description: "View your main profile",
-					value: "mainProfile",
-					default: true
+					value: "mainProfile"
 				},
 				{
-					label: "Active Quests",
-					description: "View your active quests",
-					value: "activeQuests"
+					label: "Clan Profile",
+					description: "View clan data",
+					value: "clanProfile"
 				},
 				{
 					label: "Gamblers Profile",
 					description: "View your gambling data!",
 					value: "gamblerProfile"
+				},
+				{
+					label: "Active Effects",
+					description: "View your active effects",
+					value: "activeProfile"
 				}
 			])
 
@@ -1336,12 +1347,15 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 
 				if (selectedOption === "mainProfile") {
 					await i.update({ embeds: [embed] })
-				} else if (selectedOption === "activeQuests") {
-					const questEmbed = await buildQuestEmbed(userId, interaction)
-					await i.update({ embeds: [questEmbed] }) // Display the main profile embed
 				} else if (selectedOption === "gamblerProfile") {
 					const gamblerEmbed = await buildGamblersProfile(userId, interaction)
 					await i.update({ embeds: [gamblerEmbed] })
+				} else if (selectedOption === "activeProfile") {
+					const activeEffectsEmbed = await handleEffectEmbed(userId)
+					await i.update({ embeds: [activeEffectsEmbed] })
+				} else if (selectedOption === "clanProfile") {
+					const clanEmbed = await handleClanDataEmbed(userId)
+					await i.update({ embeds: [clanEmbed] })
 				}
 			}
 		})
@@ -1352,6 +1366,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			content: "An unexpected error occurred while retrieving your Jujutsu profile. Please try again later.",
 			ephemeral: true
 		})
+		await postCommandMiddleware
 	}
 }
 
@@ -2245,11 +2260,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					//
 					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
 					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
-					primaryEmbed.addFields({
-						name: "Player Health",
-						value: `:blue_heart: ${playerHealth.toString()}`,
-						inline: true
-					})
 
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
@@ -2505,7 +2515,7 @@ function formatUptime(uptime: number): string {
 	return `${days}d ${hours}h ${minutes}m ${seconds}s`
 }
 
-export function generateStatsEmbed(client: Client): EmbedBuilder {
+export function generateStatsEmbed(client: Client, nextResetTimestamp: number): EmbedBuilder {
 	const uptime = formatUptime(client.uptime ?? 0)
 	const apiLatency = Math.round(client.ws.ping)
 
@@ -2516,10 +2526,10 @@ export function generateStatsEmbed(client: Client): EmbedBuilder {
 		.addFields(
 			{ name: "Uptime", value: uptime, inline: true },
 			{ name: "API Latency", value: `${apiLatency}ms`, inline: true },
-			{ name: "Status", value: "🟩", inline: true }
-			// Add more fields as needed
+			{ name: "Status", value: "🟩", inline: true },
+			{ name: "Next Shop Reset", value: `<t:${nextResetTimestamp}:F>`, inline: true }
 		)
-		.setTimestamp() // This automatically adds the current time as the "footer" timestamp
+		.setTimestamp()
 		.setFooter({ text: "Last Updated" }) // This sets the footer text
 
 	return statsEmbed
@@ -2539,16 +2549,23 @@ function checkWin(spinResults: string[]): boolean {
 }
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
-	//
-	const maxBetLimit = 10000000
-	//
-	const gameType = interaction.options.getString("game") // Assuming "game" is the option name
-	const betAmount = interaction.options.getInteger("amount", true)
 	const userId = interaction.user.id
+
 	const currentBalance = await getBalance(userId)
+
+	const itemEffects = await getUserItemEffects(userId)
+	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
+
+	const gamblersData = await getGamblersData(userId) // Assuming this function exists and returns an object containing the maxBetLimit
+	const maxBetLimit = gamblersData.limit // Adjust according to the actual structure of gamblersData
+
 	const { betCount } = await getUserGambleInfo(userId)
 
-	//
+	// Processing the gambling command
+	const gameType = interaction.options.getString("game") // Assuming "game" is the option name
+	const betAmount = interaction.options.getInteger("amount", true)
+
+	// Implementing a simple bet count tracking mechanism (Consider storing and updating this in the database instead)
 	const userBetCounts = {}
 
 	if (!userBetCounts[userId]) {
@@ -2556,18 +2573,24 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 	userBetCounts[userId]++
 
+	// Check for the daily gamble limit
 	if (betCount >= 20) {
 		await interaction.reply("You've reached your daily gamble limit of 20. Please try again tomorrow.")
 		return
 	}
 
+	// Check if the user has enough coins
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
 		return
 	}
 
+	// Check against the user's maximum bet limit
 	if (betAmount > maxBetLimit) {
-		await interaction.reply(`The maximum bet amount is ${formatNumberWithCommas(maxBetLimit)} coins.`)
+		await interaction.reply({
+			content: `Your maximum bet limit is ${formatNumberWithCommas(maxBetLimit)} coins, Try increasing it!`,
+			ephemeral: true
+		})
 		return
 	}
 
@@ -2633,16 +2656,21 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		//
 		let resultMessage = ""
 		if (didWin) {
-			const winnings = betAmount * 2
+			let winnings = betAmount * 2
+			// Apply the gambler bonus (if applicable)
+			if (gamblerEffect) {
+				winnings *= 5000 // Add an extra 5% to the winnings
+			}
+
 			await updateBalance(userId, winnings)
-			await updateGamblersData(userId, betAmount, winnings, 0) // Update gambling stats
+			await updateGamblersData(userId, betAmount, winnings, 0, 0) // Update gambling stats
 			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won $${formatNumberWithCommas(
 				winnings
 			)} coins!`
 		} else {
 			const losses = betAmount
 			await updateBalance(userId, -losses)
-			await updateGamblersData(userId, betAmount, 0, losses) // Update gambling stats
+			await updateGamblersData(userId, betAmount, 0, losses, 0) // Update gambling stats
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
 			}! You lost $${formatNumberWithCommas(losses)} coins.`
@@ -3245,6 +3273,59 @@ export async function handleTradeCommand(interaction) {
 		})
 	}
 }
+export async function handleViewEffectsCommand(interaction) {
+	const userId = interaction.user.id
+	const userEffects = await getUserItemEffects(userId)
+
+	if (!userEffects || userEffects.length === 0) {
+		await interaction.reply("You have no active item effects.")
+		return
+	}
+
+	const effectEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle("Active Item Effects")
+		.setDescription("Here are your currently active item effects:")
+
+	userEffects.forEach(effect => {
+		const effectDetails = itemEffects.find(e => e.name === effect.itemName)
+		if (effectDetails) {
+			// Calculate remaining time
+			const endTime = new Date(effect.endTime)
+			const now = new Date()
+			const remainingTime = endTime.getTime() - now.getTime()
+			const remainingMinutes = Math.round(remainingTime / 60000) // Convert milliseconds to minutes
+
+			// Build the value string with a bullet point and a timestamp
+			let valueString = `• ${effectDetails.description}`
+			if (remainingTime > 0) {
+				valueString += `\n• Time remaining: ${remainingMinutes} minutes`
+			} else {
+				valueString += "\n• Effect expired"
+			}
+
+			effectEmbed.addFields({
+				name: effectDetails.name,
+				value: valueString,
+				inline: false
+			})
+		}
+	})
+
+	await interaction.reply({ embeds: [effectEmbed] })
+	await postCommandMiddleware(interaction)
+}
+
+// Handle alert command
+export async function handleAlertCommand(interaction: ChatInputCommandInteraction) {
+	const alertEmbed = new EmbedBuilder()
+		.setColor("#FF0000")
+		.setTitle("🚨 Important Alert 🚨")
+		.setDescription("This is an important announcement that requires your attention.")
+		.setFooter({ text: "This is an important announcement." })
+
+	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
+}
 
 export async function handleAcceptTrade(interaction) {
 	const userId = interaction.user.id
@@ -3692,4 +3773,149 @@ function createTransformationSelectMenu(transformations) {
 	})
 
 	return selectMenu
+}
+
+// claim vote rewards
+export async function handleClaimVoteRewards(interaction) {
+	const Topgg = import("@top-gg/sdk")
+	const userId = interaction.user.id
+	const top = new (await Topgg).Api(process.env.TOPGG)
+
+	await interaction.deferReply()
+
+	const hasVoted = await top.hasVoted(userId)
+
+	if (!hasVoted) {
+		const voteEmbed = new EmbedBuilder()
+			.setTitle("Vote for Rewards!")
+			.setDescription("It seems you haven't voted yet. Support the bot and earn rewards by voting here:")
+
+		const voteButton = new ButtonBuilder()
+			.setLabel("Vote Now")
+			.setStyle(ButtonStyle.Link)
+			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
+
+		const row = new ActionRowBuilder().addComponents(voteButton)
+
+		await interaction.editReply({ embeds: [voteEmbed], components: [row] })
+		return
+	}
+
+	const voteReward = 100000
+	await updateBalance(userId, voteReward)
+	await addItemToUserInventory(userId, "Cursed Vote Chest", 1)
+
+	const claimedEmbed = new EmbedBuilder()
+		.setTitle("Rewards Claimed!")
+		.setDescription(`You have claimed your vote rewards of ${voteReward} coins! + 1 Cursed Vote Chest`)
+
+	await interaction.followUp({ embeds: [claimedEmbed] })
+}
+
+export async function handleShopCommand(interaction) {
+	const shopItems = await getAllShopItems() // Assuming you have this function
+	const balance = await getBalance(interaction.user.id)
+	const balance2 = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
+
+	if (!shopItems || shopItems.length === 0) {
+		await interaction.reply("The shop is currently empty.")
+		return
+	}
+
+	try {
+		const lastResetTime = await getShopLastReset()
+		const resetIntervalMs = 1000 * 60 * 60 * 24 // Example: 24 hours in milliseconds
+		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+
+		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+
+		const embed = new EmbedBuilder()
+			.setColor("#FFD700") // Gold color
+			.setTitle("✨ Shop Items ✨")
+			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
+			.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
+
+		shopItems.forEach(item => {
+			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+				embed.addFields([
+					{
+						name: `**${item.name}** - ${item.rarity} Rarity`,
+						value: `Price: **${item.price}** coins | Max Purchases: **${item.maxPurchases}**`,
+						inline: false
+					}
+				])
+			}
+		})
+		//
+		const row = new ActionRowBuilder()
+		shopItems.forEach((item, index) => {
+			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+				const button = new ButtonBuilder()
+					.setCustomId(`buy_${index}`)
+					.setLabel(item.name)
+					.setStyle(ButtonStyle.Primary)
+				row.addComponents(button)
+			}
+		})
+
+		//
+		const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true })
+
+		const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 }) // Adjust time as needed
+
+		collector.on("collect", async i => {
+			if (!i.isButton()) return
+
+			await i.deferUpdate()
+
+			const userId = i.user.id
+			const itemIndex = parseInt(i.customId.replace("buy_", ""))
+			const itemToBuy = shopItems[itemIndex]
+
+			if (!itemToBuy) {
+				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
+				return
+			}
+
+			// Retrieve user's purchase history
+			const userPurchases = await getUserPurchases(userId)
+			const userItemPurchase = userPurchases.find(p => p.itemName === itemToBuy.name) || {
+				itemName: itemToBuy.name,
+				purchasedAmount: 0
+			}
+
+			if (userItemPurchase.purchasedAmount >= itemToBuy.maxPurchases) {
+				await i.followUp({
+					content: `You have reached the purchase limit for ${itemToBuy.name}.`,
+					ephemeral: true
+				})
+				return
+			}
+
+			const balance = await getBalance(userId)
+			if (balance >= itemToBuy.price) {
+				await addItemToUserInventory(userId, itemToBuy.name, 1)
+				await updateBalance(userId, -itemToBuy.price)
+				await addUserPurchases(userId, itemToBuy.name, 1)
+
+				await i.followUp({
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} coins.`,
+					ephemeral: true
+				})
+			} else {
+				await i.followUp({
+					content: `You do not have enough coins to purchase ${itemToBuy.name}.`,
+					ephemeral: true
+				})
+			}
+		})
+
+		collector.on("end", collected => {
+			console.log(`Collected ${collected.size} interactions.`)
+		})
+		collector.stop
+	} catch (error) {
+		console.error("Error fetching shop items:", error)
+		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
+	}
 }
