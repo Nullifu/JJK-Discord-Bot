@@ -3321,7 +3321,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
-		.setDescription("This is an important announcement that requires your attention.")
+		.setDescription("Hi - from developer! This is an test alert message.")
 		.setFooter({ text: "This is an important announcement." })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
