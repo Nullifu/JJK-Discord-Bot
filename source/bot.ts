@@ -19,6 +19,7 @@ import cron from "node-cron"
 import { AutoPoster } from "topgg-autoposter"
 import {
 	claimQuestsCommand,
+	generateShopEmbed,
 	generateStatsEmbed,
 	handleAcceptTrade,
 	handleAchievementsCommand,
@@ -177,6 +178,9 @@ client.on("guildCreate", guild => {
 const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 
+const channelId2 = "1228378327769808926"
+const shomessageId = "1228376398759202947"
+
 cron.schedule("*/5 * * * *", async () => {
 	const channel = await client.channels.fetch(channelId)
 	if (channel.isTextBased()) {
@@ -193,6 +197,17 @@ cron.schedule("*/5 * * * *", async () => {
 		await message.edit({ embeds: [statsEmbed] }).catch(console.error)
 	}
 })
+cron.schedule("*/30 * * * *", async () => {
+	const channel = await client.channels.fetch(channelId2)
+	if (channel.isTextBased()) {
+		const message = await channel.messages.fetch(shomessageId)
+
+		// Pass the discordTimestamp to the generateStatsEmbed function
+		const embed = await generateShopEmbed()
+
+		await message.edit({ embeds: [embed] }).catch(console.error)
+	}
+})
 
 const poster = AutoPoster(process.env.TOPGG, client) // your discord.js or eris client
 
@@ -200,7 +215,7 @@ poster.on("posted", stats => {
 	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
 })
 
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(50)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()

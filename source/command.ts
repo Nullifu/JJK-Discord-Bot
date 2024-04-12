@@ -2531,7 +2531,36 @@ export function generateStatsEmbed(client: Client, nextResetTimestamp: number): 
 
 	return statsEmbed
 }
+export async function generateShopEmbed(): Promise<EmbedBuilder> {
+	const shopItems = await getAllShopItems() // Assuming you have this function
 
+	const lastResetTime = getShopLastReset()
+	const resetIntervalMs = 1000 * 60 * 60 * 24 // Example: 24 hours in milliseconds
+	const nextResetTime = new Date((await lastResetTime).getTime() + resetIntervalMs)
+
+	const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+
+	const embed = new EmbedBuilder()
+		.setColor("#FFD700") // Gold color
+		.setTitle("✨ Shop Items ✨")
+		.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
+
+	shopItems.forEach(item => {
+		if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+			embed.addFields([
+				{
+					name: `**${item.name}** - ${item.rarity} Rarity`,
+					value: `Price: **${item.price || "None"}** coins | Max Purchases: **${
+						item.maxPurchases || "None"
+					}**`,
+					inline: false
+				}
+			])
+		}
+	})
+
+	return embed
+}
 const slotSymbols = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓"]
 function spinSlots(): string[] {
 	return Array.from({ length: 3 }, () => slotSymbols[Math.floor(Math.random() * slotSymbols.length)])
@@ -3318,7 +3347,9 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
-		.setDescription("Update 4.5, Is now out! if you get any bugs please lmk in the support server!")
+		.setDescription(
+			"Update 4.5, Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
+		)
 		.setFooter({ text: "hi - from dev" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
@@ -3837,7 +3868,9 @@ export async function handleShopCommand(interaction) {
 				embed.addFields([
 					{
 						name: `**${item.name}** - ${item.rarity} Rarity`,
-						value: `Price: **${item.price}** coins | Max Purchases: **${item.maxPurchases}**`,
+						value: `Price: **${item.price || "None"}** coins | Max Purchases: **${
+							item.maxPurchases || "None"
+						}**`,
 						inline: false
 					}
 				])
