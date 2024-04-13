@@ -16,7 +16,6 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 import cron from "node-cron"
-import AutoPoster from "topgg-autoposter"
 import {
 	claimQuestsCommand,
 	generateShopEmbed,
@@ -207,12 +206,6 @@ cron.schedule("*/30 * * * *", async () => {
 
 		await message.edit({ embeds: [embed] }).catch(console.error)
 	}
-})
-
-const poster = AutoPoster(process.env.TOPGG, client)
-
-poster.on("posted", stats => {
-	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
 })
 
 const clientId = "991443928790335518"
