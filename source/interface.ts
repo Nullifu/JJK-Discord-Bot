@@ -18,17 +18,16 @@ export interface UserProfile {
 	job: string
 	activeTitle: string
 	heavenlyrestriction: string | null
-	clan: string
+	inateclan: string
 }
 
 export const gradeMappings = {
-	"special grade": 0, // Highest
+	"special grade": 0,
 	"grade 1": 1,
 	"semi-grade 1": 1,
 	"grade 2": 2,
 	"grade 3": 3,
-	"grade 4": 4 // Lowest
-	// Add other grades if necessary
+	"grade 4": 4
 }
 export interface TradeRequest {
 	_id: ObjectId // Include this line to define the _id property
@@ -179,12 +178,13 @@ function createProgressBar(current, total) {
 export async function buildGamblersProfile(userId, interaction) {
 	const gamblersData = await getGamblersData(userId)
 
-	const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Gambler Stats`).setColor("#FFD700") // Gold-ish color associated with gambling
+	const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Gambler Stats`).setColor("#FFD700") // Golnigga d-ish color associated with gambling
 		.setDescription(`
 			Gamble Limit: $${formatNumberWithCommas(gamblersData.limit)}
             Total Amount Gambled: $${formatNumberWithCommas(gamblersData.amountGambled)}
             Total Amount Won: $${formatNumberWithCommas(gamblersData.amountWon)}
             Total Amount Lost: $${formatNumberWithCommas(gamblersData.amountLost)}
+			
 
             **Win/Loss Ratio:** ${calculateWinLossRatio(gamblersData.amountWon, gamblersData.amountLost)} 
         `)

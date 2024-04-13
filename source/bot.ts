@@ -16,7 +16,7 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 import cron from "node-cron"
-import { AutoPoster } from "topgg-autoposter"
+import AutoPoster from "topgg-autoposter"
 import {
 	claimQuestsCommand,
 	generateShopEmbed,
@@ -209,7 +209,7 @@ cron.schedule("*/30 * * * *", async () => {
 	}
 })
 
-const poster = AutoPoster(process.env.TOPGG, client) // your discord.js or eris client
+const poster = AutoPoster(process.env.TOPGG, client)
 
 poster.on("posted", stats => {
 	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
@@ -219,8 +219,8 @@ const clientId = "991443928790335518"
 client.setMaxListeners(100)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
-export const digCooldown = 15 * 1000 // 30 seconds in milliseconds
-export const digCooldownBypassIDs = ["917146454940844103"] // IDs that can bypass cooldown
+export const digCooldown = 15 * 1000
+export const digCooldownBypassIDs = ["917146454940844103"]
 export const randomdig2 = [
 	"Burrowed",
 	"Found",

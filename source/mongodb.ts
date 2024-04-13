@@ -10,7 +10,7 @@ import { questsArray, shopItems, titles } from "./items jobs.js"
 dotenv()
 
 const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -352,7 +352,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 					job: 1,
 					activeTitle: 1,
 					heavenlyrestriction: 1,
-					clan: 1
+					inateclan: 1
 				}
 			}
 		)
@@ -371,7 +371,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			job: userDocument.job || "Non-Sorcerer",
 			activeTitle: userDocument.activeTitle || null,
 			heavenlyrestriction: userDocument.heavenlyrestriction || null,
-			clan: userDocument.clan || "None"
+			inateclan: userDocument.clan || "None"
 		}
 
 		console.log(`User profile found for ID: ${userId}`, userProfile)
@@ -894,7 +894,7 @@ export async function awardTitlesForAchievements(userId: string): Promise<void> 
 	}
 }
 
-// function to geta  users unlocked titles
+// get user unlocked titles
 export async function getUserUnlockedTitles(userId: string): Promise<string[]> {
 	try {
 		await client.connect()
@@ -907,9 +907,6 @@ export async function getUserUnlockedTitles(userId: string): Promise<string[]> {
 	} catch (error) {
 		console.error(`Error when retrieving unlocked titles for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Consider whether you really want to close the client here
-		// await client.close();
 	}
 }
 

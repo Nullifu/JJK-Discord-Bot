@@ -239,7 +239,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 			.setTitle(`Jujutsu Profile: ${targetUser.username} 🌀`)
 			.setThumbnail(targetUser.displayAvatarURL())
 			.addFields(
-				{ name: "**Clan** 🏆", value: userProfile.clan || "None", inline: false },
+				{ name: "**Clan** 🏆", value: userProfile.inateclan || "None", inline: false },
 				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: false },
 				{ name: "**Balance** 💰", value: `\`${userProfile.balance.toLocaleString()}\``, inline: false },
 				{ name: "**Experience** ✨", value: userProfile.experience.toLocaleString(), inline: false },
@@ -672,26 +672,36 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 	}
 }
 export async function handleTitleSelectCommand(interaction: ChatInputCommandInteraction) {
-	console.log("Title selection command received.")
-
 	const unlockedTitles = await getUserUnlockedTitles(interaction.user.id)
+
+	if (unlockedTitles.length === 0) {
+		await interaction.reply({
+			content: "You have no unlocked titles yet!",
+			ephemeral: true
+		})
+		return
+	}
 
 	const embed = new EmbedBuilder()
 		.setTitle("Select Your Title")
 		.setDescription("Choose a title from the dropdown menu below.")
 
+	console.log("unlockedTitles:", unlockedTitles)
+
 	// Create the dropdown menu
+
 	const selectMenu = new SelectMenuBuilder()
 		.setCustomId("title_selection")
 		.setPlaceholder("No title selected")
 		.addOptions(
-			unlockedTitles.map(titleName => ({
-				label: titleName, // Assuming titles is an array of title names
-				description: titleName, // You'll need this
-				value: titleName
-			}))
+			unlockedTitles.map(title => {
+				return {
+					label: title.length > 25 ? title.substring(0, 22) + "..." : title,
+					description: title.length > 100 ? title.substring(0, 97) + "..." : title,
+					value: title
+				}
+			})
 		)
-
 	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
 	await interaction.reply({ embeds: [embed], components: [row] })
 
@@ -701,7 +711,7 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 	const collector = interaction.channel.createMessageComponentCollector({
 		filter,
 		componentType: ComponentType.StringSelect,
-		time: 20000 // 20 seconds
+		time: 20000
 	})
 
 	collector.on("collect", async collectedInteraction => {
@@ -716,8 +726,7 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 			})
 		} catch (error) {
 			await collectedInteraction.followUp({
-				content:
-					"There was an error updating your title. [ THIS ERROR IS BEING FIXED OR DOES NOT ACTUALLY ERROR]",
+				content: "There was an error updating your title.",
 				embeds: [],
 				components: []
 			})
@@ -730,7 +739,7 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 			}
 		})
 
-		//collector.stop()
+		// collector.stop()
 	})
 }
 
@@ -775,7 +784,6 @@ export async function handleDomainSelection(interaction) {
 				return
 			}
 
-			// Create the updated embed with information
 			const infoEmbed = new EmbedBuilder()
 				.setTitle(selectedDomain.name)
 				.setDescription(selectedDomain.description)

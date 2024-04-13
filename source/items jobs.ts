@@ -1104,10 +1104,10 @@ export const INVENTORY_CLAN = {
 
 export interface Item1 {
 	itemName: string
-	description?: string // Optional description
+	description?: string
 	effect: (interaction: ChatInputCommandInteraction) => Promise<void>
 	imageUrl?: string
-	rarity?: "Common" | "Rare" | "Special" // If you want a system for rarity
+	rarity?: "Common" | "Rare" | "Special"
 }
 
 export const items1: Item1[] = [
@@ -1159,7 +1159,7 @@ export const items1: Item1[] = [
 			"https://64.media.tumblr.com/0cea3174e65fc444a9d13e75b8b9b23b/0f084cff6a7abfcb-76/s500x750/cc910e95dece3ee58a36d4ff8855336cd9dc357e.gif",
 		effect: async interaction => {
 			await interaction.deferReply()
-			const userId = interaction.user.id // Or however you get the user's ID in your context
+			const userId = interaction.user.id
 
 			const embedFirst = new EmbedBuilder()
 				.setColor("#4b0082")
@@ -1226,7 +1226,6 @@ export const items1: Item1[] = [
 					//
 
 					//
-					//
 					const embedClanAndQuest = new EmbedBuilder()
 						.setTitle("Curse King's Task")
 						.setDescription(dialogueWithProgress)
@@ -1239,7 +1238,7 @@ export const items1: Item1[] = [
 						.setImage("https://media1.tenor.com/m/OvmsFkMM2PwAAAAC/ryomen-sukuna-sukuna.gif")
 					await interaction.editReply({ embeds: [embedClanAndQuest] })
 				} else {
-					console.log("Quest Not Found") // Check if this message appears
+					console.log("Quest Not Found")
 					await addUserQuest(interaction.user.id, "Curse King's Task")
 					const embedAlreadyDemonVessel = new EmbedBuilder()
 						.setColor("#8b0000")
