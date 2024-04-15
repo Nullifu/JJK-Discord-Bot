@@ -1252,7 +1252,7 @@ export const items1: Item1[] = [
 			if (randomNumber <= 30) {
 				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
 				await updateUserMaxHealth(interaction.user.id, 30)
-				await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1)
+				await addUserQuest(interaction.user.id, "Satoru Gojo's Mission")
 				isLimitless = true
 			}
 
