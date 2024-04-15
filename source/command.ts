@@ -2657,7 +2657,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
 
 	const gamblersData = await getGamblersData(userId) // Assuming this function exists and returns an object containing the maxBetLimit
-	const maxBetLimit = 2500000 // Default max bet limit
+	const maxBetLimit = 25000000 // Default max bet limit
 
 	const { betCount } = await getUserGambleInfo(userId)
 
