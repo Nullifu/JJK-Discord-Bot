@@ -1,5 +1,4 @@
 import { EmbedBuilder } from "discord.js"
-import { getUserPermEffects, getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
 
 export interface Attack {
 	name: string
@@ -410,7 +409,7 @@ export const attacks: Record<string, Attack[]> = {
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	],
-	"Yuta Okkotsu & Curse Queen Rika": [
+	"Yuta Okkotsu (Rika)": [
 		{
 			name: "Combined Attack: Black Flash",
 			probability: 50,
@@ -427,6 +426,26 @@ export const attacks: Record<string, Attack[]> = {
 			name: "Pure Love: Rika's Embrace",
 			probability: 20,
 			baseDamage: 70,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Yuki Tsukumo": [
+		{
+			name: "Star Rage: Virtual Mass",
+			probability: 20,
+			baseDamage: 70,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Star Rage: Virtual Mars",
+			probability: 50,
+			baseDamage: 17,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Star Rage: Virtual Earth",
+			probability: 30,
+			baseDamage: 40,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	],
@@ -570,11 +589,210 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 42,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
+	],
+	"Panda": [
+		{
+			name: "Panda Punch",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Panda Rage",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Panda Pultz",
+			probability: 20,
+			baseDamage: 24,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Cursed Spirit": [
+		{
+			name: "Cursed Spirit Blast",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Spiritual Strike",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Spiritual Pultz",
+			probability: 20,
+			baseDamage: 24,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Inumaki": [
+		{
+			name: "Cursed Speech: Die",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Cursed Speech: Twist",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Cursed Speech: Bind",
+			probability: 20,
+			baseDamage: 24,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Maki Zenin": [
+		{
+			name: "Zenin Style: Strike",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Blitz ",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Acrobatic Strike",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Kento Nanami": [
+		{
+			name: "Overtime: Ratio",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Overtime: Maximum",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Overtime: Limit",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Roppongi Curse": [
+		{
+			name: "Curse Blast",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Curse Strike",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Curse Pultz",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Yasohachi Bridge Curse ": [
+		{
+			name: "Curse Blast",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Curse Strike",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Curse Pultz",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Nobara Kugisaki": [
+		{
+			name: "Hairpin",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Resonance",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Black Flash",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Aoi Todo": [
+		{
+			name: "Boogie Woogie: Surplex",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Boogie Woogie: Swap",
+			probability: 30,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Black Flash",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Satoru Gojo Limit-Broken": [
+		{
+			name: "100% Maximum Technique: Blue!",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "100% Reversal Red",
+			probability: 30,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "200% Hollow Purple",
+			probability: 20,
+			baseDamage: 80,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
 	]
 }
 
 export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): Attack {
-	// 1. Calculate a 'scaled' random number for selection
 	let totalProbability = 0
 	for (const attack of attacks) {
 		totalProbability += attack.probability
@@ -593,188 +811,6 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 	return attacks[attacks.length - 1]
 }
 
-const statusEffectsDescriptions = {
-	"Gamblers Limit": {
-		description: "Gamble for a chance to increase or decrease damage!",
-		effect: "? ? ?"
-	},
-	"Curse King": {
-		description: "Dismantles the enemy from within..",
-		effect: "Dismantle"
-	},
-	"Limitless Info": {
-		description: "Reduces incoming damage by 35%",
-		effect: "35% REDUC"
-	},
-	"Adaption": {
-		description: "You adapt to the enemy...",
-		effect: "15% INC 25% REDUC"
-	},
-	"Prayer Song": {
-		description: "Reduces incoming damage by 20%",
-		effect: "20% REDUC"
-	},
-	"Mutual Love": {
-		description: "Reduces incoming damage by 20%",
-		effect: "20% REDUC"
-	}
-
-	// Define other status effects here
-}
-
-export async function applyPrayerSongEffect(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
-
-	// Check if "Prayer Song" is already active to avoid duplication
-	if (!currentEffects.includes("Prayer Song")) {
-		const updatedEffects = [...currentEffects, "Prayer Song"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
-	}
-}
-export async function applyMutualLoveEffect(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
-
-	// Check if "Prayer Song" is already active to avoid duplication
-	if (!currentEffects.includes("Mutual Love")) {
-		const updatedEffects = [...currentEffects, "Mutual Love"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
-	}
-}
-
-export async function applyIdleDeathsGamble(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId)
-
-	// Check if "Prayer Song" is already active to avoid duplication
-	if (!currentEffects.includes("Gamblers Limit")) {
-		const updatedEffects = [...currentEffects, "Gamblers Limit"]
-		await updateUserStatusEffects(userId, updatedEffects)
-	}
-}
-export async function applyAdaption(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId)
-
-	// Check if "Prayer Song" is already active to avoid duplication
-	if (!currentEffects.includes("Adaption")) {
-		const updatedEffects = [...currentEffects, "Adaption"]
-		await updateUserStatusEffects(userId, updatedEffects)
-	}
-}
-
-export async function applyWorldCuttingSlash(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId)
-
-	if (!currentEffects.includes("World Cutting Slash")) {
-		const updatedEffects = [...currentEffects, "World Cutting Slash"]
-		await updateUserStatusEffects(userId, updatedEffects)
-	}
-}
-
-export async function applytransformation(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId)
-
-	if (!currentEffects.includes("1000 Year Curse")) {
-		const updatedEffects = [...currentEffects, "1000 Year Curse"]
-		await updateUserStatusEffects(userId, updatedEffects)
-	}
-}
-
-export async function fetchAndFormatStatusEffects(userId) {
-	const statusEffects = await getUserStatusEffects(userId)
-	const formattedEffects = statusEffects.map(effect => {
-		if (statusEffectsDescriptions[effect]) {
-			return `${effect} (${statusEffectsDescriptions[effect].description})`
-		}
-		return effect
-	})
-
-	return formattedEffects.length > 0 ? formattedEffects.join(", ") : "None"
-}
-
-export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
-	let damage = baseDamage
-	let damageReduction = 1 // No reduction initially
-	let damageIncrease = 1 // No increase initially
-
-	// DOMAIN EFFECTS
-	if (statusEffects.includes("Curse King")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
-	}
-	if (statusEffects.includes("Sukuna's Honour")) {
-		damageReduction *= 0.1
-	}
-	if (statusEffects.includes("1000 Year Curse")) {
-		damageReduction *= 0.4
-		damageIncrease *= 1.4
-	}
-	if (statusEffects.includes("Limitless")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
-	}
-
-	if (statusEffects.includes("Mutual Love")) {
-		damageReduction *= 0.3
-		damageIncrease *= 1.4
-	}
-	if (statusEffects.includes("Gamblers Limit")) {
-		const gambleOutcome = Math.random()
-		if (gambleOutcome < 0.5) {
-			damageReduction *= 0.3
-			damageIncrease *= 1.3
-		} else {
-			damageReduction *= 1.1
-			damageIncrease *= 0.7
-		}
-	}
-	if (statusEffects.includes("Beach Bum")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
-
-		//
-		//
-		// TECHNIQUE EFFECTS
-		if (statusEffects.includes("Adaption")) {
-			damageReduction *= 0.85
-			damageIncrease *= 1.2
-		}
-		if (statusEffects.includes("Prayer Song")) {
-			damageReduction *= 0.2
-		}
-		damage *= damageIncrease
-		damage *= damageReduction
-
-		return damage
-	}
-}
-
-export async function applyStatusEffect(userId, effectName) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId)
-
-	// Check if the status effect is already active to avoid duplication
-	if (!currentEffects.includes(effectName)) {
-		const updatedEffects = [...currentEffects, effectName]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
-	}
-}
-
-// apply permanent status effect its always in the perm effects but apply it in battle
-export async function applyPermanentStatusEffect(userId, effectName) {
-	// Fetch current status effects
-	const currentEffects = await getUserPermEffects(userId)
-
-	// Check if the status effect is already active to avoid duplication
-	if (!currentEffects.includes(effectName)) {
-		const updatedEffects = [...currentEffects, effectName]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
-	}
-}
 export const DOMAIN_INFORMATION = [
 	{
 		name: "Malevolent Shrine",
@@ -790,6 +826,14 @@ export const DOMAIN_INFORMATION = [
 		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
 		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Limitless Token"
+	},
+	{
+		name: "Chimera Shadow Garden",
+		description:
+			"Chimera Shadow Garden is a domain that creates a nightmarish world of shadows, where the users shikigami can attack from any angle.",
+		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
+		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
+		requirement: "Shadow Token"
 	},
 	{
 		name: "Coffin of the Iron Mountain",
@@ -833,14 +877,20 @@ export const TRANSFORMATIONS = [
 	{
 		name: "Curse King",
 		description: "AH I KNEW IT THE LIGHT FEELS BEST IN THE FLESH!",
-		image: "https://media.discordapp.net/attachments/681985000521990179/1226844171827154965/sukuna-evil-laugh.gif?ex=66263eac&is=6613c9ac&hm=0799274885b6078cf77283a04a31491e6c8d41c190a427f47cc8ed6dddfac181&",
+		image: "https://media1.tenor.com/m/qkbOyZZSWxAAAAAd/sukuna-laugh.gif",
 		effects: "1000 Year Curse, 25% Damage Increase, 5% Damage Reduction"
+	},
+	{
+		name: "Body of Distorted Killing",
+		description: "Idle Transfiguration...",
+		image: "https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif",
+		effects: "Transfiguration, 25% Damage Increase, 5% Damage Reduction"
 	},
 	{
 		name: "Six Eyes Release",
 		description: "Come on, let's get serious.",
-		image: "https://media1.tenor.com/m/T8RWNLn_aIUAAAAd/jjk-jujutsu-kaisen.gif",
-		effects: "1000 Year Curse, 18% Damage Increase, 16% Damage Reduction"
+		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1229378135192244234/ezgif-7-e770a26839.gif?ex=662f769c&is=661d019c&hm=9d16d32deb25b0acc9709b2557945e88d98e9c97a53d2da49857b25665d225b6&",
+		effects: "All-Seeing, 25% Damage Reduction, 16% Damage Increase"
 	},
 	{
 		name: "Curse Queen",

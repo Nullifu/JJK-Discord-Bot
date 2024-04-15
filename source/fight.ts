@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { ActionRowBuilder, SelectMenuBuilder } from "@discordjs/builders"
-import { CacheType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/builders"
+import { ButtonStyle, CacheType, ChatInputCommandInteraction, ComponentType, EmbedBuilder } from "discord.js"
 import { calculateDamage, getBossDrop, getRandomXPGain } from "./calculate.js"
 import { activeCollectors } from "./command.js"
 import { BossData } from "./interface.js"
@@ -74,6 +74,7 @@ export async function handleBossDeath(
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
+	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1)
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
@@ -175,7 +176,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 	const random = Math.random()
 
 	// Initially, it seems like the boss is defeated
-	if (random < 0.2) {
+	if (random < 0.4) {
 		const fakeDeathEmbed = new EmbedBuilder()
 			.setTitle("You won!")
 			.setColor("#0099ff")
@@ -327,13 +328,11 @@ export async function exportReincarnation(interaction, randomOpponent, primaryEm
 export async function exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
 	if (random < 0.7) {
-		// Check if the user has the 'Curse Queen' transformation unlocked
 		const unlockedTransformations = await getUserUnlockedTransformations(interaction.user.id)
 
 		if (!unlockedTransformations.includes("Curse Queen")) {
 			await updateUserUnlockedTransformations(interaction.user.id, ["Curse Queen"])
 
-			// Customize your message to indicate the new transformation has been unlocked
 			primaryEmbed.setImage("https://i.ytimg.com/vi/dwdsYVRpocc/maxresdefault.jpg")
 			primaryEmbed.setDescription(
 				`${interaction.user.username} You're pretty strong... I'll lend you some of my power. Unlocked the **Curse Queen** transformation!`
@@ -341,26 +340,24 @@ export async function exportRika(interaction, randomOpponent, primaryEmbed, row,
 			await interaction.editReply({ embeds: [primaryEmbed] })
 			return true
 		} else {
-			// If they already have the transformation, proceed as normal
+			randomOpponent.name = "Yuta Okkotsu (Rika)"
+			randomOpponent.current_health = randomOpponent.max_healt
+			const userMaxHealth = await getUserMaxHealth(interaction.user.id)
+			await updateUserHealth(interaction.user.id, userMaxHealth)
+
+			// Set the image and health fields in the embed
+			primaryEmbed.setImage("https://media1.tenor.com/m/BhgnUENmzrkAAAAC/jujutsu-kaisen0-yuta-okkotsu.gif")
 			primaryEmbed.setDescription("Rika.. Lend me your strength. **CURSE QUEEN RIKA HAS JOINED THE BATTLE!**")
+			primaryEmbed.setFields(
+				{ name: "Boss Health", value: randomOpponent.current_health.toString() },
+				{ name: "Player Health", value: playerHealth.toString() }
+			)
+
+			// Send the updated reply
+			await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+			return true
 		}
-
-		// Reset health for both the opponent and player
-		randomOpponent.current_health = randomOpponent.max_health // Reset opponent's health to max
-		const userMaxHealth = await getUserMaxHealth(interaction.user.id)
-		await updateUserHealth(interaction.user.id, userMaxHealth) // Reset player's health to max
-
-		// Set the image and health fields in the embed
-		primaryEmbed.setImage("https://media1.tenor.com/m/BhgnUENmzrkAAAAC/jujutsu-kaisen0-yuta-okkotsu.gif")
-		primaryEmbed.setFields(
-			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
-			{ name: "Player Health", value: playerHealth.toString() }
-		)
-
-		// Send the updated reply
-		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-		return true
 	}
 
 	return false // If the battle doesn't result in defeating Yuta, continue with existing logic
@@ -514,6 +511,97 @@ export async function handlePlayerRevival(interaction, primaryEmbed, row, random
 		embeds: [primaryEmbed],
 		components: row ? [row] : [] // Ensure row exists, otherwise pass an empty array
 	})
+}
+
+const gifs = [
+	"https://media1.tenor.com/m/O7x4NwNSGx0AAAAC/jjk.gif",
+	"https://media1.tenor.com/m/hQd_-MwNT5AAAAAd/jjk-jujutsu-kaisen.gif",
+	"https://media1.tenor.com/m/BgnNBMz5pFAAAAAC/jujutsu-kaisen-shibuya-arc-itadori-shibuya-arc.gif"
+]
+
+const buttonLabels = ["Black.. FLASH!", "KOKU...SEN", "CONSECUTIVE BLACK FLASH!"]
+
+const descriptions = [
+	"Harness cursed energy for a devastating Black Flash!",
+	"Amplify your attack, feel the surge of cursed energy!",
+	"Execute the perfect Black Flash, overwhelming your foe!"
+]
+
+export async function executeBlackFlash({
+	imageUrl,
+	description,
+	fieldValue,
+	collectedInteraction,
+	techniqueName,
+	damageMultiplier,
+	userTechniques,
+	userId,
+	primaryEmbed
+}) {
+	const techniquesUsed = userTechniques.get(userId) || []
+	if (techniquesUsed.includes(techniqueName)) {
+		await collectedInteraction.followUp({
+			content: "You have already used Black Flash in this session.",
+			ephemeral: true
+		})
+		return
+	}
+
+	techniquesUsed.push(techniqueName)
+	userTechniques.set(userId, techniquesUsed)
+
+	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
+	const playerGradeString = playerGradeData
+
+	let attempts = 0
+	const maxAttempts = 3
+	let damage = 0
+
+	async function attemptBlackFlash() {
+		primaryEmbed.setImage(gifs[attempts % gifs.length])
+		primaryEmbed.setDescription(descriptions[attempts % descriptions.length])
+		primaryEmbed.setFields([{ name: techniqueName, value: `Attempt ${attempts + 1} of ${maxAttempts}` }])
+
+		const button = new ButtonBuilder()
+			.setCustomId(`again-${attempts}`) // Unique ID for each attempt
+			.setLabel(buttonLabels[attempts % buttonLabels.length])
+			.setStyle(ButtonStyle.Primary)
+
+		const row = new ActionRowBuilder().addComponents(button)
+
+		await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+		const filter = i => i.customId === `again-${attempts}` && i.user.id === collectedInteraction.user.id
+		try {
+			const response = await collectedInteraction.channel.awaitMessageComponent({
+				filter,
+				componentType: ComponentType.Button,
+				time: 5000
+			})
+
+			await response.deferUpdate()
+
+			attempts++
+			if (attempts < maxAttempts) {
+				await attemptBlackFlash()
+			} else {
+				damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
+				await finishBlackFlash()
+			}
+		} catch (error) {
+			damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
+			await finishBlackFlash()
+		}
+	}
+
+	async function finishBlackFlash() {
+		primaryEmbed.setDescription(`${techniqueName} completed. Total damage: ${damage}`)
+		await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+	}
+
+	await attemptBlackFlash()
+
+	return damage
 }
 
 export { getJujutsuFlavorText }

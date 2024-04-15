@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "discord.js"
-import { BossDrop, bossDrops, itemEffects } from "./items jobs.js"
+import { BossDrop, bossDrops } from "./bossdrops.js"
+import { itemEffects } from "./items jobs.js"
 import { checkUserHasHeavenlyRestriction, getUserInateClan, getUserItemEffects } from "./mongodb.js"
 
 export function calculateDamage(

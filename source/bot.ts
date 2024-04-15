@@ -32,6 +32,7 @@ import {
 	handleDigCommand,
 	handleDomainSelection,
 	handleDonateCommand,
+	handleEquipInateClanCommand,
 	handleEquipTechniqueCommand,
 	handleEquipTransformationCommand,
 	handleFightCommand,
@@ -190,7 +191,6 @@ cron.schedule("*/5 * * * *", async () => {
 		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
 		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
-		// Pass the discordTimestamp to the generateStatsEmbed function
 		const statsEmbed = generateStatsEmbed(client, discordTimestamp)
 
 		await message.edit({ embeds: [statsEmbed] }).catch(console.error)
@@ -201,7 +201,6 @@ cron.schedule("*/30 * * * *", async () => {
 	if (channel.isTextBased()) {
 		const message = await channel.messages.fetch(shomessageId)
 
-		// Pass the discordTimestamp to the generateStatsEmbed function
 		const embed = await generateShopEmbed()
 
 		await message.edit({ embeds: [embed] }).catch(console.error)
@@ -258,6 +257,11 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
+	new SlashCommandBuilder()
+		.setName("equipclan")
+		.setDescription("Equip Inate Clan")
+		.addStringOption(option => option.setName("clan").setDescription("The clan to equip").setRequired(true)),
+
 	new SlashCommandBuilder()
 		.setName("balance")
 		.setDescription("User Balance")
@@ -351,7 +355,8 @@ const commands = [
 					{ name: "Sacred Eye", value: "Sacred Eye" },
 					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
 					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
-					{ name: "Cursed Chest", value: "Cursed Chest" }
+					{ name: "Cursed Chest", value: "Cursed Chest" },
+					{ name: "Soul Bundle", value: "Soul Bundle" }
 				)
 		),
 
@@ -713,6 +718,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "dailyshop":
 				await handleShopCommand(chatInputInteraction)
+				break
+			case "equipclan":
+				await handleEquipInateClanCommand(chatInputInteraction)
 				break
 			case "alert":
 				await handleAlertCommand(chatInputInteraction)

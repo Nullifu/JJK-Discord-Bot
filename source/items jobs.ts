@@ -15,12 +15,12 @@ import {
 	updateUserAchievements,
 	updateUserClan,
 	updateUserExperience,
-	updateUserHealth,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
 	updateUserInateClanExperience,
 	updateUserItemEffects,
 	updateUserMaxHealth,
+	updateUserOwnedInateClan,
 	updateUserUnlockedBosses,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
@@ -80,156 +80,6 @@ export const itemEffects = [
 	{ name: "Hakari Kinji's Token", description: "**Gambler** Bigger win from gambling!", time: 100 }
 ]
 
-export interface BossDrop {
-	name: string
-	rarity: string
-}
-
-export const bossDrops: Record<string, BossDrop[]> = {
-	"Sukuna": [
-		{ name: "Sukuna Finger", rarity: "common" },
-		{ name: "Malevolent Shrine (Skull)", rarity: "rare" },
-		{ name: "Malevolent Shrine (Blood Vial)", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
-	],
-	"Sukuna (Suppressed)": [
-		{ name: "Sukuna Finger", rarity: "common" },
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Bet Slip", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
-	],
-	"Sukuna (Heian Era)": [
-		{ name: "Sukuna Finger", rarity: "common" },
-		{ name: "Go//Jo", rarity: "rare" },
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Malevolent Shrine (Upgrade", rarity: "rare" }
-	],
-	"Zenin Toji": [
-		{ name: "(Broken) Split Soul Katana", rarity: "common" },
-		{ name: "Zenin Toji's Blood", rarity: "ultra rare" }
-	],
-	"Zenin Toji (Reincarnation)": [
-		{ name: "(Broken) Split Soul Katana", rarity: "common" },
-		{ name: "Fractured Chain", rarity: "ultra rare" }
-	],
-	"Megumi Fushiguro": [
-		{ name: "Super Glue", rarity: "rare" },
-		{ name: "(Broken) Divine General Wheel", rarity: "ultra rare" }
-	],
-	"Satoru Gojo": [
-		{ name: "Rikugan Eye", rarity: "rare" },
-		{ name: "Go//Jo", rarity: "ultra rare" },
-		{ name: "Fraud Poster", rarity: "ultra rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-	"Itadori": [
-		{ name: "Tailsman", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "ultra rare" },
-		{ name: "Fraud Poster", rarity: "ultra rare" }
-	],
-	"Aoi Todo & Itadori": [
-		{ name: "Brotherly Bracelet", rarity: "rare" },
-		{ name: "Takada-Chan Autograph", rarity: "rare" },
-		{ name: "Heavenly Chain", rarity: "rare" }
-	],
-	"Jogo": [
-		{ name: "Jogos left testicle", rarity: "rare" },
-		{ name: "Jogos right testicle", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
-	],
-	"Mahito (Transfigured)": [
-		{ name: "Transfigured Soul", rarity: "ultra rare" },
-		{ name: "Junpei", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
-	],
-	"Suguru Geto": [
-		{ name: "Prison Realm Fragment", rarity: "rare" },
-		{ name: "(Broken) Playful Cloud", rarity: "rare" },
-		{ name: "Transfigured Soul", rarity: "ultra rare" }
-	],
-	"The Honored One": [
-		{ name: "Rikugan Eye", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "rare" },
-		{ name: "Six Eyes", rarity: "ultra rare" }
-	],
-	"Mahoraga": [
-		{ name: "(Broken) Divine General Wheel", rarity: "rare" },
-		{ name: "Tailsman", rarity: "rare" },
-		{ name: "(Fixed) Divine General Wheel", rarity: "ultra rare" }
-	],
-	"Mahito Instant Spirit Body of Distorted Killing": [
-		{ name: "Transfigured Soul", rarity: "rare" },
-		{ name: "Tailsman", rarity: "rare" },
-		{ name: "Junpei", rarity: "ultra rare" }
-	],
-	"Hakari Kinji": [
-		{ name: "Gambler Token", rarity: "rare" },
-		{ name: "Bet Slip", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-	"Hakari (Jackpot)": [
-		{ name: "Gambler Token", rarity: "rare" },
-		{ name: "Bet Slip", rarity: "rare" },
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "rare" },
-		{ name: "Rikugan Eye", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-
-	"Kashimo": [
-		{ name: "(Broken) Electrical Staff", rarity: "rare" },
-		{ name: "Tailsman", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "ultra rare" }
-	],
-	"Dagon": [
-		{ name: "Blue Fish", rarity: "rare" },
-		{ name: "Green Fish", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-	"Hanami": [
-		{ name: "Wood Chippins", rarity: "rare" },
-		{ name: "Cursed Bud", rarity: "rare" },
-		{ name: "Jogos (Fixed) Balls", rarity: "ultra rare" }
-	],
-	"Yuta Okkotsu": [
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-	"Finger Bearer": [
-		{ name: "Sukuna Finger", rarity: "rare" },
-		{ name: "Cursed Shard", rarity: "rare" },
-		{ name: "Junpei", rarity: "ultra rare" }
-	],
-	"Disaster Curses": [
-		{ name: "Dagons Soul", rarity: "rare" },
-		{ name: "Jogos Soul", rarity: "rare" },
-		{ name: "Hanamis Soul", rarity: "ultra rare" }
-	],
-	"Zenin Toji (Reincarnated)": [
-		{ name: "Rikugan Eye", rarity: "rare" },
-		{ name: "Sukuna Finger", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
-	],
-	"Yuta Okkotsu & Curse Queen Rika": [
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
-		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" },
-		{ name: "Rikugan Eye", rarity: "ultra rare" },
-		{ name: "Sukuna Finger", rarity: "ultra rare" },
-		{ name: "Six Eyes", rarity: "ultra rare" }
-	],
-
-	"Mahito": [
-		{ name: "Transfigured Soul", rarity: "rare" },
-		{ name: "(Broken) Vengeance Katana", rarity: "rare" }
-	],
-	"Mahito (120%)": [
-		{ name: "Transfigured Soul", rarity: "rare" },
-		{ name: "Junpei", rarity: "rare" }
-	]
-}
-
 export const dailyitems = [
 	{ name: "Sukuna Finger" },
 	{ name: "Rikugan Eye" },
@@ -251,6 +101,23 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
+	},
+	bundle_soul: {
+		requiredItems: [
+			{ name: "Dagons Soul", quantity: 1 },
+			{ name: "Jogos Soul", quantity: 1 },
+			{ name: "Transfigured Soul", quantity: 6 },
+			{ name: "Hanamis Soul", quantity: 6 }
+		],
+		craftedItemName: "Soul Bundle"
+	},
+	star_fused: {
+		requiredItems: [
+			{ name: "(Shattered) Star Fragment", quantity: 1 },
+			{ name: "(Shattered) Star Remnant", quantity: 1 },
+			{ name: "Super Glue", quantity: 2 }
+		],
+		craftedItemName: "Fused Star"
 	},
 	malevolent_token: {
 		requiredItems: [
@@ -727,6 +594,27 @@ export const CLAN_SKILLS = {
 	],
 	"Limitless": [
 		{
+			name: "Maximum Technique: Purple",
+			description: "Throughout heaven and earth..",
+			cost: "2250000",
+			clan: "Limitless",
+			items: [{ name: "Upgraded Limitless Token", quantity: 1 }]
+		},
+		{
+			name: "Maximum Technique: Blue",
+			description: "Blue",
+			cost: "1250000",
+			clan: "Limitless",
+			items: [{ name: "Upgraded Limitless Token", quantity: 1 }]
+		},
+		{
+			name: "Maximum Technique: Red",
+			description: "Throughout heaven and earth..",
+			cost: "725000",
+			clan: "Limitless",
+			items: [{ name: "Upgraded Limitless Token", quantity: 1 }]
+		},
+		{
 			name: "Hollow Purple",
 			description: "Throughout heaven and earth..",
 			cost: "325000",
@@ -859,6 +747,26 @@ export const CLAN_SKILLS = {
 			clan: "Okkotsu",
 			items: [{ name: "Yuta's Token", quantity: 1 }]
 		}
+	],
+	"Star Rage": [
+		{
+			name: "Star Rage: Virtual Mass",
+			cost: "1200000",
+			clan: "Star Rage",
+			items: [{ name: "Fused Star", quantity: 3 }]
+		},
+		{
+			name: "Star Rage: Terra",
+			cost: "450000",
+			clan: "Star Rage",
+			items: [{ name: "(Shattered) Star Remnant", quantity: 1 }]
+		},
+		{
+			name: "Star Rage: Jupiter",
+			cost: "250000",
+			clan: "Star Rage",
+			items: [{ name: "(Shattered) Star Fragment", quantity: 1 }]
+		}
 	]
 }
 
@@ -939,6 +847,17 @@ export const questsArray = [
 		items: { "Sukuna's Honour": 1 },
 		task: "Round up all of the Sukuna Fingers!",
 		totalProgress: 20,
+		special: true
+	},
+	{
+		name: "Satoru Gojo's Mission",
+		description:
+			"Satoru Gojo, the strongest sorcerer, has a mission for you. Assist him in his quest to kill PLACEHOLDER and earn his respect.",
+		coins: 100000,
+		experience: 850,
+		items: { "Satoru Gojo's Respect": 1 },
+		task: "Complete Gojo's Mission!",
+		totalProgress: 8,
 		special: true
 	},
 	{
@@ -1305,7 +1224,7 @@ export const items1: Item1[] = [
 	},
 	{
 		itemName: "Six Eyes",
-		description: "A rare cursed technique that allows the user to see the flow of cursed energy.",
+		description: "? ? ?",
 		rarity: "Special",
 		imageUrl:
 			"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless",
@@ -1321,18 +1240,16 @@ export const items1: Item1[] = [
 				.setImage(
 					"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless"
 				)
+
 			await interaction.followUp({ embeds: [embedFirst] })
 
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isLimitless = false
 
-			await updateUserExperience(interaction.user.id, 125)
-
 			if (randomNumber <= 30) {
-				await updateUserAchievements(interaction.user.id, "behonoredLimitless")
-				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
-				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
-				await updateUserHealth(interaction.user.id, 30)
+				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
+				await updateUserMaxHealth(interaction.user.id, 30)
+				await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1)
 				isLimitless = true
 			}
 
@@ -1351,17 +1268,12 @@ export const items1: Item1[] = [
 
 			let embedFinal
 			if (isLimitless) {
-				const gains =
-					"You have gained:\n" +
-					"• Achievement: behonoredLimitless\n" +
-					"• Technique: Imaginary Technique: Purple\n" +
-					"• Quest Progress: The Honored One +1\n" +
-					"• Max Health +30"
+				const gains = "You have gained:\n" + "• Inate Clan: Limitless\n" + "• Max Health +30"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")
 					.setDescription(
-						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you.\n\n${gains}`
+						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you... Satoru Gojo may have a intrest in you..\n\n${gains}`
 					)
 					.setImage("https://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
 			} else {
@@ -1435,7 +1347,7 @@ export const items1: Item1[] = [
 					.setColor("#006400")
 					.setTitle("A Mystical Power... Or Not?")
 					.setDescription(
-						"The Six Eyes arent ready to be improved, but you gain 125 experience. Perhaps trying again would help.."
+						"The Six Eyes arent ready to be improved, but you gain 125 experience. Perhaps if you were stronger? (Limitless Inate Clan Required)"
 					)
 					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif")
 			}
@@ -1555,6 +1467,38 @@ export const items1: Item1[] = [
 
 			const possibleItems = [
 				"Sukuna Finger",
+				"Six Eyes",
+				"Special-Grade Cursed Object",
+				"Hakari Kinji's Token",
+				"Special-Grade Geo Locator",
+				"Fused Star"
+			]
+			function getRandomItem() {
+				const randomIndex = Math.floor(Math.random() * possibleItems.length)
+				return possibleItems[randomIndex]
+			}
+
+			const chestitem = getRandomItem()
+
+			await addItemToUserInventory(interaction.user.id, chestitem, 1)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(`You open the cursed chest and get! ${chestitem}`)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+	{
+		itemName: "Cursed Chest",
+		description: "Cursed Chest",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const possibleItems = [
+				"Sukuna Finger",
 				"Rikugan Eye",
 				"Special-Grade Cursed Object",
 				"Hakari Kinji's Token"
@@ -1572,6 +1516,23 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription(`You open the cursed chest and get! ${chestitem}`)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+		}
+	},
+	{
+		itemName: "Soul Bundle",
+		description: "Soul Bundle",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await updateUserUnlockedTransformations(interaction.user.id, ["Body of Distorted Killing"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription("You consume the souls and unlock Body of Distorted Killing!")
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
 		}
 	},
@@ -1596,7 +1557,6 @@ export const items1: Item1[] = [
 			}
 			const itemEffectsArray = [itemEffect]
 
-			// Call updateUserItemEffects function to update the user's document
 			try {
 				await updateUserItemEffects(userId, itemEffectsArray[0])
 

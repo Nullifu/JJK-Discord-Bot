@@ -20,17 +20,7 @@ import {
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction
 } from "discord.js"
-import {
-	DOMAIN_INFORMATION,
-	TRANSFORMATIONS,
-	applyAdaption,
-	applyPrayerSongEffect,
-	applyStatusEffect,
-	applyWorldCuttingSlash,
-	attacks,
-	calculateDamageWithEffects,
-	fetchAndFormatStatusEffects
-} from "./attacks.js"
+import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks } from "./attacks.js"
 import { digCooldown, digCooldownBypassIDs, digCooldowns } from "./bot.js"
 import {
 	calculateDamage,
@@ -42,6 +32,7 @@ import {
 	handleEffectEmbed
 } from "./calculate.js"
 import {
+	executeBlackFlash,
 	executeSpecialTechnique,
 	export120,
 	exportCrashOut,
@@ -60,10 +51,13 @@ import {
 	BossData,
 	buildGamblersProfile,
 	formatDomainExpansion,
+	gojoCommentary,
 	gojoMessages,
 	gradeMappings,
+	itadoriCommentary,
 	itadoriMessages,
 	specialMessages,
+	sukunaCommentary,
 	tojiMessages
 } from "./interface.js"
 import {
@@ -113,6 +107,8 @@ import {
 	getUserInventory,
 	getUserItemEffects,
 	getUserMaxHealth,
+	getUserMentor,
+	getUserOwnedInateClan,
 	getUserPermEffects,
 	getUserProfile,
 	getUserPurchases,
@@ -140,12 +136,22 @@ import {
 	updateUserGambleInfo,
 	updateUserHealth,
 	updateUserHeavenlyTechniques,
+	updateUserHonours,
+	updateUserInateClan,
 	updateUserJob,
 	updateUserTitle,
 	updateUserTransformation,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
+import {
+	applyAdaption,
+	applyPrayerSongEffect,
+	applyStatusEffect,
+	applyVirtualMass,
+	calculateDamageWithEffects,
+	fetchAndFormatStatusEffects
+} from "./statuseffects.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
@@ -1398,10 +1404,16 @@ export async function handleGuideCommand(interaction) {
 				value: "To start crafting, use `/craft [item]`. You can find item materials by using /beg /dig /search /fight /quest"
 			})
 			break
+		case "starter":
+			guideEmbed.setTitle("Starter Guide").setDescription("Here's how you can begin").addFields({
+				name: "Basic",
+				value: "You can aquire jobs with /jobselection some jobs require money and experience, You can get Money, XP, Items. by using /beg /dig /search /fight /quest, I'd reccomend working and searching til you have enough money to buy a technique, and then start fighting cursed spirits."
+			})
+			break
 		case "technique":
 			guideEmbed.setTitle("Technique Guide").setDescription("Here's how you can aquire techniques.").addFields({
 				name: "Techniques",
-				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command, And unequip it with /unequip [TECHNIQUE NAME]"
+				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command, And unequip it with /unequip [TECHNIQUE NAME]\n\n\n"
 			})
 			break
 		case "jobs":
@@ -1525,7 +1537,7 @@ async function delay(ms) {
 }
 export const activeCollectors = new Map()
 
-const specialBosses = ["Yuta Okkotsu", "Disaster Curses"]
+const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Broken"]
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
@@ -1533,9 +1545,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	await interaction.deferReply()
 
-	const userGrade = await getUserGrade(interaction.user.id)
-	const allBosses = await getBosses(userGrade)
+	// Fetch all bosses available based on user ID (updated to use user ID instead of grade)
+	const allBosses = await getBosses(interaction.user.id)
 
+	// Fetch unlocked bosses, this function call remains unchanged
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
 	if (allBosses.length === 0) {
@@ -1550,9 +1563,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		const randomIndex = Math.floor(Math.random() * allBosses.length)
 		randomOpponent = allBosses[randomIndex]
 
-		// If the selected boss is special and not unlocked, loop will try again
-		// Define special bosses that need to be unlocked to fight
-		// Example: If specialBosses includes randomOpponent.name and it's not in unlockedBosses, loop continues
 		attempts++
 	} while (
 		specialBosses.includes(randomOpponent.name) &&
@@ -1587,8 +1597,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			value: "domain",
 			description: domainname || "🔒 Domain Not Unlocked", // Default value if undefined
 			emoji: {
-				name: "1564maskedgojode", // Replace with your emoji's name
-				id: "1220626413141622794" // Replace with your emoji's ID
+				name: "1564maskedgojode",
+				id: "1220626413141622794"
 			}
 		},
 		{
@@ -1596,8 +1606,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			value: "transform",
 			description: transformname || "No transformation available", // Default value if undefined
 			emoji: {
-				name: "a:blueflame", // Replace with your emoji's name
-				id: "990539090418098246" // Replace with your emoji's ID
+				name: "a:blueflame",
+				id: "990539090418098246"
 			}
 		},
 		...userTechniques.map(techniqueName => ({
@@ -1639,6 +1649,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.setImage(randomOpponent.image_url)
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
+			{ name: "Boss Grade", value: `${randomOpponent.grade}`, inline: true },
 			{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true }
 		)
 		.addFields(
@@ -1921,7 +1932,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			}
 		} else {
 			const userTechniques = new Map()
-			// Get player's health
 
 			// get boss hp
 			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
@@ -1959,6 +1969,31 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Star Rage: Virtual Mass") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://staticg.sportskeeda.com/editor/2023/12/73a1e-17035028644330-1920.jpg",
+					description: `That's my technique! ${randomOpponent.name} It's mass <3`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+				await applyVirtualMass(collectedInteraction.user.id)
+			} else if (selectedValue === "Black Flash") {
+				damage = await executeBlackFlash({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://media1.tenor.com/m/qgIrrl1kvo8AAAAd/jujutsu-kaisen.gif",
+					description: `I guess i can play a little rough. ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Disaster Curses: Full Flux") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -1966,6 +2001,43 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 7,
 					imageUrl: "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif",
 					description: "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux.",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Blue") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 7,
+					imageUrl: "https://media1.tenor.com/m/RJjLn-wpV2QAAAAd/gojo-gojo-satoru.gif",
+					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Red") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 10,
+					imageUrl: "https://media1.tenor.com/m/64w1b87l2jgAAAAC/satoru-gojo-gojo-satoru.gif",
+					description: "Reversal.. Red",
+					fieldValue: selectedValue,
+					userTechniques,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Purple") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://media1.tenor.com/m/u2XoJQYRlcwAAAAC/gojo-gojo-satoru.gif",
+					description:
+						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
 					fieldValue: selectedValue,
 					userTechniques,
 					userId: collectedInteraction.user.id,
@@ -2085,7 +2157,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-				await applyWorldCuttingSlash(collectedInteraction.user.id)
 			} else if (selectedValue === "Imaginary Technique: Purple") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2171,11 +2242,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
 				}
 			)
-			try {
-				//await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-			} catch (err: unknown) {
-				console.error(err?.toString())
-			}
 			// is boss dead?
 			if (randomOpponent.current_health <= 0) {
 				let transformed = false
@@ -2258,15 +2324,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						battleOptionSelectMenuCollector.stop()
 					}
 				} else {
-					// Update to new player health after damage dealt
 					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+
 					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
-					//
-					//
+
 					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
 					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
+
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 				}
 			}
@@ -2591,7 +2657,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
 
 	const gamblersData = await getGamblersData(userId) // Assuming this function exists and returns an object containing the maxBetLimit
-	const maxBetLimit = gamblersData.limit // Adjust according to the actual structure of gamblersData
+	const maxBetLimit = 2500000 // Default max bet limit
 
 	const { betCount } = await getUserGambleInfo(userId)
 
@@ -3020,6 +3086,7 @@ export async function claimQuestsCommand(interaction) {
 
 		let claimedSukunasHonour = false
 		let claimedReinforcement = false
+		let claimedSatoru = false
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
@@ -3039,6 +3106,8 @@ export async function claimQuestsCommand(interaction) {
 						claimedSukunasHonour = true
 					} else if (itemName === "Cursed Energy Reinforcement") {
 						claimedReinforcement = true
+					} else if (itemName === "Satoru Gojo's Respect") {
+						claimedSatoru = true
 					}
 				}
 			}
@@ -3073,6 +3142,24 @@ export async function claimQuestsCommand(interaction) {
 				.addFields({
 					name: "New Power",
 					value: "You can now use the **Cursed Energy Reinforcement** Transformation!"
+				})
+
+			specialEmbeds.push(reinforcementEmbed)
+		}
+
+		if (claimedSatoru) {
+			await updateUserHonours(userId, ["Satoru Gojo's Respect"])
+			await addItemToUserInventory(userId, "Upgraded Limitless Token", 3)
+			const reinforcementEmbed = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("Six Eyes Unleashed!")
+				.setDescription(
+					"Well, well, look at you. Seems like someone finally figured out how those Six Eyes really work, huh?"
+				)
+				.setImage("https://media1.tenor.com/m/DoXhSg0brxsAAAAC/gojo-satoru-satoru.gif")
+				.addFields({
+					name: "New Power",
+					value: "**Awakened** Limitless techniques unleashed! You now have access to the **Awakened Limitless** power!"
 				})
 
 			specialEmbeds.push(reinforcementEmbed)
@@ -3956,4 +4043,89 @@ export async function handleShopCommand(interaction) {
 		console.error("Error fetching shop items:", error)
 		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
 	}
+}
+
+const mentorGifs = {
+	"Satoru Gojo": "https://media1.tenor.com/m/S1XOmNm6Zs0AAAAd/jujutsu-kaisen-gojou.gif",
+	"Ryomen Sukuna": "https://media1.tenor.com/m/akvtD2Ewc_8AAAAC/sukuna-jujutsu-kaisen.gif",
+	"Itadori": "https://media1.tenor.com/m/AKp3ByyVnGcAAAAC/jujutsu-kaisen-itadori-yuji.gif"
+}
+
+export async function handleMentorCommand(interaction) {
+	try {
+		await interaction.deferReply()
+
+		const userId = interaction.user.id
+		const userMentors = await getUserMentor(userId) // Fetch the mentor data
+
+		if (!userMentors.length) {
+			await interaction.editReply("You currently do not have a mentor.")
+			return
+		}
+
+		// Assume the first mentor is the current one
+		const currentMentor = userMentors[0]
+
+		if (!currentMentor) {
+			await interaction.editReply("You currently do not have a mentor.")
+			return
+		}
+
+		const { quests } = await getUserQuests(userId) // Fetch the user's quests with progress
+
+		if (!quests.length) {
+			await interaction.editReply("You currently do not have any quests.")
+			return
+		}
+
+		// Generate mentor comments based on quest progress
+		const comments = quests.map(quest => generateMentorComment(quest, currentMentor)).join("\n")
+
+		// Create the embed
+		const embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle(`Mentor Guidance: ${currentMentor}`)
+			.setDescription(comments)
+			.setTimestamp()
+
+		// Send the embed with the mentor's comments
+		await interaction.editReply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Failed to handle mentor command:", error)
+		await interaction.editReply("An error occurred while trying to display mentor information.")
+	}
+}
+
+// Function to generate a mentor's comment based on the quest progress
+function generateMentorComment(quest, mentor) {
+	let comment = `**${quest.name}:** `
+	switch (mentor.name) {
+		case "Satoru Gojo":
+			comment += gojoCommentary(quest)
+			break
+		case "Ryomen Sukuna":
+			comment += sukunaCommentary(quest)
+			break
+		case "Itadori":
+			comment += itadoriCommentary(quest)
+			break
+		default:
+			comment += "Your mentor has not provided specific advice on this quest."
+	}
+	return comment
+}
+
+// equip inate clan use getuserownedinateclan
+export async function handleEquipInateClanCommand(interaction) {
+	const userId = interaction.user.id
+	const clanName = interaction.options.getString("clan")
+
+	const userClans = await getUserOwnedInateClan(userId)
+	if (!userClans.includes(clanName)) {
+		await interaction.reply({ content: "You do not own this clan.", ephemeral: true })
+		return
+	}
+
+	await updateUserInateClan(userId, clanName)
+	await interaction.reply(`You have equipped the ${clanName} clan.`)
 }

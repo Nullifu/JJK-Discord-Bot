@@ -9,8 +9,8 @@ import { questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const bossCollectionName = "devboss"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -129,6 +129,8 @@ export async function addUser(
 			honours: [],
 			purchases: [],
 			itemEffects: [],
+			unlockedmentors: [],
+			mentors: null,
 			gamblersData: {
 				limit: 5000000,
 				amountGambled: 0,
@@ -600,22 +602,31 @@ export async function getUserHealth(userId: string): Promise<number> {
 	}
 }
 
-export async function getBosses(userGrade: string): Promise<BossData[]> {
-	try {
-		// Find the health multiplier based on the user's grade
-		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
+const gradeToBossGrade = {
+	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
+	"Grade 1": ["Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"],
+	"Semi-Grade 1": ["Semi-Grade 1", "Grade 2", "Grade 3"],
+	"Grade 2": ["Grade 2", "Grade 3", "Grade 4"],
+	"Grade 3": ["Grade 3", "Grade 4"],
+	"Grade 4": ["Grade 4"]
+}
 
-		const database = client.db(mongoDatabase) // Assuming the client is already connected
+export async function getBosses(userId: string): Promise<BossData[]> {
+	try {
+		const userGrade = await getUserGrade(userId)
+		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
+		const database = client.db(mongoDatabase)
 		const domainsCollection = database.collection(bossCollectionName)
 
-		const bosses = (await domainsCollection.find({}).toArray()).map(boss => ({
-			id: boss._id.toString(), // Convert MongoDB ObjectId to string
+		const allowedBossGrades = gradeToBossGrade[userGrade] || []
+
+		const bosses = (await domainsCollection.find({ grade: { $in: allowedBossGrades } }).toArray()).map(boss => ({
+			id: boss._id.toString(),
 			name: boss.name,
-			// Apply the multiplier to the max_health and current_health
 			max_health: Math.round(boss.max_health * healthMultiplier),
 			current_health: Math.round(boss.current_health * healthMultiplier),
-			image_url: boss.image_URL, // Ensure the property name matches your database
-			grade: boss.grade // Assuming this is the correct property and type
+			image_url: boss.image_URL,
+			grade: boss.grade
 		}))
 
 		return bosses
@@ -2510,6 +2521,60 @@ async function resetAllUserPurchases(): Promise<void> {
 		console.log(`Purchases reset for all users. Modified count: ${result.modifiedCount}`)
 	} catch (error) {
 		console.error("Error resetting user purchases:", error)
+		throw error
+	}
+}
+
+// update user owned inate clan
+export async function updateUserOwnedInateClan(userId: string, clan: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { ownedInateClan: clan } })
+	} catch (error) {
+		console.error("Error updating user owned inate clan:", error)
+		throw error
+	}
+}
+
+// get user owned inate clan
+export async function getUserOwnedInateClan(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.ownedInateClan : ""
+	} catch (error) {
+		console.error(`Error when retrieving owned inate clan for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+// get user mentor this is a string not array
+export async function getUserMentor(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.mentors : ""
+	} catch (error) {
+		console.error(`Error when retrieving mentor for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+// update user mentors if it doesnt exist create it then update
+export async function updateUserMentors(userId: string, mentors: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { mentors } })
+	} catch (error) {
+		console.error("Error updating user mentors:", error)
 		throw error
 	}
 }

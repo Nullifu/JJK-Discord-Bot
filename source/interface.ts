@@ -236,3 +236,36 @@ export const healthMultipliersByGrade = {
 	"grade 3": 1.3,
 	"grade 4": 1.0 // No change for the lowest grade
 }
+
+export function gojoCommentary(quest) {
+	// Custom commentary logic for Satoru Gojo
+	if (quest.currentProgress === 0) {
+		return "What's the hold-up? Just get started; it's not that difficult!"
+	} else if (quest.currentProgress < quest.totalProgress) {
+		return "Good job so far, but remember, it's not over until it's over. Stay sharp!"
+	} else {
+		return "Excellent work! But that was the easy part, wasn't it?"
+	}
+}
+
+export function sukunaCommentary(quest) {
+	// Custom commentary logic for Ryomen Sukuna
+	if (quest.currentProgress === 0) {
+		return "Are you scared or just lazy? Either way, you're wasting my time."
+	} else if (quest.currentProgress < quest.totalProgress) {
+		return "You're progressing... slowly. Try not to bore me with your incompetence."
+	} else {
+		return "Well done, I suppose. For a mere human, that is."
+	}
+}
+
+export function itadoriCommentary(quest) {
+	// Custom commentary logic for Itadori
+	if (quest.currentProgress === 0) {
+		return "No worries, everyone starts somewhere! You've got this!"
+	} else if (quest.currentProgress < quest.totalProgress) {
+		return "Look at you go! You're doing great; keep it up!"
+	} else {
+		return "Awesome, you finished! What's next on the agenda?"
+	}
+}
