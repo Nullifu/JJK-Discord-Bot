@@ -82,7 +82,7 @@ export async function handleBossDeath(
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
-	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1)
+	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
