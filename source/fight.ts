@@ -49,6 +49,14 @@ export async function handleBossDeath(
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
 	}
+
+	if (opponent.name === "Satoru Gojo") {
+		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
+	}
+
+	if (opponent.name === "Sukuna") {
+		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
+	}
 	if (opponent.name === "Itadori") {
 		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
 	}

@@ -856,8 +856,11 @@ export const questsArray = [
 		coins: 100000,
 		experience: 850,
 		items: { "Satoru Gojo's Respect": 1 },
-		task: "Complete Gojo's Mission!",
-		totalProgress: 8,
+		tasks: [
+			{ description: "Training", progress: 0, totalProgress: 16 },
+			{ description: "Defeat Gojo", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Sukuna", progress: 0, totalProgress: 1 }
+		],
 		special: true
 	},
 	{
