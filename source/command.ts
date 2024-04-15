@@ -638,6 +638,23 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					await buttonInteraction.deferUpdate()
 
 					if (buttonInteraction.customId === "confirmCraft") {
+						// Fetch user inventory to check if they have the required items
+						const userInventory = await getUserInventory(interaction.user.id)
+						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
+
+						// Check if user has all required items in sufficient quantities
+						const hasAllItems = selectedItemRecipe.requiredItems.every(item => {
+							return inventoryMap.get(item.name) >= item.quantity
+						})
+
+						if (!hasAllItems) {
+							await buttonInteraction.editReply({
+								content: "You do not have all the necessary items to craft this.",
+								components: []
+							})
+							return // Stop further execution if user lacks necessary items
+						}
+
 						try {
 							console.log("Starting item removal for ITEM!")
 
