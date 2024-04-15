@@ -1253,6 +1253,7 @@ export const items1: Item1[] = [
 				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
 				await updateUserMaxHealth(interaction.user.id, 30)
 				await addUserQuest(interaction.user.id, "Satoru Gojo's Mission")
+				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
 				isLimitless = true
 			}
 
