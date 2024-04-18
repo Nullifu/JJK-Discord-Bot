@@ -52,13 +52,9 @@ import {
 	buildGamblersProfile,
 	formatDomainExpansion,
 	gojoCommentary,
-	gojoMessages,
 	gradeMappings,
 	itadoriCommentary,
-	itadoriMessages,
-	specialMessages,
-	sukunaCommentary,
-	tojiMessages
+	sukunaCommentary
 } from "./interface.js"
 import {
 	CLAN_SKILLS,
@@ -109,7 +105,6 @@ import {
 	getUserMaxHealth,
 	getUserMentor,
 	getUserOwnedInateClan,
-	getUserPermEffects,
 	getUserProfile,
 	getUserPurchases,
 	getUserQuests,
@@ -119,6 +114,7 @@ import {
 	getUserUnlockedBosses,
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
+	getUserVoteTime,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
 	removeAllStatusEffects,
@@ -141,6 +137,7 @@ import {
 	updateUserJob,
 	updateUserTitle,
 	updateUserTransformation,
+	updateUserVoteTime,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
@@ -1558,14 +1555,13 @@ const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Bro
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+
 	await updateUserHealth(interaction.user.id, playerHealth1)
 
 	await interaction.deferReply()
 
-	// Fetch all bosses available based on user ID (updated to use user ID instead of grade)
 	const allBosses = await getBosses(interaction.user.id)
 
-	// Fetch unlocked bosses, this function call remains unchanged
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
 	if (allBosses.length === 0) {
@@ -1597,16 +1593,25 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
-	const honoureffects = (await getUserPermEffects(interaction.user.id)) || []
-	const specialHonour = "Sukuna's Honour"
-	const bossName = randomOpponent.name // Assuming randomOpponent.name holds the name of the boss
-	const playerHasSpecialHonour = honoureffects.includes(specialHonour)
 	//
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
+
+	console.log(`User techniques for ${interaction.user.username} `, userTechniques)
 	const transformname = await getUserTransformation(interaction.user.id)
+
+	console.log(`Transformation for ${interaction.user.username} `, transformname)
 	const domainname = await getUserDomain(interaction.user.id)
+
+	const techniqueOptions =
+		userTechniques && userTechniques.length > 0
+			? userTechniques.map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName
+			  }))
+			: []
 
 	const battleOptions = [
 		{
@@ -1627,11 +1632,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				id: "990539090418098246"
 			}
 		},
-		...userTechniques.map(techniqueName => ({
-			label: techniqueName,
-			description: "Select to use this technique",
-			value: techniqueName
-		}))
+		...techniqueOptions
 	]
 
 	const selectMenu = new SelectMenuBuilder()
@@ -1640,23 +1641,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.addOptions(battleOptions)
 
 	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-	const getRandomMessage = messages => messages[Math.floor(Math.random() * messages.length)]
-
-	let bossMessage
-
-	if (bossName === "Zenin Toji" && playerHasSpecialHonour) {
-		bossMessage = getRandomMessage(tojiMessages)
-	} else if (bossName === "Sukuna" && playerHasSpecialHonour) {
-		bossMessage = getRandomMessage(specialMessages)
-	} else if (bossName === "Satoru Gojo" && playerHasSpecialHonour) {
-		bossMessage = getRandomMessage(gojoMessages)
-	} else if (bossName === "Itadori" && playerHasSpecialHonour) {
-		bossMessage = getRandomMessage(itadoriMessages)
-	} else if (playerHasSpecialHonour) {
-		bossMessage = "The boss senses the aura of Sukuna's Honour within you and pauses momentarily."
-	} else {
-		bossMessage = `Your opponent is **${bossName}**! Prepare yourself.`
-	}
 
 	// Create embed
 	const primaryEmbed = new EmbedBuilder()
@@ -1684,13 +1668,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.addFields(
 			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
 			{ name: "Status Effect Enemy", value: "None", inline: true },
-			{ name: "Status Effect Player", value: "None", inline: true },
-			{
-				name: "Honour Effects",
-				value: honoureffects.length > 0 ? honoureffects.join(", ") : "None",
-				inline: true
-			},
-			{ name: `${randomOpponent.name}`, value: bossMessage, inline: false }
+			{ name: "Status Effect Player", value: "None", inline: true }
 		)
 
 	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
@@ -3915,12 +3893,10 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
-// claim vote rewards
 export async function handleClaimVoteRewards(interaction) {
 	const Topgg = import("@top-gg/sdk")
 	const userId = interaction.user.id
 	const top = new (await Topgg).Api(process.env.TOPGG)
-
 	await interaction.deferReply()
 
 	const hasVoted = await top.hasVoted(userId)
@@ -3933,7 +3909,7 @@ export async function handleClaimVoteRewards(interaction) {
 		const voteButton = new ButtonBuilder()
 			.setLabel("Vote Now")
 			.setStyle(ButtonStyle.Link)
-			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
+			.setURL("https://top.gg/bot/991443928790335518/vote")
 
 		const row = new ActionRowBuilder().addComponents(voteButton)
 
@@ -3941,6 +3917,25 @@ export async function handleClaimVoteRewards(interaction) {
 		return
 	}
 
+	const lastVoteTime = await getUserVoteTime(userId)
+	const currentTime = Date.now()
+
+	if (lastVoteTime && currentTime - lastVoteTime.getTime() < 12 * 60 * 60 * 1000) {
+		const timeLeft = (12 * 60 * 60 * 1000 - (currentTime - lastVoteTime.getTime())) / 3600000
+
+		const cooldownEmbed = new EmbedBuilder()
+			.setTitle("Vote Cooldown")
+			.setDescription(
+				`You have already claimed your vote rewards. Please wait ${timeLeft.toFixed(
+					1
+				)} hours before voting again.`
+			)
+
+		await interaction.editReply({ embeds: [cooldownEmbed] })
+		return
+	}
+
+	await updateUserVoteTime(userId, new Date())
 	const voteReward = 100000
 	await updateBalance(userId, voteReward)
 	await addItemToUserInventory(userId, "Cursed Vote Chest", 1)

@@ -2578,3 +2578,28 @@ export async function updateUserMentors(userId: string, mentors: string[]): Prom
 		throw error
 	}
 }
+
+export async function getUserVoteTime(userId: string): Promise<Date | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user?.voteTime || null
+	} catch (error) {
+		console.error(`Error retrieving user vote time for ${userId}:`, error)
+		throw error
+	}
+}
+
+export async function updateUserVoteTime(userId: string, voteTime: Date): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { voteTime } })
+	} catch (error) {
+		console.error(`Error updating user vote time for ${userId}:`, error)
+		throw error
+	}
+}

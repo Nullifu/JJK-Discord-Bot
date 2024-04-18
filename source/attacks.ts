@@ -774,13 +774,13 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "100% Maximum Technique: Blue!",
 			probability: 50,
-			baseDamage: 20,
+			baseDamage: 50,
 			embedUpdate: embed => embed.setDescription("BLAST!")
 		},
 		{
 			name: "100% Reversal Red",
 			probability: 30,
-			baseDamage: 40,
+			baseDamage: 60,
 			embedUpdate: embed => embed.setDescription("Strike!")
 		},
 		{
