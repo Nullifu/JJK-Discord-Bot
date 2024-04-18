@@ -47,6 +47,7 @@ export interface BossData {
 	current_health: number // Note the underscore and lowercase
 	image_url: string // Note the underscore and lowercase
 	grade: string
+	curse: boolean
 }
 
 export interface Item {
@@ -64,7 +65,6 @@ export interface InventoryItem {
 interface Quest {
 	name: string
 	id: string
-	// ... other properties of the quest
 }
 
 export interface User {
@@ -226,6 +226,14 @@ export const gojoMessages = [
 	"With a lazy smile, Gojo teases, 'Sukuna finds you worthy? Guess I'll have to take you seriously.'",
 	"Gojo laughs, 'You've caught Sukuna's eye? I'm curious now—don't let me down.'",
 	"Gojo seems intrigued, 'You bear Sukuna's Honour? Show me its worth in action.'"
+]
+
+export const gojoRespectMessages = [
+	"Alright, kid, you've earned my interest. Let's see what you can really do.",
+	"Not bad. There's a reason I acknowledged you – now let's get serious.",
+	"Heh, seems I was right about you. Now, show me why I should stay impressed.",
+	"You have potential, no doubt. Don't disappoint me now, alright?",
+	"Let's make this interesting. Prove you're worthy of the respect I've given you."
 ]
 
 export const healthMultipliersByGrade = {

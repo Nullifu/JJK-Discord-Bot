@@ -78,6 +78,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
 	"Suguru Geto": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Prison Realm Fragment", rarity: "rare" },
 		{ name: "(Broken) Playful Cloud", rarity: "rare" },
 		{ name: "Transfigured Soul", rarity: "ultra rare" }
@@ -88,6 +89,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Six Eyes", rarity: "ultra rare" }
 	],
 	"Mahoraga": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "(Broken) Divine General Wheel", rarity: "rare" },
 		{ name: "Tailsman", rarity: "rare" },
 		{ name: "(Fixed) Divine General Wheel", rarity: "ultra rare" }
@@ -98,6 +100,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Junpei", rarity: "ultra rare" }
 	],
 	"Hakari Kinji": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Gambler Token", rarity: "rare" },
 		{ name: "Bet Slip", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
@@ -112,6 +115,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 
 	"Kashimo": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "(Broken) Electrical Staff", rarity: "rare" },
 		{ name: "Tailsman", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" }
@@ -127,16 +131,19 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Jogos (Fixed) Balls", rarity: "ultra rare" }
 	],
 	"Yuta Okkotsu": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Fraud Poster", rarity: "rare" },
 		{ name: "(Broken) Vengeance Katana", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
 	"Finger Bearer": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "rare" },
 		{ name: "Cursed Shard", rarity: "rare" },
 		{ name: "Junpei", rarity: "ultra rare" }
 	],
 	"Disaster Curses": [
+		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Dagons Soul", rarity: "rare" },
 		{ name: "Jogos Soul", rarity: "rare" },
 		{ name: "Hanamis Soul", rarity: "ultra rare" }
@@ -176,8 +183,8 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Special-Grade Glasses", rarity: "rare" }
 	],
 	"Kento Nanami": [
-		{ name: "Transfigured Soul", rarity: "rare" },
-		{ name: "Junpei", rarity: "rare" }
+		{ name: "Nanami", rarity: "rare" },
+		{ name: "(Shattered) Overtime Watch", rarity: "rare" }
 	],
 	"Inumaki": [
 		{ name: "Cough Medicine", rarity: "rare" },
@@ -189,7 +196,8 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Yuki Tsukumo": [
 		{ name: "(Shattered) Star Fragment", rarity: "rare" },
-		{ name: "(Shattered) Star Remnant", rarity: "rare" }
+		{ name: "(Shattered) Star Remnant", rarity: "rare" },
+		{ name: "Rikugan Eye", rarity: "ultra rare" }
 	],
 	"Satoru Gojo Limit-Broken": [
 		{ name: "Fraud Poster", rarity: "rare" },

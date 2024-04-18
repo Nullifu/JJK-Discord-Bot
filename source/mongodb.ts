@@ -9,8 +9,9 @@ import { questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
-const usersCollectionName = "users"
+const bossCollectionName = "devboss"
+const shikigamCollectionName = "shiki"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -603,7 +604,7 @@ export async function getUserHealth(userId: string): Promise<number> {
 }
 
 const gradeToBossGrade = {
-	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
+	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1"],
 	"Grade 1": ["Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"],
 	"Semi-Grade 1": ["Semi-Grade 1", "Grade 2", "Grade 3"],
 	"Grade 2": ["Grade 2", "Grade 3", "Grade 4"],
@@ -613,25 +614,70 @@ const gradeToBossGrade = {
 
 export async function getBosses(userId: string): Promise<BossData[]> {
 	try {
+		const userEffects = await getUserItemEffects(userId)
+		const isCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "cursed")
+		const isNonCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "curse repellent")
 		const userGrade = await getUserGrade(userId)
 		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
+
 		const database = client.db(mongoDatabase)
 		const domainsCollection = database.collection(bossCollectionName)
-
 		const allowedBossGrades = gradeToBossGrade[userGrade] || []
 
-		const bosses = (await domainsCollection.find({ grade: { $in: allowedBossGrades } }).toArray()).map(boss => ({
+		// Build the query object based on whether the user is cursed and exclude the specified boss names
+		let query: { [key: string]: unknown } = {
+			grade: { $in: allowedBossGrades },
+			name: { $nin: ["Divine Dogs", "Nue", "Toad", "Great Serpent", "Max Elephant"] }
+		}
+
+		if (isCursed && !isNonCursed) {
+			query = { ...query, curse: true }
+		} else if (!isCursed && isNonCursed) {
+			query = { ...query, curse: false }
+		}
+
+		console.log("user cursed:", isCursed)
+
+		const bosses = (await domainsCollection.find(query).toArray()).map(boss => ({
 			id: boss._id.toString(),
 			name: boss.name,
 			max_health: Math.round(boss.max_health * healthMultiplier),
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL,
-			grade: boss.grade
+			grade: boss.grade,
+			curse: boss.curse
 		}))
 
 		return bosses
 	} catch (error) {
 		console.error("Error when retrieving bosses:", error)
+		throw error
+	}
+}
+
+export async function getShikigami(userId: string): Promise<BossData[]> {
+	try {
+		const userGrade = await getUserGrade(userId)
+		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
+
+		const database = client.db(mongoDatabase)
+		const domainsCollection = database.collection(shikigamCollectionName)
+
+		const shikigami = await domainsCollection.find({}).toArray()
+
+		const bosses = shikigami.map(boss => ({
+			id: boss._id.toString(),
+			name: boss.name,
+			max_health: Math.round(boss.max_health * healthMultiplier),
+			current_health: Math.round(boss.current_health * healthMultiplier),
+			image_url: boss.image_URL,
+			grade: boss.grade,
+			curse: boss.curse
+		}))
+
+		return bosses
+	} catch (error) {
+		console.error("Error when retrieving shikigami:", error)
 		throw error
 	}
 }
@@ -649,8 +695,6 @@ export async function getUserGrade(userId: string): Promise<string> {
 	} catch (error) {
 		console.error(`Error when retrieving grade for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1928,12 +1972,10 @@ export async function getUserActiveHeavenlyTechniques(userId: string): Promise<s
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.activeHeavenlyTechniques : []
+		return user ? user.activeheavenlytechniques : []
 	} catch (error) {
 		console.error(`Error when retrieving active heavenly techniques for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1951,8 +1993,6 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 	} catch (error) {
 		console.error("Error updating user active techniques:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 //
@@ -1973,8 +2013,6 @@ export async function updateUserActiveHeavenlyTechniques(
 	} catch (error) {
 		console.error("Error updating user active heavenly techniques:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -2081,6 +2119,19 @@ export async function removeAllStatusEffects(userId: string): Promise<void> {
 		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: [] } })
 	} catch (error) {
 		console.error("Error removing all status effects:", error)
+		throw error
+	}
+}
+
+// remove all itemEffects
+export async function removeAllItemEffects(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { itemEffects: [] } })
+	} catch (error) {
+		console.error("Error removing all item effects:", error)
 		throw error
 	}
 }
@@ -2318,7 +2369,7 @@ export async function updateLastAlertedVersion(userId: string, version: string):
 // get user item effects
 export async function getUserItemEffects(
 	userId: string
-): Promise<{ itemName: string; startTime: string; endTime: string }[]> {
+): Promise<{ itemName: string; effectName: string; startTime: string; endTime: string }[]> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
@@ -2575,6 +2626,81 @@ export async function updateUserMentors(userId: string, mentors: string[]): Prom
 		await usersCollection.updateOne({ id: userId }, { $set: { mentors } })
 	} catch (error) {
 		console.error("Error updating user mentors:", error)
+		throw error
+	}
+}
+
+// update user vote timestamp
+export async function updateUserVoteTimestamp(userId: string, timestamp: Date): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { voteTimestamp: timestamp } })
+	} catch (error) {
+		console.error("Error updating user vote timestamp:", error)
+		throw error
+	}
+}
+
+interface Shikigami {
+	name: string
+	experience: number
+	health: number
+}
+
+// get user shikigami
+export async function getUserShikigami(userId: string): Promise<Shikigami[]> {
+	console.log("getUserShikigami called with userId:", userId)
+
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		console.log("User found:", user)
+
+		if (user && user.shikigami) {
+			// Assuming user.shikigami is already an array of shikigami objects
+			return user.shikigami
+		} else {
+			return []
+		}
+	} catch (error) {
+		console.error(`Error when retrieving shikigami for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+interface UserShikigami {
+	name: string
+	experience: number
+	health: number
+}
+
+export async function updateUserShikigami(userId: string, newShikigami: UserShikigami): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Check if the user has any existing shikigami
+		const user = await usersCollection.findOne({ id: userId })
+		const existingShikigami = user?.shikigami || []
+
+		// Update the user's shikigami array
+		const updatedShikigami = [...existingShikigami, newShikigami]
+
+		await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$set: {
+					shikigami: updatedShikigami
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error updating user shikigami:", error)
 		throw error
 	}
 }

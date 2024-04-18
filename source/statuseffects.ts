@@ -126,6 +126,10 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 		damageReduction *= 0.2
 		damageIncrease *= 1.2
 	}
+	if (statusEffects.includes("Instinct")) {
+		damageReduction *= 0.15
+		damageIncrease *= 8.0
+	}
 	if (statusEffects.includes("Sukuna's Honour")) {
 		damageReduction *= 0.1
 	}

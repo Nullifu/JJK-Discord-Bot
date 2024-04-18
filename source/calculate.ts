@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js"
 import { BossDrop, bossDrops } from "./bossdrops.js"
 import { itemEffects } from "./items jobs.js"
-import { checkUserHasHeavenlyRestriction, getUserInateClan, getUserItemEffects } from "./mongodb.js"
+import { checkUserHasHeavenlyRestriction, getUserInateClan, getUserItemEffects, getUserShikigami } from "./mongodb.js"
 
 export function calculateDamage(
 	playerGrade: string,
@@ -11,9 +11,34 @@ export function calculateDamage(
 	const baseDamage = 10
 	const gradeDamageBonus = getGradeDamageBonus(playerGrade)
 	const randomVariationPercentage = 0.2
-	const heavenlyRestrictionMultiplier = 1.5 // For example, 50% damage increase
+	const heavenlyRestrictionMultiplier = 1.5
 
-	// Check if the user has Heavenly Restriction
+	let totalDamage = baseDamage * gradeDamageBonus
+
+	if (!ignoreHeavenlyRestriction) {
+		const hasHeavenlyRestriction = checkUserHasHeavenlyRestriction(userId)
+		if (hasHeavenlyRestriction) {
+			totalDamage *= heavenlyRestrictionMultiplier
+		}
+	}
+
+	// Apply random variation
+	const randomVariation = totalDamage * randomVariationPercentage
+	const randomFactor = (Math.random() * 2 - 1) * randomVariation // Between -randomVariation and +randomVariation
+	totalDamage += randomFactor
+
+	return Math.max(1, Math.round(totalDamage))
+}
+// function bloodlust boost
+export function calculateBloodlustBoost(
+	playerGrade: string,
+	userId: string,
+	ignoreHeavenlyRestriction: boolean = false
+): number {
+	const baseDamage = 10
+	const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+	const randomVariationPercentage = 0.2
+	const heavenlyRestrictionMultiplier = 1.5
 
 	let totalDamage = baseDamage * gradeDamageBonus
 
@@ -133,6 +158,12 @@ export async function handleClanDataEmbed(userId) {
 				.addFields({ name: "Innate Power", value: "The ability to become the **Curse King**\n" })
 		}
 
+		if (userClanData.clan === "Limitless") {
+			clanEmbed
+				.setDescription("You've got the sacred **Six Eyes**.")
+				.addFields({ name: "Innate Power", value: "The ability to Bring Fourth Infinity at will\n" })
+		}
+
 		clanEmbed.addFields(
 			{ name: "Clan", value: userClanData.clan.toString(), inline: true },
 			{ name: "Experience", value: userClanData.experience.toString(), inline: true },
@@ -141,6 +172,29 @@ export async function handleClanDataEmbed(userId) {
 	}
 
 	return clanEmbed
+}
+
+export async function handleShikigamiEmbed(userid) {
+	// Fetch the user's shikigami
+	const userShikigami = await getUserShikigami(userid)
+
+	// Create the embed
+	const embed = new EmbedBuilder().setColor("#0099ff").setTitle("Shikigami")
+
+	if (userShikigami.length === 0) {
+		embed.setDescription("You haven't tamed any shikigami yet!")
+	} else {
+		const shikigamiFields = userShikigami.map(shikigami => {
+			return {
+				name: `${shikigami.name}`,
+				value: `Experience: ${shikigami.experience}\nHealth: ${shikigami.health}`,
+				inline: true
+			}
+		})
+		embed.addFields(shikigamiFields)
+	}
+
+	return embed
 }
 
 export function getRandomLocation() {

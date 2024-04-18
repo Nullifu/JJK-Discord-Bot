@@ -37,7 +37,6 @@ import {
 	handleEquipTransformationCommand,
 	handleFightCommand,
 	handleGambleCommand,
-	handleGiveItemCommand,
 	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
@@ -52,6 +51,7 @@ import {
 	handleSellCommand,
 	handleShopCommand,
 	handleSupportCommand,
+	handleTame,
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
@@ -69,6 +69,7 @@ import {
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 import { getShopLastReset, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
+import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 
 dotenv()
 
@@ -207,7 +208,9 @@ cron.schedule("*/30 * * * *", async () => {
 	}
 })
 
-const clientId = "991443928790335518"
+//
+//
+const clientId = "1216889497980112958"
 client.setMaxListeners(100)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
@@ -256,6 +259,23 @@ const commands = [
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
+	new SlashCommandBuilder()
+		.setName("tame")
+		.setDescription("Tame your shikigami!")
+		.addStringOption(option =>
+			option
+				.setName("shikigami")
+				.setDescription("The shikigami to tame")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Mahoraga", value: "Mahoraga" },
+					{ name: "Divine Dogs", value: "Divine Dogs" },
+					{ name: "Nue", value: "Nue" },
+					{ name: "Toad", value: "Toad" },
+					{ name: "Great Serpent", value: "Great Serpent" },
+					{ name: "Max Elephant", value: "Max Elephant" }
+				)
+		),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
 	new SlashCommandBuilder()
 		.setName("equipclan")
@@ -268,7 +288,12 @@ const commands = [
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the balance for").setRequired(false)
 		),
-	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
+	new SlashCommandBuilder()
+		.setName("jujutsustatus")
+		.setDescription("Check your Jujutsu Status!")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to display the jujutsu status for").setRequired(false)
+		),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
@@ -356,7 +381,12 @@ const commands = [
 					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
 					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
 					{ name: "Cursed Chest", value: "Cursed Chest" },
-					{ name: "Soul Bundle", value: "Soul Bundle" }
+					{ name: "Soul Bundle", value: "Soul Bundle" },
+					{ name: "Curse Repellent", value: "Curse Repellent" },
+					{
+						name: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
+						value: "Special-Grade Cursed Object"
+					}
 				)
 		),
 
@@ -540,6 +570,35 @@ const commands = [
 		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("givemoney")
+		.setDescription("Gives moneys (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("ID of the user to give the money to").setRequired(true)
+		)
+		.addIntegerOption(option => option.setName("amount").setDescription("Amount to give").setRequired(true)),
+	new SlashCommandBuilder()
+		.setName("removemoney")
+		.setDescription("Remove moneys (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("ID of the user to REMOVE the money to").setRequired(true)
+		)
+		.addIntegerOption(option => option.setName("amount").setDescription("amount to remove").setRequired(true)),
+	new SlashCommandBuilder()
+		.setName("addtechnique")
+		.setDescription("Add or update a user's active techniques")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("The ID of the user to update").setRequired(true)
+		) // User ID is required
+		.addStringOption(option =>
+			option
+				.setName("techniques")
+				.setDescription("Comma-separated list of techniques to add/update")
+				.setRequired(true)
 		)
 ].map(command => command.toJSON())
 
@@ -559,7 +618,6 @@ async function doApplicationCommands() {
 doApplicationCommands()
 
 // --------------------------------------------------------------------------------------------------------------------------\\
-//
 // --------------------------------------------------------------------------------------------------------------------------\\
 //
 client.on("interactionCreate", async interaction => {
@@ -755,6 +813,10 @@ client.on("interactionCreate", async interaction => {
 				await handleFightCommand(chatInputInteraction)
 				break
 
+			case "tame":
+				await handleTame(chatInputInteraction)
+				break
+
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
 				break
@@ -794,6 +856,15 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "giveitem":
 				await handleGiveItemCommand(chatInputInteraction)
+				break
+			case "givemoney":
+				await handleUpdateBalanceCommand(chatInputInteraction)
+				break
+			case "removemoney":
+				await handleREMOVE(chatInputInteraction)
+				break
+			case "addtechnique":
+				await handleADDTECHNIQUE(chatInputInteraction)
 				break
 		}
 	}

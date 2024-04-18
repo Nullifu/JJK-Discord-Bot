@@ -71,19 +71,16 @@ export async function checkVersionMiddleware1(interaction: ChatInputCommandInter
 			})
 			shouldProceed = false
 		} else if (lastAlertedVersion !== currentVersion) {
-			// For users needing an update
 			await updateLastAlertedVersion(discordId, currentVersion)
 
 			await interaction.followUp({
 				content: "An update is available! Please use `/alert` to view the latest changes.",
 				ephemeral: true
 			})
-			// Allows the command to proceed after alerting
 		}
 	} catch (error) {
 		console.error("Error in version check middleware:", error)
 		if (!interaction.replied) {
-			// Check if interaction hasn't been replied to avoid duplicate messages
 			await interaction.editReply({
 				content: "Oops! You encountered an error. If this happens again, please contact support."
 			})
@@ -109,7 +106,7 @@ export async function postCommandMiddleware(interaction: ChatInputCommandInterac
 		} else if (lastAlertedVersion !== CURRENT_VERSION) {
 			await updateLastAlertedVersion(discordId, CURRENT_VERSION)
 			await interaction.followUp({
-				content: "An update is available! Please use `/alert` to see what's new.",
+				content: "Alert from the develepor Please use `/alert` to see what's new. 🚀",
 				ephemeral: true
 			})
 		}

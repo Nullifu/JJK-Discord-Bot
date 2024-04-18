@@ -789,6 +789,46 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: 80,
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
+	],
+	"Divine Dogs": [
+		{
+			name: "Divine Dogs: Bite",
+			probability: 50,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Divine Dogs: Shadow Pursuit",
+			probability: 30,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Divine Dogs: Twin Wolves",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Divine-General Mahoraga": [
+		{
+			name: "Foresight Adaption",
+			probability: 50,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "?$!h!@",
+			probability: 30,
+			baseDamage: 100,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Divine-General Blade",
+			probability: 20,
+			baseDamage: 175,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
 	]
 }
 
@@ -881,6 +921,12 @@ export const TRANSFORMATIONS = [
 		effects: "1000 Year Curse, 25% Damage Increase, 5% Damage Reduction"
 	},
 	{
+		name: "Bloodlusted",
+		description: "I'm going to enjoy this...",
+		image: "https://cdn.discordapp.com/attachments/681985000521990179/1229927990419263529/ezgif-7-394c1f41b7.gif?ex=663176b3&is=661f01b3&hm=bb8b80783961ac45faa2e325317abcc10322e23304a10f3018d13526a3fd9760&",
+		effects: "Bloodlust, 30% Damage Increase, 11% Damage Taken Increase"
+	},
+	{
 		name: "Body of Distorted Killing",
 		description: "Idle Transfiguration...",
 		image: "https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif",
@@ -904,5 +950,92 @@ export const TRANSFORMATIONS = [
 		description: "Reinforce your cursed energy to increase your power!",
 		image: "https://media1.tenor.com/m/QZAfD8Pdb2wAAAAC/itadori-yuji-cursed-energy.gif",
 		effects: "Reinforcement, 15% Damage Reduction"
+	},
+	{
+		name: "Super Saiyajin",
+		description: "I am a warrior pure of heart, awakened by rage... I am the legendary Super Saiyan, Son Goku!",
+		image: "https://64.media.tumblr.com/ae8c852059892af7e3119daa41daf802/tumblr_pc70jtYfOl1ujwg5zo2_540.gif",
+		effects: "Sayian Power, 25% Damage Increase, 5% Damage Reduction"
+	},
+	{
+		name: "Overtime",
+		description: "Good Griefman, I'm tired of this job.",
+		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
+		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
+	}
+]
+
+export const heavenlyrestrictionskills = [
+	{
+		name: "Pummel",
+		description: "Die!",
+		cost: "175000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Resonant Strike",
+		description: "Considered one of the most powerful techniques in Jujutsu",
+		cost: "75000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Shrapnel Burst",
+		description: "Perish!",
+		cost: "25000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Nerve Cluster Blitz",
+		description: "Strike!",
+		cost: "175000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Unbound Fury",
+		description: "Fury of the heavens",
+		cost: "125000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 1
+			}
+		]
+	},
+	{
+		name: "Inverted Spear Of Heaven: Severed Universe",
+		description: "The skill that sliced through infinity..",
+		cost: "325000",
+		clan: "Heavenly Restricted",
+		items: [
+			{
+				name: "Heavenly Chain",
+				quantity: 6
+			}
+		]
 	}
 ]

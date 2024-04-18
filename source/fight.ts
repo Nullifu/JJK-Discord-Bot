@@ -10,12 +10,14 @@ import {
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
+	getUserShikigami,
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
 	updatePlayerGrade,
 	updateUserExperience,
 	updateUserHealth,
+	updateUserShikigami,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
@@ -83,6 +85,7 @@ export async function handleBossDeath(
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
+	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
@@ -99,6 +102,44 @@ export async function handleBossDeath(
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }
 
+export async function handleShikigamiTame(
+	interaction: ChatInputCommandInteraction<CacheType>,
+	embed: EmbedBuilder,
+	row: ActionRowBuilder<SelectMenuBuilder>,
+	opponent: BossData
+) {
+	interface UserShikigami {
+		name: string
+		experience: number
+		health: number
+	}
+	// Show victory embed
+	const victoryMessage = "You won"
+	embed.setDescription(victoryMessage)
+
+	// Update values in the database
+	activeCollectors.delete(interaction.user.id)
+	await updateUserHealth(interaction.user.id, 100)
+	await removeAllStatusEffects(interaction.user.id)
+
+	const tamedShikigami: UserShikigami = {
+		name: opponent.name,
+		experience: 0,
+		health: 100
+	}
+
+	// Update the user's shikigami with the tamed boss
+	await updateUserShikigami(interaction.user.id, tamedShikigami)
+
+	// Show a loot drop embed
+	const privateEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle("Battle Rewards")
+		.addFields({ name: "Tamed", value: `You've tamed ${opponent.name}!` })
+
+	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
+}
+
 // Function to handle the execution of special techniques
 export async function executeSpecialTechnique({
 	collectedInteraction,
@@ -107,20 +148,20 @@ export async function executeSpecialTechnique({
 	imageUrl,
 	description,
 	fieldValue,
-	userTechniques,
+	userTechniques: userTechniquesFight,
 	userId,
 	primaryEmbed
 }) {
-	const techniquesUsed = userTechniques.get(userId) || []
+	const techniquesUsed = userTechniquesFight.get(userId) || []
 	techniquesUsed.push(techniqueName)
-	userTechniques.set(userId, techniquesUsed) // Update the map with the new array
+	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new array
 
 	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
 	const playerGradeString = playerGradeData
 
 	// Technique hasn't been used, proceed
 	techniquesUsed.push(techniqueName)
-	userTechniques.set(userId, techniquesUsed) // Update the map with the new techniques list
+	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new techniques list
 
 	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
 
@@ -129,11 +170,184 @@ export async function executeSpecialTechnique({
 	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-	await new Promise(resolve => setTimeout(resolve, 2000))
+	await new Promise(resolve => setTimeout(resolve, 3000))
 
 	return damage
 }
 
+export async function executeSpecialShikigami({
+	collectedInteraction,
+	shikigamiName,
+	techniqueName,
+	damageMultiplier,
+	imageUrl,
+	description,
+	fieldValue,
+	userTechniques: userTechniquesFight,
+	userId,
+	primaryEmbed,
+	bossHealthMap,
+	playerHealth,
+	randomOpponent,
+	row
+}): Promise<number | { damage: number; userTechniques: Map<string, unknown> }> {
+	primaryEmbed.setImage("https://media1.tenor.com/m/sbiTK_XDYoUAAAAC/sukuna-mahoraga.gif")
+	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+
+	const techniquesUsed = userTechniquesFight.get(userId) || []
+	techniquesUsed.push(techniqueName)
+	userTechniquesFight.set(userId, techniquesUsed)
+
+	// Check if the user has the required shikigami for the technique
+	if (techniqueName === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
+		const userShikigami = await getUserShikigami(collectedInteraction.user.id)
+
+		const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga")
+
+		if (hasMahoraga) {
+			// User has Mahoraga tamed, proceed with summoning
+
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+			await new Promise(resolve => setTimeout(resolve, 3000))
+
+			// Mahoraga adaptation mechanic
+			const mahoragaAdaptation = userTechniquesFight.get(`${userId}_mahoraga_adaptation`) || 0
+			userTechniquesFight.set(`${userId}_mahoraga_adaptation`, mahoragaAdaptation + 1)
+
+			// Mahoraga damages the enemy
+			const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
+			const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
+			const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
+			bossHealthMap.set(userId, newBossHealth)
+			randomOpponent.current_health = newBossHealth
+
+			primaryEmbed.setImage("https://media1.tenor.com/m/sFvgffc0uM8AAAAC/season-2-jujutsu-kaisen.gif")
+			primaryEmbed.setFields({
+				name: "Mahoraga's Opening Attack",
+				value: `Mahoraga is summoned and begins to adapt to the enemy's technique! The enemy takes ${enemyDamage} damage.`,
+				inline: true
+			})
+
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+
+			await new Promise(resolve => setTimeout(resolve, 3000))
+
+			// Re-add the select menu
+
+			return { damage: enemyDamage, userTechniques: userTechniquesFight }
+		} else {
+			// User doesn't have Mahoraga tamed, show the confirmation prompt
+			const confirmationEmbed = new EmbedBuilder()
+				.setTitle("Summon Mahoraga")
+				.setDescription("You don't have Mahoraga tamed. Do you want to take a risk and summon him anyway?")
+				.setColor("#FF0000")
+
+			const confirmationRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder().setCustomId("confirm_summon").setLabel("Summon").setStyle(ButtonStyle.Danger),
+				new ButtonBuilder().setCustomId("cancel_summon").setLabel("Cancel").setStyle(ButtonStyle.Secondary)
+			)
+			await collectedInteraction.followUp({
+				embeds: [confirmationEmbed],
+				components: [confirmationRow],
+				ephemeral: true
+			})
+
+			const confirmationCollector = collectedInteraction.channel.createMessageComponentCollector({
+				filter: i => i.user.id === collectedInteraction.user.id,
+				time: 15000,
+				max: 1
+			})
+
+			const confirmationResult = await new Promise(resolve => {
+				confirmationCollector.on("collect", async i => {
+					if (i.customId === "confirm_summon") {
+						await i.update({
+							content: "You decided to summon Mahoraga. Brace yourself!",
+							embeds: [],
+							components: []
+						})
+						resolve(true)
+					} else if (i.customId === "cancel_summon") {
+						await i.update({
+							content: "You decided not to summon Mahoraga.",
+							embeds: [],
+							components: []
+						})
+						resolve(false)
+					}
+				})
+
+				confirmationCollector.on("end", async collected => {
+					if (collected.size === 0) {
+						await collectedInteraction.followUp({
+							content:
+								"Mahoraga was not summoned. You took too long to decide, And mahoraga went to sleep",
+							ephemeral: true
+						})
+						resolve(false)
+					}
+				})
+			})
+
+			if (!confirmationResult) {
+				return 0
+			}
+
+			// User confirmed to summon Mahoraga without having him tamed
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const outcome = Math.random()
+			if (outcome < 0.5) {
+				// User takes damage
+				const userDamage = Math.floor(Math.random() * 50) + 10 // Random damage between 10 and 60
+				const newPlayerHealth = playerHealth - userDamage
+				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+				primaryEmbed.setImage("https://media1.tenor.com/m/xF0ATXhH9zoAAAAC/jujutsu-kaisen-megumi-fushiguro.gif")
+				primaryEmbed.setDescription(`Mahoraga is untamed and attacks you! You take ${userDamage} damage.`)
+
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+				await new Promise(resolve => setTimeout(resolve, 4000))
+
+				// Update the player health in the embed
+				primaryEmbed.setFields(
+					{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+					{ name: "Technique", value: fieldValue },
+					{ name: "Shikigami", value: shikigamiName }
+				)
+
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+				await new Promise(resolve => setTimeout(resolve, 4000))
+
+				// Re-add the select menu
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+				return { damage: clampedPlayerHealth, userTechniques: userTechniquesFight }
+			} else {
+				// Mahoraga damages the enemy
+				const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
+				const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
+				const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
+				bossHealthMap.set(userId, newBossHealth)
+				randomOpponent.current_health = newBossHealth
+
+				primaryEmbed.setImage("https://media1.tenor.com/m/sFvgffc0uM8AAAAC/season-2-jujutsu-kaisen.gif")
+				primaryEmbed.setDescription(
+					`Mahoraga is untamed but attacks the enemy! The enemy takes ${enemyDamage} damage.`
+				)
+
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+				await new Promise(resolve => setTimeout(resolve, 4000))
+
+				// Re-add the select menu
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+				return { damage: enemyDamage, userTechniques: userTechniquesFight }
+			}
+		}
+	}
+}
 export function generateHealthBar(current, max) {
 	const totalBars = 10
 	const filledBars = Math.round((current / max) * totalBars)
@@ -610,6 +824,18 @@ export async function executeBlackFlash({
 	await attemptBlackFlash()
 
 	return damage
+}
+
+export function generateBloodlustBar(currentBloodlust) {
+	const bloodlustBarLength = 20
+	const maxBloodlust = 50
+	const filledLength = Math.round((currentBloodlust / maxBloodlust) * bloodlustBarLength)
+	const emptyLength = bloodlustBarLength - filledLength
+
+	const filledBar = "🟥".repeat(filledLength)
+	const emptyBar = "⬛".repeat(emptyLength)
+
+	return `${filledBar}${emptyBar} (${currentBloodlust}/100)`
 }
 
 export { getJujutsuFlavorText }
