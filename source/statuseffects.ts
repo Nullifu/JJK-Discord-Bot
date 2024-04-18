@@ -54,20 +54,16 @@ export async function applyMutualLoveEffect(userId) {
 }
 
 export async function applyIdleDeathsGamble(userId) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Gamblers Limit")) {
 		const updatedEffects = [...currentEffects, "Gamblers Limit"]
 		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 export async function applyAdaption(userId) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Adaption")) {
 		const updatedEffects = [...currentEffects, "Adaption"]
 		await updateUserStatusEffects(userId, updatedEffects)
@@ -77,7 +73,6 @@ export async function applyVirtualMass(userId) {
 	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Mass")) {
 		const updatedEffects = [...currentEffects, "Mass"]
 		await updateUserStatusEffects(userId, updatedEffects)
@@ -107,78 +102,54 @@ export async function applytransformation(userId) {
 export async function fetchAndFormatStatusEffects(userId) {
 	const statusEffects = await getUserStatusEffects(userId)
 	const formattedEffects = statusEffects.map(effect => {
-		if (statusEffectsDescriptions[effect]) {
-			return `${effect} (${statusEffectsDescriptions[effect].description})`
-		}
-		return effect
+		const description = statusEffectsDescriptions[effect]?.description
+		return description ? `${effect} (${description})` : effect
 	})
-
 	return formattedEffects.length > 0 ? formattedEffects.join(", ") : "None"
 }
 
+const statusEffectModifiers = {
+	"Curse King": { damageReduction: 0.2, damageIncrease: 1.2 },
+	"Saiyan Power": { damageReduction: 0.15, damageIncrease: 8.0 },
+	"Scarce": { damageReduction: 1.1 },
+	"Sukuna's Honour": { damageReduction: 0.1 },
+	"Mass": { damageReduction: 0.2, damageIncrease: 1.5 },
+	"1000 Year Curse": { damageReduction: 0.4, damageIncrease: 1.4 },
+	"Limitless": { damageReduction: 0.2, damageIncrease: 1.2 },
+	"Mutual Love": { damageReduction: 0.3, damageIncrease: 1.4 },
+	"Gamblers Limit": {
+		calculateModifiers: () => {
+			const gambleOutcome = Math.random()
+			return gambleOutcome < 0.5
+				? { damageReduction: 0.3, damageIncrease: 1.3 }
+				: { damageReduction: 1.1, damageIncrease: 0.7 }
+		}
+	},
+	"Beach Bum": { damageReduction: 0.2, damageIncrease: 1.2 },
+	"Adaption": { damageReduction: 0.85, damageIncrease: 1.2 },
+	"Prayer Song": { damageReduction: 0.2 }
+}
+
 export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
-	let damage = baseDamage
 	let damageReduction = 1
 	let damageIncrease = 1
 
-	// DOMAIN EFFECTS
-	if (statusEffects.includes("Curse King")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
-	}
-	if (statusEffects.includes("Instinct")) {
-		damageReduction *= 0.15
-		damageIncrease *= 8.0
-	}
-	if (statusEffects.includes("Sukuna's Honour")) {
-		damageReduction *= 0.1
-	}
-	if (statusEffects.includes("Mass")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.5
-	}
-	if (statusEffects.includes("1000 Year Curse")) {
-		damageReduction *= 0.4
-		damageIncrease *= 1.4
-	}
-	if (statusEffects.includes("Limitless")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
-	}
-
-	if (statusEffects.includes("Mutual Love")) {
-		damageReduction *= 0.3
-		damageIncrease *= 1.4
-	}
-	if (statusEffects.includes("Gamblers Limit")) {
-		const gambleOutcome = Math.random()
-		if (gambleOutcome < 0.5) {
-			damageReduction *= 0.3
-			damageIncrease *= 1.3
-		} else {
-			damageReduction *= 1.1
-			damageIncrease *= 0.7
+	for (const effect of statusEffects) {
+		const modifiers = statusEffectModifiers[effect]
+		if (modifiers) {
+			if (typeof modifiers.calculateModifiers === "function") {
+				const calculatedModifiers = modifiers.calculateModifiers()
+				damageReduction *= calculatedModifiers.damageReduction || 1
+				damageIncrease *= calculatedModifiers.damageIncrease || 1
+			} else {
+				damageReduction *= modifiers.damageReduction || 1
+				damageIncrease *= modifiers.damageIncrease || 1
+			}
 		}
 	}
-	if (statusEffects.includes("Beach Bum")) {
-		damageReduction *= 0.2
-		damageIncrease *= 1.2
 
-		//
-		//
-		// TECHNIQUE EFFECTS
-		if (statusEffects.includes("Adaption")) {
-			damageReduction *= 0.85
-			damageIncrease *= 1.2
-		}
-		if (statusEffects.includes("Prayer Song")) {
-			damageReduction *= 0.2
-		}
-		damage *= damageIncrease
-		damage *= damageReduction
-
-		return damage
-	}
+	const damage = baseDamage * damageIncrease * damageReduction
+	return damage
 }
 
 export async function applyStatusEffect(userId, effectName) {

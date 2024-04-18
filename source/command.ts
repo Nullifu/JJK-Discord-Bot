@@ -33,7 +33,6 @@ import {
 } from "./calculate.js"
 import {
 	executeBlackFlash,
-	executeSpecialShikigami,
 	executeSpecialTechnique,
 	export120,
 	exportCrashOut,
@@ -52,6 +51,7 @@ import {
 import {
 	BossData,
 	buildGamblersProfile,
+	createBar,
 	formatDomainExpansion,
 	gojoCommentary,
 	gradeMappings,
@@ -143,6 +143,15 @@ import {
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
+import {
+	activeShikigami,
+	executeDivineDogsTechnique,
+	executeMahoraga,
+	executeNue,
+	handleDivineDogsDamage,
+	handleMahoragaAttack,
+	updateShikigamiField
+} from "./shikigami.js"
 import {
 	applyPrayerSongEffect,
 	applyStatusEffect,
@@ -1573,18 +1582,23 @@ export async function handleVoteCommand(interaction) {
 
 	// Buttons with external emojis for attention
 	const voteButtonTopGG = new ButtonBuilder()
-		.setLabel("🚀 Vote on Top.gg + Free Rewards!")
+		.setLabel("Vote on Top.gg + Free Rewards!")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://top.gg/bot/991443928790335518/vote")
 		.setEmoji("🚀")
+	const TOPGGReview = new ButtonBuilder()
+		.setLabel("Drop a Review on Top.gg!")
+		.setStyle(ButtonStyle.Link)
+		.setURL("https://top.gg/bot/991443928790335518#reviews")
+		.setEmoji("😍")
 	const discordbotlistme = new ButtonBuilder()
-		.setLabel("👍 Vote on Botlist.me")
+		.setLabel("Vote on Botlist.me")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://botlist.me/bots/991443928790335518/vote")
 		.setEmoji("👍")
 
 	// Action row - no changes needed
-	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme)
+	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme, TOPGGReview)
 
 	// Reply with the updated components
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
@@ -1711,7 +1725,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			{
 				name: "Player Health Status",
 				value: generateHealthBar(playerHealth, playerHealth1),
-				inline: false
+				inline: true
 			}
 		)
 		.addFields(
@@ -1740,7 +1754,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		await collectedInteraction.deferUpdate()
 		if (collectedInteraction.user.id !== interaction.user.id) return
 		const selectedValue = collectedInteraction.values[0]
-		const playerHealth = await getUserHealth(collectedInteraction.user.id)
+		let playerHealth = await getUserHealth(collectedInteraction.user.id)
 
 		console.log("Selected value:", selectedValue)
 		if (selectedValue === "domain") {
@@ -1969,16 +1983,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			let damage = calculateDamage(playerGradeString, interaction.user.id, true)
 
 			if (selectedValue === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
-				const result = await executeSpecialShikigami({
+				const result = await executeMahoraga({
 					playerHealth: playerHealth,
 					bossHealthMap: bossHealthMap,
 					randomOpponent: randomOpponent,
 					shikigamiName: "Mahoraga",
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 0,
-					imageUrl: "https://media1.tenor.com/m/sbiTK_XDYoUAAAAd/sukuna-mahoraga.gif",
-					description: "With this treasure.. I SUMMON",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -1990,6 +2001,41 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userTechniquesFight = result.userTechniques
 					damage = result.damage
 				}
+			} else if (selectedValue === "Ten Shadows Technique: Divine Dogs") {
+				const result = await executeDivineDogsTechnique({
+					bossHealthMap: bossHealthMap,
+					randomOpponent: randomOpponent,
+					collectedInteraction,
+					techniqueName: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed,
+					row,
+					activeShikigami
+				})
+
+				if (typeof result !== "number") {
+					userTechniquesFight = result.userTechniquesFight
+					damage = result.damage
+				}
+			} else if (selectedValue === "Ten Shadows Technique: Nue") {
+				const result = await executeNue({
+					bossHealthMap: bossHealthMap,
+					randomOpponent: randomOpponent,
+					collectedInteraction,
+					techniqueName: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed,
+					row,
+					activeShikigami
+				})
+
+				if (typeof result !== "number") {
+					userTechniquesFight = result.userTechniquesFight
+					damage = result.damage
+				}
+				//
 			} else if (selectedValue === "Atomic") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -1998,7 +2044,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/Y5S-OJqsydUAAAAd/test.gif",
 					description: "I...AM....ATOMIC",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2285,117 +2331,86 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 			)
 
-			let mahoragaAdaptation = userTechniquesFight.get(`${collectedInteraction.user.id}_mahoraga_adaptation`) || 0
-			if (mahoragaAdaptation > 0) {
-				mahoragaAdaptation++
-				userTechniquesFight.set(`${collectedInteraction.user.id}_mahoraga_adaptation`, mahoragaAdaptation)
+			const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
 
-				const mahoragaDamage = Math.floor(Math.random() * 20) + 75 // Random damage between 30 and 80
-				const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
-				const newBossHealth = Math.max(0, currentBossHealth - mahoragaDamage)
-				bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
-				randomOpponent.current_health = newBossHealth
+			if (hasMahoragaAdaptation) {
+				await handleMahoragaAttack(
+					collectedInteraction,
+					bossHealthMap,
+					randomOpponent,
+					primaryEmbed,
+					row,
+					userTechniquesFight
+				)
+			}
 
-				primaryEmbed.addFields([
-					{ name: "Mahoraga Adaptation", value: `${mahoragaAdaptation}/6`, inline: true },
-					{
-						name: "Mahoraga Attack",
-						value: `Mahoraga deals ${mahoragaDamage} damage to the enemy!`,
-						inline: false
-					}
-				])
-
-				if (mahoragaAdaptation === 6) {
-					const mahoragaSpecialDamage = Math.floor(Math.random() * 200) + 100 // Random damage between 100 and 300
-					const currentBossHealth =
-						bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
-					//
-					if (currentBossHealth <= 0) {
-						await collectedInteraction.followUp(
-							"The boss has been defeated Mahoraga ceased his special attack and has gone to bed!"
-						)
-						userTechniquesFight.delete(`${collectedInteraction.user.id}_mahoraga_adaptation`)
-					} else {
-						const newBossHealth = Math.max(0, currentBossHealth - mahoragaSpecialDamage)
-						bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
-						randomOpponent.current_health = newBossHealth
-
-						primaryEmbed.setDescription("Mahoaraga has fully adapted... and is now using a special attack!")
-						primaryEmbed.setImage(
-							"https://media1.tenor.com/m/h9vZeOgN-5gAAAAC/mahoraga-adapts-mahoraga.gif"
-						)
-
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-
-						await new Promise(resolve => setTimeout(resolve, 5000))
-
-						primaryEmbed.setDescription(
-							`Mahoraga has unleashed his full power dealing ${mahoragaSpecialDamage} damage to the enemy!`
-						)
-						primaryEmbed.setImage("https://media1.tenor.com/m/pYgj13yEW_wAAAAC/sukuna-mahoraga.gif")
-
-						userTechniquesFight.delete(`${collectedInteraction.user.id}_mahoraga_adaptation`)
-
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-
-						await new Promise(resolve => setTimeout(resolve, 3000))
-
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-					}
+			// is boss dead?
+			if (randomOpponent.current_health <= 0) {
+				let transformed = false
+				if (randomOpponent.name === "Satoru Gojo") {
+					transformed = await exportTheHonoredOne(
+						interaction,
+						randomOpponent,
+						primaryEmbed,
+						row,
+						playerHealth
+					)
+				} else if (randomOpponent.name === "Itadori") {
+					transformed = await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Zenin Toji") {
+					transformed = await exportReincarnation(
+						interaction,
+						randomOpponent,
+						primaryEmbed,
+						row,
+						playerHealth
+					)
+				} else if (randomOpponent.name === "Yuta Okkotsu") {
+					transformed = await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Hakari Kinji") {
+					transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Megumi Fushiguro") {
+					transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Sukuna Full Power") {
+					transformed = await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Mahito" || randomOpponent.name === "Mahito (Transfigured)") {
+					transformed = await export120(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+				} else if (randomOpponent.name === "Mahito (120%)") {
+					transformed = await exportMahito(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				}
+				if (!transformed) {
+					console.log("Boss is defeated and no transformation occurred.")
+					domainActivationState.set(contextKey, false)
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
 
-				// is boss dead?
-				if (randomOpponent.current_health <= 0) {
-					let transformed = false
-					if (randomOpponent.name === "Satoru Gojo") {
-						transformed = await exportTheHonoredOne(
-							interaction,
-							randomOpponent,
-							primaryEmbed,
-							row,
-							playerHealth
-						)
-					} else if (randomOpponent.name === "Itadori") {
-						transformed = await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Zenin Toji") {
-						transformed = await exportReincarnation(
-							interaction,
-							randomOpponent,
-							primaryEmbed,
-							row,
-							playerHealth
-						)
-					} else if (randomOpponent.name === "Yuta Okkotsu") {
-						transformed = await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Hakari Kinji") {
-						transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Megumi Fushiguro") {
-						transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Sukuna Full Power") {
-						transformed = await exportTheCursedOne(
-							interaction,
-							randomOpponent,
-							primaryEmbed,
-							row,
-							playerHealth
-						)
-					} else if (randomOpponent.name === "Mahito" || randomOpponent.name === "Mahito (Transfigured)") {
-						transformed = await export120(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Mahito (120%)") {
-						transformed = await exportMahito(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					}
-					if (!transformed) {
-						console.log("Boss is defeated and no transformation occurred.")
-						domainActivationState.set(contextKey, false)
-						activeCollectors.delete(interaction.user.id)
-						bossHealthMap.delete(interaction.user.id)
+					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+				}
+			} else {
+				//
+				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+				//
+				await delay(700)
+				const { divineDogsHit, newPlayerHealth: updatedPlayerHealth } = await handleDivineDogsDamage(
+					interaction,
+					randomOpponent,
+					playerHealth,
+					statusEffects
+				)
 
-						await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
-					}
+				if (divineDogsHit) {
+					// Update the player health with the value returned from handleDivineDogsDamage
+					playerHealth = updatedPlayerHealth
+
+					// Update the embed to indicate that the Divine Dogs took the hit
+					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+					const divineDogsMessage = "The Divine Dogs took the hit and protected you!"
+					await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
+					primaryEmbed.addFields({ name: "Divine Dogs", value: divineDogsMessage })
+					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 				} else {
-					//
-					bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
-					await delay(700)
 					// boss attack
 					const possibleAttacks = attacks[randomOpponent.name]
 					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
@@ -2434,6 +2449,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 						const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
+
+						await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
 
 						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 						primaryEmbed.addFields([
@@ -4902,6 +4919,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+
 				await delay(700)
 				// boss attack
 				const possibleAttacks = attacks[randomOpponent.name]
@@ -4947,4 +4965,175 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 			}
 		}
 	})
+}
+
+export async function handleViewShikigami(interaction) {
+	try {
+		// Fetch the user's shikigami from the database
+		const userShikigami = await getUserShikigami(interaction.user.id)
+
+		if (userShikigami.length === 0) {
+			await interaction.reply("You don't have any shikigami yet.")
+			return
+		}
+
+		// Create a dropdown menu with the user's shikigami
+		const shikigamiOptions = userShikigami.map(shikigami => ({
+			label: shikigami.name,
+			value: shikigami.name
+		}))
+
+		const shikigamiDropdown = new ActionRowBuilder().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId("shikigami_select")
+				.setPlaceholder("Select a shikigami")
+				.addOptions(shikigamiOptions)
+		)
+
+		// Send the initial message with the dropdown menu
+		await interaction.reply({
+			content: "Select a shikigami to view its details:",
+			components: [shikigamiDropdown]
+		})
+
+		// Wait for the user's selection
+		const selectionInteraction = await interaction.channel.awaitMessageComponent({
+			filter: i => i.customId === "shikigami_select" && i.user.id === interaction.user.id
+		})
+
+		// Get the selected shikigami
+		const selectedShikigami = userShikigami.find(shikigami => shikigami.name === selectionInteraction.values[0])
+
+		// Create an embed with the selected shikigami's details
+		const shikigamiEmbed = new EmbedBuilder().setTitle(selectedShikigami.name).addFields(
+			{
+				name: "Adopted",
+				value: `<t:${Math.floor(selectedShikigami.tamedAt.getTime() / 1000)}:f>`,
+				inline: true
+			},
+			{
+				name: "Hunger",
+				value: `${createBar(selectedShikigami.hunger, 100)} ${selectedShikigami.hunger}%`,
+				inline: true
+			},
+			{
+				name: "Hygiene",
+				value: `${createBar(selectedShikigami.hygiene, 100)} ${selectedShikigami.hygiene}%`,
+				inline: true
+			},
+			{
+				name: "Friendship",
+				value: `${createBar(selectedShikigami.friendship, 100)} ${selectedShikigami.friendship}%`,
+				inline: true
+			},
+			{
+				name: "Experience",
+				value: `${createBar(selectedShikigami.experience, 100)} ${selectedShikigami.experience}%`,
+				inline: true
+			},
+			{
+				name: "Tier",
+				value: selectedShikigami.tier.toString(),
+				inline: true
+			}
+		)
+
+		// Create buttons for shikigami actions
+		const actionButtons = new ActionRowBuilder().addComponents(
+			new ButtonBuilder().setCustomId("feed_shikigami").setLabel("Feed").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("clean_shikigami").setLabel("Clean").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("play_shikigami").setLabel("Play").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("train_shikigami").setLabel("Train").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("prestige_shikigami").setLabel("Prestige").setStyle(ButtonStyle.Primary)
+		)
+
+		// Update the message with the shikigami details and action buttons
+		await selectionInteraction.update({
+			content: "Here are the details of your selected shikigami:",
+			embeds: [shikigamiEmbed],
+			components: [actionButtons]
+		})
+
+		// Handle button interactions
+		const buttonInteraction = await interaction.channel.awaitMessageComponent({
+			filter: i =>
+				(i.customId === "feed_shikigami" ||
+					i.customId === "clean_shikigami" ||
+					i.customId === "play_shikigami" ||
+					i.customId === "train_shikigami" ||
+					i.customId === "prestige_shikigami") &&
+				i.user.id === interaction.user.id,
+			time: 300000 // 5 minutes
+		})
+
+		if (!buttonInteraction) {
+			await interaction.editReply("Shikigami action timed out.")
+			return
+		}
+
+		// Perform the selected action based on the button clicked
+		switch (buttonInteraction.customId) {
+			case "feed_shikigami":
+				// Handle feeding the shikigami
+				// ...
+				await buttonInteraction.deferReply() // Defer the initial reply
+				if (selectedShikigami.name === "Mahoraga") {
+					await buttonInteraction.followUp(
+						"You fed Mahoraga. Let's hope he doesn't mistake you for the meal!"
+					)
+				} else {
+					await buttonInteraction.reply("You fed your shikigami!")
+				}
+				break
+
+			case "clean_shikigami":
+				// Handle cleaning the shikigami
+				// ...
+				await buttonInteraction.deferReply() // Defer the initial reply
+				if (selectedShikigami.name === "Mahoraga") {
+					await buttonInteraction.followUp("You cleaned Mahoraga. Good luck getting those cursed stains out!")
+				} else {
+					await buttonInteraction.reply("You cleaned your shikigami!")
+				}
+				break
+
+			case "play_shikigami":
+				// Handle playing with the shikigami
+				// ...
+				await buttonInteraction.deferReply() // Defer the initial reply
+				if (selectedShikigami.name === "Mahoraga") {
+					await buttonInteraction.followUp("You played with Mahoraga. Hide and seek, anyone?")
+				} else {
+					await buttonInteraction.reply("You played with your shikigami!")
+				}
+				break
+
+			case "train_shikigami":
+				// Handle training the shikigami
+				// ...
+				await buttonInteraction.deferReply() // Defer the initial reply
+				if (selectedShikigami.name === "Mahoraga") {
+					await buttonInteraction.followUp("You trained Mahoraga. Let's hope he doesn't train you instead!")
+				} else {
+					await buttonInteraction.reply("You trained your shikigami!")
+				}
+				break
+
+			case "prestige_shikigami":
+				// Handle prestiging the shikigami
+				// ...
+				await buttonInteraction.deferReply() // Defer the initial reply
+				if (selectedShikigami.name === "Mahoraga") {
+					await buttonInteraction.followUp(
+						"You prestiged Mahoraga. Bow before his new, even more terrifying form!"
+					)
+				} else {
+					await buttonInteraction.reply("You prestiged your shikigami!")
+				}
+				break
+		}
+	} catch (error) {
+		console.error("Error executing viewShikigami function:", error)
+		await interaction.reply("An error occurred while processing your request.")
+	}
 }

@@ -2647,6 +2647,11 @@ interface Shikigami {
 	name: string
 	experience: number
 	health: number
+	tier: number
+	tamedAt: Date
+	hygiene: number
+	hunger: number
+	friendship: number
 }
 
 // get user shikigami
@@ -2658,8 +2663,6 @@ export async function getUserShikigami(userId: string): Promise<Shikigami[]> {
 		const usersCollection = database.collection(usersCollectionName)
 
 		const user = await usersCollection.findOne({ id: userId })
-
-		console.log("User found:", user)
 
 		if (user && user.shikigami) {
 			// Assuming user.shikigami is already an array of shikigami objects
@@ -2677,6 +2680,11 @@ interface UserShikigami {
 	name: string
 	experience: number
 	health: number
+	tier: number
+	tamedAt: Date
+	hygiene: number
+	hunger: number
+	friendship: number
 }
 
 export async function updateUserShikigami(userId: string, newShikigami: UserShikigami): Promise<void> {
@@ -2701,6 +2709,27 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 		)
 	} catch (error) {
 		console.error("Error updating user shikigami:", error)
+		throw error
+	}
+}
+
+// update shikigami health
+export async function updateShikigamiHealth(userId: string, shikigamiName: string, health: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's shikigami health
+		await usersCollection.updateOne(
+			{ "id": userId, "shikigami.name": shikigamiName },
+			{
+				$set: {
+					"shikigami.$.health": health
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error updating shikigami health:", error)
 		throw error
 	}
 }

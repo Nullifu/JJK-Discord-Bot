@@ -563,6 +563,20 @@ export const CLAN_SKILLS = {
 			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
 		},
 		{
+			name: "Ten Shadows Technique: Max Elephant",
+			description: "FATTY",
+			cost: "1250000",
+			clan: "Fushiguro",
+			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
+		},
+		{
+			name: "Ten Shadows Technique: Nue",
+			description: "bird :3",
+			cost: "250000",
+			clan: "Fushiguro",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		},
+		{
 			name: "Ten Shadows Technique: Divine Dogs",
 			description: "Divine Dogs!",
 			cost: "125000",
@@ -570,9 +584,9 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Tailsman", quantity: 1 }]
 		},
 		{
-			name: "Ten Shadows Technique: Nue",
-			description: "bird :3",
-			cost: "25000",
+			name: "Ten Shadows Technique: Toad",
+			description: "blurp",
+			cost: "100000",
 			clan: "Fushiguro",
 			items: [{ name: "Sukuna Finger", quantity: 1 }]
 		}

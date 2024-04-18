@@ -67,6 +67,18 @@ interface Quest {
 	id: string
 }
 
+/**
+ * Creates a bar using Unicode characters based on the provided value and maximum value.
+ * @param value The value to represent as a bar.
+ * @param maxValue The maximum value for the bar.
+ * @returns A string representing a bar using Unicode characters.
+ */
+export function createBar(value: number, maxValue: number): string {
+	const bars = "▓▓▓▓▓▓▓▓▓▓"
+	const percentage = Math.floor((value / maxValue) * 10)
+	return bars.slice(0, percentage) + "░".repeat(10 - percentage)
+}
+
 export interface User {
 	id: string // Assuming 'id' is the field you use to identify users.
 	inventory: InventoryItem[]

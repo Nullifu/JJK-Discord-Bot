@@ -60,6 +60,7 @@ import {
 	handleUpdateCommand,
 	handleUseItemCommand,
 	handleViewEffectsCommand,
+	handleViewShikigami,
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
@@ -259,6 +260,7 @@ const commands = [
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
+	new SlashCommandBuilder().setName("viewshikigami").setDescription("View your shikigami in Pet form!"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -792,6 +794,9 @@ client.on("interactionCreate", async interaction => {
 
 			case "inventory":
 				await handleInventoryCommand(chatInputInteraction)
+				break
+			case "viewshikigami":
+				await handleViewShikigami(chatInputInteraction)
 				break
 			case "dig":
 				await handleDigCommand(chatInputInteraction)
