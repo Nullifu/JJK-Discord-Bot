@@ -2597,7 +2597,7 @@ export async function updateUserVoteTime(userId: string, voteTime: Date): Promis
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { voteTime } })
+		await usersCollection.updateOne({ id: userId }, { $set: { voteTime } }, { upsert: true })
 	} catch (error) {
 		console.error(`Error updating user vote time for ${userId}:`, error)
 		throw error
