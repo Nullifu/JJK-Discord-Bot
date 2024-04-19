@@ -2110,7 +2110,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 10,
+					damageMultiplier: 12,
 					imageUrl: "https://media1.tenor.com/m/wmZxEiKZRXgAAAAd/yuta-cursed-energy.gif",
 					description: "I don't like people who hurt my friends...",
 					fieldValue: selectedValue,
