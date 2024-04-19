@@ -112,6 +112,7 @@ logger.error("This is an error message")
 logger.fatal("This is a fatal message")
 
 let activities = [
+	{ name: "Update 6.0", type: ActivityType.Playing },
 	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 	{ name: "The Shibuya Incident", type: ActivityType.Playing },
 	{ name: "Exchange Event", type: ActivityType.Competing },
