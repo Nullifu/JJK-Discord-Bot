@@ -146,8 +146,6 @@ export async function addUser(
 	} catch (error) {
 		console.error(`Error when adding user with ID: ${id}`, error)
 		return { error: "Failed to add user." }
-	} finally {
-		// await client.close()
 	}
 }
 
