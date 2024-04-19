@@ -132,6 +132,7 @@ export async function addUser(
 			itemEffects: [],
 			unlockedmentors: [],
 			mentors: null,
+			shikigami: [],
 			gamblersData: {
 				limit: 5000000,
 				amountGambled: 0,
