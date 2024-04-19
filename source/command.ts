@@ -20,7 +20,7 @@ import {
 	StringSelectMenuInteraction
 } from "discord.js"
 import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks, heavenlyrestrictionskills } from "./attacks.js"
-import { digCooldown, digCooldownBypassIDs, digCooldowns } from "./bot.js"
+import { digCooldown, digCooldownBypassIDs, digCooldowns, logger } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -51,7 +51,6 @@ import {
 import {
 	BossData,
 	buildGamblersProfile,
-	createBar,
 	formatDomainExpansion,
 	gojoCommentary,
 	gradeMappings,
@@ -76,13 +75,16 @@ import {
 import { getRandomItem } from "./items.js"
 import { postCommandMiddleware } from "./middleware.js"
 import {
+	UserShikigami,
 	addItemToUserInventory,
 	addUser,
 	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
 	checkUserHasHeavenlyRestriction,
+	cleanShikigami,
 	createTradeRequest,
+	feedShikigami,
 	getActiveTrades,
 	getAllShopItems,
 	getAllUserExperience,
@@ -119,6 +121,7 @@ import {
 	getUserUnlockedTransformations,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
+	healShikigami,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
@@ -137,6 +140,7 @@ import {
 	updateUserHonours,
 	updateUserInateClan,
 	updateUserJob,
+	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
 	updateUserUnlockedTransformations,
@@ -145,11 +149,14 @@ import {
 } from "./mongodb.js"
 import {
 	activeShikigami,
+	createShikigamiEmbed,
 	executeDivineDogsTechnique,
 	executeMahoraga,
 	executeNue,
+	getRandomQuote,
 	handleDivineDogsDamage,
 	handleMahoragaAttack,
+	startPlayingMinigame,
 	updateShikigamiField
 } from "./shikigami.js"
 import {
@@ -173,7 +180,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 
-		// Check if the user already exists before trying to register them
 		if (await userExists(discordId)) {
 			await interaction.reply({
 				content: "It looks like you're already registered!",
@@ -225,7 +231,7 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 		.setTitle(`${targetUser.username}'s Cursed Wallet`)
 		.setThumbnail(targetUser.displayAvatarURL())
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
-		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
+		.setFooter({ text: getRandomQuote() })
 		.setTimestamp()
 
 	await interaction.editReply({ embeds: [balanceEmbed] })
@@ -262,9 +268,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false }
 			)
 
-			.setFooter({
-				text: "Harness your cursed energy. Update your profile to reflect your growth in the Jujutsu world."
-			})
+			.setFooter({ text: getRandomQuote() })
 	}
 
 	try {
@@ -351,6 +355,7 @@ export async function handleDigCommand(interaction) {
 						expirationTime / 1000
 					)}:R>.`
 				)
+				.setFooter({ text: getRandomQuote() })
 			await interaction.editReply({ embeds: [digCooldownEmbed] })
 			return
 		}
@@ -608,12 +613,9 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						}
 						const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
 
-						// Check if the item can be crafted using the user's current inventory
-						const canCraft = checkCraftability(recipe, userInventory)
-
 						return {
 							label: recipe.craftedItemName,
-							description: canCraft ? "Can craft" : "Cannot craft",
+							description: "Click to craft this item",
 							value: key,
 							emoji: emojiId ? { id: emojiId } : undefined
 						}
@@ -671,7 +673,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				const buttonCollector = interaction.channel.createMessageComponentCollector({
 					filter: buttonFilter,
-					time: 20000 // Collector will last for 15 seconds
+					time: 20000 // Collector will last for 20 seconds
 				})
 
 				buttonCollector.on("collect", async buttonInteraction => {
@@ -688,15 +690,25 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						})
 
 						if (!hasAllItems) {
+							const errorEmbed = new EmbedBuilder()
+								.setColor("Red")
+								.setTitle("Insufficient Items")
+								.setDescription("You do not have all the necessary items to craft this item.")
+								.addFields({
+									name: "Required Items",
+									value: selectedItemRecipe.requiredItems
+										.map(item => `${item.name} (${item.quantity})`)
+										.join("\n")
+								})
+
 							await buttonInteraction.editReply({
-								content: "You do not have all the necessary items to craft this.}",
+								embeds: [errorEmbed],
 								components: []
 							})
 							return
 						}
-
 						try {
-							console.log("Starting item removal for ITEM!")
+							logger.info("Starting item removal for ITEM!")
 
 							for (const requiredItem of selectedItemRecipe.requiredItems) {
 								console.log("Removing item:", requiredItem)
@@ -705,10 +717,10 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 									requiredItem.name,
 									requiredItem.quantity
 								)
-								console.log("Item removed!")
+								logger.info("Item removed!")
 							}
 							await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
-							console.log("Item added! ", selectedItemRecipe.craftedItemName)
+							logger.info("Item added! ", selectedItemRecipe.craftedItemName)
 
 							await buttonInteraction.editReply({
 								content: `You have successfully crafted ${selectedItemRecipe.craftedItemName}!`,
@@ -730,7 +742,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 			}
 		})
 	} catch (error) {
-		console.error("Error in crafting command:", error)
+		logger.error("Error in crafting command:", error)
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
 }
@@ -1210,40 +1222,32 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 3.5", // Replace with your actual version number
-			date: "07-04-24", // Adjust the date as needed
+			version: "Update 6.0", // Replace with your actual version number
+			date: "19-04-24", // Adjust the date as needed
 			changes: [
 				{
-					name: "**Fight Command [ SEMI REWORK ]**",
-					value: "Reworked domains, added new techniques, and Added **Status Effects** Currently only domains and some skills apply these."
+					name: "**Biggest Update Yet!**",
+					value: "Reworked Fushiguro, Added Pets. + Shikigami!"
 				},
 				{
-					name: "New Boss System",
-					value: "Now you can unlock certain bosses when you use an item, So if you use **Special-Grade Geo Locator** It unlocks yuta boss, And if you do the disaster curses quest line you can fight them."
+					name: "Shikigami",
+					value: "Earn shikigami through the tame command."
 				},
 				{
-					name: "Quest And Technique Commands",
-					value: "Reworked these commands to be more user friendly and added more information."
+					name: "Did you know?",
+					value: "Shikigami can also be used as pets! using shikigami [view, shop] Remember to feed them and keep them healthy!"
 				},
 				{
-					name: "New Techniques",
-					value: "New Secret Skills. Get them with useitem - Sacred Eye, "
-				},
-				{
-					name: "Grade System Rework",
-					value: "Bosses scale with your grade, Readded boss transformation and awakenings."
-				},
-				{
-					name: "Bug Fixes",
-					value: "Interaction failed, and some other bugs fixed. < HP Bug has not been fixed yet so ive removed it for now. >"
+					name: "+ More in the discord!",
+					value: "Join the discord for more information on the update!"
 				},
 				{
 					name: "Found a bug? Report it!",
 					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
 				},
 				{
-					name: "**IF YOU LOSE ANY ITEMS DURING TRADES**",
-					value: "Please report it to the support server. We can help you get your items back."
+					name: "**sorry guys forgot to update this command about updates.. **",
+					value: "I will try to keep this updated from now on, but if i forget just check the support server for updates."
 				}
 			]
 		}
@@ -1301,7 +1305,7 @@ function findTechniqueClan(techniqueName: string): string {
 			return clanName
 		}
 	}
-	return "" // Or "Unknown" if you prefer
+	return ""
 }
 
 // Simplify technique names (assuming this function already exists in your code)
@@ -1387,11 +1391,6 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 					label: "Main Profile",
 					description: "View your main profile",
 					value: "mainProfile"
-				},
-				{
-					label: "Shikigami Profile",
-					description: "View your shikigami profile",
-					value: "shikiProfile"
 				},
 				{
 					label: "Clan Profile",
@@ -1659,11 +1658,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
-	console.log(`User ${interaction.user.id} techniques:`, userTechniques)
 	//
 	const transformname = await getUserTransformation(interaction.user.id)
 	//
-	console.log(`User ${interaction.user.id} transformation:`, transformname)
 	//
 	const domainname = await getUserDomain(interaction.user.id)
 
@@ -2048,6 +2045,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Chiyo's Cursed Manipulation Technique") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 16,
+					imageUrl: "https://i.kym-cdn.com/photos/images/original/002/031/427/6ba.gif",
+					description: "I'm gonna need you to sit down and shut up.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Hollow Purple") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2101,7 +2110,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 9,
+					damageMultiplier: 10,
 					imageUrl: "https://media1.tenor.com/m/wmZxEiKZRXgAAAAd/yuta-cursed-energy.gif",
 					description: "I don't like people who hurt my friends...",
 					fieldValue: selectedValue,
@@ -2331,6 +2340,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 			)
 
+			await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
+
 			const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
 
 			if (hasMahoragaAdaptation) {
@@ -2389,9 +2400,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+				await delay(700)
+
 				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
 				//
-				await delay(700)
+
 				const { divineDogsHit, newPlayerHealth: updatedPlayerHealth } = await handleDivineDogsDamage(
 					interaction,
 					randomOpponent,
@@ -2406,10 +2419,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					// Update the embed to indicate that the Divine Dogs took the hit
 					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 					const divineDogsMessage = "The Divine Dogs took the hit and protected you!"
-					await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
 					primaryEmbed.addFields({ name: "Divine Dogs", value: divineDogsMessage })
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
+
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+					logger.info("after divine dogs")
 				} else {
 					// boss attack
 					const possibleAttacks = attacks[randomOpponent.name]
@@ -2431,7 +2445,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						} else {
 							const bossAttackMessage = `${randomOpponent.name} killed you!`
 							primaryEmbed.setFooter({ text: bossAttackMessage })
-
 							activeCollectors.delete(interaction.user.id)
 							bossHealthMap.delete(interaction.user.id)
 							//
@@ -2446,17 +2459,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						}
 					} else {
 						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-
 						const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
-
-						await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
-
 						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 						primaryEmbed.addFields([
 							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
 						])
-
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 					}
 				}
@@ -2581,7 +2589,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			}
 
 			if (skillsToDisplay.length === 0) {
-				await i.editReply({
+				await i.followUp({
+					ephemeral: true,
 					content: "There are no more techniques available for you to purchase in this category.",
 					components: [] // Clear any interactive components
 				})
@@ -3575,7 +3584,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
 		.setDescription(
-			"Update 4.5, Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
+			"Update 6.0, **BIGGEST UPDATE YET!** Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
 		)
 		.setFooter({ text: "hi - from dev" })
 
@@ -4249,17 +4258,33 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const chosenShikigamiName = interaction.options.getString("shikigami")
 
 	// Check if the chosen shikigami is Mahoraga
-	const isMahoraga = chosenShikigamiName === "Mahoraga"
+	const isMahoraga = chosenShikigamiName === "Divine-General Mahoraga"
 
 	if (isMahoraga) {
 		// Fetch the user's shikigami
 		const userShikigami: { name: string }[] = await getUserShikigami(interaction.user.id)
 
 		// Check if the user has the required shikigami to summon Mahoraga
-		const hasRequiredShikigami = userShikigami.some(shikigami => shikigami.name === "Divine Dogs")
+		const requiredShikigami = ["Divine Dogs", "Nue", "Toad", "Max Elephant"]
+
+		const hasRequiredShikigami = requiredShikigami.every(shikigamiName => {
+			return userShikigami.some(shikigami => shikigami.name === shikigamiName)
+		})
 
 		if (!hasRequiredShikigami) {
-			await interaction.editReply({ content: "You do not have the required shikigami to summon Mahoraga." })
+			const errorEmbed = new EmbedBuilder()
+				.setColor("Red")
+				.setTitle("Insufficient Shikigami")
+				.setDescription("You do not have all the necessary Shikigami to summon **MAHORAGA**")
+				.addFields(
+					{ name: "Required Shikigami", value: requiredShikigami.join(", ") },
+					{ name: "Your Shikigami", value: userShikigami.map(shikigami => shikigami.name).join(", ") }
+				)
+
+			await interaction.followUp({
+				ephemeral: true,
+				embeds: [errorEmbed]
+			})
 			return
 		}
 	}
@@ -4967,9 +4992,67 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	})
 }
 
+// pet shop
+
+const petVersions = ["Cursed", "Normal"]
+
+const petOptions = [
+	{
+		name: "Kitsune",
+		price: 10000000,
+		formattedPrice: "10,000,000",
+		description: "A little kitsune pet.",
+		info: "Type: Normal | Rarity: Special Grade",
+		emoji: "<:6861shirohappynoises:1230889537761316924>"
+	},
+	{
+		name: "Loyal Pup",
+		price: 50000,
+		formattedPrice: "50,000",
+		description: "A faithful companion that will always be by your side.",
+		info: "Type: Normal | Rarity: Common",
+		emoji: "🐶"
+	},
+	{
+		name: "Fluffy Bunny",
+		price: 500000,
+		formattedPrice: "500,000",
+		description: "A soft and gentle creature that hops with joy.",
+		info: "Type: Normal | Rarity: Common",
+		emoji: "🐰"
+	},
+	// Cursed Pets
+	{
+		name: "Mythical Dragon",
+		price: 35000000,
+		formattedPrice: "35,000,000",
+		description: "He might mistake you for a snack...",
+		info: "Type: Cursed | Rarity: Legendary",
+		emoji: "<:2087dragon:1230896152950476880>",
+		requiredItems: [{ name: "Dragon Scales", quantity: 10 }]
+	},
+	{
+		name: "Mystical Fox",
+		price: 7500000,
+		formattedPrice: "7,500,000",
+		description: "A cunning and versatile creature that can change forms.",
+		info: "Type: Cursed | Rarity: Epic",
+		emoji: "<:6702foxed:1230903814517686293>",
+		requiredItems: [{ name: "Mahito's Soul " || "Mahitos Soul", quantity: 5 }]
+	},
+	{
+		name: "Noj",
+		price: 100000000,
+		formattedPrice: "100,000,000",
+		description: "Friend of the developer!",
+		info: "Type: Cursed | Rarity: Special Grade",
+		emoji: "<:73062buwumask:1230903140703015035>",
+		requiredItems: [{ name: "Sukuna Finger Bundle", quantity: 1 }]
+	}
+]
+
 export async function handleViewShikigami(interaction) {
 	try {
-		// Fetch the user's shikigami from the database
 		const userShikigami = await getUserShikigami(interaction.user.id)
 
 		if (userShikigami.length === 0) {
@@ -4977,7 +5060,6 @@ export async function handleViewShikigami(interaction) {
 			return
 		}
 
-		// Create a dropdown menu with the user's shikigami
 		const shikigamiOptions = userShikigami.map(shikigami => ({
 			label: shikigami.name,
 			value: shikigami.name
@@ -4990,150 +5072,340 @@ export async function handleViewShikigami(interaction) {
 				.addOptions(shikigamiOptions)
 		)
 
-		// Send the initial message with the dropdown menu
 		await interaction.reply({
-			content: "Select a shikigami to view its details:",
 			components: [shikigamiDropdown]
 		})
 
-		// Wait for the user's selection
 		const selectionInteraction = await interaction.channel.awaitMessageComponent({
 			filter: i => i.customId === "shikigami_select" && i.user.id === interaction.user.id
 		})
 
-		// Get the selected shikigami
 		const selectedShikigami = userShikigami.find(shikigami => shikigami.name === selectionInteraction.values[0])
 
-		// Create an embed with the selected shikigami's details
-		const shikigamiEmbed = new EmbedBuilder().setTitle(selectedShikigami.name).addFields(
-			{
-				name: "Adopted",
-				value: `<t:${Math.floor(selectedShikigami.tamedAt.getTime() / 1000)}:f>`,
-				inline: true
-			},
-			{
-				name: "Hunger",
-				value: `${createBar(selectedShikigami.hunger, 100)} ${selectedShikigami.hunger}%`,
-				inline: true
-			},
-			{
-				name: "Hygiene",
-				value: `${createBar(selectedShikigami.hygiene, 100)} ${selectedShikigami.hygiene}%`,
-				inline: true
-			},
-			{
-				name: "Friendship",
-				value: `${createBar(selectedShikigami.friendship, 100)} ${selectedShikigami.friendship}%`,
-				inline: true
-			},
-			{
-				name: "Experience",
-				value: `${createBar(selectedShikigami.experience, 100)} ${selectedShikigami.experience}%`,
-				inline: true
-			},
-			{
-				name: "Tier",
-				value: selectedShikigami.tier.toString(),
-				inline: true
-			}
-		)
+		const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
 
-		// Create buttons for shikigami actions
 		const actionButtons = new ActionRowBuilder().addComponents(
 			new ButtonBuilder().setCustomId("feed_shikigami").setLabel("Feed").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("clean_shikigami").setLabel("Clean").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("play_shikigami").setLabel("Play").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("train_shikigami").setLabel("Train").setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId("prestige_shikigami").setLabel("Prestige").setStyle(ButtonStyle.Primary)
+			new ButtonBuilder().setCustomId("heal_shikigami").setLabel("Heal").setStyle(ButtonStyle.Primary)
 		)
 
-		// Update the message with the shikigami details and action buttons
-		await selectionInteraction.update({
-			content: "Here are the details of your selected shikigami:",
+		const shikigamiMessage = await selectionInteraction.update({
 			embeds: [shikigamiEmbed],
-			components: [actionButtons]
+			components: [actionButtons, shikigamiDropdown]
 		})
 
-		// Handle button interactions
-		const buttonInteraction = await interaction.channel.awaitMessageComponent({
-			filter: i =>
-				(i.customId === "feed_shikigami" ||
-					i.customId === "clean_shikigami" ||
-					i.customId === "play_shikigami" ||
-					i.customId === "train_shikigami" ||
-					i.customId === "prestige_shikigami") &&
-				i.user.id === interaction.user.id,
-			time: 300000 // 5 minutes
-		})
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const buttonInteraction = await interaction.channel.awaitMessageComponent({
+				filter: i =>
+					i.customId === "shikigami_select" ||
+					((i.customId === "feed_shikigami" ||
+						i.customId === "clean_shikigami" ||
+						i.customId === "play_shikigami" ||
+						i.customId === "train_shikigami" ||
+						i.customId === "heal_shikigami") &&
+						i.user.id === interaction.user.id)
+			})
 
-		if (!buttonInteraction) {
-			await interaction.editReply("Shikigami action timed out.")
-			return
-		}
+			if (buttonInteraction.customId === "shikigami_select") {
+				const selectedShikigami = userShikigami.find(
+					shikigami => shikigami.name === buttonInteraction.values[0]
+				)
 
-		// Perform the selected action based on the button clicked
-		switch (buttonInteraction.customId) {
-			case "feed_shikigami":
-				// Handle feeding the shikigami
-				// ...
-				await buttonInteraction.deferReply() // Defer the initial reply
-				if (selectedShikigami.name === "Mahoraga") {
-					await buttonInteraction.followUp(
-						"You fed Mahoraga. Let's hope he doesn't mistake you for the meal!"
-					)
-				} else {
-					await buttonInteraction.reply("You fed your shikigami!")
+				const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+
+				await buttonInteraction.update({
+					embeds: [shikigamiEmbed],
+					components: [actionButtons, shikigamiDropdown]
+				})
+			} else {
+				switch (buttonInteraction.customId) {
+					case "feed_shikigami":
+						await buttonInteraction.deferUpdate()
+
+						try {
+							const randomFoodAmount = Math.floor(Math.random() * 21) + 10
+							const userInventory = await getUserInventory(interaction.user.id)
+							const shikigamiFoodItems = userInventory.find(item => item.name === "Shikigami food")
+
+							if (selectedShikigami.hunger === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already full!`,
+									ephemeral: true
+								})
+							} else if (!shikigamiFoodItems) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Shikigami food in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								await removeItemFromUserInventory(interaction.user.id, "Shikigami food", 1)
+								await feedShikigami(interaction.user.id, selectedShikigami.name, randomFoodAmount)
+								selectedShikigami.hunger = Math.min(100, selectedShikigami.hunger + randomFoodAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error feeding shikigami:", error)
+						}
+						break
+
+					case "play_shikigami":
+						await buttonInteraction.deferReply() // Defer the initial reply
+						try {
+							if (selectedShikigami.friendship === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is happy!`,
+									ephemeral: true
+								})
+							} else {
+								await startPlayingMinigame(buttonInteraction, selectedShikigami)
+							}
+						} catch (error) {
+							logger.error("Error happy shikigami:", error)
+						}
+						break
+					case "clean_shikigami":
+						await buttonInteraction.deferUpdate()
+						try {
+							const userInventory = await getUserInventory(interaction.user.id)
+							const cleaningItem = userInventory.find(item => item.name === "Cleaning Kit")
+
+							if (selectedShikigami.hygiene === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already clean!`,
+									ephemeral: true
+								})
+							} else if (!cleaningItem) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Cleaning Kit's in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								const randomCleanAmount = Math.floor(Math.random() * 40) + 10
+								await removeItemFromUserInventory(interaction.user.id, "Cleaning Kit", 1)
+								await cleanShikigami(interaction.user.id, selectedShikigami.name, randomCleanAmount)
+								selectedShikigami.hygiene = Math.min(100, selectedShikigami.hygiene + randomCleanAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error cleaning shikigami:", error)
+						}
+
+						break
+					case "heal_shikigami":
+						await buttonInteraction.deferUpdate()
+						try {
+							const userInventory = await getUserInventory(interaction.user.id)
+							const specialGradeMedicineItem = userInventory.find(
+								item => item.name === "Special-Grade Medicine"
+							)
+
+							if (selectedShikigami.health === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already full!`,
+									ephemeral: true
+								})
+							} else if (!specialGradeMedicineItem) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Special-Grade Medicine in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								const randomHealAmount = Math.floor(Math.random() * 40) + 10
+								await removeItemFromUserInventory(interaction.user.id, "Special-Grade Medicine", 1)
+								await healShikigami(interaction.user.id, selectedShikigami.name, randomHealAmount)
+								selectedShikigami.health = Math.min(100, selectedShikigami.health + randomHealAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error healing shikigami:", error)
+						}
+						break
+					case "prestige_shikigami":
+						await buttonInteraction.deferUpdate()
+						break
 				}
-				break
-
-			case "clean_shikigami":
-				// Handle cleaning the shikigami
-				// ...
-				await buttonInteraction.deferReply() // Defer the initial reply
-				if (selectedShikigami.name === "Mahoraga") {
-					await buttonInteraction.followUp("You cleaned Mahoraga. Good luck getting those cursed stains out!")
-				} else {
-					await buttonInteraction.reply("You cleaned your shikigami!")
-				}
-				break
-
-			case "play_shikigami":
-				// Handle playing with the shikigami
-				// ...
-				await buttonInteraction.deferReply() // Defer the initial reply
-				if (selectedShikigami.name === "Mahoraga") {
-					await buttonInteraction.followUp("You played with Mahoraga. Hide and seek, anyone?")
-				} else {
-					await buttonInteraction.reply("You played with your shikigami!")
-				}
-				break
-
-			case "train_shikigami":
-				// Handle training the shikigami
-				// ...
-				await buttonInteraction.deferReply() // Defer the initial reply
-				if (selectedShikigami.name === "Mahoraga") {
-					await buttonInteraction.followUp("You trained Mahoraga. Let's hope he doesn't train you instead!")
-				} else {
-					await buttonInteraction.reply("You trained your shikigami!")
-				}
-				break
-
-			case "prestige_shikigami":
-				// Handle prestiging the shikigami
-				// ...
-				await buttonInteraction.deferReply() // Defer the initial reply
-				if (selectedShikigami.name === "Mahoraga") {
-					await buttonInteraction.followUp(
-						"You prestiged Mahoraga. Bow before his new, even more terrifying form!"
-					)
-				} else {
-					await buttonInteraction.reply("You prestiged your shikigami!")
-				}
-				break
+			}
 		}
 	} catch (error) {
-		console.error("Error executing viewShikigami function:", error)
-		await interaction.reply("An error occurred while processing your request.")
+		logger.error("Error executing viewShikigami function:", error)
 	}
+}
+
+export async function handlePetShop(interaction) {
+	const defaultPets = petOptions.filter(pet => pet.info.includes("Type: Normal"))
+
+	const defaultVersion = "Normal"
+	const userShikigami = await getUserShikigami(interaction.user.id)
+	const ownedPetNames = userShikigami.map(shikigami => shikigami.name)
+
+	const availablePets = defaultPets.filter(pet => !ownedPetNames.includes(pet.name))
+
+	const petEmbed = new EmbedBuilder()
+		.setTitle(`${defaultVersion} Pets`)
+		.setDescription("Click the button to buy a pet.")
+		.setFooter({ text: getRandomQuote() })
+
+	availablePets.forEach(pet => {
+		const requiredItemsText = pet.requiredItems?.length
+			? pet.requiredItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
+			: "None"
+		petEmbed.addFields({
+			name: `${pet.emoji} ${pet.name}`,
+			value: `<:7426replycontinued:1230892780407099593>${pet.description}\n<:7426replycontinued:1230892780407099593>${pet.info}\n<:7426replycontinued:1230892780407099593>Required Items: ${requiredItemsText}\n<:1412reply:1230892779211849839>Price: ${pet.formattedPrice} coins`
+		})
+	})
+
+	const petButtons = availablePets.map(pet => {
+		return new ButtonBuilder()
+			.setCustomId(`buy_pet_${pet.name}`)
+			.setLabel(`Buy ${pet.name} - ${pet.formattedPrice} coins`)
+			.setStyle(ButtonStyle.Primary)
+	})
+
+	const buttonRows = petButtons.reduce((rows, button, index) => {
+		const rowIndex = Math.floor(index / 3)
+		if (!rows[rowIndex]) {
+			rows[rowIndex] = new ActionRowBuilder<ButtonBuilder>()
+		}
+		rows[rowIndex].addComponents(button)
+		return rows
+	}, [] as ActionRowBuilder<ButtonBuilder>[])
+
+	const versionMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("pet_version")
+			.setPlaceholder("Select a pet type")
+			.addOptions(
+				petVersions.map(version => ({
+					label: version,
+					value: version
+				}))
+			)
+	)
+
+	await interaction.reply({ embeds: [petEmbed], components: [...buttonRows, versionMenu] })
+
+	const filter = (i: CommandInteraction) =>
+		i.user.id === interaction.user.id && (i.isStringSelectMenu() || i.isButton())
+
+	const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 160000 })
+
+	collector?.on("collect", async i => {
+		if (i.isStringSelectMenu() && i.customId === "pet_version") {
+			const selectedVersion = i.values[0]
+			const selectedPets = petOptions.filter(pet => pet.info.includes(`Type: ${selectedVersion}`))
+			const availableSelectedPets = selectedPets.filter(pet => !ownedPetNames.includes(pet.name))
+
+			const petEmbed = new EmbedBuilder()
+				.setTitle(`${selectedVersion} Pets`)
+				.setDescription("Click the button to buy a pet.")
+				.setFooter({ text: getRandomQuote() })
+
+			availableSelectedPets.forEach(pet => {
+				const requiredItemsText = pet.requiredItems?.length
+					? pet.requiredItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
+					: "None"
+
+				petEmbed.addFields({
+					name: `${pet.emoji} ${pet.name}`,
+					value: `<:7426replycontinued:1230892780407099593>${pet.description}\n<:7426replycontinued:1230892780407099593>${pet.info}\n<:7426replycontinued:1230892780407099593>Required Items: ${requiredItemsText}\n<:1412reply:1230892779211849839>Price: ${pet.formattedPrice} coins`
+				})
+			})
+
+			const selectedPetButtons = availableSelectedPets.map(pet => {
+				return new ButtonBuilder()
+					.setCustomId(`buy_pet_${pet.name}`)
+					.setLabel(`Buy ${pet.name} - ${pet.formattedPrice} coins`)
+					.setStyle(ButtonStyle.Primary)
+			})
+
+			const selectedButtonRows = selectedPetButtons.reduce((rows, button, index) => {
+				const rowIndex = Math.floor(index / 3)
+				if (!rows[rowIndex]) {
+					rows[rowIndex] = new ActionRowBuilder<ButtonBuilder>()
+				}
+				rows[rowIndex].addComponents(button)
+				return rows
+			}, [] as ActionRowBuilder<ButtonBuilder>[])
+
+			await i.update({ embeds: [petEmbed], components: [...selectedButtonRows, versionMenu] })
+		} else if (i.isButton() && i.customId.startsWith("buy_pet_")) {
+			const petName = i.customId.replace("buy_pet_", "")
+			const pet = petOptions.find(p => p.name === petName)
+
+			if (pet) {
+				const userBalance = await getBalance(i.user.id)
+				const userInventory = await getUserInventory(i.user.id)
+
+				// Check if the user has the required items
+				const hasRequiredItems =
+					!pet.requiredItems?.length ||
+					pet.requiredItems.every(requiredItem => {
+						const userItem = userInventory.find(item => item.name === requiredItem.name)
+						return userItem && userItem.quantity >= requiredItem.quantity
+					})
+
+				if (!hasRequiredItems) {
+					await i.reply({
+						content: `You don't have the required items to buy ${pet.name}. Required items: ${
+							pet.requiredItems?.map(item => `${item.quantity}x ${item.name}`).join(", ") || "None"
+						}`,
+						ephemeral: true
+					})
+					return
+				}
+
+				if (userBalance >= pet.price) {
+					await updateBalance(i.user.id, -pet.price)
+
+					// Remove the required items from the user's inventory
+					for (const requiredItem of pet.requiredItems || []) {
+						await removeItemFromUserInventory(i.user.id, requiredItem.name, -requiredItem.quantity)
+					}
+
+					const newShikigami: UserShikigami = {
+						name: pet.name,
+						experience: 0,
+						tier: 1,
+						tamedAt: new Date(),
+						hygiene: 100,
+						hunger: 100,
+						friendship: 0
+					}
+
+					await updateUserShikigami(i.user.id, newShikigami)
+
+					await i.reply({
+						content: `Congratulations! You have successfully purchased ${pet.name}.`,
+						ephemeral: true
+					})
+				} else {
+					await i.reply({
+						content: "Insufficient funds to buy this pet.",
+						ephemeral: true
+					})
+				}
+				collector.stop()
+			}
+		}
+	})
 }

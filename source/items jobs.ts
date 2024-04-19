@@ -1,4 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { logger } from "./bot.js"
+import { dirtyToCleanItemMap } from "./interface.js"
 import {
 	addItemToUserInventory,
 	addUserQuest,
@@ -6,9 +8,9 @@ import {
 	addUserTechnique,
 	getGamblersData,
 	getUserInateClan,
+	getUserInventory,
 	getUserQuests,
 	getUserUnlockedTransformations,
-	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	resetBetLimit,
 	updateGamblersData,
@@ -96,6 +98,20 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	wheel_fixed: {
+		requiredItems: [
+			{ name: "(Broken) Divine General Wheel", quantity: 6 },
+			{ name: "Super Glue", quantity: 1 }
+		],
+		craftedItemName: "Mahoragas Wheel"
+	},
+	specialgradespray: {
+		requiredItems: [
+			{ name: "Empty Bottle", quantity: 1 },
+			{ name: "Special-Grade Medicine", quantity: 1 }
+		],
+		craftedItemName: "Special-Grade Anti Effect Spray"
+	},
 	bundle_soul: {
 		requiredItems: [
 			{ name: "Dagons Soul", quantity: 1 },
@@ -108,8 +124,8 @@ export const craftingRecipes = {
 	},
 	curse_rep: {
 		requiredItems: [
-			{ name: "Empty Can", quantity: 1 },
-			{ name: "Smelly Sock", quantity: 1 },
+			{ name: "Empty Bottle", quantity: 1 },
+			{ name: "Cursed Shard", quantity: 1 },
 			{ name: "Super Glue", quantity: 1 }
 		],
 		craftedItemName: "Curse Repellent"
@@ -217,7 +233,7 @@ export const craftingRecipes = {
 			{ name: "Dirty Sponge", quantity: 1 },
 			{ name: "Cleaning Kit", quantity: 1 }
 		],
-		craftedItemName: "Clean Sponge"
+		craftedItemName: "Cleaning Sponge"
 	}
 }
 
@@ -560,35 +576,38 @@ export const CLAN_SKILLS = {
 			description: "With this treasure i summon...",
 			cost: "3250000",
 			clan: "Fushiguro",
-			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
+			items: [
+				{ name: "Mahoraga's Wheel", quantity: 1 },
+				{ name: "Mahoraga's Soul", quantity: 1 }
+			]
 		},
 		{
 			name: "Ten Shadows Technique: Max Elephant",
 			description: "FATTY",
 			cost: "1250000",
 			clan: "Fushiguro",
-			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
+			items: [{ name: "Elephant Shikigami's Soul", quantity: 1 }]
 		},
 		{
 			name: "Ten Shadows Technique: Nue",
 			description: "bird :3",
 			cost: "250000",
 			clan: "Fushiguro",
-			items: [{ name: "Sukuna Finger", quantity: 1 }]
+			items: [{ name: "Bird Shikigami's Soul", quantity: 1 }]
 		},
 		{
 			name: "Ten Shadows Technique: Divine Dogs",
 			description: "Divine Dogs!",
 			cost: "125000",
 			clan: "Fushiguro",
-			items: [{ name: "Tailsman", quantity: 1 }]
+			items: [{ name: "Divine Dogs Shikigami's Soul", quantity: 1 }]
 		},
 		{
 			name: "Ten Shadows Technique: Toad",
 			description: "blurp",
 			cost: "100000",
 			clan: "Fushiguro",
-			items: [{ name: "Sukuna Finger", quantity: 1 }]
+			items: [{ name: "Tailsman", quantity: 1 }]
 		}
 	],
 	"Zenin": [
@@ -1635,26 +1654,68 @@ export const items1: Item1[] = [
 		}
 	},
 	{
-		itemName: "Clean Sponge",
-		description: "Clean Sponge",
+		itemName: "Cleaning Sponge",
+		description: "Cleaning Sponge",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
 			await interaction.deferReply()
-
 			const userId = interaction.user.id
+			const itemToClean = interaction.options.getString("item_to_clean")
+
+			if (!itemToClean) {
+				await interaction.editReply({ content: "Please specify the item to clean." })
+				return
+			}
 
 			try {
-				await removeAllStatusEffects(userId)
+				const userInventory = await getUserInventory(userId)
+				const itemIndex = userInventory.findIndex(item => item.name === itemToClean)
 
-				const embedFinal = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("Clean Sponge")
-					.setDescription("All status effects removed! You are now clean!")
-				await interaction.editReply({ embeds: [embedFinal] })
+				if (itemIndex === -1) {
+					await interaction.editReply({
+						content: `You don't have the item "${itemToClean}" in your inventory.`
+					})
+					return
+				}
+
+				const itemToCleaned = userInventory[itemIndex]
+
+				// Apply cleaning logic here
+				const cleaningSuccess = Math.random() < 0.8 // 80% chance of successful cleaning
+
+				if (cleaningSuccess) {
+					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
+
+					// Add the cleaned version of the item to the inventory
+					const cleanedItemName = dirtyToCleanItemMap[itemToCleaned.name] || itemToCleaned.name
+					await addItemToUserInventory(userId, cleanedItemName, 1)
+
+					const embedFinal = new EmbedBuilder()
+						.setColor("#006400")
+						.setTitle("Cleaning Sponge")
+						.setDescription(
+							`Successfully cleaned "${itemToCleaned.name}"! You now have a "${cleanedItemName}" in your inventory.`
+						)
+
+					await interaction.editReply({ embeds: [embedFinal] })
+				} else {
+					// Remove the original item from the inventory
+					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
+
+					const embedFinal = new EmbedBuilder()
+						.setColor("#FF0000")
+						.setTitle("Cleaning Sponge")
+						.setDescription(`Failed to clean "${itemToCleaned.name}"! The item has disappeared.`)
+
+					await interaction.editReply({ embeds: [embedFinal] })
+				}
+
+				// Remove the cleaning sponge from the inventory
+				await removeItemFromUserInventory(userId, "Cleaning Sponge", 1)
 			} catch (error) {
-				console.error("Error applying item effect:", error)
-				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to use the cleaning sponge. Please try again." })
 			}
 		}
 	},
@@ -1730,8 +1791,10 @@ export const shopItems = [
 	{ name: "Prison Realm Fragment", rarity: "Grade 1", price: 95000 },
 	{ name: "(Shattered) Domain Remnants", rarity: "Grade 1", price: 125000 },
 	{ name: "Clean Sponge", rarity: "Grade 1", price: 100000 },
+	{ name: "Dragon Scales", rarity: "Grade 1", price: 250000 },
 	//
 	{ name: "Gamblers Token", rarity: "Special Grade", price: 250000, maxPurchases: 5 },
+	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 1 },
 	{ name: "Curse Repellent", rarity: "Special Grade", price: 200000, maxPurchases: 8 },
 	{ name: "Sukuna Finger", rarity: "Special Grade", price: 350000, maxPurchases: 8 },
 	{ name: "Rikugan Eye", rarity: "Special Grade", price: 1000000, maxPurchases: 2 },

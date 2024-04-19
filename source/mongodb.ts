@@ -9,25 +9,15 @@ import { questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "devboss"
+const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "devuser"
+const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 
-const mongoUser = process.env["MONGO_USER"]
-const mongoPassword = process.env["MONGO_PASSWORD"]
 const mongoDatabase = process.env["MONGO_DATABASE"]
-const mongoHost = process.env["MONGO_HOST"]
-const mongoPort = process.env["MONGO_PORT"]
 const mongoUri = process.env.MONGO_URI
-
-console.log("MongoDB User:", mongoUser)
-console.log("MongoDB Database:", mongoDatabase)
-console.log("MongoDB Password:", mongoPassword)
-console.log("MongoDB Host:", mongoHost)
-console.log("MongoDB Port:", mongoPort)
 
 // Create a new MongoClient
 const client = new MongoClient(mongoUri)
@@ -36,37 +26,47 @@ let isConnected = false
 
 client.on("connected", () => {
 	isConnected = true
-	console.log("Connected to MongoDB")
+	logger.info("Connected to MongoDB")
 })
 
 client.on("close", () => {
 	isConnected = false
-	console.log("Disconnected from MongoDB")
+	logger.info("Disconnected from MongoDB")
 })
 
 // LINK START! ---------------------------------------------------------------
 
 // Function to run both tasks
 async function runScheduledTasks() {
-	console.log("Running scheduled tasks...")
+	logger.info("Running scheduled tasks...")
 	try {
 		await updateShop()
-		console.log("Shop update completed successfully.")
+		logger.info("Shop update completed successfully.")
 	} catch (error) {
-		console.error("Error updating shop:", error)
+		logger.error("Error updating shop:", error)
 	}
 
 	try {
 		await resetBetCounts()
-		console.log("Bet counts reset completed successfully.")
+		logger.info("Bet counts reset completed successfully.")
 	} catch (error) {
-		console.error("Error resetting bet counts:", error)
+		logger.error("Error resetting bet counts:", error)
 	}
 }
 
 // Schedule the tasks to run every day at 3 PM
 const job = schedule.scheduleJob("0 15 * * *", function () {
 	runScheduledTasks()
+})
+
+cron.schedule("0 * * * *", async () => {
+	try {
+		await decreaseShikigamiHunger()
+		await decreaseShikigamiHygiene()
+		logger.info("Decreased shikigami hunger and hygiene")
+	} catch (error) {
+		logger.error("Error decreasing shikigami hunger:", error)
+	}
 })
 
 // ----------------------------------------------------------------------------
@@ -186,28 +186,21 @@ async function removeExpiredItemEffects() {
 			}
 		)
 
-		console.log(`Removed ${updateResult.modifiedCount} expired item effects`)
+		logger.info(`Removed ${updateResult.modifiedCount} expired item effects`)
 	} catch (error) {
 		console.error("Error removing expired item effects:", error)
-	} finally {
-		// await client.close()
 	}
 }
 
 export async function initializeDatabase() {
 	try {
-		console.log("Connecting to database...")
+		logger.info("Connecting to database...")
 		await client.connect()
 
-		console.log("Initializing database...")
-		await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
-		//
-		//
-		//
+		logger.info("Initializing database...")
+		//await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
 	} catch (error) {
-		console.error("Database initialization failed:", error)
-	} finally {
-		// await client.close()
+		logger.fatal("Database initialization failed:", error)
 	}
 }
 
@@ -242,18 +235,18 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		// Find users without the fields or where 'gamblersData.limit' is missing
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ purchases: { $exists: false } }]
+				$or: [{ shikigami: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [{ purchases: { $exists: false } }]
+					$or: [{ shikigami: { $exists: false } }]
 				},
 				{
 					$set: {
-						purchases: []
+						shikigami: []
 					}
 				}
 			)
@@ -793,9 +786,6 @@ function calculateTier(experience) {
 	else return 6
 }
 
-// Test the calculateTier function with 625 experience
-console.log(calculateTier(625)) // Should log 4 based on your tier system
-
 // Main function to update the player's grade based on experience
 export async function updatePlayerGrade(userId) {
 	try {
@@ -822,9 +812,6 @@ export async function updatePlayerGrade(userId) {
 		}
 	} catch (error) {
 		console.error(`Error updating grade for user ${userId} in the users collection:`, error)
-	} finally {
-		// Consider the best strategy for handling your MongoDB client connection here
-		// await client.close()
 	}
 }
 // update play inate clan tier based on inate clan experience
@@ -859,9 +846,6 @@ export async function updatePlayerClanTier(userId) {
 		}
 	} catch (error) {
 		console.error(`Error updating clan tier for user ${userId}:`, error)
-	} finally {
-		// If this operation is not frequent, you might close the connection here. Otherwise, keep it open.
-		// await client.close();
 	}
 }
 
@@ -890,8 +874,6 @@ export async function updateUserAchievements(userId, achievementId) {
 	} catch (error) {
 		console.error("Error updating user achievements:", error)
 		throw error
-	} finally {
-		// Consider reusing the connection instead of connecting and closing each time
 	}
 }
 
@@ -909,9 +891,6 @@ export async function getUserAchievements(userId: string): Promise<string[]> {
 	} catch (error) {
 		console.error(`Error when retrieving achievements for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Consider whether you really want to close the client here
-		// await client.close();
 	}
 }
 
@@ -943,9 +922,6 @@ export async function awardTitlesForAchievements(userId: string): Promise<void> 
 		await usersCollection.updateOne({ id: userId }, { $set: { unlockedTitles: unlockedTitles } })
 	} catch (error) {
 		console.error("Error awarding titles based on achievements:", error)
-	} finally {
-		// Consider if you need to close the client here
-		// await client.close();
 	}
 }
 
@@ -980,8 +956,6 @@ export async function updateUserBankBalance(userId: string, newBalance: number):
 	} catch (error) {
 		console.error("Error updating user bank balance:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -998,8 +972,6 @@ export async function getUserBankBalance(userId: string): Promise<number> {
 	} catch (error) {
 		console.error(`Error when retrieving bank balance for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1053,9 +1025,6 @@ export async function getUserDailyData(userId: string): Promise<{ lastDaily: num
 	} catch (error) {
 		console.error(`Error when retrieving daily data for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Consider whether you really want to close the client here
-		// await client.close();
 	}
 }
 
@@ -1070,9 +1039,6 @@ export async function updateUserDailyData(userId: string, lastDaily: number, str
 	} catch (error) {
 		console.error(`Error when updating daily data for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Consider whether you really want to close the client here
-		// await client.close();
 	}
 }
 
@@ -1105,8 +1071,6 @@ export async function checkUserHasHeavenlyRestriction(userId) {
 	} catch (error) {
 		console.error("Error checking Heavenly Restriction:", error)
 		throw error // Rethrow or handle as needed
-	} finally {
-		//
 	}
 }
 
@@ -1123,8 +1087,6 @@ export async function getUserClan(userId: string): Promise<string | null> {
 	} catch (error) {
 		console.error(`Error when retrieving clan for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1141,8 +1103,6 @@ export async function getUserTechniques(userId: string): Promise<string[]> {
 	} catch (error) {
 		console.error(`Error when retrieving techniques for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1161,8 +1121,6 @@ export async function getAllUserExperience(): Promise<{ id: string; experience: 
 	} catch (error) {
 		console.error("Error when retrieving all user experience:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1185,8 +1143,6 @@ export async function getAllQuests(): Promise<{ id: string; name: string; descri
 	} catch (error) {
 		console.error("Error when retrieving all quests:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // update user techniques
@@ -1222,8 +1178,6 @@ export async function updateUserClan(userId: string, newClan: string): Promise<v
 	} catch (error) {
 		console.error("Error updating user clan:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1481,6 +1435,7 @@ export async function updateUserGamble(userId: string, newGamble: number): Promi
 }
 
 import moment from "moment-timezone"
+import { logger } from "./bot.js"
 
 async function dailyReset() {
 	const database = client.db(mongoDatabase)
@@ -2676,10 +2631,10 @@ export async function getUserShikigami(userId: string): Promise<Shikigami[]> {
 	}
 }
 
-interface UserShikigami {
+export interface UserShikigami {
 	name: string
 	experience: number
-	health: number
+	health?: number
 	tier: number
 	tamedAt: Date
 	hygiene: number
@@ -2730,6 +2685,151 @@ export async function updateShikigamiHealth(userId: string, shikigamiName: strin
 		)
 	} catch (error) {
 		console.error("Error updating shikigami health:", error)
+		throw error
+	}
+}
+
+// feedshikigami
+export async function feedShikigami(userId: string, shikigamiName: string, foodAmount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's shikigami hunger
+
+		await usersCollection.updateOne(
+			{ "id": userId, "shikigami.name": shikigamiName },
+
+			{
+				$inc: {
+					"shikigami.$.hunger": foodAmount
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error feeding shikigami:", error)
+
+		throw error
+	}
+}
+
+export async function decreaseShikigamiHunger(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Decrease the hunger of all shikigami by a certain amount
+		const hungerDecrement = 10 // Adjust this value as needed
+
+		await usersCollection.updateMany(
+			{},
+			{
+				$inc: {
+					"shikigami.$[elem].hunger": -hungerDecrement
+				}
+			},
+			{
+				arrayFilters: [
+					{
+						"elem.hunger": { $gt: 0 }
+					}
+				]
+			}
+		)
+	} catch (error) {
+		console.error("Error decreasing shikigami hunger:", error)
+		throw error
+	}
+}
+// decrease shikigami hygiene
+export async function decreaseShikigamiHygiene(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Decrease the hygiene of all shikigami by a certain amount
+		const hygieneDecrement = 10 // Adjust this value as needed
+
+		await usersCollection.updateMany(
+			{},
+			{
+				$inc: {
+					"shikigami.$[elem].hygiene": -hygieneDecrement
+				}
+			},
+			{
+				arrayFilters: [
+					{
+						"elem.hygiene": { $gt: 0 }
+					}
+				]
+			}
+		)
+	} catch (error) {
+		console.error("Error decreasing shikigami hygiene:", error)
+		throw error
+	}
+}
+// cleanShikigami
+export async function cleanShikigami(userId: string, shikigamiName: string, hygieneAmount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's shikigami hygiene
+		await usersCollection.updateOne(
+			{ "id": userId, "shikigami.name": shikigamiName },
+			{
+				$inc: {
+					"shikigami.$.hygiene": hygieneAmount
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error cleaning shikigami:", error)
+		throw error
+	}
+}
+
+// increasebond
+export async function increaseBond(userId: string, shikigamiName: string, friendshipAmount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's shikigami friendship
+		await usersCollection.updateOne(
+			{ "id": userId, "shikigami.name": shikigamiName },
+			{
+				$inc: {
+					"shikigami.$.friendship": friendshipAmount
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error increasing bond with shikigami:", error)
+		throw error
+	}
+}
+
+//healshikigami
+export async function healShikigami(userId: string, shikigamiName: string, healthAmount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Update the user's shikigami health
+		await usersCollection.updateOne(
+			{ "id": userId, "shikigami.name": shikigamiName },
+			{
+				$inc: {
+					"shikigami.$.health": healthAmount
+				}
+			}
+		)
+	} catch (error) {
+		console.error("Error healing shikigami:", error)
 		throw error
 	}
 }

@@ -120,17 +120,19 @@ export async function handleShikigamiTame(
 	// Show victory embed
 	const victoryMessage = "You won"
 	embed.setDescription(victoryMessage)
+	const drop = getBossDrop(opponent.name)
 
 	// Update values in the database
 	activeCollectors.delete(interaction.user.id)
 	await updateUserHealth(interaction.user.id, 100)
+	await addItemToUserInventory(interaction.user.id, drop.name, 1)
 	await removeAllStatusEffects(interaction.user.id)
 
 	const tamedShikigami: UserShikigami = {
 		name: opponent.name,
 		experience: 0,
 		tier: 5,
-		health: 100,
+		health: opponent.name === "Mahoraga" ? 400 : 100,
 		tamedAt: new Date(),
 		hygiene: 100,
 		hunger: 100,

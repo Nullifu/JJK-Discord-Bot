@@ -810,6 +810,86 @@ export const attacks: Record<string, Attack[]> = {
 			embedUpdate: embed => embed.setDescription("ZAP")
 		}
 	],
+	"Nue": [
+		{
+			name: "Nue: Bite",
+			probability: 50,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Nue: Dropdown Strike",
+			probability: 30,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Nut: Lightning Manipulation",
+			probability: 20,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Toad": [
+		{
+			name: "ribbit",
+			probability: 50,
+			baseDamage: 1,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "ribbit1",
+			probability: 30,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Domain Expansion: ribbit2",
+			probability: 20,
+			baseDamage: 120,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Great Serpent": [
+		{
+			name: "Ssss-Strike",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Worm Strike",
+			probability: 30,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Serpent Strike",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
+	"Max Elephant": [
+		{
+			name: "Water Manipulation",
+			probability: 50,
+			baseDamage: 20,
+			embedUpdate: embed => embed.setDescription("BLAST!")
+		},
+		{
+			name: "Belly Flop",
+			probability: 30,
+			baseDamage: 40,
+			embedUpdate: embed => embed.setDescription("Strike!")
+		},
+		{
+			name: "Elephant Charge",
+			probability: 20,
+			baseDamage: 30,
+			embedUpdate: embed => embed.setDescription("ZAP")
+		}
+	],
 	"Divine-General Mahoraga": [
 		{
 			name: "Foresight Adaption",
@@ -820,7 +900,7 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "?$!h!@",
 			probability: 30,
-			baseDamage: 100,
+			baseDamage: 60,
 			embedUpdate: embed => embed.setDescription("Strike!")
 		},
 		{

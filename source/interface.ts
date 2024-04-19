@@ -66,6 +66,11 @@ interface Quest {
 	name: string
 	id: string
 }
+export const dirtyToCleanItemMap = {
+	"(Dirty) Sukuna Finger": "Sukuna Finger",
+	"Tarnished Sword": "Shiny Sword",
+	"Soiled Cape": "Clean Cape"
+}
 
 /**
  * Creates a bar using Unicode characters based on the provided value and maximum value.
