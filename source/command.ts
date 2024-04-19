@@ -15,13 +15,12 @@ import {
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
-	InteractionResponse,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction
 } from "discord.js"
-import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks } from "./attacks.js"
-import { digCooldown, digCooldownBypassIDs, digCooldowns } from "./bot.js"
+import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks, heavenlyrestrictionskills } from "./attacks.js"
+import { digCooldown, digCooldownBypassIDs, digCooldowns, logger } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -29,7 +28,8 @@ import {
 	getRandomAmount,
 	getRandomLocation,
 	handleClanDataEmbed,
-	handleEffectEmbed
+	handleEffectEmbed,
+	handleShikigamiEmbed
 } from "./calculate.js"
 import {
 	executeBlackFlash,
@@ -45,7 +45,8 @@ import {
 	exportTheHonoredOne,
 	generateHealthBar,
 	handleBossDeath,
-	handlePlayerRevival
+	handlePlayerRevival,
+	handleShikigamiTame
 } from "./fight.js"
 import {
 	BossData,
@@ -64,8 +65,6 @@ import {
 	benefactors,
 	craftingRecipes,
 	dailyitems,
-	getRandomItem,
-	heavenlyrestrictionskills,
 	itemEffects,
 	items,
 	items1,
@@ -73,15 +72,19 @@ import {
 	lookupItems,
 	questsArray
 } from "./items jobs.js"
+import { getRandomItem } from "./items.js"
 import { postCommandMiddleware } from "./middleware.js"
 import {
+	UserShikigami,
 	addItemToUserInventory,
 	addUser,
 	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
 	checkUserHasHeavenlyRestriction,
+	cleanShikigami,
 	createTradeRequest,
+	feedShikigami,
 	getActiveTrades,
 	getAllShopItems,
 	getAllUserExperience,
@@ -90,6 +93,7 @@ import {
 	getBosses,
 	getGamblersData,
 	getPreviousTrades,
+	getShikigami,
 	getShopLastReset,
 	getUserAchievements,
 	getUserActiveHeavenlyTechniques,
@@ -108,6 +112,7 @@ import {
 	getUserProfile,
 	getUserPurchases,
 	getUserQuests,
+	getUserShikigami,
 	getUserStatusEffects,
 	getUserTechniques,
 	getUserTransformation,
@@ -117,6 +122,7 @@ import {
 	getUserVoteTime,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
+	healShikigami,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
@@ -135,14 +141,25 @@ import {
 	updateUserHonours,
 	updateUserInateClan,
 	updateUserJob,
+	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
-	updateUserVoteTime,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
 import {
-	applyAdaption,
+	activeShikigami,
+	createShikigamiEmbed,
+	executeDivineDogsTechnique,
+	executeMahoraga,
+	executeNue,
+	getRandomQuote,
+	handleDivineDogsDamage,
+	handleMahoragaAttack,
+	startPlayingMinigame,
+	updateShikigamiField
+} from "./shikigami.js"
+import {
 	applyPrayerSongEffect,
 	applyStatusEffect,
 	applyVirtualMass,
@@ -163,7 +180,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 
-		// Check if the user already exists before trying to register them
 		if (await userExists(discordId)) {
 			await interaction.reply({
 				content: "It looks like you're already registered!",
@@ -215,7 +231,7 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 		.setTitle(`${targetUser.username}'s Cursed Wallet`)
 		.setThumbnail(targetUser.displayAvatarURL())
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
-		.setFooter({ text: "Spend wisely. Every decision shapes your destiny." })
+		.setFooter({ text: getRandomQuote() })
 		.setTimestamp()
 
 	await interaction.editReply({ embeds: [balanceEmbed] })
@@ -252,9 +268,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false }
 			)
 
-			.setFooter({
-				text: "Harness your cursed energy. Update your profile to reflect your growth in the Jujutsu world."
-			})
+			.setFooter({ text: getRandomQuote() })
 	}
 
 	try {
@@ -341,6 +355,7 @@ export async function handleDigCommand(interaction) {
 						expirationTime / 1000
 					)}:R>.`
 				)
+				.setFooter({ text: getRandomQuote() })
 			await interaction.editReply({ embeds: [digCooldownEmbed] })
 			return
 		}
@@ -348,20 +363,22 @@ export async function handleDigCommand(interaction) {
 
 	digCooldowns.set(authorId, currentTime)
 
-	const itemDiscoveryChance = 0.7 // 50% chance to discover an item
+	const itemDiscoveryChance = 0.7
 	const doesDiscoverItem = Math.random() < itemDiscoveryChance
-
 	const coinsFound = Math.floor(Math.random() * 20000) + 1
+
 	await updateBalance(interaction.user.id, coinsFound)
 
 	if (doesDiscoverItem) {
 		const itemFound = getRandomItem()
+
 		if (itemFound) {
 			await addItemToUserInventory(authorId, itemFound.name, 1)
+
 			const digEmbed = new EmbedBuilder()
-				.setColor(0x00ff00) // Success color
+				.setColor(0x00ff00)
 				.setTitle("Digging Results")
-				.setDescription(`You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`)
+				.setDescription(`You unearthed \\\`⌬${coinsFound}\\\` coins! **You also found a ${itemFound.name}!**`)
 				.setTimestamp()
 			await interaction.editReply({ embeds: [digEmbed] })
 		} else {
@@ -561,23 +578,51 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	await postCommandMiddleware(interaction)
 }
 
+function checkCraftability(recipe, userInventory) {
+	// Check if requiredMaterials and userInventory are properly defined
+	if (!recipe.requiredMaterials || !userInventory) {
+		console.error("Missing required materials or user inventory data")
+		return false // Cannot craft if data is missing
+	}
+
+	for (const [item, requiredAmount] of Object.entries(recipe.requiredMaterials)) {
+		if (!userInventory[item] || userInventory[item] < requiredAmount) {
+			return false // The user does not have enough of this item
+		}
+	}
+	return true // All required items are available in the necessary quantities
+}
+
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>) {
 	try {
-		// Assuming craftingRecipes is an object where the key is the item identifier and it contains all necessary details
+		const userInventory = await getUserInventory(interaction.user.id) // Fetch the user's current inventory
+		if (!userInventory) {
+			throw new Error("User inventory is not available.")
+		}
+
 		const craftableItemsMenu = new SelectMenuBuilder()
 			.setCustomId("selectCraftItem")
 			.setPlaceholder("Select an item to craft")
 			.addOptions(
-				Object.keys(craftingRecipes).map(key => {
-					const recipe = craftingRecipes[key]
-					const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
-					return {
-						label: recipe.craftedItemName,
-						value: key,
-						emoji: emojiId ? { id: emojiId } : undefined
-					}
-				})
+				Object.keys(craftingRecipes)
+					.map(key => {
+						const recipe = craftingRecipes[key]
+						if (!recipe) {
+							console.error("Recipe details not found for key:", key)
+							return null // Continue to the next item if the recipe is missing
+						}
+						const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
+
+						return {
+							label: recipe.craftedItemName,
+							description: "Click to craft this item",
+							value: key,
+							emoji: emojiId ? { id: emojiId } : undefined
+						}
+					})
+					.filter(option => option !== null) // Filter out any null options created by missing recipes
 			)
+		//
 
 		const row1 = new ActionRowBuilder<SelectMenuBuilder>().addComponents(craftableItemsMenu)
 
@@ -595,7 +640,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				const craftEmbed = new EmbedBuilder()
 					.setColor(0x00ff00)
-					.setTitle(`${selectedItemRecipe.emoji} ${selectedItemRecipe.craftedItemName}`)
+					.setTitle(`${selectedItemRecipe.craftedItemName}`)
 					.addFields({
 						name: "Requirements",
 						value: selectedItemRecipe.requiredItems
@@ -628,7 +673,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				const buttonCollector = interaction.channel.createMessageComponentCollector({
 					filter: buttonFilter,
-					time: 20000 // Collector will last for 15 seconds
+					time: 20000 // Collector will last for 20 seconds
 				})
 
 				buttonCollector.on("collect", async buttonInteraction => {
@@ -645,15 +690,25 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						})
 
 						if (!hasAllItems) {
+							const errorEmbed = new EmbedBuilder()
+								.setColor("Red")
+								.setTitle("Insufficient Items")
+								.setDescription("You do not have all the necessary items to craft this item.")
+								.addFields({
+									name: "Required Items",
+									value: selectedItemRecipe.requiredItems
+										.map(item => `${item.name} (${item.quantity})`)
+										.join("\n")
+								})
+
 							await buttonInteraction.editReply({
-								content: "You do not have all the necessary items to craft this.",
+								embeds: [errorEmbed],
 								components: []
 							})
-							return // Stop further execution if user lacks necessary items
+							return
 						}
-
 						try {
-							console.log("Starting item removal for ITEM!")
+							logger.info("Starting item removal for ITEM!")
 
 							for (const requiredItem of selectedItemRecipe.requiredItems) {
 								console.log("Removing item:", requiredItem)
@@ -662,10 +717,10 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 									requiredItem.name,
 									requiredItem.quantity
 								)
-								console.log("Item removed!")
+								logger.info("Item removed!")
 							}
 							await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
-							console.log("Item added! ", selectedItemRecipe.craftedItemName)
+							logger.info("Item added! ", selectedItemRecipe.craftedItemName)
 
 							await buttonInteraction.editReply({
 								content: `You have successfully crafted ${selectedItemRecipe.craftedItemName}!`,
@@ -687,7 +742,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 			}
 		})
 	} catch (error) {
-		console.error("Error in crafting command:", error)
+		logger.error("Error in crafting command:", error)
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
 }
@@ -1167,40 +1222,32 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 3.5", // Replace with your actual version number
-			date: "07-04-24", // Adjust the date as needed
+			version: "Update 6.0", // Replace with your actual version number
+			date: "19-04-24", // Adjust the date as needed
 			changes: [
 				{
-					name: "**Fight Command [ SEMI REWORK ]**",
-					value: "Reworked domains, added new techniques, and Added **Status Effects** Currently only domains and some skills apply these."
+					name: "**Biggest Update Yet!**",
+					value: "Reworked Fushiguro, Added Pets. + Shikigami!"
 				},
 				{
-					name: "New Boss System",
-					value: "Now you can unlock certain bosses when you use an item, So if you use **Special-Grade Geo Locator** It unlocks yuta boss, And if you do the disaster curses quest line you can fight them."
+					name: "Shikigami",
+					value: "Earn shikigami through the tame command."
 				},
 				{
-					name: "Quest And Technique Commands",
-					value: "Reworked these commands to be more user friendly and added more information."
+					name: "Did you know?",
+					value: "Shikigami can also be used as pets! using shikigami [view, shop] Remember to feed them and keep them healthy!"
 				},
 				{
-					name: "New Techniques",
-					value: "New Secret Skills. Get them with useitem - Sacred Eye, "
-				},
-				{
-					name: "Grade System Rework",
-					value: "Bosses scale with your grade, Readded boss transformation and awakenings."
-				},
-				{
-					name: "Bug Fixes",
-					value: "Interaction failed, and some other bugs fixed. < HP Bug has not been fixed yet so ive removed it for now. >"
+					name: "+ More in the discord!",
+					value: "Join the discord for more information on the update!"
 				},
 				{
 					name: "Found a bug? Report it!",
 					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
 				},
 				{
-					name: "**IF YOU LOSE ANY ITEMS DURING TRADES**",
-					value: "Please report it to the support server. We can help you get your items back."
+					name: "**sorry guys forgot to update this command about updates.. **",
+					value: "I will try to keep this updated from now on, but if i forget just check the support server for updates."
 				}
 			]
 		}
@@ -1258,7 +1305,7 @@ function findTechniqueClan(techniqueName: string): string {
 			return clanName
 		}
 	}
-	return "" // Or "Unknown" if you prefer
+	return ""
 }
 
 // Simplify technique names (assuming this function already exists in your code)
@@ -1271,7 +1318,8 @@ function simplifyTechniqueName(fullName: string): string {
 }
 
 export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInteraction) {
-	const userId = interaction.user.id
+	const targetUser = interaction.options.getUser("user") || interaction.user
+	const userId = targetUser.id
 
 	try {
 		const userDomain = await getUserDomain(userId)
@@ -1321,7 +1369,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 
 		// Construct the embed
 		const embed = new EmbedBuilder()
-			.setTitle(`${interaction.user.username}'s Jujutsu Profile`)
+			.setTitle(`${targetUser.username}'s Jujutsu Profile`)
 			.setColor("#4B0082") // Purple color
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
@@ -1335,7 +1383,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				{ name: "🔪 Transformation", value: transform || "None", inline: false },
 				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay || "None", inline: false }
 			)
-		const selectMenu = new StringSelectMenuBuilder() // Note: StringSelectMenuBuilder
+		const selectMenu = new StringSelectMenuBuilder()
 			.setCustomId("selectMenu")
 			.setPlaceholder("Select an option")
 			.addOptions([
@@ -1383,6 +1431,9 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 				} else if (selectedOption === "clanProfile") {
 					const clanEmbed = await handleClanDataEmbed(userId)
 					await i.update({ embeds: [clanEmbed] })
+				} else if (selectedOption === "shikiProfile") {
+					const shikiEmbed = await handleShikigamiEmbed(userId)
+					await i.update({ embeds: [shikiEmbed] })
 				}
 			}
 		})
@@ -1530,18 +1581,23 @@ export async function handleVoteCommand(interaction) {
 
 	// Buttons with external emojis for attention
 	const voteButtonTopGG = new ButtonBuilder()
-		.setLabel("🚀 Vote on Top.gg")
+		.setLabel("Vote on Top.gg + Free Rewards!")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://top.gg/bot/991443928790335518/vote")
 		.setEmoji("🚀")
+	const TOPGGReview = new ButtonBuilder()
+		.setLabel("Drop a Review on Top.gg!")
+		.setStyle(ButtonStyle.Link)
+		.setURL("https://top.gg/bot/991443928790335518#reviews")
+		.setEmoji("😍")
 	const discordbotlistme = new ButtonBuilder()
-		.setLabel("👍 Vote on Botlist.me")
+		.setLabel("Vote on Botlist.me")
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://botlist.me/bots/991443928790335518/vote")
 		.setEmoji("👍")
 
 	// Action row - no changes needed
-	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme)
+	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme, TOPGGReview)
 
 	// Reply with the updated components
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
@@ -1555,7 +1611,6 @@ const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Bro
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
-
 	await updateUserHealth(interaction.user.id, playerHealth1)
 
 	await interaction.deferReply()
@@ -1590,18 +1645,16 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		return
 	}
 
-	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
+	//
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
+	//
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 	//
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
-
-	console.log(`User techniques for ${interaction.user.username} `, userTechniques)
 	const transformname = await getUserTransformation(interaction.user.id)
-
-	console.log(`Transformation for ${interaction.user.username} `, transformname)
 	const domainname = await getUserDomain(interaction.user.id)
 
 	const techniqueOptions =
@@ -1662,7 +1715,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			{
 				name: "Player Health Status",
 				value: generateHealthBar(playerHealth, playerHealth1),
-				inline: false
+				inline: true
 			}
 		)
 		.addFields(
@@ -1681,18 +1734,17 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		components: [row]
 	})
 
-	// Handle user selection
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
-		time: 300000 // 60 seconds
+		time: 300000
 	})
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
 		await collectedInteraction.deferUpdate()
 		if (collectedInteraction.user.id !== interaction.user.id) return
 		const selectedValue = collectedInteraction.values[0]
-		const playerHealth = await getUserHealth(collectedInteraction.user.id)
+		let playerHealth = await getUserHealth(collectedInteraction.user.id)
 
 		console.log("Selected value:", selectedValue)
 		if (selectedValue === "domain") {
@@ -1713,7 +1765,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						content: "Your Heavenly Restriction negates the use of domain expansion.",
 						ephemeral: true
 					})
-					return // Exit if Heavenly Restriction is present, or adjust as needed
+					return
 				}
 
 				const domainInfo = await getUserDomain(interaction.user.id)
@@ -1747,19 +1799,16 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				}
 				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
 
-				// Wait for 2 seconds before updating
 				await new Promise(resolve => setTimeout(resolve, 2000))
 
 				const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
 
-				// Apply the domain's status effect
 				if (domainObjec1t && domainObjec1t.statusEffect) {
 					await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
 				}
 
 				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 
-				// Here, prepare the updated state of the game, potentially with new images, effects, etc.
 				const updatedEmbed = new EmbedBuilder()
 					.setColor("Blue")
 					.setTitle("The battle continues!")
@@ -1779,7 +1828,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
 					)
 
-				// Optionally, set a new image if the domain effect changes the scene
 				if (domainObjec1t.image_URL) {
 					updatedEmbed.setImage(domainObjec1t.image_URL)
 				}
@@ -1789,8 +1837,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const playerGradeData = await getUserGrade(interaction.user.id)
 				const playerGradeString = playerGradeData
 				const userId = interaction.user.id
-
-				// Calculate the base damage and extra domain damage
 
 				const baseDamage = await calculateDamage(playerGradeString, userId, true)
 				const extraDomainDamage = 30
@@ -1843,16 +1889,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			}
 
 			try {
-				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
-
-				if (hasHeavenlyRestriction) {
-					await collectedInteraction.followUp({
-						content: "Your Heavenly Restriction negates the use of transformation.",
-						ephemeral: true
-					})
-					return // Exit if Heavenly Restriction is present, or adjust as needed
-				}
-
 				const transformationInfo = await getUserTransformation(interaction.user.id)
 				if (!transformationInfo) {
 					await collectedInteraction.followUp({
@@ -1926,8 +1962,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				})
 			}
 		} else {
-			const userTechniques = new Map()
-
 			// get boss hp
 			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
 
@@ -1937,21 +1971,85 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 			// calculate damage
 			let damage = calculateDamage(playerGradeString, interaction.user.id, true)
-			console.log("11")
 
 			if (selectedValue === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
+				const result = await executeMahoraga({
+					playerHealth: playerHealth,
+					bossHealthMap: bossHealthMap,
+					randomOpponent: randomOpponent,
+					shikigamiName: "Mahoraga",
+					collectedInteraction,
+					techniqueName: selectedValue,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed,
+					row
+				})
+
+				if (typeof result !== "number") {
+					userTechniquesFight = result.userTechniques
+					damage = result.damage
+				}
+			} else if (selectedValue === "Ten Shadows Technique: Divine Dogs") {
+				const result = await executeDivineDogsTechnique({
+					bossHealthMap: bossHealthMap,
+					randomOpponent: randomOpponent,
+					collectedInteraction,
+					techniqueName: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed,
+					row,
+					activeShikigami
+				})
+
+				if (typeof result !== "number") {
+					userTechniquesFight = result.userTechniquesFight
+					damage = result.damage
+				}
+			} else if (selectedValue === "Ten Shadows Technique: Nue") {
+				const result = await executeNue({
+					bossHealthMap: bossHealthMap,
+					randomOpponent: randomOpponent,
+					collectedInteraction,
+					techniqueName: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed,
+					row,
+					activeShikigami
+				})
+
+				if (typeof result !== "number") {
+					userTechniquesFight = result.userTechniquesFight
+					damage = result.damage
+				}
+				//
+			} else if (selectedValue === "Atomic") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 2,
-					imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
-					description: "With this treasure.. I summon.",
+					damageMultiplier: 16,
+					imageUrl: "https://media1.tenor.com/m/Y5S-OJqsydUAAAAd/test.gif",
+					description: "I...AM....ATOMIC",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-				await applyAdaption(collectedInteraction.user.id)
+			} else if (selectedValue === "Chiyo's Cursed Manipulation Technique") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 16,
+					imageUrl: "https://i.kym-cdn.com/photos/images/original/002/031/427/6ba.gif",
+					description: "I'm gonna need you to sit down and shut up.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Hollow Purple") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -1960,7 +2058,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/ZdRh7cZgkGIAAAAC/hollow-purple.gif",
 					description: `I guess i can play a little rough. ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -1972,7 +2070,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://staticg.sportskeeda.com/editor/2023/12/73a1e-17035028644330-1920.jpg",
 					description: `That's my technique! ${randomOpponent.name} It's mass <3`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -1983,9 +2081,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					techniqueName: selectedValue,
 					damageMultiplier: 8,
 					imageUrl: "https://media1.tenor.com/m/qgIrrl1kvo8AAAAd/jujutsu-kaisen.gif",
-					description: `I guess i can play a little rough. ${randomOpponent.name}`,
+					description: "KOKUSEN! BLACK FLASH!",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -1997,7 +2095,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif",
 					description: "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux.",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Vengance Blade: Executioners Blade") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 10,
+					imageUrl: "https://media1.tenor.com/m/wmZxEiKZRXgAAAAd/yuta-cursed-energy.gif",
+					description: "I don't like people who hurt my friends...",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2009,7 +2119,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/RJjLn-wpV2QAAAAd/gojo-gojo-satoru.gif",
 					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2017,11 +2127,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 10,
+					damageMultiplier: 8,
 					imageUrl: "https://media1.tenor.com/m/64w1b87l2jgAAAAC/satoru-gojo-gojo-satoru.gif",
 					description: "Reversal.. Red",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2029,24 +2139,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 12,
+					damageMultiplier: 11,
 					imageUrl: "https://media1.tenor.com/m/u2XoJQYRlcwAAAAC/gojo-gojo-satoru.gif",
 					description:
 						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
 					fieldValue: selectedValue,
-					userTechniques,
-					userId: collectedInteraction.user.id,
-					primaryEmbed
-				})
-			} else if (selectedValue === "Chiyo") {
-				damage = await executeSpecialTechnique({
-					collectedInteraction,
-					techniqueName: selectedValue,
-					damageMultiplier: 5,
-					imageUrl: "https://media1.tenor.com/m/mUWaK2ogJ1AAAAAC/azumanga-daioh-azumanga.gif",
-					description: "You're a good kid. I'll make sure you don't suffer.",
-					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2059,7 +2157,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					description:
 						"Nine point.. Polarized light. Crow and Shomyo chant. The gap between within and without. Hollow Technique: PURPLE!",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2072,7 +2170,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1225688422551785544/image.png?ex=66220a4c&is=660f954c&hm=df32c017b95d2a118b22ff2999990e6ab413e14acbe354b059bee5ced017db16&",
 					description: "**You synchronize with your opponent's movements... it's absolutely chilling.**",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2086,7 +2184,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif",
 					description: `ILL BURN YOU TO A CRISP ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2098,7 +2196,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/BufoLoGxC9sAAAAd/toji-dagon.gif",
 					description: `PERISH ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2106,12 +2204,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 2,
+					damageMultiplier: 3,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1186763190835613748/1226088236397629562/ezgif-2-b2f2996757.gif?ex=66237ea7&is=661109a7&hm=e7eeb0b3305213ae20f0fee49b77dbfc873ca875e61dbd22e629543b33f2c0bf&",
 					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2119,11 +2217,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 4,
+					damageMultiplier: 6,
 					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
 					description: `I'm going to lose huh? ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2132,11 +2230,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 2,
-					imageUrl:
-						"https://cdn.discordapp.com/attachments/1094302755960664255/1223345474397016134/ezgif-6-37bc5a10ee.gif?ex=66198441&is=66070f41&hm=4a3dafff4b4ced975dce6677b3764c16f1e42838fa4e4fae7cbeca0dcf818077&",
+					imageUrl: "https://media1.tenor.com/m/Pi5w2UFZWO0AAAAC/hakari-kinji-kinji-hakari.gif",
 					description: `TURN UP THE VOLUME ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2145,10 +2242,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 3,
-					imageUrl: "https://media1.tenor.com/m/O8RVjFsdWI8AAAAC/sukuna-ryomen.gif",
+					imageUrl: "https://media1.tenor.com/m/blvmSHjEGFsAAAAd/jjk-jujutsu-kaisen.gif",
 					description: `Dissect! ${randomOpponent.name}`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2162,7 +2259,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					description:
 						"Sorry, Amanai I'm not even angry over you right now. I bear no grudge against anyone. But the world is just so peaceful.\n **Throughout heaven and earth, I alone am the honored one.**",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2175,7 +2272,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					description:
 						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2187,7 +2284,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/FILnhw_rozUAAAAC/black-flash-jujutsu-kaisen.gif",
 					description: "**KOKU...SEN!**",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2199,7 +2296,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/ZGlpNTqs6xcAAAAd/jjk0-yuta.gif",
 					description: `**How Rude ${randomOpponent.name}, It's pure love.**`,
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
@@ -2211,32 +2308,46 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					imageUrl: "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif",
 					description: "You gamble... AND FORTUNE FAVORS THE BOLD! You deal double damage!",
 					fieldValue: selectedValue,
-					userTechniques,
+					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
 			}
 
-			// update boss hp
-			bossHealthMap.set(interaction.user.id, Math.max(0, currentBossHealth - damage))
+			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - damage))
 			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
 
-			// result message
 			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 			primaryEmbed.setDescription(fightResult)
+
 			primaryEmbed.setFields(
 				{
 					name: "Boss Health",
 					value: `:heart: ${randomOpponent.current_health.toString()}`,
 					inline: true
 				},
-
 				{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
 				{
 					name: "Boss Health Status",
 					value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
 				}
 			)
+
+			await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
+
+			const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
+
+			if (hasMahoragaAdaptation) {
+				await handleMahoragaAttack(
+					collectedInteraction,
+					bossHealthMap,
+					randomOpponent,
+					primaryEmbed,
+					row,
+					userTechniquesFight
+				)
+			}
+
 			// is boss dead?
 			if (randomOpponent.current_health <= 0) {
 				let transformed = false
@@ -2283,52 +2394,72 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
 				await delay(700)
-				// boss attack
-				const possibleAttacks = attacks[randomOpponent.name]
-				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 
-				// Assume we have a function to fetch current status effects for the player
 				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
-				await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
+				//
 
-				const damageToPlayer = chosenAttack.baseDamage
+				const { divineDogsHit, newPlayerHealth: updatedPlayerHealth } = await handleDivineDogsDamage(
+					interaction,
+					randomOpponent,
+					playerHealth,
+					statusEffects
+				)
 
-				const newPlayerHealth = playerHealth - damageToPlayer
-				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+				if (divineDogsHit) {
+					// Update the player health with the value returned from handleDivineDogsDamage
+					playerHealth = updatedPlayerHealth
 
-				//did bro die?
-				if (clampedPlayerHealth <= 0) {
-					if (randomOpponent.name === "Mahito (Transfigured)") {
-						// Call the Aoi Todo revival function
-						await handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth)
-					} else {
-						const bossAttackMessage = `${randomOpponent.name} killed you!`
-						primaryEmbed.setFooter({ text: bossAttackMessage })
-
-						// Reset player health in the database.
-						activeCollectors.delete(interaction.user.id)
-						bossHealthMap.delete(interaction.user.id)
-						//
-						await updateUserHealth(interaction.user.id, 100)
-						await removeAllStatusEffects(interaction.user.id)
-						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-						await collectedInteraction.followUp({
-							content: `${randomOpponent.name} killed you!`,
-							ephemeral: true
-						})
-						battleOptionSelectMenuCollector.stop()
-					}
-				} else {
-					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
-
+					// Update the embed to indicate that the Divine Dogs took the hit
 					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
-
-					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
-					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
-
+					const divineDogsMessage = "The Divine Dogs took the hit and protected you!"
+					primaryEmbed.addFields({ name: "Divine Dogs", value: divineDogsMessage })
 					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
 
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+					logger.info("after divine dogs")
+				} else {
+					// boss attack
+					const possibleAttacks = attacks[randomOpponent.name]
+					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+
+					// Assume we have a function to fetch current status effects for the player
+					const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+					await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
+
+					const damageToPlayer = chosenAttack.baseDamage
+
+					const newPlayerHealth = playerHealth - damageToPlayer
+					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+					//did bro die?
+					if (clampedPlayerHealth <= 0) {
+						if (randomOpponent.name === "Mahito (Transfigured)") {
+							await handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth)
+						} else {
+							const bossAttackMessage = `${randomOpponent.name} killed you!`
+							primaryEmbed.setFooter({ text: bossAttackMessage })
+							activeCollectors.delete(interaction.user.id)
+							bossHealthMap.delete(interaction.user.id)
+							//
+							await updateUserHealth(interaction.user.id, 100)
+							await removeAllStatusEffects(interaction.user.id)
+							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+							await collectedInteraction.followUp({
+								content: `${randomOpponent.name} killed you!`,
+								ephemeral: true
+							})
+							battleOptionSelectMenuCollector.stop()
+						}
+					} else {
+						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+						const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
+						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+						primaryEmbed.addFields([
+							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
+						])
+						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+					}
 				}
 			}
 		}
@@ -2451,7 +2582,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			}
 
 			if (skillsToDisplay.length === 0) {
-				await i.editReply({
+				await i.followUp({
+					ephemeral: true,
 					content: "There are no more techniques available for you to purchase in this category.",
 					components: [] // Clear any interactive components
 				})
@@ -2478,7 +2610,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				)
 				.setFooter({ text: "Select a technique to buy." })
 
-			// Create buttons for purchasing skills
 			const skillButtons = skillsToDisplay.map(skill =>
 				new ButtonBuilder()
 					.setCustomId(`${customIdPrefix}${skill.name.toLowerCase().replace(/\s+/g, "_")}`)
@@ -2486,16 +2617,13 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					.setStyle(ButtonStyle.Secondary)
 			)
 
-			// Create rows of buttons for skills
 			const buttonRows = []
 			for (let j = 0; j < skillButtons.length; j += 5) {
 				buttonRows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(skillButtons.slice(j, j + 5)))
 			}
 
-			// Keep the dropdown menu in the components
 			buttonRows.unshift(row)
 
-			// Update the interaction with the embed and new buttons
 			await i.editReply({
 				embeds: [embed],
 				components: buttonRows
@@ -2520,7 +2648,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				return
 			}
 
-			// Check if the user has enough balance
 			if (userBalance < parseInt(selectedSkill.cost, 10)) {
 				await i.followUp({
 					content: `You do not have enough coins to purchase ${selectedSkill.name}.`
@@ -2541,17 +2668,14 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				return
 			}
 
-			// Deduct coins and items
-			await updateBalance(userId, -parseInt(selectedSkill.cost, 10)) // Deduct coins
+			await updateBalance(userId, -parseInt(selectedSkill.cost, 10))
 			for (const { name, quantity } of selectedSkill.items || []) {
-				await removeItemFromUserInventory(userId, name, quantity) // Remove items
+				await removeItemFromUserInventory(userId, name, quantity)
 			}
 
 			if (isHeavenlySkill) {
-				// If it's a heavenly restriction technique, add it to that collection
 				await updateUserHeavenlyTechniques(userId, selectedSkill.name)
 			} else {
-				// Otherwise, add it as a regular technique
 				await addUserTechnique(userId, selectedSkill.name)
 			}
 
@@ -2751,11 +2875,8 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		//
 		let resultMessage = ""
 		if (didWin) {
-			let winnings = betAmount * 2
+			const winnings = betAmount * 2
 			// Apply the gambler bonus (if applicable)
-			if (gamblerEffect) {
-				winnings *= 1.25
-			}
 
 			await updateBalance(userId, winnings)
 			await updateGamblersData(userId, betAmount, winnings, 0, 0) // Update gambling stats
@@ -3082,6 +3203,7 @@ export async function claimQuestsCommand(interaction) {
 		let claimedSukunasHonour = false
 		let claimedReinforcement = false
 		let claimedSatoru = false
+		let claimedNanami = false
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
@@ -3103,6 +3225,8 @@ export async function claimQuestsCommand(interaction) {
 						claimedReinforcement = true
 					} else if (itemName === "Satoru Gojo's Respect") {
 						claimedSatoru = true
+					} else if (itemName === "Overtime") {
+						claimedNanami = true
 					}
 				}
 			}
@@ -3145,7 +3269,7 @@ export async function claimQuestsCommand(interaction) {
 		if (claimedSatoru) {
 			await updateUserHonours(userId, ["Satoru Gojo's Respect"])
 			await addItemToUserInventory(userId, "Upgraded Limitless Token", 3)
-			const reinforcementEmbed = new EmbedBuilder()
+			const claimedSatoru = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("Six Eyes Unleashed!")
 				.setDescription(
@@ -3157,7 +3281,22 @@ export async function claimQuestsCommand(interaction) {
 					value: "**Awakened** Limitless techniques unleashed! You now have access to the **Awakened Limitless** power!"
 				})
 
-			specialEmbeds.push(reinforcementEmbed)
+			specialEmbeds.push(claimedSatoru)
+		}
+
+		if (claimedNanami) {
+			await updateUserUnlockedTransformations(userId, ["Overtime"])
+			const claimedNanami = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("Overtime")
+				.setDescription("Grit, determination, and a whole lot of overtime pay, Goodjob kid.")
+				.setImage("https://media1.tenor.com/m/8A5xvJMFYMwAAAAC/nanami-kento-nanami.gif")
+				.addFields({
+					name: "New Power",
+					value: "**Awakened** Overtime Transformation Unlocked! You now have access to the **Overtime** power!"
+				})
+
+			specialEmbeds.push(claimedNanami)
 		}
 
 		// Reply with special embeds or a generic completion message
@@ -3438,7 +3577,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
 		.setDescription(
-			"Update 4.5, Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
+			"Update 6.0, **BIGGEST UPDATE YET!** Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
 		)
 		.setFooter({ text: "hi - from dev" })
 
@@ -3749,35 +3888,6 @@ export async function handleViewTechniquesCommand(interaction) {
 	}
 }
 
-export async function handleGiveItemCommand(
-	interaction: ChatInputCommandInteraction
-): Promise<InteractionResponse<boolean>> {
-	if (interaction.user.id !== "292385626773258240") {
-		return interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true })
-	}
-	const targetUserId = interaction.options.getString("userid")
-	const itemName = interaction.options.getString("item")
-	const quantity = interaction.options.getInteger("quantity")
-
-	if (!targetUserId || !itemName || !quantity) {
-		return await interaction.reply({
-			content: "Please provide a target user ID, item name, and quantity.",
-			ephemeral: true
-		})
-	}
-
-	try {
-		await addItemToUserInventory(targetUserId, itemName, quantity)
-		return interaction.reply({
-			content: `Successfully added ${quantity}x ${itemName} to user ${targetUserId}`,
-			ephemeral: true
-		})
-	} catch (error) {
-		console.error("Error in giveitem command", error)
-		return interaction.reply({ content: "...", ephemeral: true })
-	}
-}
-
 // handle unequip quests command dropdown menu embed but instead of giving quest it takes it away
 export async function handleUnequipQuestCommand(interaction) {
 	const userId = interaction.user.id
@@ -3827,42 +3937,34 @@ export async function handleUnequipQuestCommand(interaction) {
 
 export async function handleEquipTransformationCommand(interaction: ChatInputCommandInteraction) {
 	try {
-		// 1. Fetch user's unlocked transformations
 		const unlockedtransformations = await getUserUnlockedTransformations(interaction.user.id)
 
-		// 2. Filter out the currently equipped transformation
 		const currentTransformation = await getUserTransformation(interaction.user.id) // Assuming this still returns a single string
 		const availableTransformations = unlockedtransformations.filter(transformationName => {
 			return transformationName && transformationName.trim() !== currentTransformation
 		})
 
-		// 3. Create a dropdown menu
 		const selectMenu = createTransformationSelectMenu(availableTransformations)
 
 		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
-		// 4. Send initial message with the dropdown
 		await interaction.reply({
 			content: "Choose a transformation to equip:",
 			components: [row]
 		})
 
-		// 5. Handle dropdown interaction
 		const selectMenuInteraction = await interaction.channel.awaitMessageComponent({
 			filter: i => i.user.id === interaction.user.id && i.isStringSelectMenu(),
-			time: 60000 // Example timeout of 60 seconds
+			time: 60000
 		})
 
-		// 6. Get the selected transformation name
 		const selectedTransformationName = (selectMenuInteraction as StringSelectMenuInteraction).values[0]
 
-		// 7. Update the user's equipped transformation
 		await updateUserTransformation(interaction.user.id, selectedTransformationName)
 
-		// 8. Send confirmation message
 		await selectMenuInteraction.update({
 			content: `You have equipped ${selectedTransformationName}!`,
-			components: [] // Remove the dropdown
+			components: []
 		})
 	} catch (error) {
 		console.error("Error handling equip transformation command:", error)
@@ -3879,7 +3981,6 @@ function createTransformationSelectMenu(transformations) {
 		.setPlaceholder("Select a Transformation")
 
 	transformations.forEach(transformationName => {
-		// Ensure the transformation name is a string and not empty
 		if (typeof transformationName === "string" && transformationName.trim() !== "") {
 			selectMenu.addOptions({
 				label: transformationName.substring(0, 100),
@@ -3893,6 +3994,7 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
+// claim vote rewards
 export async function handleClaimVoteRewards(interaction) {
 	const Topgg = import("@top-gg/sdk")
 	const userId = interaction.user.id
@@ -3905,17 +4007,33 @@ export async function handleClaimVoteRewards(interaction) {
 		const voteEmbed = new EmbedBuilder()
 			.setTitle("Vote for Rewards!")
 			.setDescription("It seems you haven't voted yet. Support the bot and earn rewards by voting here:")
-
 		const voteButton = new ButtonBuilder()
 			.setLabel("Vote Now")
 			.setStyle(ButtonStyle.Link)
-			.setURL("https://top.gg/bot/991443928790335518/vote")
+			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
 
 		const row = new ActionRowBuilder().addComponents(voteButton)
-
 		await interaction.editReply({ embeds: [voteEmbed], components: [row] })
 		return
 	}
+
+	const lastVoteTime = userVoteTimestamps[userId]
+	const currentTime = Date.now()
+
+	if (lastVoteTime && currentTime - lastVoteTime < 12 * 60 * 60 * 1000) {
+		const timeLeft = (12 * 60 * 60 * 1000 - (currentTime - lastVoteTime)) / 3600000
+		const cooldownEmbed = new EmbedBuilder()
+			.setTitle("Vote Cooldown")
+			.setDescription(
+				`You have already claimed your vote rewards. Please wait ${timeLeft.toFixed(
+					1
+				)} hours before voting again.`
+			)
+		await interaction.editReply({ embeds: [cooldownEmbed] })
+		return
+	}
+
+	userVoteTimestamps[userId] = currentTime
 
 	const lastVoteTime = await getUserVoteTime(userId)
 	const currentTime = Date.now()
@@ -3943,14 +4061,12 @@ export async function handleClaimVoteRewards(interaction) {
 	const claimedEmbed = new EmbedBuilder()
 		.setTitle("Rewards Claimed!")
 		.setDescription(`You have claimed your vote rewards of ${voteReward} coins! + 1 Cursed Vote Chest`)
-
 	await interaction.followUp({ embeds: [claimedEmbed] })
 }
-
 export async function handleShopCommand(interaction) {
-	const shopItems = await getAllShopItems() // Assuming you have this function
+	const shopItems = await getAllShopItems()
 	const balance = await getBalance(interaction.user.id)
-	const balance2 = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
+	const balance2 = balance.toLocaleString("en-US")
 
 	if (!shopItems || shopItems.length === 0) {
 		await interaction.reply("The shop is currently empty.")
@@ -3959,7 +4075,7 @@ export async function handleShopCommand(interaction) {
 
 	try {
 		const lastResetTime = await getShopLastReset()
-		const resetIntervalMs = 1000 * 60 * 60 * 24 // Example: 24 hours in milliseconds
+		const resetIntervalMs = 1000 * 60 * 60 * 24
 		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
 
 		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
@@ -4140,4 +4256,1167 @@ export async function handleEquipInateClanCommand(interaction) {
 
 	await updateUserInateClan(userId, clanName)
 	await interaction.reply(`You have equipped the ${clanName} clan.`)
+}
+
+export async function handleTame(interaction: ChatInputCommandInteraction) {
+	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const userTechniquesTame = new Map<string, any>()
+	await updateUserHealth(interaction.user.id, playerHealth1)
+	await interaction.deferReply()
+
+	// Get the chosen shikigami name from the user input
+	const chosenShikigamiName = interaction.options.getString("shikigami")
+
+	// Check if the chosen shikigami is Mahoraga
+	const isMahoraga = chosenShikigamiName === "Divine-General Mahoraga"
+
+	if (isMahoraga) {
+		// Fetch the user's shikigami
+		const userShikigami: { name: string }[] = await getUserShikigami(interaction.user.id)
+
+		// Check if the user has the required shikigami to summon Mahoraga
+		const requiredShikigami = ["Divine Dogs", "Nue", "Toad", "Max Elephant"]
+
+		const hasRequiredShikigami = requiredShikigami.every(shikigamiName => {
+			return userShikigami.some(shikigami => shikigami.name === shikigamiName)
+		})
+
+		if (!hasRequiredShikigami) {
+			const errorEmbed = new EmbedBuilder()
+				.setColor("Red")
+				.setTitle("Insufficient Shikigami")
+				.setDescription("You do not have all the necessary Shikigami to summon **MAHORAGA**")
+				.addFields(
+					{ name: "Required Shikigami", value: requiredShikigami.join(", ") },
+					{ name: "Your Shikigami", value: userShikigami.map(shikigami => shikigami.name).join(", ") }
+				)
+
+			await interaction.followUp({
+				ephemeral: true,
+				embeds: [errorEmbed]
+			})
+			return
+		}
+	}
+
+	// Fetch the shikigami based on the chosen name
+	const allBosses = await getShikigami(interaction.user.id)
+	const chosenShikigami = allBosses.find(boss => boss.name === chosenShikigamiName)
+
+	if (!chosenShikigami) {
+		console.error(`No shikigami found with the name ${chosenShikigamiName}`)
+		await interaction.editReply({ content: `No shikigami found with the name ${chosenShikigamiName}` })
+		return
+	}
+
+	// Use the chosenShikigami as the opponent
+	const randomOpponent = chosenShikigami
+
+	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+	const playerHealth = await getUserMaxHealth(interaction.user.id)
+	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
+	//
+	const userTechniques = hasHeavenlyRestriction
+		? await getUserActiveHeavenlyTechniques(interaction.user.id)
+		: await getUserActiveTechniques(interaction.user.id)
+	const transformname = await getUserTransformation(interaction.user.id)
+	const domainname = await getUserDomain(interaction.user.id)
+
+	const techniqueOptions =
+		userTechniques && userTechniques.length > 0
+			? userTechniques.map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName
+			  }))
+			: []
+
+	const battleOptions = [
+		{
+			label: "Domain Expansion",
+			value: "domain",
+			description: domainname || "🔒 Domain Not Unlocked", // Default value if undefined
+			emoji: {
+				name: "1564maskedgojode",
+				id: "1220626413141622794"
+			}
+		},
+		{
+			label: "Transform",
+			value: "transform",
+			description: transformname || "No transformation available", // Default value if undefined
+			emoji: {
+				name: "a:blueflame",
+				id: "990539090418098246"
+			}
+		},
+		...techniqueOptions
+	]
+
+	const selectMenu = new SelectMenuBuilder()
+		.setCustomId("select-battle-option")
+		.setPlaceholder("Choose your technique")
+		.addOptions(battleOptions)
+
+	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+
+	// Create embed
+	const primaryEmbed = new EmbedBuilder()
+		.setColor(cursedEnergyPurple)
+		.setTitle("Cursed Battle!")
+		.setDescription(`You're facing **${randomOpponent.name}**! Choose your technique wisely.`)
+		.setImage(randomOpponent.image_url)
+		.addFields(
+			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
+			{ name: "Boss Grade", value: `${randomOpponent.grade}`, inline: true },
+			{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true }
+		)
+		.addFields(
+			{
+				name: "Boss Health Status",
+				value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health),
+				inline: false
+			},
+			{
+				name: "Player Health Status",
+				value: generateHealthBar(playerHealth, playerHealth1),
+				inline: false
+			}
+		)
+		.addFields(
+			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+			{ name: "Status Effect Boss", value: "None", inline: true },
+			{ name: "Status Effect Player", value: "None", inline: true }
+		)
+
+	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
+	if (remainingHealthPercentage < 0.5) {
+		primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
+	}
+
+	await interaction.editReply({
+		embeds: [primaryEmbed],
+		components: [row]
+	})
+
+	// Handle user selection
+	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
+		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
+		componentType: ComponentType.StringSelect,
+		time: 300000 // 60 seconds
+	})
+
+	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
+		await collectedInteraction.deferUpdate()
+		if (collectedInteraction.user.id !== interaction.user.id) return
+		const selectedValue = collectedInteraction.values[0]
+		const playerHealth = await getUserHealth(collectedInteraction.user.id)
+
+		console.log("Selected value:", selectedValue)
+		if (selectedValue === "domain") {
+			console.log("Domain expansion selected.")
+			if (domainActivationState.get(contextKey)) {
+				await collectedInteraction.followUp({
+					content: "You can only activate your domain once per fight.",
+					ephemeral: true
+				})
+				return
+			}
+
+			try {
+				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
+
+				if (hasHeavenlyRestriction) {
+					await collectedInteraction.followUp({
+						content: "Your Heavenly Restriction negates the use of domain expansion.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const domainInfo = await getUserDomain(interaction.user.id)
+				if (!domainInfo) {
+					await collectedInteraction.followUp({
+						content: "You do not have a domain unlocked yet.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+				if (!domainObject) {
+					console.error("Invalid domain found in the database.")
+					return
+				}
+				domainActivationState.set(contextKey, true)
+				// embed here
+				const domainEmbed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
+					.setDescription(`Domain Expansion... ${domainInfo}`)
+					.addFields({
+						name: `${interaction.user.username}`,
+						value: "USES THERE DOMAIN EXPANSION!",
+						inline: false
+					})
+				//add image
+				if (domainObject.open_image_URL) {
+					domainEmbed.setImage(domainObject.open_image_URL)
+				}
+				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
+
+				// Wait for 2 seconds before updating
+				await new Promise(resolve => setTimeout(resolve, 2000))
+
+				const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+
+				// Apply the domain's status effect
+				if (domainObjec1t && domainObjec1t.statusEffect) {
+					await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
+				}
+
+				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+
+				// Here, prepare the updated state of the game, potentially with new images, effects, etc.
+				const updatedEmbed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle("The battle continues!")
+					.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
+					.addFields(
+						{
+							name: "Boss Health",
+							value: `:heart: ${randomOpponent.current_health.toString()}`,
+							inline: true
+						},
+						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+						{
+							name: "Boss Health Status",
+							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+						},
+						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+						{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
+					)
+
+				// Optionally, set a new image if the domain effect changes the scene
+				if (domainObjec1t.image_URL) {
+					updatedEmbed.setImage(domainObjec1t.image_URL)
+				}
+				await collectedInteraction.editReply({ embeds: [updatedEmbed], components: [row] })
+
+				//
+				const playerGradeData = await getUserGrade(interaction.user.id)
+				const playerGradeString = playerGradeData
+				const userId = interaction.user.id
+
+				// Calculate the base damage and extra domain damage
+
+				const baseDamage = await calculateDamage(playerGradeString, userId, true)
+				const extraDomainDamage = 30
+				const totalDamage = baseDamage + extraDomainDamage
+				// update boss hp
+
+				let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+				currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+				bossHealthMap.set(interaction.user.id, currentBossHealth)
+
+				// is boss dead?
+				if (randomOpponent.current_health <= 0) {
+					if (randomOpponent.name === "Mahoraga") {
+						await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					}
+
+					domainActivationState.set(contextKey, false)
+					activeCollectors.delete(interaction.user.id)
+
+					// reset health
+					bossHealthMap.delete(interaction.user.id)
+
+					await handleShikigamiTame(interaction, primaryEmbed, row, randomOpponent)
+				}
+			} catch (error) {
+				console.error("Error during fight command:", error)
+				await collectedInteraction.followUp({
+					content: "An error occurred during the fight. Please try again later.",
+					ephemeral: true
+				})
+			}
+		} else if (selectedValue === "transform") {
+			console.log("Transformation selected.")
+			if (transformationState.get(contextKey)) {
+				await collectedInteraction.followUp({
+					content: "You can only transform once per fight.",
+					ephemeral: true
+				})
+				return
+			}
+
+			try {
+				const transformationInfo = await getUserTransformation(interaction.user.id)
+				if (!transformationInfo) {
+					await collectedInteraction.followUp({
+						content: "You do not have a transformation unlocked yet.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const transformationObject = TRANSFORMATIONS.find(
+					transformation => transformation.name === transformationInfo
+				)
+				if (!transformationObject) {
+					console.error("Invalid transformation found in the database.")
+					return
+				}
+				transformationState.set(contextKey, true)
+				// embed here
+				const transformationEmbed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle("Transformation!")
+					.setDescription(`Transformation: ${transformationInfo}`)
+					.addFields({
+						name: `${interaction.user.username}`,
+						value: "USES THERE TRANSFORMATION!",
+						inline: false
+					})
+					//add image
+					.setImage(transformationObject.image)
+				await collectedInteraction.editReply({ embeds: [transformationEmbed], components: [] })
+				//
+				await new Promise(resolve => setTimeout(resolve, 2000))
+
+				if (transformationObject && transformationObject.effects) {
+					await applyStatusEffect(collectedInteraction.user.id, transformationObject.effects)
+				}
+				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+
+				const nutembed = new EmbedBuilder()
+					.setColor("Blue")
+					.setTitle("The battle continues!")
+					.setDescription(`${interaction.user.username} has transformed into ${transformationInfo}!`)
+					.addFields(
+						{
+							name: "Boss Health",
+							value: `:heart: ${randomOpponent.current_health.toString()}`,
+							inline: true
+						},
+						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+						{ name: "Transformation: ", value: `${transformationInfo}`, inline: true },
+
+						{
+							name: "Boss Health Status",
+							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+						},
+						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+						{ name: "Status Effect Player", value: statusEffectsValue, inline: false }
+					)
+				if (transformationObject.image) {
+					nutembed.setImage(transformationObject.image)
+				}
+				transformationState.set(contextKey, false)
+
+				//
+				await collectedInteraction.editReply({ embeds: [nutembed], components: [row] })
+			} catch (error) {
+				console.error("Error during fight command:", error)
+				await collectedInteraction.followUp({
+					content: "An error occurred during the fight. Please try again later.",
+					ephemeral: true
+				})
+			}
+		} else {
+			// get boss hp
+			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+
+			// grade
+			const playerGradeData = await getUserGrade(interaction.user.id)
+			const playerGradeString = playerGradeData
+
+			// calculate damage
+			let damage = calculateDamage(playerGradeString, interaction.user.id, true)
+
+			if (selectedValue === "Atomic") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 16,
+					imageUrl: "https://media1.tenor.com/m/Y5S-OJqsydUAAAAd/test.gif",
+					description: "I...AM....ATOMIC",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Genki Dama") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 10,
+					imageUrl: "https://media1.tenor.com/m/8Ltt65SLeFUAAAAC/genki-dama-spirit-bomb.gif",
+					description: "PLEASE LEND ME SOME OF YOUR ENERRGY!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Hollow Purple") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/ZdRh7cZgkGIAAAAC/hollow-purple.gif",
+					description: `I guess i can play a little rough. ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Star Rage: Virtual Mass") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://staticg.sportskeeda.com/editor/2023/12/73a1e-17035028644330-1920.jpg",
+					description: `That's my technique! ${randomOpponent.name} It's mass <3`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+				await applyVirtualMass(collectedInteraction.user.id)
+			} else if (selectedValue === "Black Flash") {
+				damage = await executeBlackFlash({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://media1.tenor.com/m/qgIrrl1kvo8AAAAd/jujutsu-kaisen.gif",
+					description: `I guess i can play a little rough. ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Disaster Curses: Full Flux") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 7,
+					imageUrl: "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif",
+					description: "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Blue") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 7,
+					imageUrl: "https://media1.tenor.com/m/RJjLn-wpV2QAAAAd/gojo-gojo-satoru.gif",
+					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Red") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 10,
+					imageUrl: "https://media1.tenor.com/m/64w1b87l2jgAAAAC/satoru-gojo-gojo-satoru.gif",
+					description: "Reversal.. Red",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Maximum Technique: Purple") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://media1.tenor.com/m/u2XoJQYRlcwAAAAC/gojo-gojo-satoru.gif",
+					description:
+						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Hollow Purple: Nuke") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 6,
+					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
+					description:
+						"Nine point.. Polarized light. Crow and Shomyo chant. The gap between within and without. Hollow Technique: PURPLE!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Prayer Song") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1225688422551785544/image.png?ex=66220a4c&is=660f954c&hm=df32c017b95d2a118b22ff2999990e6ab413e14acbe354b059bee5ced017db16&",
+					description: "**You synchronize with your opponent's movements... it's absolutely chilling.**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+				await applyPrayerSongEffect(collectedInteraction.user.id)
+				//
+			} else if (selectedValue === "Maximum: METEOR") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif",
+					description: `ILL BURN YOU TO A CRISP ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Zenin Style: Playful Cloud: STRIKE") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/BufoLoGxC9sAAAAd/toji-dagon.gif",
+					description: `PERISH ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Flame Arrow") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1186763190835613748/1226088236397629562/ezgif-2-b2f2996757.gif?ex=66237ea7&is=661109a7&hm=e7eeb0b3305213ae20f0fee49b77dbfc873ca875e61dbd22e629543b33f2c0bf&",
+					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Inverted Spear Of Heaven: Severed Universe") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 4,
+					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
+					description: `I'm going to lose huh? ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jackpot: Strike") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1223345474397016134/ezgif-6-37bc5a10ee.gif?ex=66198441&is=66070f41&hm=4a3dafff4b4ced975dce6677b3764c16f1e42838fa4e4fae7cbeca0dcf818077&",
+					description: `TURN UP THE VOLUME ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "World Cutting Slash") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/O8RVjFsdWI8AAAAC/sukuna-ryomen.gif",
+					description: `Dissect! ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Imaginary Technique: Purple") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl:
+						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif",
+					description:
+						"Sorry, Amanai I'm not even angry over you right now. I bear no grudge against anyone. But the world is just so peaceful.\n **Throughout heaven and earth, I alone am the honored one.**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Disaster Flames: Full Fire Formation") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
+					description:
+						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "MAXIMUM: BLACK FLASH") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 6,
+					imageUrl: "https://media1.tenor.com/m/FILnhw_rozUAAAAC/black-flash-jujutsu-kaisen.gif",
+					description: "**KOKU...SEN!**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Pure Love: Unleashed Fury") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 5,
+					imageUrl: "https://media1.tenor.com/m/ZGlpNTqs6xcAAAAd/jjk0-yuta.gif",
+					description: `**How Rude ${randomOpponent.name}, It's pure love.**`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Private Pure Love Train: Jackpot") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 4,
+					imageUrl: "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif",
+					description: "You gamble... AND FORTUNE FAVORS THE BOLD! You deal double damage!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			}
+
+			// update boss hp
+			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - damage))
+			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
+
+			// result message
+			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
+			primaryEmbed.setDescription(fightResult)
+
+			primaryEmbed.setFields(
+				{
+					name: "Boss Health",
+					value: `:heart: ${randomOpponent.current_health.toString()}`,
+					inline: true
+				},
+				{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+				{
+					name: "Boss Health Status",
+					value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+				}
+			)
+			// is boss dead?
+			if (randomOpponent.current_health <= 0) {
+				let transformed = false
+				if (randomOpponent.name === "Satoru Gojo") {
+					transformed = await exportTheHonoredOne(
+						interaction,
+						randomOpponent,
+						primaryEmbed,
+						row,
+						playerHealth
+					)
+				}
+				if (!transformed) {
+					console.log("Boss is defeated and no transformation occurred.")
+					domainActivationState.set(contextKey, false)
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
+
+					await handleShikigamiTame(interaction, primaryEmbed, row, randomOpponent)
+				}
+			} else {
+				//
+				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
+
+				await delay(700)
+				// boss attack
+				const possibleAttacks = attacks[randomOpponent.name]
+				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
+
+				// Assume we have a function to fetch current status effects for the player
+				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+				await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
+
+				const damageToPlayer = chosenAttack.baseDamage
+
+				const newPlayerHealth = playerHealth - damageToPlayer
+				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+				//did bro die?
+				if (clampedPlayerHealth <= 0) {
+					const bossAttackMessage = `${randomOpponent.name} killed you!`
+					primaryEmbed.setFooter({ text: bossAttackMessage })
+
+					// Reset player health in the database.
+					activeCollectors.delete(interaction.user.id)
+					bossHealthMap.delete(interaction.user.id)
+					//
+					await updateUserHealth(interaction.user.id, 100)
+					await removeAllStatusEffects(interaction.user.id)
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+					await collectedInteraction.followUp({
+						content: `${randomOpponent.name} killed you!`,
+						ephemeral: true
+					})
+					battleOptionSelectMenuCollector.stop()
+				} else {
+					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
+
+					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+					const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
+
+					primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+					primaryEmbed.addFields([{ name: "Status Effect Player", value: statusEffectsValue, inline: true }])
+
+					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+				}
+			}
+		}
+	})
+}
+
+// pet shop
+
+const petVersions = ["Cursed", "Normal"]
+
+const petOptions = [
+	{
+		name: "Kitsune",
+		price: 10000000,
+		formattedPrice: "10,000,000",
+		description: "A little kitsune pet.",
+		info: "Type: Normal | Rarity: Special Grade",
+		emoji: "<:6861shirohappynoises:1230889537761316924>"
+	},
+	{
+		name: "Loyal Pup",
+		price: 50000,
+		formattedPrice: "50,000",
+		description: "A faithful companion that will always be by your side.",
+		info: "Type: Normal | Rarity: Common",
+		emoji: "🐶"
+	},
+	{
+		name: "Fluffy Bunny",
+		price: 500000,
+		formattedPrice: "500,000",
+		description: "A soft and gentle creature that hops with joy.",
+		info: "Type: Normal | Rarity: Common",
+		emoji: "🐰"
+	},
+	// Cursed Pets
+	{
+		name: "Mythical Dragon",
+		price: 35000000,
+		formattedPrice: "35,000,000",
+		description: "He might mistake you for a snack...",
+		info: "Type: Cursed | Rarity: Legendary",
+		emoji: "<:2087dragon:1230896152950476880>",
+		requiredItems: [{ name: "Dragon Scales", quantity: 10 }]
+	},
+	{
+		name: "Mystical Fox",
+		price: 7500000,
+		formattedPrice: "7,500,000",
+		description: "A cunning and versatile creature that can change forms.",
+		info: "Type: Cursed | Rarity: Epic",
+		emoji: "<:6702foxed:1230903814517686293>",
+		requiredItems: [{ name: "Mahito's Soul " || "Mahitos Soul", quantity: 5 }]
+	},
+	{
+		name: "Noj",
+		price: 100000000,
+		formattedPrice: "100,000,000",
+		description: "Friend of the developer!",
+		info: "Type: Cursed | Rarity: Special Grade",
+		emoji: "<:73062buwumask:1230903140703015035>",
+		requiredItems: [{ name: "Sukuna Finger Bundle", quantity: 1 }]
+	}
+]
+
+export async function handleViewShikigami(interaction) {
+	try {
+		const userShikigami = await getUserShikigami(interaction.user.id)
+
+		if (userShikigami.length === 0) {
+			await interaction.reply("You don't have any shikigami yet.")
+			return
+		}
+
+		const shikigamiOptions = userShikigami.map(shikigami => ({
+			label: shikigami.name,
+			value: shikigami.name
+		}))
+
+		const shikigamiDropdown = new ActionRowBuilder().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId("shikigami_select")
+				.setPlaceholder("Select a shikigami")
+				.addOptions(shikigamiOptions)
+		)
+
+		await interaction.reply({
+			components: [shikigamiDropdown]
+		})
+
+		const selectionInteraction = await interaction.channel.awaitMessageComponent({
+			filter: i => i.customId === "shikigami_select" && i.user.id === interaction.user.id
+		})
+
+		const selectedShikigami = userShikigami.find(shikigami => shikigami.name === selectionInteraction.values[0])
+
+		const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+
+		const actionButtons = new ActionRowBuilder().addComponents(
+			new ButtonBuilder().setCustomId("feed_shikigami").setLabel("Feed").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("clean_shikigami").setLabel("Clean").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("play_shikigami").setLabel("Play").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("train_shikigami").setLabel("Train").setStyle(ButtonStyle.Primary),
+			new ButtonBuilder().setCustomId("heal_shikigami").setLabel("Heal").setStyle(ButtonStyle.Primary)
+		)
+
+		const shikigamiMessage = await selectionInteraction.update({
+			embeds: [shikigamiEmbed],
+			components: [actionButtons, shikigamiDropdown]
+		})
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const buttonInteraction = await interaction.channel.awaitMessageComponent({
+				filter: i =>
+					i.customId === "shikigami_select" ||
+					((i.customId === "feed_shikigami" ||
+						i.customId === "clean_shikigami" ||
+						i.customId === "play_shikigami" ||
+						i.customId === "train_shikigami" ||
+						i.customId === "heal_shikigami") &&
+						i.user.id === interaction.user.id)
+			})
+
+			if (buttonInteraction.customId === "shikigami_select") {
+				const selectedShikigami = userShikigami.find(
+					shikigami => shikigami.name === buttonInteraction.values[0]
+				)
+
+				const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+
+				await buttonInteraction.update({
+					embeds: [shikigamiEmbed],
+					components: [actionButtons, shikigamiDropdown]
+				})
+			} else {
+				switch (buttonInteraction.customId) {
+					case "feed_shikigami":
+						await buttonInteraction.deferUpdate()
+
+						try {
+							const randomFoodAmount = Math.floor(Math.random() * 21) + 10
+							const userInventory = await getUserInventory(interaction.user.id)
+							const shikigamiFoodItems = userInventory.find(item => item.name === "Shikigami food")
+
+							if (selectedShikigami.hunger === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already full!`,
+									ephemeral: true
+								})
+							} else if (!shikigamiFoodItems) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Shikigami food in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								await removeItemFromUserInventory(interaction.user.id, "Shikigami food", 1)
+								await feedShikigami(interaction.user.id, selectedShikigami.name, randomFoodAmount)
+								selectedShikigami.hunger = Math.min(100, selectedShikigami.hunger + randomFoodAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error feeding shikigami:", error)
+						}
+						break
+
+					case "play_shikigami":
+						await buttonInteraction.deferReply() // Defer the initial reply
+						try {
+							if (selectedShikigami.friendship === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is happy!`,
+									ephemeral: true
+								})
+							} else {
+								await startPlayingMinigame(buttonInteraction, selectedShikigami)
+							}
+						} catch (error) {
+							logger.error("Error happy shikigami:", error)
+						}
+						break
+					case "clean_shikigami":
+						await buttonInteraction.deferUpdate()
+						try {
+							const userInventory = await getUserInventory(interaction.user.id)
+							const cleaningItem = userInventory.find(item => item.name === "Cleaning Kit")
+
+							if (selectedShikigami.hygiene === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already clean!`,
+									ephemeral: true
+								})
+							} else if (!cleaningItem) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Cleaning Kit's in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								const randomCleanAmount = Math.floor(Math.random() * 40) + 10
+								await removeItemFromUserInventory(interaction.user.id, "Cleaning Kit", 1)
+								await cleanShikigami(interaction.user.id, selectedShikigami.name, randomCleanAmount)
+								selectedShikigami.hygiene = Math.min(100, selectedShikigami.hygiene + randomCleanAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error cleaning shikigami:", error)
+						}
+
+						break
+					case "heal_shikigami":
+						await buttonInteraction.deferUpdate()
+						try {
+							const userInventory = await getUserInventory(interaction.user.id)
+							const specialGradeMedicineItem = userInventory.find(
+								item => item.name === "Special-Grade Medicine"
+							)
+
+							if (selectedShikigami.health === 100) {
+								await buttonInteraction.followUp({
+									content: `${selectedShikigami.name} is already full!`,
+									ephemeral: true
+								})
+							} else if (!specialGradeMedicineItem) {
+								await buttonInteraction.followUp({
+									content: "You don't have any Special-Grade Medicine in your inventory!",
+									ephemeral: true
+								})
+							} else {
+								const randomHealAmount = Math.floor(Math.random() * 40) + 10
+								await removeItemFromUserInventory(interaction.user.id, "Special-Grade Medicine", 1)
+								await healShikigami(interaction.user.id, selectedShikigami.name, randomHealAmount)
+								selectedShikigami.health = Math.min(100, selectedShikigami.health + randomHealAmount)
+
+								const updatedShikigamiEmbed = createShikigamiEmbed(selectedShikigami)
+								await shikigamiMessage.edit({
+									embeds: [updatedShikigamiEmbed],
+									components: [actionButtons, shikigamiDropdown]
+								})
+							}
+						} catch (error) {
+							logger.error("Error healing shikigami:", error)
+						}
+						break
+					case "prestige_shikigami":
+						await buttonInteraction.deferUpdate()
+						break
+				}
+			}
+		}
+	} catch (error) {
+		logger.error("Error executing viewShikigami function:", error)
+	}
+}
+
+export async function handlePetShop(interaction) {
+	const defaultPets = petOptions.filter(pet => pet.info.includes("Type: Normal"))
+
+	const defaultVersion = "Normal"
+	const userShikigami = await getUserShikigami(interaction.user.id)
+	const ownedPetNames = userShikigami.map(shikigami => shikigami.name)
+
+	const availablePets = defaultPets.filter(pet => !ownedPetNames.includes(pet.name))
+
+	const petEmbed = new EmbedBuilder()
+		.setTitle(`${defaultVersion} Pets`)
+		.setDescription("Click the button to buy a pet.")
+		.setFooter({ text: getRandomQuote() })
+
+	availablePets.forEach(pet => {
+		const requiredItemsText = pet.requiredItems?.length
+			? pet.requiredItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
+			: "None"
+		petEmbed.addFields({
+			name: `${pet.emoji} ${pet.name}`,
+			value: `<:7426replycontinued:1230892780407099593>${pet.description}\n<:7426replycontinued:1230892780407099593>${pet.info}\n<:7426replycontinued:1230892780407099593>Required Items: ${requiredItemsText}\n<:1412reply:1230892779211849839>Price: ${pet.formattedPrice} coins`
+		})
+	})
+
+	const petButtons = availablePets.map(pet => {
+		return new ButtonBuilder()
+			.setCustomId(`buy_pet_${pet.name}`)
+			.setLabel(`Buy ${pet.name} - ${pet.formattedPrice} coins`)
+			.setStyle(ButtonStyle.Primary)
+	})
+
+	const buttonRows = petButtons.reduce((rows, button, index) => {
+		const rowIndex = Math.floor(index / 3)
+		if (!rows[rowIndex]) {
+			rows[rowIndex] = new ActionRowBuilder<ButtonBuilder>()
+		}
+		rows[rowIndex].addComponents(button)
+		return rows
+	}, [] as ActionRowBuilder<ButtonBuilder>[])
+
+	const versionMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("pet_version")
+			.setPlaceholder("Select a pet type")
+			.addOptions(
+				petVersions.map(version => ({
+					label: version,
+					value: version
+				}))
+			)
+	)
+
+	await interaction.reply({ embeds: [petEmbed], components: [...buttonRows, versionMenu] })
+
+	const filter = (i: CommandInteraction) =>
+		i.user.id === interaction.user.id && (i.isStringSelectMenu() || i.isButton())
+
+	const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 160000 })
+
+	collector?.on("collect", async i => {
+		if (i.isStringSelectMenu() && i.customId === "pet_version") {
+			const selectedVersion = i.values[0]
+			const selectedPets = petOptions.filter(pet => pet.info.includes(`Type: ${selectedVersion}`))
+			const availableSelectedPets = selectedPets.filter(pet => !ownedPetNames.includes(pet.name))
+
+			const petEmbed = new EmbedBuilder()
+				.setTitle(`${selectedVersion} Pets`)
+				.setDescription("Click the button to buy a pet.")
+				.setFooter({ text: getRandomQuote() })
+
+			availableSelectedPets.forEach(pet => {
+				const requiredItemsText = pet.requiredItems?.length
+					? pet.requiredItems.map(item => `${item.quantity}x ${item.name}`).join(", ")
+					: "None"
+
+				petEmbed.addFields({
+					name: `${pet.emoji} ${pet.name}`,
+					value: `<:7426replycontinued:1230892780407099593>${pet.description}\n<:7426replycontinued:1230892780407099593>${pet.info}\n<:7426replycontinued:1230892780407099593>Required Items: ${requiredItemsText}\n<:1412reply:1230892779211849839>Price: ${pet.formattedPrice} coins`
+				})
+			})
+
+			const selectedPetButtons = availableSelectedPets.map(pet => {
+				return new ButtonBuilder()
+					.setCustomId(`buy_pet_${pet.name}`)
+					.setLabel(`Buy ${pet.name} - ${pet.formattedPrice} coins`)
+					.setStyle(ButtonStyle.Primary)
+			})
+
+			const selectedButtonRows = selectedPetButtons.reduce((rows, button, index) => {
+				const rowIndex = Math.floor(index / 3)
+				if (!rows[rowIndex]) {
+					rows[rowIndex] = new ActionRowBuilder<ButtonBuilder>()
+				}
+				rows[rowIndex].addComponents(button)
+				return rows
+			}, [] as ActionRowBuilder<ButtonBuilder>[])
+
+			await i.update({ embeds: [petEmbed], components: [...selectedButtonRows, versionMenu] })
+		} else if (i.isButton() && i.customId.startsWith("buy_pet_")) {
+			const petName = i.customId.replace("buy_pet_", "")
+			const pet = petOptions.find(p => p.name === petName)
+
+			if (pet) {
+				const userBalance = await getBalance(i.user.id)
+				const userInventory = await getUserInventory(i.user.id)
+
+				// Check if the user has the required items
+				const hasRequiredItems =
+					!pet.requiredItems?.length ||
+					pet.requiredItems.every(requiredItem => {
+						const userItem = userInventory.find(item => item.name === requiredItem.name)
+						return userItem && userItem.quantity >= requiredItem.quantity
+					})
+
+				if (!hasRequiredItems) {
+					await i.reply({
+						content: `You don't have the required items to buy ${pet.name}. Required items: ${
+							pet.requiredItems?.map(item => `${item.quantity}x ${item.name}`).join(", ") || "None"
+						}`,
+						ephemeral: true
+					})
+					return
+				}
+
+				if (userBalance >= pet.price) {
+					await updateBalance(i.user.id, -pet.price)
+
+					// Remove the required items from the user's inventory
+					for (const requiredItem of pet.requiredItems || []) {
+						await removeItemFromUserInventory(i.user.id, requiredItem.name, -requiredItem.quantity)
+					}
+
+					const newShikigami: UserShikigami = {
+						name: pet.name,
+						experience: 0,
+						tier: 1,
+						tamedAt: new Date(),
+						hygiene: 100,
+						hunger: 100,
+						friendship: 0
+					}
+
+					await updateUserShikigami(i.user.id, newShikigami)
+
+					await i.reply({
+						content: `Congratulations! You have successfully purchased ${pet.name}.`,
+						ephemeral: true
+					})
+				} else {
+					await i.reply({
+						content: "Insufficient funds to buy this pet.",
+						ephemeral: true
+					})
+				}
+				collector.stop()
+			}
+		}
+	})
 }

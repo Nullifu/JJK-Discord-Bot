@@ -1,4 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { logger } from "./bot.js"
+import { dirtyToCleanItemMap } from "./interface.js"
 import {
 	addItemToUserInventory,
 	addUserQuest,
@@ -6,6 +8,7 @@ import {
 	addUserTechnique,
 	getGamblersData,
 	getUserInateClan,
+	getUserInventory,
 	getUserQuests,
 	getUserUnlockedTransformations,
 	removeItemFromUserInventory,
@@ -25,17 +28,7 @@ import {
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
-export const digitems = [
-	{ name: "Tailsman", rarity: "Super Rare", chance: 0.07, price: 0 },
-	{ name: "Prison Realm Fragment", rarity: "Super Rare", chance: 0.07 },
-	{ name: "Jogos left testicle", rarity: "Super Rare", chance: 0.07 },
-	{ name: "Jogos right testicle", rarity: "Super Rare", chance: 0.07 },
-	{ name: "Super Glue", rarity: "Super Rare", chance: 0.07 },
-	{ name: "Sukuna Finger", rarity: "Special Grade", chance: 0.05 },
-	{ name: "Rikugan Eye", rarity: "Special Grade", chance: 0.03 },
-	{ name: "Heavenly Chain", rarity: "Special Grade", chance: 0.1 },
-	{ name: "(Shattered) Domain Remnants", rarity: "Special Grade", chance: 0.1 }
-]
+//
 export const items = [
 	{ name: "Tailsman", rarity: "Super Rare", chance: 0.07, price: 0 },
 	{ name: "Takada-Chan Autograph", rarity: "Super Rare", chance: 0.07, price: 200 },
@@ -76,8 +69,13 @@ export const items = [
 ]
 
 export const itemEffects = [
-	{ name: "Special-Grade Cursed Object", description: "**Cursed** Enemies are stronger!", time: 25 },
-	{ name: "Hakari Kinji's Token", description: "**Gambler** Bigger win from gambling!", time: 100 }
+	{ name: "Curse Repellent", description: "**Anti-Curse** Less likely to find curse spirit enemies!", time: 25 },
+	{
+		name: "Special-Grade Cursed Object",
+		description: "**Cursed** More likely to find curse spirit enemies!",
+		time: 25
+	},
+	{ name: "Hakari Kinji's Token", description: "**Gambler** 🤑🤑🤑🤑🤑", time: 25 }
 ]
 
 export const dailyitems = [
@@ -89,8 +87,6 @@ export const dailyitems = [
 	{ name: "Megumi Plushie" },
 	{ name: "Sukuna Plushie" },
 	{ name: "Takada-Chan Plushie" }
-
-	// ...
 ]
 
 export const craftingRecipes = {
@@ -102,14 +98,37 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	wheel_fixed: {
+		requiredItems: [
+			{ name: "(Broken) Divine General Wheel", quantity: 6 },
+			{ name: "Super Glue", quantity: 1 }
+		],
+		craftedItemName: "Mahoragas Wheel"
+	},
+	specialgradespray: {
+		requiredItems: [
+			{ name: "Empty Bottle", quantity: 1 },
+			{ name: "Special-Grade Medicine", quantity: 1 }
+		],
+		craftedItemName: "Special-Grade Anti Effect Spray"
+	},
 	bundle_soul: {
 		requiredItems: [
 			{ name: "Dagons Soul", quantity: 1 },
 			{ name: "Jogos Soul", quantity: 1 },
+			{ name: "Mahito's Soul", quantity: 1 },
 			{ name: "Transfigured Soul", quantity: 6 },
-			{ name: "Hanamis Soul", quantity: 6 }
+			{ name: "Hanamis Soul", quantity: 1 }
 		],
 		craftedItemName: "Soul Bundle"
+	},
+	curse_rep: {
+		requiredItems: [
+			{ name: "Empty Bottle", quantity: 1 },
+			{ name: "Cursed Shard", quantity: 1 },
+			{ name: "Super Glue", quantity: 1 }
+		],
+		craftedItemName: "Curse Repellent"
 	},
 	star_fused: {
 		requiredItems: [
@@ -208,6 +227,13 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Sukuna Finger Bundle",
 		emoji: "<:ezgif69884ff9ecd1:1226787131956138077>"
+	},
+	clean_sponge: {
+		requiredItems: [
+			{ name: "Dirty Sponge", quantity: 1 },
+			{ name: "Cleaning Kit", quantity: 1 }
+		],
+		craftedItemName: "Cleaning Sponge"
 	}
 }
 
@@ -266,93 +292,6 @@ export const DOMAIN_EXPANSIONS = [
 	}
 ]
 
-export const heavenlyrestrictionskills = [
-	{
-		name: "Pummel",
-		description: "Die!",
-		cost: "175000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Resonant Strike",
-		description: "Considered one of the most powerful techniques in Jujutsu",
-		cost: "75000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Shrapnel Burst",
-		description: "Perish!",
-		cost: "25000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Nerve Cluster Blitz",
-		description: "Strike!",
-		cost: "175000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Unbound Fury",
-		description: "Fury of the heavens",
-		cost: "125000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Inverted Spear Of Heaven: Severed Universe",
-		description: "The skill that sliced through infinity..",
-		cost: "325000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 6
-			}
-		]
-	}
-]
-
-export function getRandomItem() {
-	const roll = Math.random()
-	let cumulativeChance = 0
-
-	for (const item of digitems) {
-		cumulativeChance += item.chance
-		if (roll < cumulativeChance) {
-			return item
-		}
-	}
-	return null // If no item is found based on the chances
-}
 // jobs sans will never get
 export const jobs = [
 	{ name: "Student", payout: { min: 250, max: 750 }, cost: 0, requiredExperience: 0, cooldown: 80000 },
@@ -520,11 +459,6 @@ export const lookupItems = [
 		effect: "Eat one and you might gain special abilities!"
 	},
 	{ name: "Tailsman", description: "Common Tailsman!" },
-	{
-		name: "Domain Token",
-		description: "A special grade token that can grant the user a domain of their choice!",
-		effect: "Use it and manifest your domain!"
-	},
 	{ name: "Jogos (Fixed) Balls", description: "Shibuya Aftermath!", effect: "Doesn't really do much" },
 	{ name: "Platinum", description: "Rare" },
 	{
@@ -640,23 +574,40 @@ export const CLAN_SKILLS = {
 		{
 			name: "Ten Shadows Technique: Divergent Sila Divine General Mahoraga",
 			description: "With this treasure i summon...",
-			cost: "325000",
+			cost: "3250000",
 			clan: "Fushiguro",
-			items: [{ name: "(Broken) Divine General Wheel", quantity: 6 }]
+			items: [
+				{ name: "Mahoraga's Wheel", quantity: 1 },
+				{ name: "Mahoraga's Soul", quantity: 1 }
+			]
+		},
+		{
+			name: "Ten Shadows Technique: Max Elephant",
+			description: "FATTY",
+			cost: "1250000",
+			clan: "Fushiguro",
+			items: [{ name: "Elephant Shikigami's Soul", quantity: 1 }]
+		},
+		{
+			name: "Ten Shadows Technique: Nue",
+			description: "bird :3",
+			cost: "250000",
+			clan: "Fushiguro",
+			items: [{ name: "Bird Shikigami's Soul", quantity: 1 }]
 		},
 		{
 			name: "Ten Shadows Technique: Divine Dogs",
 			description: "Divine Dogs!",
 			cost: "125000",
 			clan: "Fushiguro",
-			items: [{ name: "Tailsman", quantity: 1 }]
+			items: [{ name: "Divine Dogs Shikigami's Soul", quantity: 1 }]
 		},
 		{
-			name: "Ten Shadows Technique: Nue",
-			description: "bird :3",
-			cost: "25000",
+			name: "Ten Shadows Technique: Toad",
+			description: "blurp",
+			cost: "100000",
 			clan: "Fushiguro",
-			items: [{ name: "Sukuna Finger", quantity: 1 }]
+			items: [{ name: "Tailsman", quantity: 1 }]
 		}
 	],
 	"Zenin": [
@@ -730,6 +681,15 @@ export const CLAN_SKILLS = {
 	],
 	"Okkotsu": [
 		{
+			name: "Vengance Blade: Executioners Blade",
+			cost: "1235000",
+			clan: "Okkotsu",
+			items: [
+				{ name: "Yuta's Token", quantity: 2 },
+				{ name: "Sukuna Finger Bundle", quantity: 1 }
+			]
+		},
+		{
 			name: "MAXIMUM: BLACK FLASH",
 			cost: "925000",
 			clan: "Okkotsu",
@@ -753,7 +713,7 @@ export const CLAN_SKILLS = {
 			name: "Star Rage: Virtual Mass",
 			cost: "1200000",
 			clan: "Star Rage",
-			items: [{ name: "Fused Star", quantity: 3 }]
+			items: [{ name: "Fused Star", quantity: 2 }]
 		},
 		{
 			name: "Star Rage: Terra",
@@ -766,6 +726,72 @@ export const CLAN_SKILLS = {
 			cost: "250000",
 			clan: "Star Rage",
 			items: [{ name: "(Shattered) Star Fragment", quantity: 1 }]
+		}
+	],
+	"Cursed Speech": [
+		{
+			name: "Cursed Speech: Twist",
+			cost: "120000",
+			clan: "Cursed Speech",
+			items: [{ name: "Cough Medicine", quantity: 3 }]
+		},
+		{
+			name: "Cursed Speech: Explode",
+			cost: "90000",
+			clan: "Cursed Speech",
+			items: [{ name: "Cough Medicine", quantity: 1 }]
+		},
+		{
+			name: "Cursed Speech: Shatter",
+			cost: "45000",
+			clan: "Cursed Speech",
+			items: [{ name: "Cough Medicine", quantity: 1 }]
+		}
+	],
+	"Boogie Woogie": [
+		{
+			name: "Boogie Woogie: Surplex",
+			cost: "528000",
+			clan: "Boogie Woogie",
+			items: [
+				{ name: "Brotherly Bracelet", quantity: 6 },
+				{ name: "Takada-Chan Autograph", quantity: 1 }
+			]
+		},
+		{
+			name: "Boogie Woogie: Surprise Fist",
+			cost: "120000",
+			clan: "Boogie Woogie",
+			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
+		},
+		{
+			name: "Boogie Woogie: Swap",
+			cost: "45000",
+			clan: "Boogie Woogie",
+			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
+		}
+	],
+	"Overtime": [
+		{
+			name: "Overtime: Collapse",
+			cost: "528000",
+			clan: "Overtime",
+			items: [
+				{ name: "(Shattered) Overtime Watch", quantity: 6 },
+				{ name: "Mahito's Soul", quantity: 1 }
+			]
+		},
+		{
+			name: "Overtime: Ratio",
+			cost: "120000",
+			clan: "Overtime",
+			items: [{ name: "(Shattered) Overtime Watch", quantity: 1 }]
+		},
+		{
+			name: "Overtime: Relentless Sword Strike",
+			cost: "45000",
+			clan: "Overtime",
+			items: [{ name: "(Shattered) Overtime Watch", quantity: 1 }]
 		}
 	]
 }
@@ -792,6 +818,17 @@ export const questsArray = [
 		itemQuantity: 1,
 		task: "Defeat Hakari Kinji 5 times!",
 		totalProgress: 5
+	},
+	{
+		name: "Nanami's Task",
+		description:
+			"Nanami has tasked you with a mission. Assist him in his quest to kill curses and earn his respect.",
+		coins: 45000,
+		experience: 470,
+		items: { Overtime: 1 },
+		itemQuantity: 1,
+		task: "Exorcise 20 Foes!",
+		totalProgress: 20
 	},
 	{
 		name: "Training with Itadori",
@@ -852,7 +889,7 @@ export const questsArray = [
 	{
 		name: "Satoru Gojo's Mission",
 		description:
-			"Satoru Gojo, the strongest sorcerer, has a mission for you. Assist him in his quest to kill PLACEHOLDER and earn his respect.",
+			"Satoru Gojo, the strongest sorcerer, has a mission for you. Assist him in his quest to kill curses and earn his respect.",
 		coins: 100000,
 		experience: 850,
 		items: { "Satoru Gojo's Respect": 1 },
@@ -1412,7 +1449,7 @@ export const items1: Item1[] = [
 
 			const itemEffect = {
 				itemName: "Hakari Kinji's Token",
-				effectTime: 100,
+				effectTime: 25,
 				startTime: startTime.toISOString(),
 				endTime: endTime.toISOString()
 			}
@@ -1490,7 +1527,7 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription(`You open the cursed chest and get! ${chestitem}`)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
 	{
@@ -1520,7 +1557,7 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription(`You open the cursed chest and get! ${chestitem}`)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
 	{
@@ -1537,11 +1574,11 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription("You consume the souls and unlock Body of Distorted Killing!")
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
 	{
-		itemName: "Special-Grade Cursed Object",
+		itemName: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
 		description: "Special-Grade Cursed Object",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
@@ -1555,6 +1592,7 @@ export const items1: Item1[] = [
 
 			const itemEffect = {
 				itemName: "Special-Grade Cursed Object",
+				effectName: "Cursed",
 				effectTime: 25,
 				startTime: startTime.toISOString(),
 				endTime: endTime.toISOString()
@@ -1567,11 +1605,117 @@ export const items1: Item1[] = [
 				const embedFinal = new EmbedBuilder()
 					.setColor("#006400")
 					.setTitle("Cursed Object")
-					.setDescription("You are now cursed for the next 25 minutes.")
+					.setDescription(
+						"You are now cursed for the next 25 minutes.\n**More prominent to get cursed bosses, Sukuna Dagon Jogo ETC**"
+					)
 				await interaction.editReply({ embeds: [embedFinal] })
 			} catch (error) {
 				console.error("Error applying item effect:", error)
 				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
+	},
+	{
+		itemName: "Curse Repellent",
+		description: "Curse Repellent",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const userId = interaction.user.id
+
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+
+			const itemEffect = {
+				itemName: "Curse Repellent",
+				effectName: "Curse Repellent",
+				effectTime: 25,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+
+			try {
+				await updateUserItemEffects(userId, itemEffectsArray[0])
+
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Curse Repellent")
+					.setDescription(
+						" You are now safe from curses for the next 25 minutes. (Less likely to find cursed bosses!)"
+					)
+				await interaction.editReply({ embeds: [embedFinal] })
+			} catch (error) {
+				console.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
+	},
+	{
+		itemName: "Cleaning Sponge",
+		description: "Cleaning Sponge",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+			const userId = interaction.user.id
+			const itemToClean = interaction.options.getString("item_to_clean")
+
+			if (!itemToClean) {
+				await interaction.editReply({ content: "Please specify the item to clean." })
+				return
+			}
+
+			try {
+				const userInventory = await getUserInventory(userId)
+				const itemIndex = userInventory.findIndex(item => item.name === itemToClean)
+
+				if (itemIndex === -1) {
+					await interaction.editReply({
+						content: `You don't have the item "${itemToClean}" in your inventory.`
+					})
+					return
+				}
+
+				const itemToCleaned = userInventory[itemIndex]
+
+				// Apply cleaning logic here
+				const cleaningSuccess = Math.random() < 0.8 // 80% chance of successful cleaning
+
+				if (cleaningSuccess) {
+					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
+
+					// Add the cleaned version of the item to the inventory
+					const cleanedItemName = dirtyToCleanItemMap[itemToCleaned.name] || itemToCleaned.name
+					await addItemToUserInventory(userId, cleanedItemName, 1)
+
+					const embedFinal = new EmbedBuilder()
+						.setColor("#006400")
+						.setTitle("Cleaning Sponge")
+						.setDescription(
+							`Successfully cleaned "${itemToCleaned.name}"! You now have a "${cleanedItemName}" in your inventory.`
+						)
+
+					await interaction.editReply({ embeds: [embedFinal] })
+				} else {
+					// Remove the original item from the inventory
+					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
+
+					const embedFinal = new EmbedBuilder()
+						.setColor("#FF0000")
+						.setTitle("Cleaning Sponge")
+						.setDescription(`Failed to clean "${itemToCleaned.name}"! The item has disappeared.`)
+
+					await interaction.editReply({ embeds: [embedFinal] })
+				}
+
+				// Remove the cleaning sponge from the inventory
+				await removeItemFromUserInventory(userId, "Cleaning Sponge", 1)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to use the cleaning sponge. Please try again." })
 			}
 		}
 	},
@@ -1646,8 +1790,12 @@ export const shopItems = [
 	{ name: "(Broken) Divine General Wheel", rarity: "Grade 1", price: 56000 },
 	{ name: "Prison Realm Fragment", rarity: "Grade 1", price: 95000 },
 	{ name: "(Shattered) Domain Remnants", rarity: "Grade 1", price: 125000 },
+	{ name: "Clean Sponge", rarity: "Grade 1", price: 100000 },
+	{ name: "Dragon Scales", rarity: "Grade 1", price: 250000 },
 	//
 	{ name: "Gamblers Token", rarity: "Special Grade", price: 250000, maxPurchases: 5 },
+	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 1 },
+	{ name: "Curse Repellent", rarity: "Special Grade", price: 200000, maxPurchases: 8 },
 	{ name: "Sukuna Finger", rarity: "Special Grade", price: 350000, maxPurchases: 8 },
 	{ name: "Rikugan Eye", rarity: "Special Grade", price: 1000000, maxPurchases: 2 },
 	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 }

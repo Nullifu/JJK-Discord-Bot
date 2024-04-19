@@ -16,6 +16,7 @@ import {
 	updatePlayerGrade,
 	updateUserExperience,
 	updateUserHealth,
+	updateUserShikigami,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
@@ -83,6 +84,7 @@ export async function handleBossDeath(
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
+	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 
 	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
@@ -99,6 +101,56 @@ export async function handleBossDeath(
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }
 
+export async function handleShikigamiTame(
+	interaction: ChatInputCommandInteraction<CacheType>,
+	embed: EmbedBuilder,
+	row: ActionRowBuilder<SelectMenuBuilder>,
+	opponent: BossData
+) {
+	interface UserShikigami {
+		name: string
+		experience: number
+		health: number
+		tier: number
+		tamedAt: Date
+		hygiene: number
+		hunger: number
+		friendship: number
+	}
+	// Show victory embed
+	const victoryMessage = "You won"
+	embed.setDescription(victoryMessage)
+	const drop = getBossDrop(opponent.name)
+
+	// Update values in the database
+	activeCollectors.delete(interaction.user.id)
+	await updateUserHealth(interaction.user.id, 100)
+	await addItemToUserInventory(interaction.user.id, drop.name, 1)
+	await removeAllStatusEffects(interaction.user.id)
+
+	const tamedShikigami: UserShikigami = {
+		name: opponent.name,
+		experience: 0,
+		tier: 5,
+		health: opponent.name === "Mahoraga" ? 400 : 100,
+		tamedAt: new Date(),
+		hygiene: 100,
+		hunger: 100,
+		friendship: 0
+	}
+
+	// Update the user's shikigami with the tamed boss
+	await updateUserShikigami(interaction.user.id, tamedShikigami)
+
+	// Show a loot drop embed
+	const privateEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle("Battle Rewards")
+		.addFields({ name: "Tamed", value: `You've tamed ${opponent.name}!` })
+
+	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
+}
+
 // Function to handle the execution of special techniques
 export async function executeSpecialTechnique({
 	collectedInteraction,
@@ -107,20 +159,20 @@ export async function executeSpecialTechnique({
 	imageUrl,
 	description,
 	fieldValue,
-	userTechniques,
+	userTechniques: userTechniquesFight,
 	userId,
 	primaryEmbed
 }) {
-	const techniquesUsed = userTechniques.get(userId) || []
+	const techniquesUsed = userTechniquesFight.get(userId) || []
 	techniquesUsed.push(techniqueName)
-	userTechniques.set(userId, techniquesUsed) // Update the map with the new array
+	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new array
 
 	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
 	const playerGradeString = playerGradeData
 
 	// Technique hasn't been used, proceed
 	techniquesUsed.push(techniqueName)
-	userTechniques.set(userId, techniquesUsed) // Update the map with the new techniques list
+	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new techniques list
 
 	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
 
@@ -129,7 +181,7 @@ export async function executeSpecialTechnique({
 	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-	await new Promise(resolve => setTimeout(resolve, 2000))
+	await new Promise(resolve => setTimeout(resolve, 3000))
 
 	return damage
 }
@@ -610,6 +662,18 @@ export async function executeBlackFlash({
 	await attemptBlackFlash()
 
 	return damage
+}
+
+export function generateBloodlustBar(currentBloodlust) {
+	const bloodlustBarLength = 20
+	const maxBloodlust = 50
+	const filledLength = Math.round((currentBloodlust / maxBloodlust) * bloodlustBarLength)
+	const emptyLength = bloodlustBarLength - filledLength
+
+	const filledBar = "🟥".repeat(filledLength)
+	const emptyBar = "⬛".repeat(emptyLength)
+
+	return `${filledBar}${emptyBar} (${currentBloodlust}/100)`
 }
 
 export { getJujutsuFlavorText }

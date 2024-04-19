@@ -15,6 +15,7 @@ import {
 	SlashCommandBuilder
 } from "discord.js"
 import { config as dotenv } from "dotenv"
+
 import cron from "node-cron"
 import {
 	claimQuestsCommand,
@@ -37,13 +38,13 @@ import {
 	handleEquipTransformationCommand,
 	handleFightCommand,
 	handleGambleCommand,
-	handleGiveItemCommand,
 	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
 	handleJujutsuStatsCommand,
 	handleLeaderBoardCommand,
 	handleLookupCommand,
+	handlePetShop,
 	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handleQuestCommand,
@@ -52,6 +53,7 @@ import {
 	handleSellCommand,
 	handleShopCommand,
 	handleSupportCommand,
+	handleTame,
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
@@ -60,6 +62,7 @@ import {
 	handleUpdateCommand,
 	handleUseItemCommand,
 	handleViewEffectsCommand,
+	handleViewShikigami,
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
@@ -69,6 +72,7 @@ import {
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 import { getShopLastReset, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
+import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 
 dotenv()
 
@@ -83,6 +87,30 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 })
 
+import log4js from "log4js"
+
+// Configure log4js
+log4js.configure({
+	appenders: {
+		console: { type: "console" },
+		file: { type: "file", filename: "logs/app.log" }
+	},
+	categories: {
+		default: { appenders: ["console", "file"], level: "debug" }
+	}
+})
+
+// Get a logger instance
+export const logger = log4js.getLogger("jjk-bot")
+
+// Use the logger
+logger.trace("This is a trace message")
+logger.debug("This is a debug message")
+logger.info("This is an info message")
+logger.warn("This is a warning message")
+logger.error("This is an error message")
+logger.fatal("This is a fatal message")
+
 let activities = [
 	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 	{ name: "The Shibuya Incident", type: ActivityType.Playing },
@@ -92,16 +120,16 @@ let activities = [
 let index = 0
 
 client.on("ready", async () => {
-	console.log(`Logged in as ${client.user.tag}!`)
+	logger.info(`Logged in as ${client.user.tag}!`)
 	client.guilds.cache.forEach(guild => {
-		console.log(`${guild.name} (ID: ${guild.id})`)
+		logger.info(`${guild.name} (ID: ${guild.id})`)
 	})
 
 	try {
 		await initializeDatabase()
-		console.log("Database initialization completed.")
+		logger.info("Database initialization completed.")
 	} catch (error) {
-		console.error("Error initializing database:", error)
+		logger.fatal("Error initializing database:", error)
 	}
 })
 
@@ -207,6 +235,8 @@ cron.schedule("*/30 * * * *", async () => {
 	}
 })
 
+//
+//
 const clientId = "991443928790335518"
 client.setMaxListeners(100)
 export const workCooldowns = new Map<string, number>()
@@ -256,6 +286,23 @@ const commands = [
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
+	new SlashCommandBuilder()
+		.setName("tame")
+		.setDescription("Tame your shikigami!")
+		.addStringOption(option =>
+			option
+				.setName("shikigami")
+				.setDescription("The shikigami to tame")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Mahoraga", value: "Divine-General Mahoraga" },
+					{ name: "Divine Dogs", value: "Divine Dogs" },
+					{ name: "Nue", value: "Nue" },
+					{ name: "Toad", value: "Toad" },
+					{ name: "Great Serpent", value: "Great Serpent" },
+					{ name: "Max Elephant", value: "Max Elephant" }
+				)
+		),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
 	new SlashCommandBuilder()
 		.setName("equipclan")
@@ -268,7 +315,12 @@ const commands = [
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the balance for").setRequired(false)
 		),
-	new SlashCommandBuilder().setName("jujutsustatus").setDescription("Check your Jujutsu Status!"),
+	new SlashCommandBuilder()
+		.setName("jujutsustatus")
+		.setDescription("Check your Jujutsu Status!")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to display the jujutsu status for").setRequired(false)
+		),
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
@@ -356,7 +408,23 @@ const commands = [
 					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
 					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
 					{ name: "Cursed Chest", value: "Cursed Chest" },
-					{ name: "Soul Bundle", value: "Soul Bundle" }
+					{ name: "Soul Bundle", value: "Soul Bundle" },
+					{ name: "Curse Repellent", value: "Curse Repellent" },
+					{
+						name: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
+						value: "Special-Grade Cursed Object"
+					},
+					{ name: "Cleaning Sponge", value: "Cleaning Sponge" }
+				)
+		)
+		.addStringOption(option =>
+			option
+				.setName("item_to_clean")
+				.setDescription("The name of the item to clean (only for Cleaning Sponge)")
+				.setRequired(false)
+				.addChoices(
+					{ name: "(Dirty) Sukuna Finger", value: "(Dirty) Sukuna Finger" },
+					{ name: "(Dirty) Rikugan Eye", value: "(Dirty) Rikugan Eye" }
 				)
 		),
 
@@ -374,6 +442,16 @@ const commands = [
 					{ name: "Claim", value: "claim" },
 					{ name: "Abandon", value: "abandon" }
 				)
+		),
+	new SlashCommandBuilder()
+		.setName("shikigami")
+		.setDescription("View your shikigami in Pet form!")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices({ name: "View", value: "view" }, { name: "Shop", value: "shop" })
 		),
 	new SlashCommandBuilder()
 		.setName("technique")
@@ -540,6 +618,35 @@ const commands = [
 		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("givemoney")
+		.setDescription("Gives moneys (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("ID of the user to give the money to").setRequired(true)
+		)
+		.addIntegerOption(option => option.setName("amount").setDescription("Amount to give").setRequired(true)),
+	new SlashCommandBuilder()
+		.setName("removemoney")
+		.setDescription("Remove moneys (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("ID of the user to REMOVE the money to").setRequired(true)
+		)
+		.addIntegerOption(option => option.setName("amount").setDescription("amount to remove").setRequired(true)),
+	new SlashCommandBuilder()
+		.setName("addtechnique")
+		.setDescription("Add or update a user's active techniques")
+		.setDefaultMemberPermissions(0)
+		.addStringOption(option =>
+			option.setName("userid").setDescription("The ID of the user to update").setRequired(true)
+		) // User ID is required
+		.addStringOption(option =>
+			option
+				.setName("techniques")
+				.setDescription("Comma-separated list of techniques to add/update")
+				.setRequired(true)
 		)
 ].map(command => command.toJSON())
 
@@ -547,19 +654,18 @@ const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN
 
 async function doApplicationCommands() {
 	try {
-		console.log("Started refreshing application (/) commands.")
+		logger.info("Started refreshing application (/) commands.")
 
 		await rest.put(Routes.applicationCommands(clientId), { body: commands })
 
-		console.log("Successfully reloaded application (/) commands.")
+		logger.info("Successfully reloaded application (/) commands.")
 	} catch (error) {
-		console.error(error)
+		logger.error(error)
 	}
 }
 doApplicationCommands()
 
 // --------------------------------------------------------------------------------------------------------------------------\\
-//
 // --------------------------------------------------------------------------------------------------------------------------\\
 //
 client.on("interactionCreate", async interaction => {
@@ -631,7 +737,6 @@ client.on("interactionCreate", async interaction => {
 	}
 	client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
-			console.log("Select menu interaction detected")
 			if (interaction.customId.startsWith("accept_trade_select_")) {
 				console.log("Handling trade selection...")
 				await interaction
@@ -692,6 +797,19 @@ client.on("interactionCreate", async interaction => {
 			default:
 				await interaction.reply({ content: "Unknown action.", ephemeral: true })
 		}
+	} else if (commandName === "shikigami") {
+		const action = interaction.options.getString("action")
+
+		switch (action) {
+			case "view":
+				await handleViewShikigami(interaction)
+				break
+			case "shop":
+				await handlePetShop(interaction)
+				break
+			default:
+				await interaction.reply({ content: "Unknown action.", ephemeral: true })
+		}
 	} else if (commandName === "quests") {
 		const action = interaction.options.getString("action")
 
@@ -735,6 +853,9 @@ client.on("interactionCreate", async interaction => {
 			case "inventory":
 				await handleInventoryCommand(chatInputInteraction)
 				break
+			case "viewshikigami":
+				await handleViewShikigami(chatInputInteraction)
+				break
 			case "dig":
 				await handleDigCommand(chatInputInteraction)
 				break
@@ -753,6 +874,10 @@ client.on("interactionCreate", async interaction => {
 
 			case "fight":
 				await handleFightCommand(chatInputInteraction)
+				break
+
+			case "tame":
+				await handleTame(chatInputInteraction)
 				break
 
 			case "selectjob":
@@ -794,6 +919,15 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "giveitem":
 				await handleGiveItemCommand(chatInputInteraction)
+				break
+			case "givemoney":
+				await handleUpdateBalanceCommand(chatInputInteraction)
+				break
+			case "removemoney":
+				await handleREMOVE(chatInputInteraction)
+				break
+			case "addtechnique":
+				await handleADDTECHNIQUE(chatInputInteraction)
 				break
 		}
 	}
