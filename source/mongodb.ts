@@ -2833,3 +2833,30 @@ export async function healShikigami(userId: string, shikigamiName: string, healt
 		throw error
 	}
 }
+
+// update user vote time
+export async function updateUserVoteTime(userId: string, voteTime: Date): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { voteTime } })
+	} catch (error) {
+		console.error("Error updating user vote time:", error)
+		throw error
+	}
+}
+// get user vote time
+export async function getUserVoteTime(userId: string): Promise<Date> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.voteTime : new Date(0)
+	} catch (error) {
+		console.error(`Error when retrieving vote time for user with ID: ${userId}`, error)
+		throw error
+	}
+}

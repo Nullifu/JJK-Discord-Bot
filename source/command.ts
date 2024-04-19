@@ -119,7 +119,6 @@ import {
 	getUserUnlockedBosses,
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
-	getUserVoteTime,
 	getUserWorkCooldown,
 	handleTradeAcceptance,
 	healShikigami,
@@ -144,6 +143,7 @@ import {
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
+	updateUserUnlockedTransformations,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
@@ -1611,6 +1611,10 @@ const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Bro
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let userTechniquesFight = new Map<string, any>()
+
 	await updateUserHealth(interaction.user.id, playerHealth1)
 
 	await interaction.deferReply()
@@ -1654,7 +1658,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const userTechniques = hasHeavenlyRestriction
 		? await getUserActiveHeavenlyTechniques(interaction.user.id)
 		: await getUserActiveTechniques(interaction.user.id)
+	//
 	const transformname = await getUserTransformation(interaction.user.id)
+	//
+	//
 	const domainname = await getUserDomain(interaction.user.id)
 
 	const techniqueOptions =
@@ -3994,11 +4001,13 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
-// claim vote rewards
+const userVoteTimestamps = {}
+
 export async function handleClaimVoteRewards(interaction) {
 	const Topgg = import("@top-gg/sdk")
 	const userId = interaction.user.id
 	const top = new (await Topgg).Api(process.env.TOPGG)
+
 	await interaction.deferReply()
 
 	const hasVoted = await top.hasVoted(userId)
@@ -4011,7 +4020,6 @@ export async function handleClaimVoteRewards(interaction) {
 			.setLabel("Vote Now")
 			.setStyle(ButtonStyle.Link)
 			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
-
 		const row = new ActionRowBuilder().addComponents(voteButton)
 		await interaction.editReply({ embeds: [voteEmbed], components: [row] })
 		return
@@ -4035,25 +4043,6 @@ export async function handleClaimVoteRewards(interaction) {
 
 	userVoteTimestamps[userId] = currentTime
 
-	const lastVoteTime = await getUserVoteTime(userId)
-	const currentTime = Date.now()
-
-	if (lastVoteTime && currentTime - lastVoteTime.getTime() < 12 * 60 * 60 * 1000) {
-		const timeLeft = (12 * 60 * 60 * 1000 - (currentTime - lastVoteTime.getTime())) / 3600000
-
-		const cooldownEmbed = new EmbedBuilder()
-			.setTitle("Vote Cooldown")
-			.setDescription(
-				`You have already claimed your vote rewards. Please wait ${timeLeft.toFixed(
-					1
-				)} hours before voting again.`
-			)
-
-		await interaction.editReply({ embeds: [cooldownEmbed] })
-		return
-	}
-
-	await updateUserVoteTime(userId, new Date())
 	const voteReward = 100000
 	await updateBalance(userId, voteReward)
 	await addItemToUserInventory(userId, "Cursed Vote Chest", 1)
