@@ -610,7 +610,7 @@ const commands = [
 
 	// ADMIN ONLY COMMANDS
 	new SlashCommandBuilder()
-		.setName("giveitem")
+		.setName("owner-giveitem")
 		.setDescription("Gives an item to a specified user (Restricted to Bot Owner)")
 		.setDefaultMemberPermissions(0)
 		.addStringOption(option =>
@@ -621,7 +621,7 @@ const commands = [
 			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
 		),
 	new SlashCommandBuilder()
-		.setName("givemoney")
+		.setName("owner-givemoney")
 		.setDescription("Gives moneys (Restricted to Bot Owner)")
 		.setDefaultMemberPermissions(0)
 		.addStringOption(option =>
@@ -629,7 +629,7 @@ const commands = [
 		)
 		.addIntegerOption(option => option.setName("amount").setDescription("Amount to give").setRequired(true)),
 	new SlashCommandBuilder()
-		.setName("removemoney")
+		.setName("owner-removemoney")
 		.setDescription("Remove moneys (Restricted to Bot Owner)")
 		.setDefaultMemberPermissions(0)
 		.addStringOption(option =>
@@ -637,12 +637,12 @@ const commands = [
 		)
 		.addIntegerOption(option => option.setName("amount").setDescription("amount to remove").setRequired(true)),
 	new SlashCommandBuilder()
-		.setName("addtechnique")
+		.setName("owner-addtechnique")
 		.setDescription("Add or update a user's active techniques")
 		.setDefaultMemberPermissions(0)
 		.addStringOption(option =>
 			option.setName("userid").setDescription("The ID of the user to update").setRequired(true)
-		) // User ID is required
+		)
 		.addStringOption(option =>
 			option
 				.setName("techniques")
