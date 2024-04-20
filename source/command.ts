@@ -4302,6 +4302,22 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		return
 	}
 
+	// Generate a random number between 0 and 1
+	const randomChance = Math.random()
+
+	// Define the probability of getting a Divine-General Mahoraga (e.g., 5% chance)
+	const divineGeneralChance = 0.05
+
+	// Check if the user is lucky enough to get a Divine-General Mahoraga
+	if (chosenShikigami.name === "Mahoraga" && randomChance < divineGeneralChance) {
+		// User got a Divine-General Mahoraga
+		chosenShikigami.name = "Divine-General Mahoraga"
+		chosenShikigami.current_health = 650
+		chosenShikigami.max_health = 650
+		chosenShikigami.grade = "Unknown...?"
+		chosenShikigami.image_url = "https://media1.tenor.com/m/T7rdnze2j8oAAAAd/gojo-mahoraga.gif"
+	}
+
 	// Use the chosenShikigami as the opponent
 	const randomOpponent = chosenShikigami
 
@@ -4356,7 +4372,9 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	// Create embed
 	const primaryEmbed = new EmbedBuilder()
 		.setColor(cursedEnergyPurple)
-		.setTitle("Cursed Battle!")
+		.setTitle(
+			randomOpponent.name === "Divine-General Mahoraga" ? "🌟 Divine-General Mahoraga..? 🌟" : "Cursed Battle!"
+		)
 		.setDescription(`You're facing **${randomOpponent.name}**! Choose your technique wisely.`)
 		.setImage(randomOpponent.image_url)
 		.addFields(
@@ -4381,6 +4399,9 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 			{ name: "Status Effect Boss", value: "None", inline: true },
 			{ name: "Status Effect Player", value: "None", inline: true }
 		)
+	if (randomOpponent.name === "Divine-General Mahoraga") {
+		primaryEmbed.setColor("Gold")
+	}
 
 	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
 	if (remainingHealthPercentage < 0.5) {
