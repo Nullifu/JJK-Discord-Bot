@@ -59,7 +59,7 @@ const job = schedule.scheduleJob("0 15 * * *", function () {
 	runScheduledTasks()
 })
 
-cron.schedule("0 * * * *", async () => {
+cron.schedule("0 */3 * * *", async () => {
 	try {
 		await decreaseShikigamiHunger()
 		await decreaseShikigamiHygiene()
