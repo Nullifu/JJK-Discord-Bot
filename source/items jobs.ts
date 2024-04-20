@@ -13,9 +13,11 @@ import {
 	getUserUnlockedTransformations,
 	removeItemFromUserInventory,
 	resetBetLimit,
+	updateBalance,
 	updateGamblersData,
 	updatePlayerClanTier,
 	updateUserAchievements,
+	updateUserActiveTechniques,
 	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
@@ -1572,8 +1574,30 @@ export const items1: Item1[] = [
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
-				.setTitle("Opening...")
+				.setTitle("? ? ?")
 				.setDescription("You consume the souls and unlock Body of Distorted Killing!")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+		}
+	},
+	{
+		itemName: "Soul Bundle",
+		description: "Soul Bundle",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 1)
+			await addItemToUserInventory(interaction.user.id, "Tailsman", 5)
+			await updateBalance(interaction.user.id, 20000)
+			await updateUserActiveTechniques(interaction.user.id, ["Fist of the Cursed"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(
+					"You open the Starter Bundle and get! 1x Sukuna Finger, 5x Tailsman. + 20,000 Coins! And a free technique! [ Fist of the Cursed ], Have fun!"
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
@@ -1791,6 +1815,7 @@ export const shopItems = [
 	{ name: "Prison Realm Fragment", rarity: "Grade 1", price: 95000 },
 	{ name: "(Shattered) Domain Remnants", rarity: "Grade 1", price: 125000 },
 	{ name: "Clean Sponge", rarity: "Grade 1", price: 100000 },
+	{ name: "Special-Grade Medicine", rarity: "Grade 1", price: 75000 },
 	{ name: "Dragon Scales", rarity: "Grade 1", price: 250000 },
 	//
 	{ name: "Gamblers Token", rarity: "Special Grade", price: 250000, maxPurchases: 5 },

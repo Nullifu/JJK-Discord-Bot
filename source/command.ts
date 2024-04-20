@@ -190,12 +190,16 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 		const result = await addUser(discordId)
 
+		await addItemToUserInventory(discordId, "Starter Bundle", 1)
+
 		if (result && "insertedId" in result) {
 			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
-				.setDescription(`Welcome, ${interaction.user.toString()}! Your Jujutsu journey begins.`)
+				.setDescription(
+					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /info on a certain subject.`
+				)
 				.setImage(imageURL)
 				.setTimestamp()
 				.setFooter({
@@ -210,7 +214,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 			})
 		}
 	} catch (error) {
-		console.error("Error registering user:", error)
+		logger.error("Error registering user:", error)
 		await interaction.reply({
 			content: "There was an error while trying to register you.",
 			ephemeral: true
