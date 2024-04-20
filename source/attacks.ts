@@ -1038,8 +1038,14 @@ export const TRANSFORMATIONS = [
 		effects: "Sayian Power, 25% Damage Increase, 5% Damage Reduction"
 	},
 	{
+		name: "Ultra Instinct",
+		description: "I am the hope of the universe. I am the answer to all living things that cry out for peace...",
+		image: "https://i.redd.it/y03e7f1ojto71.gif",
+		effects: "INSTINCT, 8000% Damage Increase, 100% Damage Reduction"
+	},
+	{
 		name: "Overtime",
-		description: "Good Griefman, I'm tired of this job.",
+		description: "Good Grief man, I'm tired of this job.",
 		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
 		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
 	}
