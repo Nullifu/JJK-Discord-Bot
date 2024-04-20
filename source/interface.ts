@@ -68,8 +68,7 @@ interface Quest {
 }
 export const dirtyToCleanItemMap = {
 	"(Dirty) Sukuna Finger": "Sukuna Finger",
-	"Tarnished Sword": "Shiny Sword",
-	"Soiled Cape": "Clean Cape"
+	"(Dirty) Rikugan Eye": "Rikugan Eye"
 }
 
 /**
