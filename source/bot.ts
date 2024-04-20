@@ -233,7 +233,7 @@ client.setMaxListeners(100)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
-export const digCooldownBypassIDs = ["917146454940844103"]
+export const digCooldownBypassIDs = ["292385626773258240"]
 export const randomdig2 = [
 	"Burrowed",
 	"Found",
