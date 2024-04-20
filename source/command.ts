@@ -4643,9 +4643,21 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 10,
+					damageMultiplier: 12,
 					imageUrl: "https://media1.tenor.com/m/8Ltt65SLeFUAAAAC/genki-dama-spirit-bomb.gif",
 					description: "PLEASE LEND ME SOME OF YOUR ENERRGY!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Vengance Blade: Executioners Blade") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://media1.tenor.com/m/wmZxEiKZRXgAAAAd/yuta-cursed-energy.gif",
+					description: "I don't like people who hurt my friends...",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesTame,
 					userId: collectedInteraction.user.id,
