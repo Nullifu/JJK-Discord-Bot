@@ -4261,7 +4261,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const chosenShikigamiName = interaction.options.getString("shikigami")
 
 	// Check if the chosen shikigami is Mahoraga
-	const isMahoraga = chosenShikigamiName === "Divine-General Mahoraga"
+	const isMahoraga = chosenShikigamiName === "Mahoraga"
 
 	if (isMahoraga) {
 		// Fetch the user's shikigami
