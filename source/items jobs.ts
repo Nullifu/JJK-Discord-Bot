@@ -1096,7 +1096,6 @@ export const items1: Item1[] = [
 				)
 			await interaction.editReply({ embeds: [embedSecond] })
 
-			await removeItemFromUserInventory(interaction.user.id, "Heavenly Restricted Blood", 1)
 			await updateUserHeavenlyRestriction(interaction.user.id)
 			await updateUserAchievements(interaction.user.id, "unlockHeavenlyRestriction")
 
@@ -1714,6 +1713,7 @@ export const items1: Item1[] = [
 					// Add the cleaned version of the item to the inventory
 					const cleanedItemName = dirtyToCleanItemMap[itemToCleaned.name] || itemToCleaned.name
 					await addItemToUserInventory(userId, cleanedItemName, 1)
+					await addItemToUserInventory(userId, "Dirty Sponge", 1)
 
 					const embedFinal = new EmbedBuilder()
 						.setColor("#006400")
@@ -1736,7 +1736,6 @@ export const items1: Item1[] = [
 				}
 
 				// Remove the cleaning sponge from the inventory
-				await removeItemFromUserInventory(userId, "Cleaning Sponge", 1)
 			} catch (error) {
 				logger.error("Error applying item effect:", error)
 				await interaction.editReply({ content: "Failed to use the cleaning sponge. Please try again." })

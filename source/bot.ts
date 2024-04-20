@@ -912,16 +912,16 @@ client.on("interactionCreate", async interaction => {
 			case "donate":
 				await handleDonateCommand(chatInputInteraction)
 				break
-			case "giveitem":
+			case "owner-giveitem":
 				await handleGiveItemCommand(chatInputInteraction)
 				break
-			case "givemoney":
+			case "owner-givemoney":
 				await handleUpdateBalanceCommand(chatInputInteraction)
 				break
-			case "removemoney":
+			case "owner-removemoney":
 				await handleREMOVE(chatInputInteraction)
 				break
-			case "addtechnique":
+			case "owner-addtechnique":
 				await handleADDTECHNIQUE(chatInputInteraction)
 				break
 		}
