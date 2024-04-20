@@ -290,7 +290,7 @@ const commands = [
 				.setDescription("The shikigami to tame")
 				.setRequired(true)
 				.addChoices(
-					{ name: "Mahoraga", value: "Divine-General Mahoraga" },
+					{ name: "Mahoraga", value: "Mahoraga" },
 					{ name: "Divine Dogs", value: "Divine Dogs" },
 					{ name: "Nue", value: "Nue" },
 					{ name: "Toad", value: "Toad" },
