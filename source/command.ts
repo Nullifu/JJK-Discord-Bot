@@ -190,15 +190,14 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 		const result = await addUser(discordId)
 
-		await addItemToUserInventory(discordId, "Starter Bundle", 1)
-
 		if (result && "insertedId" in result) {
+			await addItemToUserInventory(discordId, "Starter Bundle", 1)
 			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
 				.setDescription(
-					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /info on a certain subject.`
+					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /info on a certain subject.\nYou've also got a free Starter Bundle in your inventory!`
 				)
 				.setImage(imageURL)
 				.setTimestamp()
