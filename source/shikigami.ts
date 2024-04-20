@@ -697,17 +697,23 @@ export function createShikigamiEmbed(selectedShikigami) {
 			},
 			{
 				name: "Hunger",
-				value: `${createBar(selectedShikigami.hunger, 100)} **${selectedShikigami.hunger}%**`,
+				value: `${createBar(Math.max(0, Math.min(100, selectedShikigami.hunger)), 100)} **${
+					selectedShikigami.hunger
+				}%**`,
 				inline: true
 			},
 			{
 				name: "Hygiene",
-				value: `${createBar(selectedShikigami.hygiene, 100)} **${selectedShikigami.hygiene}%**`,
+				value: `${createBar(Math.max(0, Math.min(100, selectedShikigami.hygiene)), 100)} **${
+					selectedShikigami.hygiene
+				}%**`,
 				inline: true
 			},
 			{
 				name: "Friendship",
-				value: `${createBar(selectedShikigami.friendship, 100)} **${selectedShikigami.friendship}**`,
+				value: `${createBar(Math.max(0, Math.min(100, selectedShikigami.friendship)), 100)} **${
+					selectedShikigami.friendship
+				}**`,
 				inline: true
 			},
 			{
@@ -725,7 +731,9 @@ export function createShikigamiEmbed(selectedShikigami) {
 	if (selectedShikigami.health !== undefined) {
 		embed.addFields({
 			name: "Health",
-			value: `${createBar(selectedShikigami.health, 100)} **${selectedShikigami.health}%**`,
+			value: `${createBar(Math.max(0, Math.min(100, selectedShikigami.health)), 100)} **${
+				selectedShikigami.health
+			}%**`,
 			inline: true
 		})
 	}
