@@ -245,6 +245,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 
 	const createProfileEmbed = async user => {
 		const userProfile = await getUserProfile(user.id)
+
 		if (!userProfile) throw new Error("Profile not found.")
 
 		const hasHeavenlyRestriction = !!userProfile.heavenlyrestriction
@@ -256,7 +257,7 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 			domainExpansionValue = formatDomainExpansion(userProfile.domain)
 		}
 
-		return new EmbedBuilder()
+		const embed = new EmbedBuilder()
 			.setColor(0x1f6b4e)
 			.setTitle(`Jujutsu Profile: ${targetUser.username} 🌀`)
 			.setThumbnail(targetUser.displayAvatarURL())
@@ -270,15 +271,23 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false },
 				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false }
 			)
-
 			.setFooter({ text: getRandomQuote() })
+
+		// Check if the user ID matches the special user ID
+		if (user.id === "292385626773258240") {
+			embed.setColor("LuminousVividPink")
+			embed.addFields({ name: "**All-Knowing**", value: "This user is all knowing! 🤔", inline: false })
+			embed.addFields({ name: "**Special Status**", value: "This user is special! ✨", inline: false })
+		}
+
+		return embed
 	}
 
 	try {
 		const profileEmbed = await createProfileEmbed(targetUser)
 		await interaction.reply({ embeds: [profileEmbed] })
 	} catch (error) {
-		console.error("Error handling profile command:", error)
+		logger.error("Error handling profile command:", error)
 		await interaction.reply({ content: "There was an error retrieving your profile.", ephemeral: true })
 	}
 }
@@ -637,7 +646,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 		menuCollector.on("collect", async interaction => {
 			if (interaction.isStringSelectMenu()) {
 				await interaction.deferUpdate()
-
 				const selectedItemKey = interaction.values[0]
 				const selectedItemRecipe = craftingRecipes[selectedItemKey]
 
@@ -680,8 +688,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 				})
 
 				buttonCollector.on("collect", async buttonInteraction => {
-					await buttonInteraction.deferUpdate()
-
+					await buttonInteraction.deferReply()
 					if (buttonInteraction.customId === "confirmCraft") {
 						// Fetch user inventory to check if they have the required items
 						const userInventory = await getUserInventory(interaction.user.id)
@@ -725,12 +732,13 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
 							logger.info("Item added! ", selectedItemRecipe.craftedItemName)
 
-							await buttonInteraction.editReply({
+							await buttonInteraction.followUp({
+								ephemeral: true,
 								content: `You have successfully crafted ${selectedItemRecipe.craftedItemName}!`,
 								components: []
 							})
 						} catch (error) {
-							console.error("Error during crafting:", error)
+							logger.fatal("Error during crafting:", error)
 							await buttonInteraction.editReply({
 								content: "There was an error during the crafting process. Please try again.",
 								components: []
@@ -1565,7 +1573,7 @@ export async function handleLeaderBoardCommand(interaction) {
 		// Reply with the chosen type of leaderboard
 		await interaction.reply({ embeds: [leaderboardEmbed] })
 	} catch (error) {
-		console.error("Failed to handle leaderboard command:", error)
+		logger.error("Failed to handle leaderboard command:", error)
 		await interaction.reply("There was an error trying to execute that command!")
 	}
 }
@@ -2939,6 +2947,35 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 }
 
+function getRandomBenefactor() {
+	const totalWeight = benefactors.reduce((sum, benefactor) => sum + benefactor.weight, 0)
+	let randomWeight = Math.random() * totalWeight
+
+	for (const benefactor of benefactors) {
+		randomWeight -= benefactor.weight
+		if (randomWeight <= 0) {
+			const coins =
+				benefactor.coinsMin && benefactor.coinsMax
+					? Math.floor(Math.random() * (benefactor.coinsMax - benefactor.coinsMin + 1)) + benefactor.coinsMin
+					: 0
+
+			const items = benefactor.items
+				.map(item => ({
+					name: item,
+					quantity:
+						benefactor.itemQuantityMin && benefactor.itemQuantityMax
+							? Math.floor(
+									Math.random() * (benefactor.itemQuantityMax - benefactor.itemQuantityMin + 1)
+							  ) + benefactor.itemQuantityMin
+							: 0
+				}))
+				.filter(item => item.quantity > 0)
+
+			return { ...benefactor, coins, items }
+		}
+	}
+}
+
 const begcooldown = new Map<string, number>()
 const begcooldownamount = 30 * 1000 // 5 seconds in milliseconds
 
@@ -2959,46 +2996,60 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 	// Update Cooldown
 	begcooldown.set(userId, now)
 
-	// Weighted Random Benefactor Selection
-	const totalWeight = benefactors.reduce((sum, benefactor) => sum + benefactor.weight, 0)
-	let random = Math.random() * totalWeight
-	let chosenOne
-	for (const benefactor of benefactors) {
-		random -= benefactor.weight
-		if (random <= 0) {
-			chosenOne = benefactor
-			break
-		}
-	}
+	// Get Random Benefactor
+	const chosenOne = getRandomBenefactor()
 
 	// Result Message Construction
-	let resultMessage = `You begged ${chosenOne.name}`
+	let resultMessage = `You begged ${chosenOne.name}. `
+
+	// Benefactor's Words
+	if (chosenOne.words) {
+		resultMessage += `${chosenOne.name} says: "${chosenOne.words}" `
+	}
+
 	let receivedItems = false
 
-	if ("coins" in chosenOne) {
+	if (chosenOne.coins > 0) {
 		await updateBalance(interaction.user.id, chosenOne.coins)
-		resultMessage += ` and they felt generous, giving you ${chosenOne.coins.toLocaleString()} coins`
+		resultMessage += `They felt generous and gave you ${chosenOne.coins.toLocaleString()} coins. `
 		receivedItems = true
 	}
-	if ("item" in chosenOne) {
-		await addItemToUserInventory(interaction.user.id, chosenOne.item, chosenOne.itemQuantity ?? 1)
+
+	if (chosenOne.items.length > 0) {
+		for (const item of chosenOne.items) {
+			await addItemToUserInventory(interaction.user.id, item.name, item.quantity)
+		}
+		const itemList = chosenOne.items.map(item => `${item.quantity} x ${item.name}`).join(", ")
 		if (receivedItems) {
-			resultMessage += ` and also handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+			resultMessage += `They also handed you ${itemList}. `
 		} else {
-			resultMessage += ` and handed you ${chosenOne.itemQuantity ?? 1} x ${chosenOne.item}`
+			resultMessage += `They handed you ${itemList}. `
 		}
 		receivedItems = true
-	} else {
-		resultMessage += ", but didn't give you any items this time."
 	}
-	resultMessage += "!"
+
+	if (!receivedItems) {
+		resultMessage += "They didn't give you any items or coins this time."
+	}
 
 	// Embed Creation
 	const resultEmbed = new EmbedBuilder()
 		.setTitle("Begging Result")
-		.setDescription(resultMessage)
-		.setColor("#FFD700")
+		.addFields(
+			{ name: "Benefactor", value: chosenOne.name, inline: true },
+			{ name: "Words", value: chosenOne.words || "No words", inline: true },
+			{
+				name: "Received",
+				value: receivedItems
+					? `${chosenOne.coins > 0 ? `${chosenOne.coins} coins\n` : ""}${chosenOne.items
+							.map(item => `${item.quantity} x ${item.name}`)
+							.join("\n")}`
+					: "Nothing"
+			}
+		)
+		.setColor("#00FF00")
 		.setTimestamp()
+		.setFooter({ text: getRandomQuote() })
 
 	await interaction.reply({ embeds: [resultEmbed] })
 }
@@ -3888,14 +3939,36 @@ export async function handleViewTechniquesCommand(interaction) {
 		}
 
 		const embed = new EmbedBuilder()
-			.setTitle("THESE ARE YOUR OWNED TECHNIQUES NOT YOUR ACTIVE ONES. USE /TECHNIQUE EQUIP TO EQUIP THEM")
-			.setDescription(userTechniques.join("\n"))
+			.setTitle("Your Owned Techniques")
+			.setDescription("These are the techniques you own. Use `/technique equip` to equip them.")
+			.setColor("#7289DA")
+			.setTimestamp()
+
+		const chunkSize = 10 // Number of techniques per field
+		const chunkedTechniques = chunkArray(userTechniques, chunkSize)
+
+		chunkedTechniques.forEach((chunk, index) => {
+			const techniques = chunk.map((technique, i) => `${index * chunkSize + i + 1}. ${technique}`).join("\n")
+			embed.addFields({
+				name: `Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
+				value: techniques
+			})
+		})
 
 		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
-		console.error("Error fetching user techniques:", error)
+		logger.error("Error fetching user techniques:", error)
 		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
 	}
+}
+
+// Helper function to split an array into chunks
+function chunkArray(array, chunkSize) {
+	const chunks = []
+	for (let i = 0; i < array.length; i += chunkSize) {
+		chunks.push(array.slice(i, i + chunkSize))
+	}
+	return chunks
 }
 
 // handle unequip quests command dropdown menu embed but instead of giving quest it takes it away
@@ -4302,10 +4375,8 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		return
 	}
 
-	// Generate a random number between 0 and 1
 	const randomChance = Math.random()
 
-	// Define the probability of getting a Divine-General Mahoraga (e.g., 5% chance)
 	const divineGeneralChance = 0.008
 
 	// Check if the user is lucky enough to get a Divine-General Mahoraga
@@ -4709,18 +4780,6 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					primaryEmbed
 				})
 				await applyVirtualMass(collectedInteraction.user.id)
-			} else if (selectedValue === "Black Flash") {
-				damage = await executeBlackFlash({
-					collectedInteraction,
-					techniqueName: selectedValue,
-					damageMultiplier: 8,
-					imageUrl: "https://media1.tenor.com/m/qgIrrl1kvo8AAAAd/jujutsu-kaisen.gif",
-					description: `I guess i can play a little rough. ${randomOpponent.name}`,
-					fieldValue: selectedValue,
-					userTechniques: userTechniquesTame,
-					userId: collectedInteraction.user.id,
-					primaryEmbed
-				})
 			} else if (selectedValue === "Disaster Curses: Full Flux") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -5124,7 +5183,6 @@ export async function handleViewShikigami(interaction) {
 			new ButtonBuilder().setCustomId("feed_shikigami").setLabel("Feed").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("clean_shikigami").setLabel("Clean").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("play_shikigami").setLabel("Play").setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId("train_shikigami").setLabel("Train").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("heal_shikigami").setLabel("Heal").setStyle(ButtonStyle.Primary)
 		)
 
@@ -5141,7 +5199,6 @@ export async function handleViewShikigami(interaction) {
 					((i.customId === "feed_shikigami" ||
 						i.customId === "clean_shikigami" ||
 						i.customId === "play_shikigami" ||
-						i.customId === "train_shikigami" ||
 						i.customId === "heal_shikigami") &&
 						i.user.id === interaction.user.id)
 			})

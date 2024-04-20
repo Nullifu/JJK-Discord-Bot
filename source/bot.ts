@@ -451,7 +451,7 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("technique")
 		.setDescription("Manage your techniques.")
-		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View your equipped techniques."))
+		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View your OWNED techniques."))
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName("unequip")

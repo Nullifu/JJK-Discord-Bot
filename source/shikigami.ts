@@ -405,12 +405,22 @@ export async function handleMahoragaAttack(
 	if (!hasMahoragaAdaptation) {
 		return
 	}
+
+	const userShikigami = await getUserShikigami(collectedInteraction.user.id)
+	const hasDivineGeneralMahoraga = userShikigami.some(shikigami => shikigami.name === "Divine-General Mahoraga")
+
 	let mahoragaAdaptation = userTechniquesFight.get(`${collectedInteraction.user.id}_mahoraga_adaptation`) || 0
+
 	if (mahoragaAdaptation > 0) {
 		mahoragaAdaptation++
 		userTechniquesFight.set(`${collectedInteraction.user.id}_mahoraga_adaptation`, mahoragaAdaptation)
 
-		const mahoragaDamage = Math.floor(Math.random() * 20) + 75 // Random damage between 30 and 80
+		let mahoragaDamage = Math.floor(Math.random() * 20) + 75
+
+		if (hasDivineGeneralMahoraga) {
+			mahoragaDamage += 50
+		}
+
 		const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
 		const newBossHealth = Math.max(0, currentBossHealth - mahoragaDamage)
 		bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
@@ -425,32 +435,37 @@ export async function handleMahoragaAttack(
 			}
 		])
 
+		if (hasDivineGeneralMahoraga) {
+			primaryEmbed.setColor("Gold")
+			primaryEmbed.setTitle("✨ Divine-General Mahoraga's Attack ✨")
+			primaryEmbed.setDescription("The Divine-General Mahoraga unleashes its sacred power!")
+		}
+
 		if (mahoragaAdaptation === 6) {
 			const mahoragaSpecialDamage = Math.floor(Math.random() * 200) + 100 // Random damage between 100 and 300
+			const additionalDamage = hasDivineGeneralMahoraga ? 100 : 0 // Additional damage for Divine-General Mahoraga
+			const totalSpecialDamage = mahoragaSpecialDamage + additionalDamage
+
 			const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
-			//
-			const newBossHealth = Math.max(0, currentBossHealth - mahoragaSpecialDamage)
+			const newBossHealth = Math.max(0, currentBossHealth - totalSpecialDamage)
 			bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
 			randomOpponent.current_health = newBossHealth
 
-			primaryEmbed.setDescription("Mahoaraga has fully adapted... and is now using a special attack!")
+			primaryEmbed.setDescription("Mahoraga has fully adapted... and is now using a special attack!")
 			primaryEmbed.setImage("https://media1.tenor.com/m/h9vZeOgN-5gAAAAC/mahoraga-adapts-mahoraga.gif")
 
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-
 			await new Promise(resolve => setTimeout(resolve, 5000))
 
 			primaryEmbed.setDescription(
-				`Mahoraga has unleashed his full power dealing ${mahoragaSpecialDamage} damage to the enemy!`
+				`Mahoraga has unleashed its full power, dealing ${totalSpecialDamage} damage to the enemy!`
 			)
 			primaryEmbed.setImage("https://media1.tenor.com/m/pYgj13yEW_wAAAAC/sukuna-mahoraga.gif")
 
 			userTechniquesFight.delete(`${collectedInteraction.user.id}_mahoraga_adaptation`)
 
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-
 			await new Promise(resolve => setTimeout(resolve, 3000))
-
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 		}
 	}
@@ -737,6 +752,39 @@ export function createShikigamiEmbed(selectedShikigami) {
 			inline: true
 		})
 	}
+	if (selectedShikigami.name === "Divine-General Mahoraga") {
+		embed.setThumbnail("https://i.redd.it/e99r17yyf31c1.jpg")
+		embed.setColor("Gold")
+
+		// Add a special badge or icon
+		const shinyBadge = "✨"
+		embed.setTitle(`${shinyBadge} ${selectedShikigami.name} ${getShikigamiEmoji(selectedShikigami.name)}`)
+
+		// Modify the description
+
+		// Include additional fields
+		embed.addFields({
+			name: "Special Abilities",
+			value: "- Enhanced Divine Power\n- Increased Damage Output",
+			inline: false
+		})
+	}
+	if (selectedShikigami.name === "Garuda") {
+		embed.setColor("DarkVividPink")
+
+		// Add a special badge or icon
+		const shinyBadge = "✨"
+		embed.setTitle(`${shinyBadge} ${selectedShikigami.name} ${getShikigamiEmoji(selectedShikigami.name)}`)
+
+		// Modify the description
+
+		// Include additional fields
+		embed.addFields({
+			name: "Special Abilities",
+			value: "- Friendly and Loyal\n- Increased Speed and Agility",
+			inline: false
+		})
+	}
 
 	return embed
 }
@@ -858,13 +906,18 @@ export function getRandomItemDescription(itemName: string): string {
 
 export function getShikigamiEmoji(shikigamiName) {
 	const shikigamiEmojis = {
-		"Divine Dogs": "🐶",
+		"Divine Dogs": "🐺",
+		"Toad": "🐸",
+		"Max Elephant": "🐘",
+		"Divine-General Mahoraga": "👿",
 		"Mahoraga": "😈",
+		"Great Serpent": "🐍",
 		"Nue": "🦚",
 		"Noj": "<:73062buwumask:1230903140703015035>",
 		"Kitsune": "<:6861shirohappynoises:1230889537761316924>",
 		"Mythical Dragon": "<:2087dragon:1230896152950476880>",
-		"Mystical Fox": "<:6702foxed:1230903814517686293>"
+		"Mystical Fox": "<:6702foxed:1230903814517686293>",
+		"Garuda": "🦅"
 	}
 
 	return shikigamiEmojis[shikigamiName] || "❓"

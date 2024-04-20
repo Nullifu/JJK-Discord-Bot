@@ -105,14 +105,16 @@ export const craftingRecipes = {
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
 			{ name: "Super Glue", quantity: 1 }
 		],
-		craftedItemName: "Mahoragas Wheel"
+		craftedItemName: "Mahoragas Wheel",
+		emoji: "<:wheel2:1231282696563458118>"
 	},
 	specialgradespray: {
 		requiredItems: [
 			{ name: "Empty Bottle", quantity: 1 },
 			{ name: "Special-Grade Medicine", quantity: 1 }
 		],
-		craftedItemName: "Special-Grade Anti Effect Spray"
+		craftedItemName: "Special-Grade Anti Effect Spray",
+		emoji: "<:ezgif588ef94330c1:1231284086073725008>"
 	},
 	bundle_soul: {
 		requiredItems: [
@@ -122,7 +124,8 @@ export const craftingRecipes = {
 			{ name: "Transfigured Soul", quantity: 6 },
 			{ name: "Hanamis Soul", quantity: 1 }
 		],
-		craftedItemName: "Soul Bundle"
+		craftedItemName: "Soul Bundle",
+		emoji: "<:ezgif5b1d05d94771:1231285347644870757>"
 	},
 	curse_rep: {
 		requiredItems: [
@@ -130,7 +133,8 @@ export const craftingRecipes = {
 			{ name: "Cursed Shard", quantity: 1 },
 			{ name: "Super Glue", quantity: 1 }
 		],
-		craftedItemName: "Curse Repellent"
+		craftedItemName: "Curse Repellent",
+		emoji: "<:ezgif588ef94330c1:1231284086073725008>"
 	},
 	star_fused: {
 		requiredItems: [
@@ -138,7 +142,8 @@ export const craftingRecipes = {
 			{ name: "(Shattered) Star Remnant", quantity: 1 },
 			{ name: "Super Glue", quantity: 2 }
 		],
-		craftedItemName: "Fused Star"
+		craftedItemName: "Fused Star",
+		emoji: "<:ezgif5b9e754d358:1231284110899675220>"
 	},
 	malevolent_token: {
 		requiredItems: [
@@ -235,7 +240,8 @@ export const craftingRecipes = {
 			{ name: "Dirty Sponge", quantity: 1 },
 			{ name: "Cleaning Kit", quantity: 1 }
 		],
-		craftedItemName: "Cleaning Sponge"
+		craftedItemName: "Cleaning Sponge",
+		emoji: "<:hygienespongecleaningcleanliness:1231284893871243397>"
 	}
 }
 
@@ -799,14 +805,53 @@ export const CLAN_SKILLS = {
 }
 
 export const benefactors = [
-	{ name: "Go", coins: 9500, item: "Go", itemQuantity: 1, weight: 1 },
-	{ name: "Jo", coins: 9500, item: "Jo", itemQuantity: 1, weight: 1 },
-	{ name: "Kento Nanami", coins: 1500, weight: 8 },
-	{ name: "Yuji Itadori", item: "Special-Grade Cursed Object", itemQuantity: 1, weight: 2 },
-	{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1, weight: 5 },
-	{ name: "Curse King", coins: 1, item: "Sukuna Finger", itemQuantity: 1, weight: 3 },
-	{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1, weight: 3 },
-	{ name: "Megumi Fushiguro", coins: 5000, weight: 10 }
+	{ name: "Kento Nanami", coinsMin: 1000, coinsMax: 2000, items: ["(Shattered) Overtime Watch"], weight: 8 },
+	{
+		name: "Yuji Itadori",
+		items: ["Special-Grade Cursed Object", "Sukuna Finger"],
+		words: "Have this!",
+		itemQuantityMin: 1,
+		itemQuantityMax: 2,
+		weight: 2
+	},
+	{
+		name: "Hakari Kinji",
+		coinsMin: 2500,
+		coinsMax: 3500,
+		items: ["Gambler Token"],
+		words: "GAMBLE 🤑🤑🤑🤑🤑🤑",
+		itemQuantityMin: 1,
+		itemQuantityMax: 2,
+		weight: 5
+	},
+	{
+		name: "Curse King",
+		coinsMin: 1,
+		coinsMax: 1000,
+		items: ["Sukuna Finger"],
+		words: "You're just a brat!",
+		itemQuantityMin: 1,
+		itemQuantityMax: 4,
+		weight: 3
+	},
+	{
+		name: "Nobara Kugisaki",
+		coinsMin: 2500,
+		coinsMax: 3500,
+		items: ["Nobara's Right Eye", "Nobara's Left Eye"],
+		words: "My eyes are up here!",
+		itemQuantityMin: 1,
+		itemQuantityMax: 1,
+		weight: 3
+	},
+	{
+		name: "Megumi Fushiguro",
+		coinsMin: 4000,
+		coinsMax: 6000,
+		items: ["(Broken) Divine General Wheel"],
+		words: "With this treasure i summon",
+		weight: 10
+	}
 ]
 
 // quests array

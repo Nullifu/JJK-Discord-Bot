@@ -1032,6 +1032,13 @@ export const TRANSFORMATIONS = [
 		effects: "Reinforcement, 15% Damage Reduction"
 	},
 	{
+		name: "Overtime",
+		description: "Good Grief man, I'm tired of this job.",
+		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
+		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
+	},
+	// Owner
+	{
 		name: "Super Saiyajin",
 		description: "I am a warrior pure of heart, awakened by rage... I am the legendary Super Saiyan, Son Goku!",
 		image: "https://64.media.tumblr.com/ae8c852059892af7e3119daa41daf802/tumblr_pc70jtYfOl1ujwg5zo2_540.gif",
@@ -1044,10 +1051,11 @@ export const TRANSFORMATIONS = [
 		effects: "INSTINCT, 8000% Damage Increase, 100% Damage Reduction"
 	},
 	{
-		name: "Overtime",
-		description: "Good Grief man, I'm tired of this job.",
-		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
-		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
+		name: "Gear Fifth",
+		description:
+			"I can do everything I wanted to do! I think I can fight a little bit more! My heartbeat sounds funny.. This is my peak! **GEAR FIFTH!**",
+		image: "https://media1.tenor.com/m/GTUpXKnYwI0AAAAC/gear-5-joyboy.gif",
+		effects: "Joy Boy, Un-quantifiable Damage Increase.."
 	}
 ]
 

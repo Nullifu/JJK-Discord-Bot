@@ -10,6 +10,7 @@ import {
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
+	getUserShikigami,
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
@@ -128,25 +129,54 @@ export async function handleShikigamiTame(
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
 	await removeAllStatusEffects(interaction.user.id)
 
-	const tamedShikigami: UserShikigami = {
-		name: opponent.name,
-		experience: 0,
-		tier: 5,
-		health: opponent.name === "Mahoraga" ? 400 : 100,
-		tamedAt: new Date(),
-		hygiene: 100,
-		hunger: 100,
-		friendship: 0
+	let tamedShikigami: UserShikigami
+
+	if (opponent.name === "Divine-General Mahoraga") {
+		tamedShikigami = {
+			name: "Divine-General Mahoraga",
+			experience: 0,
+			tier: 5,
+			health: 500,
+			tamedAt: new Date(),
+			hygiene: 100,
+			hunger: 100,
+			friendship: 0
+		}
+	} else {
+		tamedShikigami = {
+			name: opponent.name,
+			experience: 0,
+			tier: 5,
+			health: opponent.name === "Mahoraga" ? 400 : 100,
+			tamedAt: new Date(),
+			hygiene: 100,
+			hunger: 100,
+			friendship: 0
+		}
 	}
+
+	const userShikigami = await getUserShikigami(interaction.user.id)
+
+	const hasShikigami = userShikigami.some(shikigami => shikigami.name === tamedShikigami.name)
 
 	// Update the user's shikigami with the tamed boss
 	await updateUserShikigami(interaction.user.id, tamedShikigami)
 
-	// Show a loot drop embed
-	const privateEmbed = new EmbedBuilder()
-		.setColor("#0099ff")
-		.setTitle("Battle Rewards")
-		.addFields({ name: "Tamed", value: `You've tamed ${opponent.name}!` })
+	// Update the user's shikigami with the tamed boss
+	await updateUserShikigami(interaction.user.id, tamedShikigami)
+
+	const privateEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Battle Rewards")
+
+	if (!hasShikigami) {
+		// Update the user's shikigami with the tamed boss only if they don't already have it
+		await updateUserShikigami(interaction.user.id, tamedShikigami)
+		privateEmbed.addFields({ name: "Tamed", value: `You've tamed ${opponent.name}!` })
+	} else {
+		privateEmbed.addFields({
+			name: "Already Tamed",
+			value: `You already have ${opponent.name} in your collection!`
+		})
+	}
 
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }
