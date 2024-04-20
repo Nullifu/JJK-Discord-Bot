@@ -1476,6 +1476,18 @@ export async function handleGuideCommand(interaction) {
 	const guideEmbed = new EmbedBuilder().setColor("#0099ff")
 
 	switch (topic) {
+		case "special":
+			guideEmbed
+				.setTitle("Special Items")
+				.setDescription("Information on unique//special items")
+				.addFields({
+					name: "Basic Crafting",
+					value: "There are special techniques, pets, and items in the bot.. For techniques you'd use a item like a sukuna finger or the six eyes, And if your lucky you should get a embed that looks a bit like this!"
+				})
+				.setImage(
+					"https://cdn.discordapp.com/attachments/1094302755960664255/1231374487774040074/image.png?ex=6636b9db&is=662444db&hm=b80646a17ca3cb4c205170abc51a1616810afb548d8746c80a313b7587aa195a&"
+				)
+			break
 		case "crafting":
 			guideEmbed.setTitle("Crafting Guide").setDescription("Here's how you can craft items.").addFields({
 				name: "Basic Crafting",
@@ -1492,6 +1504,18 @@ export async function handleGuideCommand(interaction) {
 			guideEmbed.setTitle("Technique Guide").setDescription("Here's how you can aquire techniques.").addFields({
 				name: "Techniques",
 				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command, And unequip it with /unequip [TECHNIQUE NAME]\n\n\n"
+			})
+			break
+		case "shikigami":
+			guideEmbed.setTitle("Shikigami Guide").setDescription("Here's how you can aquire Shikigami.").addFields({
+				name: "Shikigami",
+				value: "To aquire a shikigami you must tame one through the /tame command, now they are quite difficult so be prepared!, once you've tamed a shikigami you can use /shikigami view to view the stats//status of it once you aquire the right shikigami you can go onto to summoning mahoraga."
+			})
+			break
+		case "fighting":
+			guideEmbed.setTitle("Fighting Guide").setDescription("Guide to the fight command").addFields({
+				name: "Fighting",
+				value: "Probably the most unique thing about this bot, To start a fight use /fight now remember you need techniques to fight these bosses.. But have no fear for you get a free technique when registering for the first time! It's not strong but it'll help you in the start.. once you begin to aquire more items and cash, you can buy newer and greater techniques to rise up the ranks!"
 			})
 			break
 		case "jobs":
@@ -2546,7 +2570,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			}
 		]
 	} else {
-		const clans = Object.keys(CLAN_SKILLS) // Assuming CLAN_SKILLS is an object mapping clans to their skills
+		const clans = Object.keys(CLAN_SKILLS)
 		clanOptions = clans.map(clan => ({
 			label: clan,
 			value: clan.toLowerCase().replace(/\s+/g, "_"),
@@ -2582,26 +2606,23 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 
 	techniqueshopcollector.on("collect", async i => {
 		const currentSessionTimestamp = latestSessionTimestampPerUser.get(userId)
-		const interactionTimestamp = i.createdTimestamp // Discord.js provides the timestamp of when the interaction was created
+		const interactionTimestamp = i.createdTimestamp
 		let skillsToDisplay
 		let embedTitle
 		let customIdPrefix
 
 		if (interactionTimestamp < currentSessionTimestamp) {
 			console.log("Attempted to interact with a stale session. Ignoring.")
-			return // Skip processing this interaction
+			return
 		}
 
 		if (i.isStringSelectMenu()) {
 			await i.deferUpdate()
-			// Determine the set of skills based on whether the "Heavenly Restriction" option was selected or a clan was chosen
 			if (i.values[0] === "heavenly_restriction") {
-				// Heavenly Restriction skills
 				skillsToDisplay = heavenlyrestrictionskills.filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = "Heavenly Restriction Techniques"
 				customIdPrefix = "buy_heavenly_technique_"
 			} else {
-				// Normal clan skills
 				const selectedClan = clans.find(clan => clan.toLowerCase().replace(/\s+/g, "_") === i.values[0])
 				skillsToDisplay = CLAN_SKILLS[selectedClan].filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = `${selectedClan} Clan Techniques`
@@ -2612,13 +2633,12 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				await i.followUp({
 					ephemeral: true,
 					content: "There are no more techniques available for you to purchase in this category.",
-					components: [] // Clear any interactive components
+					components: []
 				})
 				techniqueshopcollector.stop
-				return // Stop further execution if no skills are available
+				return
 			}
 
-			// Build the embed for displaying skills
 			const embed = new EmbedBuilder()
 				.setTitle(embedTitle)
 				.setColor(0x1f512d)
@@ -2663,7 +2683,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				.replace("buy_heavenly_technique_", "")
 				.replace(/_/g, " ")
 
-			// Retrieve the selected technique details
 			const selectedSkill = isHeavenlySkill
 				? heavenlyrestrictionskills.find(skill => skill.name.toLowerCase() === techniqueName)
 				: Object.values(CLAN_SKILLS)
@@ -2682,7 +2701,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				return
 			}
 
-			// Check if the user has the required items (if any)
 			const hasRequiredItems = (selectedSkill.items || []).every(reqItem => {
 				const userItem = userInventory.find(item => item.name === reqItem.name)
 				return userItem && userItem.quantity >= reqItem.quantity
@@ -2706,13 +2724,11 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				await addUserTechnique(userId, selectedSkill.name)
 			}
 
-			// Respond to the interaction
 			await i.followUp({
 				content: `Congratulations! You have successfully purchased the technique: ${selectedSkill.name}.`,
-				components: [], // Clear the components to remove the buttons
+				components: [],
 				ephemeral: true
 			})
-			techniqueshopcollector.stop()
 		}
 	})
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -3813,26 +3829,19 @@ export async function handleDonateCommand(interaction) {
 }
 export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
-
-	const inputTechniqueNames = []
-	for (let i = 1; i <= 10; i++) {
-		const optionName = `technique${i === 1 ? "" : i}`
-		const techniqueName = interaction.options.getString(optionName)
-		if (techniqueName) {
-			inputTechniqueNames.push(techniqueName)
-		}
-	}
+	const inputTechniquesString = interaction.options.getString("techniques")
+	const inputTechniqueNames = inputTechniquesString.split(",").map(name => name.trim())
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
 		const activeTechniques = await getUserActiveTechniques(userId)
-
 		const userTechniquesLowercaseMap = new Map(userTechniques.map(name => [name.toLowerCase(), name]))
 		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
 
 		const invalidTechniques = inputTechniqueNames.filter(
 			name => !userTechniquesLowercaseMap.has(name.toLowerCase())
 		)
+
 		if (invalidTechniques.length > 0) {
 			return await interaction.reply({
 				content: `You don't own the following techniques: ${invalidTechniques.join(", ")}`,
@@ -3847,7 +3856,6 @@ export async function handleEquipTechniqueCommand(interaction) {
 		if (techniquesToActivate.length > 0) {
 			const updatedActiveTechniques = [...activeTechniques, ...techniquesToActivate]
 			await updateUserActiveTechniques(userId, updatedActiveTechniques)
-
 			const techniquesToActivateDisplay = techniquesToActivate.join(", ")
 			return await interaction.reply(`Techniques equipped: ${techniquesToActivateDisplay}`)
 		} else {
@@ -3862,20 +3870,17 @@ export async function handleEquipTechniqueCommand(interaction) {
 	}
 }
 export async function handleUnequipTechniqueCommand(interaction) {
-	console.log(interaction.options.data) // Log the options data to see what is received
 	const userId = interaction.user.id
 
-	// Gather all provided technique names
 	const techniqueNamesInput = []
 	for (let i = 1; i <= 10; i++) {
 		const optionName = `technique${i === 1 ? "" : i}`
 		const techniqueName = interaction.options.getString(optionName)
 		if (techniqueName) {
-			techniqueNamesInput.push(techniqueName.trim()) // Trim and add to the array
+			techniqueNamesInput.push(techniqueName.trim())
 		}
 	}
 
-	// Ensure at least one technique name was provided
 	if (techniqueNamesInput.length === 0) {
 		return await interaction.reply({
 			content: "Please specify a technique name.",
@@ -3884,39 +3889,32 @@ export async function handleUnequipTechniqueCommand(interaction) {
 	}
 
 	try {
-		let activeTechniques = await getUserActiveTechniques(userId) // Presumed to return original casing
+		let activeTechniques = await getUserActiveTechniques(userId)
 
-		// Ensure activeTechniques is an array and filter out null values
 		activeTechniques = Array.isArray(activeTechniques)
 			? activeTechniques.filter(name => name != null).map(name => name.trim())
 			: []
 
-		// The names of techniques that have been unequipped
 		const unequippedTechniques = []
 
 		for (const techniqueNameInput of techniqueNamesInput) {
-			// Create a lowercase map for case-insensitive comparison
 			const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
 
 			const techniqueNameLowercase = techniqueNameInput.toLowerCase()
 			if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
-				// If any of the techniques are not equipped, we return immediately
 				return await interaction.reply({
 					content: `The technique "${techniqueNameInput}" is not currently equipped.`,
 					ephemeral: true
 				})
 			}
 
-			// Filter out the unequipped technique while preserving original casing for others
 			activeTechniques = activeTechniques.filter(technique => technique.toLowerCase() !== techniqueNameLowercase)
 
-			// Store the original case name for the technique being unequipped
 			unequippedTechniques.push(activeTechniquesLowercaseMap.get(techniqueNameLowercase))
 		}
 
 		await updateUserActiveTechniques(userId, activeTechniques)
 
-		// Reply with a message that includes all the unequipped techniques
 		await interaction.reply(`Technique(s) '${unequippedTechniques.join(", ")}' unequipped!`)
 	} catch (error) {
 		console.error("Error unequipping technique:", error)
@@ -3943,7 +3941,7 @@ export async function handleViewTechniquesCommand(interaction) {
 			.setColor("#7289DA")
 			.setTimestamp()
 
-		const chunkSize = 10 // Number of techniques per field
+		const chunkSize = 10
 		const chunkedTechniques = chunkArray(userTechniques, chunkSize)
 
 		chunkedTechniques.forEach((chunk, index) => {
@@ -3961,7 +3959,6 @@ export async function handleViewTechniquesCommand(interaction) {
 	}
 }
 
-// Helper function to split an array into chunks
 function chunkArray(array, chunkSize) {
 	const chunks = []
 	for (let i = 0; i < array.length; i += chunkSize) {
@@ -3970,7 +3967,6 @@ function chunkArray(array, chunkSize) {
 	return chunks
 }
 
-// handle unequip quests command dropdown menu embed but instead of giving quest it takes it away
 export async function handleUnequipQuestCommand(interaction) {
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)

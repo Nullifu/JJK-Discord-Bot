@@ -114,9 +114,6 @@ let index = 0
 
 client.on("ready", async () => {
 	logger.info(`Logged in as ${client.user.tag}!`)
-	client.guilds.cache.forEach(guild => {
-		logger.info(`${guild.name} (ID: ${guild.id})`)
-	})
 
 	try {
 		await initializeDatabase()
@@ -248,10 +245,8 @@ export const randomdig2 = [
 
 const itemChoices = lookupItems.map(item => ({
 	name: item.name,
-	value: item.name.toLowerCase().replace(/\s+/g, "_") // Ensure these values meet Discord's requirements
+	value: item.name.toLowerCase().replace(/\s+/g, "_")
 }))
-
-export const userLastDaily = new Map<string, number>() // Maps user IDs to the last time they used /daily
 
 // Slash Commands
 const commands = [
@@ -351,7 +346,10 @@ const commands = [
 				.addChoices(
 					{ name: "Crafting", value: "crafting" },
 					{ name: "Techniques", value: "technique" },
-					{ name: "Jobs", value: "jobs" }
+					{ name: "Special", value: "special" },
+					{ name: "Starter", value: "starter" },
+					{ name: "Fighting", value: "fighting" },
+					{ name: "Shikigami", value: "shikigami" }
 				)
 		),
 
@@ -512,78 +510,16 @@ const commands = [
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName("equip")
-				.setDescription("Equip a technique.")
+				.setDescription("Equip techniques.")
 				.addStringOption(option =>
 					option
-						.setName("technique")
-						.setDescription("The technique to equip")
+						.setName("techniques")
+						.setDescription("Comma-separated list of techniques to equip")
 						.setRequired(true)
 						.setAutocomplete(false)
 				)
-				.addStringOption(option =>
-					option
-						.setName("technique1")
-						.setDescription("First technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique2")
-						.setDescription("Second technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique3")
-						.setDescription("Third technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique4")
-						.setDescription("Fourth technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique5")
-						.setDescription("Fifth technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique6")
-						.setDescription("Sixth technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique7")
-						.setDescription("Seventh technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique8")
-						.setDescription("Eight technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique9")
-						.setDescription("Ninth technique to equip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
 		)
+
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName("shop")
