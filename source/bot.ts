@@ -111,13 +111,7 @@ logger.warn("This is a warning message")
 logger.error("This is an error message")
 logger.fatal("This is a fatal message")
 
-let activities = [
-	{ name: "Update 6.0", type: ActivityType.Playing },
-	{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
-	{ name: "The Shibuya Incident", type: ActivityType.Playing },
-	{ name: "Exchange Event", type: ActivityType.Competing },
-	{ name: "/register", type: ActivityType.Listening }
-]
+let activities = []
 let index = 0
 
 client.on("ready", async () => {
@@ -154,10 +148,10 @@ async function updateDynamicActivities() {
 
 	// Update or add dynamic activities based on the current member and server count
 	activities = [
+		{ name: "Update 6.0", type: ActivityType.Playing }, // Dynamic member count
 		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
-		{ name: "Gojo’s explanations", type: ActivityType.Listening },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
 		{ name: "Exchange Event", type: ActivityType.Competing },
 		{ name: "/register", type: ActivityType.Listening }
