@@ -22,7 +22,6 @@ export function calculateDamage(
 		}
 	}
 
-	// Apply random variation
 	const randomVariation = totalDamage * randomVariationPercentage
 	const randomFactor = (Math.random() * 2 - 1) * randomVariation // Between -randomVariation and +randomVariation
 	totalDamage += randomFactor
@@ -49,7 +48,6 @@ export function calculateBloodlustBoost(
 		}
 	}
 
-	// Apply random variation
 	const randomVariation = totalDamage * randomVariationPercentage
 	const randomFactor = (Math.random() * 2 - 1) * randomVariation // Between -randomVariation and +randomVariation
 	totalDamage += randomFactor
@@ -84,7 +82,7 @@ export function createInventoryPage(items, startIndex, itemsPerPage, user) {
 	const pageItems = items.slice(startIndex, startIndex + itemsPerPage)
 	const totalItems = items.length
 	const totalPages = Math.ceil(totalItems / itemsPerPage)
-	const currentPage = startIndex / itemsPerPage + 1 // Calculate the current page
+	const currentPage = startIndex / itemsPerPage + 1
 
 	const inventoryEmbed = new EmbedBuilder()
 		.setColor(0x1f8b4c)
@@ -175,10 +173,8 @@ export async function handleClanDataEmbed(userId) {
 }
 
 export async function handleShikigamiEmbed(userid) {
-	// Fetch the user's shikigami
 	const userShikigami = await getUserShikigami(userid)
 
-	// Create the embed
 	const embed = new EmbedBuilder().setColor("#0099ff").setTitle("Shikigami")
 
 	if (userShikigami.length === 0) {

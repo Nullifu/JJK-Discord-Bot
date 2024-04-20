@@ -19,7 +19,6 @@ const shopCollectionName = "shop"
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
 
-// Create a new MongoClient
 const client = new MongoClient(mongoUri)
 
 let isConnected = false
@@ -36,7 +35,6 @@ client.on("close", () => {
 
 // LINK START! ---------------------------------------------------------------
 
-// Function to run both tasks
 async function runScheduledTasks() {
 	logger.info("Running scheduled tasks...")
 	try {
@@ -54,7 +52,6 @@ async function runScheduledTasks() {
 	}
 }
 
-// Schedule the tasks to run every day at 3 PM
 const job = schedule.scheduleJob("0 15 * * *", function () {
 	runScheduledTasks()
 })
@@ -77,8 +74,7 @@ export async function userExists(discordId: string): Promise<boolean> {
 	const usersCollection = database.collection(usersCollectionName)
 
 	const user = await usersCollection.findOne({ id: discordId })
-	// await client.close() // Close the connection after the operation
-	return user !== null // Returns true if the user exists, false otherwise
+	return user !== null
 }
 
 export async function addUser(
@@ -154,11 +150,7 @@ async function resetBetCounts() {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update all user documents, setting betCount to 0
-		const updateResult = await usersCollection.updateMany(
-			{}, // An empty filter selects all documents in the collection
-			{ $set: { betCount: 0 } } // Set betCount to 0 for all documents
-		)
+		const updateResult = await usersCollection.updateMany({}, { $set: { betCount: 0 } })
 
 		console.log(`Bet counts reset for ${updateResult.modifiedCount} users.`)
 	} catch (error) {
@@ -231,7 +223,6 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		// Find users without the fields or where 'gamblersData.limit' is missing
 		const usersToUpdate = await usersCollection
 			.find({
 				$or: [{ shikigami: { $exists: false } }]
@@ -261,7 +252,6 @@ async function renameUserDocumentFields(database) {
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		// Rename 'honours' to 'Honours' where it exists
 		const updateResult = await usersCollection.updateMany(
 			{ honours: { $exists: true } },
 			{ $rename: { honours: "Honours" } }
@@ -287,10 +277,8 @@ export async function getBalance(id: string): Promise<number> {
 
 		return user ? user.balance : 0
 	} catch (error) {
-		console.error(`Error when retrieving balance for user with ID: ${id}`, error)
-		throw error // Rethrow the error so it can be caught and handled by the caller
-	} finally {
-		// await client.close()
+		logger.error(`Error when retrieving balance for user with ID: ${id}`, error)
+		throw error
 	}
 }
 
@@ -300,41 +288,35 @@ export async function updateBalance(id: string, amount: number): Promise<void> {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Get the user's current balance
 		const user = await usersCollection.findOne({ id: id })
 		if (!user) {
 			console.log(`No user found with ID: ${id}`)
 			throw new Error(`No user found with ID: ${id}`)
 		}
 
-		// Calculate the potential new balance
 		const newBalance = user.balance + amount
 
-		// Failsafe: Only update if the new balance would be non-negative
 		if (newBalance >= 0) {
 			const updateResult = await usersCollection.updateOne(
 				{ id: id },
 				{ $set: { balance: newBalance } } // Use $set to directly update the value
 			)
 
-			console.log(`Updated balance for user with ID: ${id}`)
+			logger.log(`Updated balance for user with ID: ${id}`)
 		} else {
-			console.log("Balance update prevented: would have resulted in negative balance")
+			logger.log("Balance update prevented: would have resulted in negative balance")
 		}
 	} catch (error) {
-		console.error(`Error when updating balance for user with ID: ${id}`, error)
+		logger.error(`Error when updating balance for user with ID: ${id}`, error)
 		throw error
-	} finally {
-		// await client.close();
 	}
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
 	try {
 		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection<User>(usersCollectionName) // Use any if the collection's schema is not strictly typed
+		const usersCollection = database.collection<User>(usersCollectionName)
 
-		// Fetch the user profile from the database
 		const userDocument = await usersCollection.findOne(
 			{ id: userId },
 			{
@@ -357,7 +339,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			return null
 		}
 
-		// Constructing UserProfile object from the fetched document
 		const userProfile: UserProfile = {
 			balance: userDocument.balance,
 			experience: userDocument.experience,
@@ -369,22 +350,19 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			inateclan: userDocument.clan || "None"
 		}
 
-		console.log(`User profile found for ID: ${userId}`, userProfile)
+		logger.log(`User profile found for ID: ${userId}`, userProfile)
 		return userProfile
 	} catch (error) {
-		console.error(`Error when retrieving user profile for ID: ${userId}`, error)
-		throw error // Propagate any errors for external handling
+		logger.error(`Error when retrieving user profile for ID: ${userId}`, error)
+		throw error
 	}
 }
 
-// function to update user's domain expansion
 export async function updateUserDomainExpansion(userId: string, domainName: string): Promise<boolean> {
 	try {
-		// Assume `client` is already connected to MongoDB
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Set the 'domain' field to be an object with the 'name' property
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { domain: { name: domainName } } })
 
 		if (updateResult.matchedCount === 0) {
@@ -394,12 +372,11 @@ export async function updateUserDomainExpansion(userId: string, domainName: stri
 
 		return true
 	} catch (error) {
-		console.error("Error updating user domain:", error)
+		logger.error("Error updating user domain:", error)
 		throw error
 	}
 }
 
-// get user inventory and quantity
 export async function getUserInventory(userId: string): Promise<{ name: string; quantity: number }[]> {
 	try {
 		await client.connect()
@@ -410,10 +387,8 @@ export async function getUserInventory(userId: string): Promise<{ name: string; 
 
 		return user ? user.inventory : []
 	} catch (error) {
-		console.error(`Error when retrieving inventory for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving inventory for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -431,17 +406,14 @@ export async function addItemToUserInventory(userId: string, itemName: string, q
 				{ $inc: { "inventory.$.quantity": quantityToAdd } }
 			)
 		} else {
-			// Item doesn't exist, add it
 			await usersCollection.updateOne(
 				{ id: userId },
 				{ $push: { inventory: { name: itemName, quantity: quantityToAdd } } }
 			)
 		}
 	} catch (error) {
-		console.error("Error adding item to user inventory:", error)
+		logger.error("Error adding item to user inventory:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -456,10 +428,8 @@ export async function getUserExperience(userId: string): Promise<number> {
 
 		return user ? user.experience : 0
 	} catch (error) {
-		console.error(`Error when retrieving experience for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving experience for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -479,10 +449,8 @@ export async function updateUserJob(userId: string, newJob: string): Promise<boo
 
 		return true
 	} catch (error) {
-		console.error("Error updating user job:", error)
+		logger.error("Error updating user job:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -493,26 +461,19 @@ export async function updateUserExperience(userId: string, experienceToAdd: numb
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		console.log(`Attempting to update experience for user ID: ${userId}`)
+		logger.log(`Attempting to update experience for user ID: ${userId}`)
 
-		const updateResult = await usersCollection.updateOne(
-			{ id: userId }, // Ensure this matches the exact field and type in your documents
-			{ $inc: { experience: experienceToAdd } }
-		)
+		const updateResult = await usersCollection.updateOne({ id: userId }, { $inc: { experience: experienceToAdd } })
 
-		console.log(`Matched Count: ${updateResult.matchedCount}`)
-		console.log(`Modified Count: ${updateResult.modifiedCount}`)
+		logger.log(`Matched Count: ${updateResult.matchedCount}`)
+		logger.log(`Modified Count: ${updateResult.modifiedCount}`)
 
 		if (updateResult.matchedCount === 0) {
-			console.log(`No user found with the specified ID: ${userId}`)
-			// Further action or error handling here
+			logger.log(`No user found with the specified ID: ${userId}`)
 		}
 	} catch (error) {
 		console.error("Error updating user experience:", error)
 		throw error
-	} finally {
-		// Consider your application's connection management strategy
-		// await client.close();
 	}
 }
 
@@ -532,10 +493,8 @@ export async function updateUserTitle(userId: string, newTitle: string): Promise
 
 		return true
 	} catch (error) {
-		console.error("Error updating user title:", error)
+		logger.error("Error updating user title:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -558,22 +517,18 @@ export async function removeItemFromUserInventory(
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<UserDocument> = database.collection(usersCollectionName)
-		// Decrement the quantity of the specified item
 		const updateResult = await usersCollection.updateOne(
 			{ "id": userId, "inventory.name": itemName },
 			{ $inc: { "inventory.$.quantity": -quantityToRemove } }
 		)
 
-		// If the quantity becomes 0, remove the item from the inventory
 		await usersCollection.updateOne(
 			{ "id": userId, "inventory.name": itemName },
 			{ $pull: { inventory: { quantity: 0 } } }
 		)
 	} catch (error) {
-		console.error("Error removing item from user inventory:", error)
+		logger.error("Error removing item from user inventory:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -588,10 +543,8 @@ export async function getUserHealth(userId: string): Promise<number> {
 
 		return user ? user.health : 0
 	} catch (error) {
-		console.error(`Error when retrieving health for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving health for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -616,7 +569,6 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		const domainsCollection = database.collection(bossCollectionName)
 		const allowedBossGrades = gradeToBossGrade[userGrade] || []
 
-		// Build the query object based on whether the user is cursed and exclude the specified boss names
 		let query: { [key: string]: unknown } = {
 			grade: { $in: allowedBossGrades },
 			name: { $nin: ["Divine Dogs", "Nue", "Toad", "Great Serpent", "Max Elephant"] }
@@ -642,7 +594,7 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 
 		return bosses
 	} catch (error) {
-		console.error("Error when retrieving bosses:", error)
+		logger.error("Error when retrieving bosses:", error)
 		throw error
 	}
 }
@@ -669,12 +621,11 @@ export async function getShikigami(userId: string): Promise<BossData[]> {
 
 		return bosses
 	} catch (error) {
-		console.error("Error when retrieving shikigami:", error)
+		logger.error("Error when retrieving shikigami:", error)
 		throw error
 	}
 }
 
-// get player grade from user collection
 export async function getUserGrade(userId: string): Promise<string> {
 	try {
 		await client.connect()
@@ -703,13 +654,11 @@ export async function updateBossHealth(bossName: string, newHealth: number): Pro
 		)
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No boss found with the specified name")
+			logger.log("No boss found with the specified name")
 		}
 	} catch (error) {
-		console.error("Error updating boss health:", error)
+		logger.error("Error updating boss health:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -726,10 +675,8 @@ export async function updateUserHealth(userId: string, newHealth: number): Promi
 			console.log("No user found with the specified ID")
 		}
 	} catch (error) {
-		console.error("Error updating user health:", error)
+		logger.error("Error updating user health:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -742,14 +689,10 @@ export async function getUserDomain(userId: string): Promise<string | null> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		// Check if the user exists and has a domain, and then return the domain's name
 		return user && user.domain ? user.domain.name : null
 	} catch (error) {
-		console.error(`Error when retrieving domain for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving domain for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Keeping the connection open is useful if you're making frequent queries
-		// await client.close();
 	}
 }
 
@@ -762,7 +705,7 @@ export async function checkUserRegistration(userId) {
 		const user = await usersCollection.findOne({ id: userId })
 		return user !== null // Returns true if the user exists
 	} catch (error) {
-		console.error("Error checking registration:", error)
+		logger.error("Error checking registration:", error)
 		return false // Consider returning false in case of database errors
 	}
 }
@@ -790,10 +733,8 @@ export async function updatePlayerGrade(userId) {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
-		// Using the users collection name from your setup
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Retrieve the current experience of the player
 		const player = await usersCollection.findOne({ id: userId })
 		if (!player) {
 			console.log("No user found with the specified ID in the users collection.")
@@ -802,18 +743,16 @@ export async function updatePlayerGrade(userId) {
 
 		const newGrade = calculateGrade(player.experience)
 
-		// Update the player's grade in the database if it has changed
 		if (newGrade !== player.grade) {
 			await usersCollection.updateOne({ id: userId }, { $set: { grade: newGrade } })
-			console.log(`Grade updated to ${newGrade} for user ${userId} in the users collection.`)
+			logger.log(`Grade updated to ${newGrade} for user ${userId} in the users collection.`)
 		} else {
-			console.log(`No grade update needed for user ${userId} in the users collection.`)
+			logger.log(`No grade update needed for user ${userId} in the users collection.`)
 		}
 	} catch (error) {
-		console.error(`Error updating grade for user ${userId} in the users collection:`, error)
+		logger.error(`Error updating grade for user ${userId} in the users collection:`, error)
 	}
 }
-// update play inate clan tier based on inate clan experience
 export async function updatePlayerClanTier(userId) {
 	try {
 		await client.connect()
@@ -823,7 +762,7 @@ export async function updatePlayerClanTier(userId) {
 
 		const player = await usersCollection.findOne({ id: userId }, { projection: { inateclan: 1 } })
 		if (!player || !player.inateclan) {
-			console.log("No user or clan information found with the specified ID.")
+			logger.log("No user or clan information found with the specified ID.")
 			return
 		}
 
@@ -832,23 +771,20 @@ export async function updatePlayerClanTier(userId) {
 		if (newTier !== player.inateclan.tier) {
 			const result = await usersCollection.updateOne({ id: userId }, { $set: { "inateclan.tier": newTier } })
 
-			// Log the result of the update operation
 			if (result.matchedCount === 0) {
-				console.log(`No document found for user ${userId} to update.`)
+				logger.log(`No document found for user ${userId} to update.`)
 			} else if (result.modifiedCount === 0) {
-				console.log(`Document for user ${userId} was found but not modified.`)
+				logger.log(`Document for user ${userId} was found but not modified.`)
 			} else {
-				console.log(`Clan tier updated to ${newTier} for user ${userId}.`)
+				logger.log(`Clan tier updated to ${newTier} for user ${userId}.`)
 			}
 		} else {
-			console.log(`No clan tier update needed for user ${userId}. Current tier is already ${newTier}.`)
+			logger.log(`No clan tier update needed for user ${userId}. Current tier is already ${newTier}.`)
 		}
 	} catch (error) {
-		console.error(`Error updating clan tier for user ${userId}:`, error)
+		logger.error(`Error updating clan tier for user ${userId}:`, error)
 	}
 }
-
-// update inate clan experience
 
 // add achivements function
 export async function updateUserAchievements(userId, achievementId) {
@@ -857,10 +793,9 @@ export async function updateUserAchievements(userId, achievementId) {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's achievements, adding the achievementId if it's not already present
 		const updateResult = await usersCollection.updateOne(
 			{ id: userId },
-			{ $addToSet: { achievements: achievementId } } // Correct for array fields
+			{ $addToSet: { achievements: achievementId } }
 		)
 
 		if (updateResult.matchedCount === 0) {
@@ -871,7 +806,7 @@ export async function updateUserAchievements(userId, achievementId) {
 			console.log("Achievement added to the user's achievements.")
 		}
 	} catch (error) {
-		console.error("Error updating user achievements:", error)
+		logger.error("Error updating user achievements:", error)
 		throw error
 	}
 }
@@ -885,10 +820,9 @@ export async function getUserAchievements(userId: string): Promise<string[]> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		// Ensure an array is always returned
 		return user && Array.isArray(user.achievements) ? user.achievements : []
 	} catch (error) {
-		console.error(`Error when retrieving achievements for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving achievements for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -901,7 +835,7 @@ export async function awardTitlesForAchievements(userId: string): Promise<void> 
 
 		const user = await usersCollection.findOne({ id: userId })
 		if (!user) {
-			console.log("User not found")
+			logger.log("User not found")
 			return
 		}
 
@@ -913,14 +847,13 @@ export async function awardTitlesForAchievements(userId: string): Promise<void> 
 				!unlockedTitles.includes(title.name)
 			) {
 				unlockedTitles.push(title.name)
-				console.log(`User ${userId} has unlocked the title: ${title.name}`)
-				// Optionally notify the user they have unlocked a new title here
+				logger.log(`User ${userId} has unlocked the title: ${title.name}`)
 			}
 		})
 
 		await usersCollection.updateOne({ id: userId }, { $set: { unlockedTitles: unlockedTitles } })
 	} catch (error) {
-		console.error("Error awarding titles based on achievements:", error)
+		logger.error("Error awarding titles based on achievements:", error)
 	}
 }
 
@@ -935,7 +868,7 @@ export async function getUserUnlockedTitles(userId: string): Promise<string[]> {
 
 		return user ? user.unlockedTitles : []
 	} catch (error) {
-		console.error(`Error when retrieving unlocked titles for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving unlocked titles for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -950,10 +883,10 @@ export async function updateUserBankBalance(userId: string, newBalance: number):
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { bankBalance: newBalance } })
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No user found with the specified ID")
+			logger.log("No user found with the specified ID")
 		}
 	} catch (error) {
-		console.error("Error updating user bank balance:", error)
+		logger.error("Error updating user bank balance:", error)
 		throw error
 	}
 }
@@ -969,7 +902,7 @@ export async function getUserBankBalance(userId: string): Promise<number> {
 
 		return user ? user.bankBalance : 0
 	} catch (error) {
-		console.error(`Error when retrieving bank balance for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving bank balance for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -980,12 +913,11 @@ export async function getUser(discordId: string): Promise<unknown> {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Find the user by Discord ID
 		const userDocument = await usersCollection.findOne({ id: discordId })
-		return userDocument // This will be 'null' if no user is found
+		return userDocument
 	} catch (error) {
-		console.error(`An error occurred while getting user with ID ${discordId}:`, error)
-		throw error // Rethrow the error so that the caller can handle it
+		logger.error(`An error occurred while getting user with ID ${discordId}:`, error)
+		throw error //
 	}
 }
 
@@ -995,7 +927,6 @@ export async function updateUser(discordId, updates) {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// The '$set' operator replaces the value of a field with the specified value
 		const result = await usersCollection.updateOne({ id: discordId }, { $set: updates })
 
 		console.log(
@@ -1003,8 +934,8 @@ export async function updateUser(discordId, updates) {
 		)
 		return result
 	} catch (error) {
-		console.error(`An error occurred while updating user with ID ${discordId}:`, error)
-		throw error // Rethrow the error so the caller can decide how to handle it
+		logger.error(`An error occurred while updating user with ID ${discordId}:`, error)
+		throw error
 	}
 }
 
@@ -1022,7 +953,7 @@ export async function getUserDailyData(userId: string): Promise<{ lastDaily: num
 			streak: user?.streak || 0
 		}
 	} catch (error) {
-		console.error(`Error when retrieving daily data for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving daily data for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1033,10 +964,9 @@ export async function updateUserDailyData(userId: string, lastDaily: number, str
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's last daily claim time and streak
 		await usersCollection.updateOne({ id: userId }, { $set: { lastDaily, streak } }, { upsert: true })
 	} catch (error) {
-		console.error(`Error when updating daily data for user with ID: ${userId}`, error)
+		logger.error(`Error when updating daily data for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1049,7 +979,7 @@ export async function updateUserHeavenlyRestriction(userId: string): Promise<voi
 
 		await usersCollection.updateOne({ id: userId }, { $set: { heavenlyrestriction: true } })
 	} catch (error) {
-		console.error("Error updating heavenly restriction:", error)
+		logger.error("Error updating heavenly restriction:", error)
 		throw error
 	}
 }
@@ -1063,13 +993,13 @@ export async function checkUserHasHeavenlyRestriction(userId) {
 		const user = await usersCollection.findOne({ id: userId }, { projection: { heavenlyrestriction: 1 } })
 
 		if (user && user.heavenlyrestriction === true) {
-			return true // User has Heavenly Restriction
+			return true
 		} else {
 			return false
 		}
 	} catch (error) {
-		console.error("Error checking Heavenly Restriction:", error)
-		throw error // Rethrow or handle as needed
+		logger.error("Error checking Heavenly Restriction:", error)
+		throw error
 	}
 }
 
@@ -1084,7 +1014,7 @@ export async function getUserClan(userId: string): Promise<string | null> {
 
 		return user ? user.clan : null
 	} catch (error) {
-		console.error(`Error when retrieving clan for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving clan for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1100,7 +1030,7 @@ export async function getUserTechniques(userId: string): Promise<string[]> {
 
 		return user ? user.techniques : []
 	} catch (error) {
-		console.error(`Error when retrieving techniques for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving techniques for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1118,7 +1048,7 @@ export async function getAllUserExperience(): Promise<{ id: string; experience: 
 
 		return users
 	} catch (error) {
-		console.error("Error when retrieving all user experience:", error)
+		logger.error("Error when retrieving all user experience:", error)
 		throw error
 	}
 }
@@ -1140,7 +1070,7 @@ export async function getAllQuests(): Promise<{ id: string; name: string; descri
 
 		return quests
 	} catch (error) {
-		console.error("Error when retrieving all quests:", error)
+		logger.error("Error when retrieving all quests:", error)
 		throw error
 	}
 }
@@ -1157,11 +1087,8 @@ export async function addUserTechnique(userId: string, newTechnique: string): Pr
 			{ $addToSet: { techniques: newTechnique } } // Use $addToSet to avoid duplicate entries
 		)
 	} catch (error) {
-		console.error("Error updating user techniques:", error)
+		logger.error("Error updating user techniques:", error)
 		throw error
-	} finally {
-		// Generally, you keep the connection open in a web server context
-		// await client.close();
 	}
 }
 
@@ -1175,7 +1102,7 @@ export async function updateUserClan(userId: string, newClan: string): Promise<v
 		// Update the user's clan
 		await usersCollection.updateOne({ id: userId }, { $set: { clan: newClan } })
 	} catch (error) {
-		console.error("Error updating user clan:", error)
+		logger.error("Error updating user clan:", error)
 		throw error
 	}
 }
@@ -1193,11 +1120,8 @@ export async function updateUserHeavenlyTechniques(userId: string, newTechnique:
 			{ $addToSet: { heavenlytechniques: newTechnique } } // Use $addToSet to avoid duplicate entries
 		)
 	} catch (error) {
-		console.error("Error updating user heavenly techniques:", error)
+		logger.error("Error updating user heavenly techniques:", error)
 		throw error
-	} finally {
-		// Generally, you keep the connection open in a web server context
-		// await client.close();
 	}
 }
 
@@ -1212,10 +1136,8 @@ export async function getUserHeavenlyTechniques(userId: string): Promise<string[
 
 		return user ? user.heavenlytechniques : []
 	} catch (error) {
-		console.error(`Error when retrieving heavenly techniques for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving heavenly techniques for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1249,31 +1171,26 @@ export async function toggleHeavenlyRestriction(userId) {
 		console.log(`Toggled Heavenly Restriction for user with ID: ${userId}`)
 		return true
 	} catch (error) {
-		console.error(`Error when toggling Heavenly Restriction for user with ID: ${userId}`, error)
+		logger.error(`Error when toggling Heavenly Restriction for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// Optionally close the client connection
 	}
 }
 
 export async function handleToggleHeavenlyRestrictionCommand(interaction) {
-	// Ensure this function is handling a CommandInteraction
 	if (!(interaction instanceof CommandInteraction)) return
 
-	const userId = interaction.user.id // Discord user ID
+	const userId = interaction.user.id
 
 	try {
 		const success = await toggleHeavenlyRestriction(userId)
 
 		if (success) {
-			// Successfully toggled, inform the user
 			await interaction.reply({
 				content:
 					"Your Heavenly Restriction status has been toggled. You can now harness its power differently!",
-				ephemeral: true // Only the user can see this
+				ephemeral: true
 			})
 		} else {
-			// User has not unlocked the feature, inform them accordingly
 			await interaction.reply({
 				content:
 					"It seems you have not unlocked Heavenly Restriction yet. Keep training and exploring to unlock this ability!",
@@ -1281,8 +1198,7 @@ export async function handleToggleHeavenlyRestrictionCommand(interaction) {
 			})
 		}
 	} catch (error) {
-		console.error("Error toggling Heavenly Restriction:", error)
-		// Respond to the user with an error message
+		logger.error("Error toggling Heavenly Restriction:", error)
 		await interaction.reply({
 			content:
 				"An error occurred while trying to toggle your Heavenly Restriction status. Please try again later.",
@@ -1302,10 +1218,8 @@ export async function getUserCursedEnergy(userId: string): Promise<number> {
 
 		return user ? user.cursedEnergy : 100
 	} catch (error) {
-		console.error(`Error when retrieving cursed energy for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving cursed energy for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // update user cursedEnergy
@@ -1317,10 +1231,8 @@ export async function updateUserCursedEnergy(userId: string, newCursedEnergy: nu
 
 		await usersCollection.updateOne({ id: userId }, { $set: { cursedEnergy: newCursedEnergy } })
 	} catch (error) {
-		console.error("Error updating user cursed energy:", error)
+		logger.error("Error updating user cursed energy:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // get user last vote time
@@ -1334,10 +1246,8 @@ export async function getUserLastVoteTime(userId: string): Promise<number> {
 
 		return user ? user.lastVoteTime : 0
 	} catch (error) {
-		console.error(`Error when retrieving last vote time for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving last vote time for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // update user last vote time
@@ -1349,10 +1259,8 @@ export async function updateUserLastVoteTime(userId: string, newLastVoteTime: nu
 
 		await usersCollection.updateOne({ id: userId }, { $set: { lastVoteTime: newLastVoteTime } })
 	} catch (error) {
-		console.error("Error updating user last vote time:", error)
+		logger.error("Error updating user last vote time:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // get all users balance
@@ -1369,10 +1277,8 @@ export async function getAllUsersBalance() {
 			balance: user.balance
 		}))
 	} catch (error) {
-		console.error("Error when retrieving all users balance:", error)
+		logger.error("Error when retrieving all users balance:", error)
 		throw error
-	} finally {
-		await client.close()
 	}
 }
 
@@ -1394,15 +1300,12 @@ export async function getUserGambleInfo(
 			lastGambleDate: user?.lastGambleDate || null
 		}
 	} catch (error) {
-		console.error(`Error when retrieving gamble info for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving gamble info for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 // update user gamble info
 export async function updateUserGambleInfo(userId: string): Promise<void> {
-	// Renamed for clarity
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
@@ -1413,7 +1316,7 @@ export async function updateUserGambleInfo(userId: string): Promise<void> {
 			{ $inc: { betCount: 1 } } // Use $inc to increment betCount
 		)
 	} catch (error) {
-		console.error("Error updating user gamble info:", error)
+		logger.error("Error updating user gamble info:", error)
 		throw error
 	}
 }
@@ -1426,10 +1329,8 @@ export async function updateUserGamble(userId: string, newGamble: number): Promi
 		const usersCollection = database.collection(usersCollectionName)
 		await usersCollection.updateOne({ id: userId }, { $set: { gamble: newGamble } })
 	} catch (error) {
-		console.error("Error updating user gamble:", error)
+		logger.error("Error updating user gamble:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1438,7 +1339,7 @@ import { logger } from "./bot.js"
 
 async function dailyReset() {
 	const database = client.db(mongoDatabase)
-	const usersCollection = database.collection("users") // Correct way to get a collection
+	const usersCollection = database.collection("users")
 	const users = await usersCollection.find().toArray()
 
 	for (const user of users) {
@@ -1449,10 +1350,8 @@ async function dailyReset() {
 	}
 }
 
-// Using node-cron for scheduling
-cron.schedule("0 0 * * *", dailyReset) // Runs at midnight every day
+cron.schedule("0 0 * * *", dailyReset)
 
-// get user work cooldown
 export async function getUserWorkCooldown(userId: string): Promise<number> {
 	try {
 		await client.connect()
@@ -1463,10 +1362,8 @@ export async function getUserWorkCooldown(userId: string): Promise<number> {
 
 		return user?.cooldowns?.work || 0
 	} catch (error) {
-		console.error(`Error when retrieving work cooldown for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving work cooldown for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1479,7 +1376,7 @@ export async function updateUserCooldown(userId: string, jobType: string, newCoo
 
 		await usersCollection.updateOne({ id: userId }, { $set: { [`cooldowns.${jobType}`]: newCooldown } })
 	} catch (error) {
-		console.error("Error updating user work cooldown:", error)
+		logger.error("Error updating user work cooldown:", error)
 		throw error
 	}
 }
@@ -1498,7 +1395,7 @@ export async function hasUserReceivedVoteReward(userId: string): Promise<boolean
 
 		return user?.receivedVoteReward || false
 	} catch (error) {
-		console.error(`Error when checking vote reward for user with ID: ${userId}`, error)
+		logger.error(`Error when checking vote reward for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1512,7 +1409,7 @@ export async function updateUserVoteRewardStatus(userId: string): Promise<void> 
 
 		await usersCollection.updateOne({ id: userId }, { $set: { receivedVoteReward: true } })
 	} catch (error) {
-		console.error("Error updating user vote reward status:", error)
+		logger.error("Error updating user vote reward status:", error)
 		throw error
 	}
 }
@@ -1524,14 +1421,11 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Find the quest details from questsArray by questName
 		const questToAdd = questsArray.find(quest => quest.name === questName)
 
-		// Check if the quest was found and has the correct structure
 		if (questToAdd) {
 			let questData
 			if (questToAdd.tasks) {
-				// For quests with multiple tasks, copy the tasks structure
 				questData = {
 					id: questName,
 					tasks: questToAdd.tasks.map(task => ({
@@ -1541,7 +1435,6 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 					}))
 				}
 			} else {
-				// For quests with a single task, maintain the single progress structure
 				questData = {
 					id: questName,
 					progress: 0,
@@ -1555,7 +1448,7 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 			throw new Error("Quest not found: " + questName)
 		}
 	} catch (error) {
-		console.error("Error adding user quest:", error)
+		logger.error("Error adding user quest:", error)
 		throw error
 	}
 }
@@ -1563,18 +1456,12 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 // addUserQuestProgress
 export async function addUserQuestProgress(userId, questId, increment, taskDescription = null) {
 	try {
-		// Assuming client is an instance of MongoClient that has been initialized previously.
-		// You should connect to the client outside of this function and reuse the connection.
-		// Connect to the MongoDB client and select the database and collection.
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
 		let updateResult
 
-		// Check if a taskDescription is provided for quests with multiple tasks.
 		if (taskDescription) {
-			// Update logic for quests with multiple tasks.
-			// Use "quests.id" to match the quests by their id and "tasks.description" to find the specific task.
 			updateResult = await usersCollection.updateOne(
 				{
 					"id": userId,
@@ -1589,12 +1476,10 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 				}
 			)
 		} else {
-			// Update logic for quests with a single task or no specific task provided.
-			// This branch assumes that if no task description is given, the quest only has an overall progress to update.
 			updateResult = await usersCollection.updateOne(
 				{
 					"id": userId,
-					"quests.id": questId // Use "quests.id" to match the quest by id.
+					"quests.id": questId
 				},
 				{
 					$inc: { "quests.$.progress": increment }
@@ -1604,53 +1489,45 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 
 		// Error handling and logging
 		if (updateResult.matchedCount === 0) {
-			console.error("Quest not found for user:", userId)
-			// Handle the case where the quest is not found for the user. You might want to send a message back or take some action.
+			logger.error("Quest not found for user:", userId)
 		} else if (updateResult.modifiedCount === 0) {
-			console.error("Quest progress was not updated for user:", userId)
-			// Handle the case where the quest progress is not updated. This could be because the quest is already at total progress.
+			logger.error("Quest progress was not updated for user:", userId)
 		} else {
-			console.log("Quest progress updated successfully for user:", userId)
-			// Optionally, you can handle post-update logic here, such as informing the user of their updated progress.
+			logger.log("Quest progress updated successfully for user:", userId)
 		}
 	} catch (error) {
-		console.error("Error updating user quest progress:", error)
-		// Depending on your application's structure, you might want to handle the error, such as rolling back changes, retrying, etc.
-		throw error // Re-throwing the error is a valid approach if you want the calling function to handle it.
+		logger.error("Error updating user quest progress:", error)
+		throw error
 	}
 }
 
 // getUserQuests
 export async function getUserQuests(userId) {
 	try {
-		console.log("Attempting to retrieve quests for userId:", userId)
+		logger.info("Attempting to retrieve quests for userId:", userId)
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
 		const user = await usersCollection.findOne({ id: userId })
-		console.log("User document retrieved:", user) // This should log the user document or null
+		logger.info("User document retrieved:", user)
 
 		if (!user) return { quests: [] }
 
-		const userQuests = user.quests ? [...user.quests] : [] // Use spread operator to clone the quests array
+		const userQuests = user.quests ? [...user.quests] : []
 		return { quests: userQuests }
 	} catch (error) {
-		console.error(`Error when retrieving quests for user with ID: ${userId}:`, error.stack)
+		logger.error(`Error when retrieving quests for user with ID: ${userId}:`, error.stack)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
 // removeUserQuest function
 export async function removeUserQuest(userId, questName) {
 	try {
-		// Assuming client is already connected and available
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<User> = database.collection<User>(usersCollectionName)
 
-		// Update the user's document by pulling the quest from the quests array by its name
 		const result = await usersCollection.updateOne(
 			{ id: userId },
 			{ $pull: { quests: { id: questName } } } // Make sure 'id' matches the property in the Quest interface.
@@ -1664,7 +1541,7 @@ export async function removeUserQuest(userId, questName) {
 			return true
 		}
 	} catch (error) {
-		console.error(`Error when removing quest for user with ID: ${userId}`, error)
+		logger.error(`Error when removing quest for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1676,27 +1553,19 @@ export async function updateUserMaxHealth(userId: string, healthIncrement: numbe
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Get the current health and max health of the user
 		const user = await usersCollection.findOne({ id: userId })
 		if (user) {
 			let { health, maxhealth } = user
 
-			// Increment the max health by the healthIncrement value, not exceeding 300
 			maxhealth = Math.min(maxhealth + healthIncrement, 300)
 
-			// Ensure current health does not exceed the new max health
 			health = Math.min(health, maxhealth)
 
-			// Update the user's maxHealth and currentHealth if necessary
 			await usersCollection.updateOne({ id: userId }, { $set: { maxhealth, health } })
 		}
 	} catch (error) {
-		console.error("Error updating user max health:", error)
+		logger.error("Error updating user max health:", error)
 		throw error
-	} finally {
-		// If you're calling this function frequently, you might not want to close the client after each call.
-		// Determine if you should close the client based on your application's needs.
-		// await client.close();
 	}
 }
 
@@ -1713,8 +1582,6 @@ export async function getUserMaxHealth(userId: string): Promise<number> {
 	} catch (error) {
 		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1741,7 +1608,7 @@ export async function createTradeRequest(
 
 		await tradeRequestsCollection.insertOne(tradeRequest)
 	} catch (error) {
-		console.error("Error creating trade request:", error)
+		logger.error("Error creating trade request:", error)
 		throw error
 	}
 }
@@ -1753,10 +1620,9 @@ export async function acceptTradeRequest(tradeRequestId: string): Promise<void> 
 		const database = client.db(mongoDatabase)
 		const tradeRequestsCollection = database.collection(tradeCollectionName)
 
-		// Update the status of the trade request to 'accepted'
 		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
 	} catch (error) {
-		console.error("Error accepting trade request:", error)
+		logger.error("Error accepting trade request:", error)
 		throw error
 	}
 }
@@ -1776,7 +1642,6 @@ export async function viewTradeRequests(userId: string): Promise<TradeRequest[]>
 			.toArray()
 
 		return tradeRequests.map(doc => ({
-			// Keep your mapping logic
 			_id: doc._id,
 			initiatorName: doc.initiatorName,
 			initiatorId: doc.initiatorId,
@@ -1787,7 +1652,7 @@ export async function viewTradeRequests(userId: string): Promise<TradeRequest[]>
 			createdAt: doc.createdAt
 		}))
 	} catch (error) {
-		console.error("Error viewing trade requests:", error)
+		logger.error("Error viewing trade requests:", error)
 		throw error
 	}
 }
@@ -1803,7 +1668,7 @@ export async function validateTradeRequest(tradeRequestId: string): Promise<bool
 
 		return tradeRequest && tradeRequest.status === "pending"
 	} catch (error) {
-		console.error("Error validating trade request:", error)
+		logger.error("Error validating trade request:", error)
 		throw error
 	}
 }
@@ -1812,7 +1677,6 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 	const tradeRequestsCollection = database.collection(tradeCollectionName)
 
 	try {
-		// Fetch the trade request
 		const tradeRequest = await tradeRequestsCollection.findOne({
 			_id: new ObjectId(tradeRequestId),
 			status: "pending",
@@ -1823,15 +1687,12 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 			throw new Error("Trade request not found or not valid for this user.")
 		}
 
-		// Decrement the quantity of the item from the initiator's inventory
 		await removeItemFromUserInventory(tradeRequest.initiatorId, tradeRequest.item, Number(tradeRequest.quantity))
 
-		// Increment the quantity of the item for the acceptor's inventory
 		await addItemToUserInventory(tradeRequest.targetUserId, tradeRequest.item, Number(tradeRequest.quantity))
-		// Update the trade request's status to 'accepted'
 		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
 	} catch (error) {
-		console.error("Error during trade acceptance:", error)
+		logger.error("Error during trade acceptance:", error)
 		throw error // Consider more specific error handling
 	}
 }
@@ -1855,7 +1716,7 @@ export async function getPreviousTrades(userId: string): Promise<TradeRequest[]>
 			createdAt: doc.createdAt
 		}))
 	} catch (error) {
-		console.error("Error getting previous trades:", error)
+		logger.error("Error getting previous trades:", error)
 		throw error
 	}
 }
@@ -1894,12 +1755,11 @@ export async function resetBetLimit(userId: string): Promise<void> {
 
 		await usersCollection.updateOne({ id: userId }, { $set: { betCount: 0 } })
 	} catch (error) {
-		console.error("Error resetting bet limit:", error)
+		logger.error("Error resetting bet limit:", error)
 		throw error
 	}
 }
 
-// get user active techniques if it doesnt exist create it
 export async function getUserActiveTechniques(userId: string): Promise<string[]> {
 	try {
 		await client.connect()
@@ -1910,10 +1770,8 @@ export async function getUserActiveTechniques(userId: string): Promise<string[]>
 
 		return user ? user.activeTechniques : []
 	} catch (error) {
-		console.error(`Error when retrieving active techniques for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving active techniques for user with ID: ${userId}`, error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -1928,7 +1786,7 @@ export async function getUserActiveHeavenlyTechniques(userId: string): Promise<s
 
 		return user ? user.activeheavenlytechniques : []
 	} catch (error) {
-		console.error(`Error when retrieving active heavenly techniques for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving active heavenly techniques for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1940,12 +1798,11 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the new active techniques do not exceed 10
 		const activeTechniques = newActiveTechniques.slice(0, 20)
 
 		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques } })
 	} catch (error) {
-		console.error("Error updating user active techniques:", error)
+		logger.error("Error updating user active techniques:", error)
 		throw error
 	}
 }
@@ -1965,7 +1822,7 @@ export async function updateUserActiveHeavenlyTechniques(
 
 		await usersCollection.updateOne({ id: userId }, { $set: { activeHeavenlyTechniques } })
 	} catch (error) {
-		console.error("Error updating user active heavenly techniques:", error)
+		logger.error("Error updating user active heavenly techniques:", error)
 		throw error
 	}
 }
@@ -1985,7 +1842,6 @@ export async function updateGamblersData(
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Calculate new limit based on the percentage increase, if any.
 		let newLimit = currentLimit > 0 ? currentLimit : DEFAULT_LIMIT
 		if (increaseLimitByPercent > 0) {
 			newLimit = Math.min(currentLimit * (1 + increaseLimitByPercent / 100), MAX_LIMIT)
@@ -2008,9 +1864,7 @@ export async function updateGamblersData(
 			console.warn("User with specified ID not found for gamblers data update.")
 		}
 	} catch (error) {
-		console.error("Error updating gamblers data:", error)
-	} finally {
-		// await client.close();
+		logger.error("Error updating gamblers data:", error)
 	}
 }
 
@@ -2025,9 +1879,7 @@ export async function getGamblersData(userId) {
 
 		return user ? user.gamblersData : null
 	} catch (error) {
-		console.error("Error getting gamblers data:", error)
-	} finally {
-		// await client.close()
+		logger.error("Error getting gamblers data:", error)
 	}
 }
 
@@ -2037,15 +1889,12 @@ export async function updateUserStatusEffects(userId: string, statusEffects: str
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the new status effects do not exceed 10
 		const effects = statusEffects.slice(0, 5)
 
 		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: effects } })
 	} catch (error) {
 		console.error("Error updating user status effects:", error)
 		throw error
-	} finally {
-		// await client.close()
 	}
 }
 
@@ -2059,7 +1908,7 @@ export async function getUserStatusEffects(userId: string): Promise<string[]> {
 
 		return user ? user.statusEffects : []
 	} catch (error) {
-		console.error(`Error when retrieving status effects for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving status effects for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2072,7 +1921,7 @@ export async function removeAllStatusEffects(userId: string): Promise<void> {
 
 		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: [] } })
 	} catch (error) {
-		console.error("Error removing all status effects:", error)
+		logger.error("Error removing all status effects:", error)
 		throw error
 	}
 }
@@ -2085,7 +1934,7 @@ export async function removeAllItemEffects(userId: string): Promise<void> {
 
 		await usersCollection.updateOne({ id: userId }, { $set: { itemEffects: [] } })
 	} catch (error) {
-		console.error("Error removing all item effects:", error)
+		logger.error("Error removing all item effects:", error)
 		throw error
 	}
 }
@@ -2098,7 +1947,7 @@ export async function removeStatusEffect(userId: string, statusEffect: string): 
 
 		await usersCollection.updateOne({ id: userId }, { $pull: { statusEffects: statusEffect } })
 	} catch (error) {
-		console.error("Error removing status effect:", error)
+		logger.error("Error removing status effect:", error)
 		throw error
 	}
 }
@@ -2111,7 +1960,7 @@ export async function updateUserUnlockedBosses(userId: string, unlockedBosses: s
 
 		await usersCollection.updateOne({ id: userId }, { $set: { unlockedBosses } })
 	} catch (error) {
-		console.error("Error updating user unlocked bosses:", error)
+		logger.error("Error updating user unlocked bosses:", error)
 		throw error
 	}
 }
@@ -2126,7 +1975,7 @@ export async function getUserUnlockedBosses(userId: string): Promise<string[]> {
 
 		return user ? user.unlockedBosses : []
 	} catch (error) {
-		console.error(`Error when retrieving unlocked bosses for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving unlocked bosses for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2141,7 +1990,7 @@ export async function getUserTransformation(userId: string): Promise<string> {
 
 		return user ? user.transformation : ""
 	} catch (error) {
-		console.error(`Error when retrieving transformation for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving transformation for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2154,7 +2003,7 @@ export async function updateUserTransformation(userId: string, transformation: s
 
 		await usersCollection.updateOne({ id: userId }, { $set: { transformation } })
 	} catch (error) {
-		console.error("Error updating user transformation:", error)
+		logger.error("Error updating user transformation:", error)
 		throw error
 	}
 }
@@ -2165,7 +2014,6 @@ export async function updateUserInateClanExperience(userId: string, experience: 
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Increment the inateClan experience by the given amount and set the clan if it's provided
 		await usersCollection.updateOne(
 			{ id: userId },
 			{
@@ -2187,7 +2035,7 @@ export async function updateUserInateClan(userId: string, clan: string): Promise
 
 		await usersCollection.updateOne({ id: userId }, { $set: { inateclan: { clan, experience: 0, tier: 5 } } })
 	} catch (error) {
-		console.error("Error updating user inate clan:", error)
+		logger.error("Error updating user inate clan:", error)
 		throw error
 	}
 }
@@ -2218,7 +2066,7 @@ export async function updateUserUnlockedTransformations(
 
 		await usersCollection.updateOne({ id: userId }, { $set: { unlockedtransformations } })
 	} catch (error) {
-		console.error("Error updating user unlocked transformations:", error)
+		logger.error("Error updating user unlocked transformations:", error)
 		throw error
 	}
 }
@@ -2233,7 +2081,7 @@ export async function getUserUnlockedTransformations(userId: string): Promise<st
 
 		return user ? user.unlockedtransformations : []
 	} catch (error) {
-		console.error(`Error when retrieving unlocked transformations for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving unlocked transformations for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2246,7 +2094,7 @@ export async function updateUserPermEffects(userId: string, permEffects: string[
 
 		await usersCollection.updateOne({ id: userId }, { $set: { permEffects } })
 	} catch (error) {
-		console.error("Error updating user perm effects:", error)
+		logger.error("Error updating user perm effects:", error)
 		throw error
 	}
 }
@@ -2260,7 +2108,7 @@ export async function getUserPermEffects(userId: string): Promise<string[]> {
 
 		return user ? user.permEffects : []
 	} catch (error) {
-		console.error(`Error when retrieving perm effects for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving perm effects for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2287,7 +2135,7 @@ export async function getUserHonours(userId: string): Promise<string[]> {
 
 		return user ? user.honours : []
 	} catch (error) {
-		console.error(`Error when retrieving honours for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving honours for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2302,7 +2150,7 @@ export async function getLastAlertedVersion(userId: string): Promise<string> {
 
 		return user ? user.lastAlertedVersion : ""
 	} catch (error) {
-		console.error(`Error when retrieving last alerted version for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving last alerted version for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2315,7 +2163,7 @@ export async function updateLastAlertedVersion(userId: string, version: string):
 
 		await usersCollection.updateOne({ id: userId }, { $set: { lastAlertedVersion: version } })
 	} catch (error) {
-		console.error("Error updating last alerted version:", error)
+		logger.error("Error updating last alerted version:", error)
 		throw error
 	}
 }
@@ -2345,7 +2193,7 @@ export async function updateUserItemEffects(userId: string, itemEffect: ItemEffe
 
 		await usersCollection.updateOne({ id: userId }, { $addToSet: { itemEffects: itemEffect } })
 	} catch (error) {
-		console.error("Error adding item effect:", error)
+		logger.error("Error adding item effect:", error)
 		throw error
 	}
 }
@@ -2364,7 +2212,6 @@ async function updateShop(): Promise<void> {
 
 		const now = new Date()
 
-		// If no shop data is found or it's time to reset, generate new items
 		const shouldGenerateItems =
 			!shopData || now.getTime() - new Date(shopData.lastShopReset).getTime() >= resetInterval
 
@@ -2398,7 +2245,7 @@ async function updateShop(): Promise<void> {
 			console.log("Shop does not need a reset yet.")
 		}
 	} catch (error) {
-		console.error("Error updating shop items:", error)
+		logger.error("Error updating shop items:", error)
 		throw error
 	}
 }
@@ -2424,15 +2271,14 @@ async function generateDailyShop() {
 		}
 
 		if (randomItem.rarity !== "legendary" || Math.random() < 0.2) {
-			// Ensure no duplicates are added
 			if (!dailyShopItems.includes(randomItem)) {
 				dailyShopItems.push(randomItem)
-				console.log("Item added to daily shop:", randomItem) // Log the item being added
+				console.log("Item added to daily shop:", randomItem)
 			}
 		}
 	}
 
-	console.log("Daily shop items generated:", dailyShopItems) // Log the final array
+	console.log("Daily shop items generated:", dailyShopItems)
 	return dailyShopItems
 }
 
@@ -2441,14 +2287,13 @@ export async function getAllShopItems() {
 		const database = client.db(mongoDatabase)
 		const shopsCollection = database.collection(shopCollectionName)
 
-		// This assumes each document has a 'shopItems' field that is an array of items.
 		const shopDocuments = await shopsCollection.find({}).toArray()
 		const allShopItems = shopDocuments.map(doc => doc.shopItems).flat()
 
 		console.log("Retrieved shop items:", allShopItems)
 		return allShopItems
 	} catch (error) {
-		console.error("Error retrieving shop items:", error)
+		logger.error("Error retrieving shop items:", error)
 		throw error
 	}
 }
@@ -2461,7 +2306,7 @@ export async function getShopLastReset(): Promise<Date> {
 		const shopData = await shopsCollection.findOne({})
 		return shopData ? shopData.lastShopReset : new Date(0)
 	} catch (error) {
-		console.error("Error getting shop last reset time:", error)
+		logger.error("Error getting shop last reset time:", error)
 		throw error
 	}
 }
@@ -2480,7 +2325,7 @@ export async function getUserPurchases(userId: string): Promise<Purchase[]> {
 
 		return user ? user.purchases : []
 	} catch (error) {
-		console.error(`Error when retrieving purchases for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving purchases for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2507,7 +2352,7 @@ export async function addUserPurchases(userId: string, itemName: string, amount:
 
 		await usersCollection.updateOne({ id: userId }, { $set: { purchases: user.purchases } })
 	} catch (error) {
-		console.error(`Error when adding purchases for user with ID: ${userId}`, error)
+		logger.error(`Error when adding purchases for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2517,15 +2362,11 @@ async function resetAllUserPurchases(): Promise<void> {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection<User>(usersCollectionName)
 
-		// Update all user documents to reset their purchases
-		const result = await usersCollection.updateMany(
-			{}, // Filter for all documents
-			{ $set: { purchases: [] } } // Reset purchases array for all users
-		)
+		const result = await usersCollection.updateMany({}, { $set: { purchases: [] } })
 
 		console.log(`Purchases reset for all users. Modified count: ${result.modifiedCount}`)
 	} catch (error) {
-		console.error("Error resetting user purchases:", error)
+		logger.error("Error resetting user purchases:", error)
 		throw error
 	}
 }
@@ -2538,7 +2379,7 @@ export async function updateUserOwnedInateClan(userId: string, clan: string): Pr
 
 		await usersCollection.updateOne({ id: userId }, { $set: { ownedInateClan: clan } })
 	} catch (error) {
-		console.error("Error updating user owned inate clan:", error)
+		logger.error("Error updating user owned inate clan:", error)
 		throw error
 	}
 }
@@ -2553,7 +2394,7 @@ export async function getUserOwnedInateClan(userId: string): Promise<string> {
 
 		return user ? user.ownedInateClan : ""
 	} catch (error) {
-		console.error(`Error when retrieving owned inate clan for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving owned inate clan for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2567,7 +2408,7 @@ export async function getUserMentor(userId: string): Promise<string> {
 
 		return user ? user.mentors : ""
 	} catch (error) {
-		console.error(`Error when retrieving mentor for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving mentor for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2579,7 +2420,7 @@ export async function updateUserMentors(userId: string, mentors: string[]): Prom
 
 		await usersCollection.updateOne({ id: userId }, { $set: { mentors } })
 	} catch (error) {
-		console.error("Error updating user mentors:", error)
+		logger.error("Error updating user mentors:", error)
 		throw error
 	}
 }
@@ -2592,7 +2433,7 @@ export async function updateUserVoteTimestamp(userId: string, timestamp: Date): 
 
 		await usersCollection.updateOne({ id: userId }, { $set: { voteTimestamp: timestamp } })
 	} catch (error) {
-		console.error("Error updating user vote timestamp:", error)
+		logger.error("Error updating user vote timestamp:", error)
 		throw error
 	}
 }
@@ -2619,13 +2460,12 @@ export async function getUserShikigami(userId: string): Promise<Shikigami[]> {
 		const user = await usersCollection.findOne({ id: userId })
 
 		if (user && user.shikigami) {
-			// Assuming user.shikigami is already an array of shikigami objects
 			return user.shikigami
 		} else {
 			return []
 		}
 	} catch (error) {
-		console.error(`Error when retrieving shikigami for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving shikigami for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2646,11 +2486,9 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Check if the user has any existing shikigami
 		const user = await usersCollection.findOne({ id: userId })
 		const existingShikigami = user?.shikigami || []
 
-		// Update the user's shikigami array
 		const updatedShikigami = [...existingShikigami, newShikigami]
 
 		await usersCollection.updateOne(
@@ -2662,7 +2500,7 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 			}
 		)
 	} catch (error) {
-		console.error("Error updating user shikigami:", error)
+		logger.error("Error updating user shikigami:", error)
 		throw error
 	}
 }
@@ -2673,7 +2511,6 @@ export async function updateShikigamiHealth(userId: string, shikigamiName: strin
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's shikigami health
 		await usersCollection.updateOne(
 			{ "id": userId, "shikigami.name": shikigamiName },
 			{
@@ -2683,7 +2520,7 @@ export async function updateShikigamiHealth(userId: string, shikigamiName: strin
 			}
 		)
 	} catch (error) {
-		console.error("Error updating shikigami health:", error)
+		logger.error("Error updating shikigami health:", error)
 		throw error
 	}
 }
@@ -2695,8 +2532,6 @@ export async function feedShikigami(userId: string, shikigamiName: string, foodA
 
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's shikigami hunger
-
 		await usersCollection.updateOne(
 			{ "id": userId, "shikigami.name": shikigamiName },
 
@@ -2707,7 +2542,7 @@ export async function feedShikigami(userId: string, shikigamiName: string, foodA
 			}
 		)
 	} catch (error) {
-		console.error("Error feeding shikigami:", error)
+		logger.error("Error feeding shikigami:", error)
 
 		throw error
 	}
@@ -2718,8 +2553,7 @@ export async function decreaseShikigamiHunger(): Promise<void> {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Decrease the hunger of all shikigami by a certain amount
-		const hungerDecrement = 10 // Adjust this value as needed
+		const hungerDecrement = 10
 
 		await usersCollection.updateMany(
 			{},
@@ -2737,18 +2571,16 @@ export async function decreaseShikigamiHunger(): Promise<void> {
 			}
 		)
 	} catch (error) {
-		console.error("Error decreasing shikigami hunger:", error)
+		logger.error("Error decreasing shikigami hunger:", error)
 		throw error
 	}
 }
-// decrease shikigami hygiene
 export async function decreaseShikigamiHygiene(): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Decrease the hygiene of all shikigami by a certain amount
-		const hygieneDecrement = 10 // Adjust this value as needed
+		const hygieneDecrement = 10
 
 		await usersCollection.updateMany(
 			{},
@@ -2766,7 +2598,7 @@ export async function decreaseShikigamiHygiene(): Promise<void> {
 			}
 		)
 	} catch (error) {
-		console.error("Error decreasing shikigami hygiene:", error)
+		logger.error("Error decreasing shikigami hygiene:", error)
 		throw error
 	}
 }
@@ -2776,7 +2608,6 @@ export async function cleanShikigami(userId: string, shikigamiName: string, hygi
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's shikigami hygiene
 		await usersCollection.updateOne(
 			{ "id": userId, "shikigami.name": shikigamiName },
 			{
@@ -2786,7 +2617,7 @@ export async function cleanShikigami(userId: string, shikigamiName: string, hygi
 			}
 		)
 	} catch (error) {
-		console.error("Error cleaning shikigami:", error)
+		logger.error("Error cleaning shikigami:", error)
 		throw error
 	}
 }
@@ -2797,7 +2628,6 @@ export async function increaseBond(userId: string, shikigamiName: string, friend
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's shikigami friendship
 		await usersCollection.updateOne(
 			{ "id": userId, "shikigami.name": shikigamiName },
 			{
@@ -2807,7 +2637,7 @@ export async function increaseBond(userId: string, shikigamiName: string, friend
 			}
 		)
 	} catch (error) {
-		console.error("Error increasing bond with shikigami:", error)
+		logger.error("Error increasing bond with shikigami:", error)
 		throw error
 	}
 }
@@ -2818,7 +2648,6 @@ export async function healShikigami(userId: string, shikigamiName: string, healt
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Update the user's shikigami health
 		await usersCollection.updateOne(
 			{ "id": userId, "shikigami.name": shikigamiName },
 			{
@@ -2828,7 +2657,7 @@ export async function healShikigami(userId: string, shikigamiName: string, healt
 			}
 		)
 	} catch (error) {
-		console.error("Error healing shikigami:", error)
+		logger.error("Error healing shikigami:", error)
 		throw error
 	}
 }
@@ -2841,7 +2670,7 @@ export async function updateUserVoteTime(userId: string, voteTime: Date): Promis
 
 		await usersCollection.updateOne({ id: userId }, { $set: { voteTime } })
 	} catch (error) {
-		console.error("Error updating user vote time:", error)
+		logger.error("Error updating user vote time:", error)
 		throw error
 	}
 }
@@ -2855,7 +2684,7 @@ export async function getUserVoteTime(userId: string): Promise<Date> {
 
 		return user ? user.voteTime : new Date(0)
 	} catch (error) {
-		console.error(`Error when retrieving vote time for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving vote time for user with ID: ${userId}`, error)
 		throw error
 	}
 }

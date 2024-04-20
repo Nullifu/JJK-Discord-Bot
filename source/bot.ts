@@ -100,10 +100,8 @@ log4js.configure({
 	}
 })
 
-// Get a logger instance
 export const logger = log4js.getLogger("jjk-bot")
 
-// Use the logger
 logger.trace("This is a trace message")
 logger.debug("This is a debug message")
 logger.info("This is an info message")
@@ -138,7 +136,7 @@ setInterval(async () => {
 		status: "online"
 	})
 	index++
-}, 60000) // Update every 25 seconds
+}, 60000)
 
 async function updateDynamicActivities() {
 	let totalMembers = 0
@@ -146,7 +144,6 @@ async function updateDynamicActivities() {
 		totalMembers += guild.memberCount
 	})
 
-	// Update or add dynamic activities based on the current member and server count
 	activities = [
 		{ name: "Update 6.0", type: ActivityType.Playing }, // Dynamic member count
 		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
@@ -193,7 +190,6 @@ client.on("guildCreate", guild => {
 				.setLabel("Join Our Support//Community Server!")
 		)
 
-		// Send the embed with the button
 		defaultChannel.send({ embeds: [welcomeEmbed], components: [row] })
 	}
 })
@@ -757,13 +753,13 @@ client.on("interactionCreate", async interaction => {
 				await handleUnequipTechniqueCommand(interaction)
 				break
 			case "equip":
-				await handleEquipTechniqueCommand(interaction) // Make sure to correct this to use the appropriate function
+				await handleEquipTechniqueCommand(interaction)
 				break
 			case "equipform":
-				await handleEquipTransformationCommand(interaction) // Make sure to correct this to use the appropriate function
+				await handleEquipTransformationCommand(interaction)
 				break
 			case "shop":
-				const category = interaction.options.getString("category") // This is how you correctly access a subcommand option
+				const category = interaction.options.getString("category")
 				if (category === "domains") {
 					await handleDomainSelection(interaction)
 				} else if (category === "skills") {

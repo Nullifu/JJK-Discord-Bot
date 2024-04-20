@@ -1,14 +1,14 @@
 interface User {
 	lastAlertedVersion?: string
-	// add other properties as needed
 }
-const CURRENT_VERSION = "1.0.0"
+const CURRENT_VERSION = "1.1.2"
 //
 //
 
 import { EmbedBuilder } from "@discordjs/builders"
 import { ChatInputCommandInteraction } from "discord.js"
 import { getUser, updateLastAlertedVersion } from "./mongodb.js"
+import { logger } from "./bot.js"
 
 export async function checkRegistrationMiddleware(interaction: ChatInputCommandInteraction): Promise<boolean> {
 	console.log("Middleware started")
@@ -32,8 +32,7 @@ export async function checkRegistrationMiddleware(interaction: ChatInputCommandI
 
 		return true
 	} catch (error) {
-		console.error("Error in middleware:", error)
-		// Only reply with an error message if a previous reply hasn't been sent
+		logger.error("Error in middleware:", error)
 		if (!interaction.replied && !interaction.deferred) {
 			await interaction.reply({
 				content: "Oops! You got a rare error if this happens again please make a ticket in the support server."
@@ -54,7 +53,6 @@ export async function checkVersionMiddleware1(interaction: ChatInputCommandInter
 		const currentVersion = CURRENT_VERSION
 		const lastAlertedVersion = user?.lastAlertedVersion
 
-		// Ensure the interaction is acknowledged before proceeding
 		if (!interaction.deferred && !interaction.replied) {
 			await interaction.deferReply({ ephemeral: true })
 		}
@@ -79,7 +77,7 @@ export async function checkVersionMiddleware1(interaction: ChatInputCommandInter
 			})
 		}
 	} catch (error) {
-		console.error("Error in version check middleware:", error)
+		logger.error("Error in version check middleware:", error)
 		if (!interaction.replied) {
 			await interaction.editReply({
 				content: "Oops! You encountered an error. If this happens again, please contact support."
@@ -111,7 +109,7 @@ export async function postCommandMiddleware(interaction: ChatInputCommandInterac
 			})
 		}
 	} catch (error) {
-		console.error("Error in post-command middleware:", error)
+		logger.error("Error in post-command middleware:", error)
 		await interaction.followUp({
 			content: "Oops! There was a problem processing your request. Please try again later.",
 			ephemeral: true

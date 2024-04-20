@@ -12,7 +12,7 @@ export const attacks: Record<string, Attack[]> = {
 	// Sukana's attacks
 	"Sukuna": [
 		{
-			name: "Cleave", // Simple attack, no special embed changes
+			name: "Cleave",
 			probability: 60,
 			baseDamage: 25,
 			embedUpdate: embed => embed
@@ -927,7 +927,6 @@ export function chooseRandomAttackForBossBasedOnProbability(attacks: Attack[]): 
 		}
 	}
 
-	// If this point is reached, fallback to the last item
 	return attacks[attacks.length - 1]
 }
 

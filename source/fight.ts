@@ -554,12 +554,11 @@ export async function export120(interaction, randomOpponent, primaryEmbed, row, 
 export async function handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth) {
 	const userMaxHealth = await getUserMaxHealth(interaction.user.id)
 	//
-	await updateUserHealth(interaction.user.id, userMaxHealth) // Reset player health to max
+	await updateUserHealth(interaction.user.id, userMaxHealth)
 	//
 	randomOpponent.name = "Mahito"
-	randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+	randomOpponent.current_health = randomOpponent.max_health
 
-	// Customize the message and image for Aoi Todo's revival
 	primaryEmbed.setDescription(
 		"My power reveals a fascinating truth... the shape of the soul, the essence of a curse. Perhaps I embody it all!"
 	)
@@ -577,9 +576,8 @@ export async function handlePlayerRevival(interaction, primaryEmbed, row, random
 		embeds: [primaryEmbed]
 	})
 
-	await new Promise(resolve => setTimeout(resolve, 5000)) // 3 seconds delay
+	await new Promise(resolve => setTimeout(resolve, 5000))
 
-	// Customize the message and image for Aoi Todo's revival
 	primaryEmbed.setDescription(
 		"The sound of the Gion Shoja bells... echoes the impermanence of all things. The color of the sala flowers...reveals the truth the prosperous must decline. But, we are the exceptions. \n\n**Get up, brother! Our battle is just beginning!**"
 	)
@@ -593,7 +591,7 @@ export async function handlePlayerRevival(interaction, primaryEmbed, row, random
 
 	await interaction.editReply({
 		embeds: [primaryEmbed],
-		components: row ? [row] : [] // Ensure row exists, otherwise pass an empty array
+		components: row ? [row] : []
 	})
 }
 

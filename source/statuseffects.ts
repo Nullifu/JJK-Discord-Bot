@@ -33,23 +33,18 @@ const statusEffectsDescriptions = {
 }
 
 export async function applyPrayerSongEffect(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
-
-	// Check if "Prayer Song" is already active to avoid duplication
+	const currentEffects = await getUserStatusEffects(userId)
 	if (!currentEffects.includes("Prayer Song")) {
 		const updatedEffects = [...currentEffects, "Prayer Song"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 export async function applyMutualLoveEffect(userId) {
-	// Fetch current status effects
-	const currentEffects = await getUserStatusEffects(userId) // This function needs to fetch the current effects from the database
+	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if "Prayer Song" is already active to avoid duplication
 	if (!currentEffects.includes("Mutual Love")) {
 		const updatedEffects = [...currentEffects, "Mutual Love"]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 
@@ -70,7 +65,6 @@ export async function applyAdaption(userId) {
 	}
 }
 export async function applyVirtualMass(userId) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
 	if (!currentEffects.includes("Mass")) {
@@ -80,7 +74,6 @@ export async function applyVirtualMass(userId) {
 }
 
 export async function applyWorldCuttingSlash(userId) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
 	if (!currentEffects.includes("World Cutting Slash")) {
@@ -90,7 +83,6 @@ export async function applyWorldCuttingSlash(userId) {
 }
 
 export async function applytransformation(userId) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
 	if (!currentEffects.includes("1000 Year Curse")) {
@@ -153,24 +145,19 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 }
 
 export async function applyStatusEffect(userId, effectName) {
-	// Fetch current status effects
 	const currentEffects = await getUserStatusEffects(userId)
 
-	// Check if the status effect is already active to avoid duplication
 	if (!currentEffects.includes(effectName)) {
 		const updatedEffects = [...currentEffects, effectName]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }
 
-// apply permanent status effect its always in the perm effects but apply it in battle
 export async function applyPermanentStatusEffect(userId, effectName) {
-	// Fetch current status effects
 	const currentEffects = await getUserPermEffects(userId)
 
-	// Check if the status effect is already active to avoid duplication
 	if (!currentEffects.includes(effectName)) {
 		const updatedEffects = [...currentEffects, effectName]
-		await updateUserStatusEffects(userId, updatedEffects) // Update the database with the new effects list
+		await updateUserStatusEffects(userId, updatedEffects)
 	}
 }

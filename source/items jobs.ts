@@ -1179,7 +1179,6 @@ export const items1: Item1[] = [
 			await interaction.followUp({ embeds: [embedFirst] })
 
 			const userClanData = await getUserInateClan(interaction.user.id)
-			console.log("userClanData: ", userClanData) // Log for debugging
 			await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
 			await updateUserInateClanExperience(userId, 125, "Demon Vessel")
 			await updatePlayerClanTier(userId)
@@ -1518,7 +1517,7 @@ export const items1: Item1[] = [
 						)
 					await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 				} catch (error) {
-					console.error("Error applying item effect:", error)
+					logger.error("Error applying item effect:", error)
 					await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 				}
 			})
@@ -1678,7 +1677,7 @@ export const items1: Item1[] = [
 					)
 				await interaction.editReply({ embeds: [embedFinal] })
 			} catch (error) {
-				console.error("Error applying item effect:", error)
+				logger.error("Error applying item effect:", error)
 				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 			}
 		}
@@ -1716,7 +1715,7 @@ export const items1: Item1[] = [
 					)
 				await interaction.editReply({ embeds: [embedFinal] })
 			} catch (error) {
-				console.error("Error applying item effect:", error)
+				logger.error("Error applying item effect:", error)
 				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 			}
 		}
@@ -1749,13 +1748,11 @@ export const items1: Item1[] = [
 
 				const itemToCleaned = userInventory[itemIndex]
 
-				// Apply cleaning logic here
 				const cleaningSuccess = Math.random() < 0.8 // 80% chance of successful cleaning
 
 				if (cleaningSuccess) {
 					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
 
-					// Add the cleaned version of the item to the inventory
 					const cleanedItemName = dirtyToCleanItemMap[itemToCleaned.name] || itemToCleaned.name
 					await addItemToUserInventory(userId, cleanedItemName, 1)
 					await addItemToUserInventory(userId, "Dirty Sponge", 1)
@@ -1769,7 +1766,6 @@ export const items1: Item1[] = [
 
 					await interaction.editReply({ embeds: [embedFinal] })
 				} else {
-					// Remove the original item from the inventory
 					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
 
 					const embedFinal = new EmbedBuilder()
@@ -1779,8 +1775,6 @@ export const items1: Item1[] = [
 
 					await interaction.editReply({ embeds: [embedFinal] })
 				}
-
-				// Remove the cleaning sponge from the inventory
 			} catch (error) {
 				logger.error("Error applying item effect:", error)
 				await interaction.editReply({ content: "Failed to use the cleaning sponge. Please try again." })
@@ -1833,16 +1827,13 @@ export const items1: Item1[] = [
 
 			await interaction.editReply({ embeds: [embedFinal] })
 
-			// Additional delay before adding the new field
 			await new Promise(resolve => setTimeout(resolve, 4000))
 
-			// Add the new field to the existing embed
 			embedFinal.addFields({
 				name: "Gift of the Curses",
 				value: "Power surges within you as 'Disaster Curses: Full Flux' awakens. The legacy of the fallen fuels your ascent. Gain 925 experience, There spirits now roam free you may encounter them again..."
 			})
 
-			// Update the embed with the new field
 			await interaction.editReply({ embeds: [embedFinal] })
 		}
 	}

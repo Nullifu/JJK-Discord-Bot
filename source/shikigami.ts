@@ -30,7 +30,6 @@ export function updateShikigamiField(primaryEmbed, activeShikigami, userId) {
 		}
 	}
 
-	// Remove duplicate "Shikigami" fields
 	const shikigamiFields = primaryEmbed.fields.filter(field => field.name === "Shikigami")
 	if (shikigamiFields.length > 1) {
 		primaryEmbed.fields = primaryEmbed.fields.filter(field => field.name !== "Shikigami")
@@ -61,24 +60,19 @@ export async function executeMahoraga({
 	techniquesUsed.push(techniqueName)
 	userTechniquesFight.set(userId, techniquesUsed)
 
-	// Check if the user has the required shikigami for the technique
 	if (techniqueName === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
 		const userShikigami = await getUserShikigami(collectedInteraction.user.id)
 
 		const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga")
 
 		if (hasMahoraga) {
-			// User has Mahoraga tamed, proceed with summoning
-
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 			await new Promise(resolve => setTimeout(resolve, 3000))
 
-			// Mahoraga adaptation mechanic
 			const mahoragaAdaptation = userTechniquesFight.get(`${userId}_mahoraga_adaptation`) || 0
 			userTechniquesFight.set(`${userId}_mahoraga_adaptation`, mahoragaAdaptation + 1)
 
-			// Mahoraga damages the enemy
-			const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
+			const enemyDamage = Math.floor(Math.random() * 100) + 50
 			const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
 			const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
 			bossHealthMap.set(userId, newBossHealth)
@@ -95,11 +89,8 @@ export async function executeMahoraga({
 
 			await new Promise(resolve => setTimeout(resolve, 3000))
 
-			// Re-add the select menu
-
 			return { damage: enemyDamage, userTechniques: userTechniquesFight }
 		} else {
-			// User doesn't have Mahoraga tamed, show the confirmation prompt
 			const confirmationEmbed = new EmbedBuilder()
 				.setTitle("Summon Mahoraga")
 				.setDescription("You don't have Mahoraga tamed. Do you want to take a risk and summon him anyway?")
@@ -156,14 +147,12 @@ export async function executeMahoraga({
 				return 0
 			}
 
-			// User confirmed to summon Mahoraga without having him tamed
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 			await new Promise(resolve => setTimeout(resolve, 4000))
 
 			const outcome = Math.random()
 			if (outcome < 0.5) {
-				// User takes damage
-				const userDamage = Math.floor(Math.random() * 50) + 10 // Random damage between 10 and 60
+				const userDamage = Math.floor(Math.random() * 50) + 10
 				const newPlayerHealth = playerHealth - userDamage
 				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
 
@@ -173,7 +162,6 @@ export async function executeMahoraga({
 				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 				await new Promise(resolve => setTimeout(resolve, 4000))
 
-				// Update the player health in the embed
 				primaryEmbed.setFields(
 					{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
 					{ name: "Technique", value: fieldValue },
@@ -183,12 +171,10 @@ export async function executeMahoraga({
 				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 				await new Promise(resolve => setTimeout(resolve, 4000))
 
-				// Re-add the select menu
 				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 				return { damage: clampedPlayerHealth, userTechniques: userTechniquesFight }
 			} else {
-				// Mahoraga damages the enemy
 				const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
 				const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
 				const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
@@ -203,7 +189,6 @@ export async function executeMahoraga({
 				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 				await new Promise(resolve => setTimeout(resolve, 4000))
 
-				// Re-add the select menu
 				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 				return { damage: enemyDamage, userTechniques: userTechniquesFight }
@@ -479,12 +464,10 @@ export async function handleDivineDogsDamage(interaction, randomOpponent, player
 		const divineDogs = userShikigami.find(shikigami => shikigami.name === "Divine Dogs")
 
 		if (divineDogs && divineDogs.health > 10) {
-			// Calculate the chance to take the hit based on friendship level (0-100)
 			const friendshipLevel = divineDogs.friendship
 			const chanceToTakeHit = Math.min(0.3 + (friendshipLevel / 100) * 0.4, 0.7)
 
 			if (Math.random() < chanceToTakeHit) {
-				// Divine Dogs take the hit
 				const possibleAttacks = attacks[randomOpponent.name]
 				const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 				const damageToDogsBeforeReduction = chosenAttack.baseDamage
@@ -669,7 +652,6 @@ export function getRandomQuote() {
 export function createShikigamiEmbed(selectedShikigami) {
 	let description = null
 
-	// Check if all levels are high
 	const isHealthGood = selectedShikigami.health > 80
 	const isHungerGood = selectedShikigami.hunger > 80
 	const isHygieneGood = selectedShikigami.hygiene > 80
@@ -762,7 +744,6 @@ export function createShikigamiEmbed(selectedShikigami) {
 		const shinyBadge = "✨"
 		embed.setTitle(`${shinyBadge} ${selectedShikigami.name} ${getShikigamiEmoji(selectedShikigami.name)}`)
 
-		// Add general witty lines for Divine-General Mahoraga
 		const divineMahoragaQuotes = [
 			"Divine-General Mahoraga wonders if you're worthy of its divine presence.",
 			"Divine-General Mahoraga silently judges your every move. No pressure!",
@@ -777,7 +758,6 @@ export function createShikigamiEmbed(selectedShikigami) {
 			inline: false
 		})
 
-		// Add friendship-based witty lines for Divine-General Mahoraga
 		if (selectedShikigami.friendship <= 50) {
 			embed.addFields({
 				name: "Divine-General Mahoraga's Thoughts",
@@ -800,7 +780,6 @@ export function createShikigamiEmbed(selectedShikigami) {
 	}
 
 	if (selectedShikigami.name === "Mahoraga") {
-		// Add general witty lines for regular Mahoraga
 		const mahoragaQuotes = [
 			"Mahoraga gives you a stern look, as if questioning your life choices.",
 			"Mahoraga lets out a yawn, clearly unimpressed by your presence.",
@@ -858,7 +837,6 @@ export async function startPlayingMinigame(interaction, shikigami) {
 		{ question: "What is the square root of 49?", answer: "7" },
 		{ question: "What is the capital of Australia?", answer: "Canberra" },
 		{ question: "What is the smallest country in the world?", answer: "Vatican City" }
-		// Add more questions and answers here
 	]
 
 	const selectedQuestions = getRandomQuestions(questions, 3)
@@ -913,7 +891,7 @@ export async function startPlayingMinigame(interaction, shikigami) {
 			await interaction.followUp(
 				`Congratulations! You answered all ${selectedQuestions.length} questions correctly!`
 			)
-			await increaseBond(interaction.user.id, shikigami.name, 30) // Increase bond by 30 points
+			await increaseBond(interaction.user.id, shikigami.name, 30)
 		} else {
 			const resultEmbed = new EmbedBuilder()
 				.setTitle("Quiz Results")

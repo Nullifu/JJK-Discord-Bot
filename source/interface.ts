@@ -30,7 +30,7 @@ export const gradeMappings = {
 	"grade 4": 4
 }
 export interface TradeRequest {
-	_id: ObjectId // Include this line to define the _id property
+	_id: ObjectId
 	initiatorName: string
 	initiatorId: string
 	targetUserId: string
@@ -41,11 +41,11 @@ export interface TradeRequest {
 }
 
 export interface BossData {
-	id?: string // Making `id` optional if it's not always available
+	id?: string
 	name: string
 	max_health: number
-	current_health: number // Note the underscore and lowercase
-	image_url: string // Note the underscore and lowercase
+	current_health: number
+	image_url: string
 	grade: string
 	curse: boolean
 }
@@ -209,12 +209,12 @@ export async function buildGamblersProfile(userId, interaction) {
 }
 
 function calculateWinLossRatio(amountWon, amountLost) {
-	if (amountLost === 0) return "∞" // Avoid division by zero
+	if (amountLost === 0) return "∞"
 	return (amountWon / amountLost).toFixed(2)
 }
 
 function formatNumberWithCommas(number) {
-	return number.toLocaleString("en-US") // Formats with commas for US locale
+	return number.toLocaleString("en-US")
 }
 
 export const specialMessages = [
@@ -253,16 +253,15 @@ export const gojoRespectMessages = [
 ]
 
 export const healthMultipliersByGrade = {
-	"special grade": 3.0, // Boss health is doubled for the highest grade
+	"special grade": 3.0,
 	"grade 1": 2.5,
 	"semi-grade 1": 1.7,
 	"grade 2": 1.6,
 	"grade 3": 1.3,
-	"grade 4": 1.0 // No change for the lowest grade
+	"grade 4": 1.0
 }
 
 export function gojoCommentary(quest) {
-	// Custom commentary logic for Satoru Gojo
 	if (quest.currentProgress === 0) {
 		return "What's the hold-up? Just get started; it's not that difficult!"
 	} else if (quest.currentProgress < quest.totalProgress) {
@@ -273,7 +272,6 @@ export function gojoCommentary(quest) {
 }
 
 export function sukunaCommentary(quest) {
-	// Custom commentary logic for Ryomen Sukuna
 	if (quest.currentProgress === 0) {
 		return "Are you scared or just lazy? Either way, you're wasting my time."
 	} else if (quest.currentProgress < quest.totalProgress) {
@@ -284,7 +282,6 @@ export function sukunaCommentary(quest) {
 }
 
 export function itadoriCommentary(quest) {
-	// Custom commentary logic for Itadori
 	if (quest.currentProgress === 0) {
 		return "No worries, everyone starts somewhere! You've got this!"
 	} else if (quest.currentProgress < quest.totalProgress) {
