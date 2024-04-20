@@ -293,3 +293,17 @@ export function itadoriCommentary(quest) {
 		return "Awesome, you finished! What's next on the agenda?"
 	}
 }
+
+export const shikigamiThumbnails = {
+	"Divine-General Mahoraga": "https://i.redd.it/e99r17yyf31c1.jpg",
+	"Mahoraga":
+		"https://preview.redd.it/what-do-mahoragas-titles-mean-v0-5zkcjgyqvscb1.jpg?width=640&crop=smart&auto=webp&s=9f9c6eded8e740fca8e1710e4affb400966b69c7",
+	"Garuda":
+		"https://static.wikia.nocookie.net/jujutsu-kaisen/images/a/a4/Yuki_Tsukumo_greets_Aoi_Todo.png/revision/latest?cb=20230613024714",
+	"Divine Dogs":
+		"https://static.wikia.nocookie.net/jujutsu-kaisen/images/b/b9/Fushiguro_using_Jade_Hounds.png/revision/latest?cb=20181112220305",
+	"Toad": "https://static.wikia.nocookie.net/jujutsu-kaisen/images/c/c9/Toad.png/revision/latest/scale-to-width/360?cb=20210205005021",
+	"Nue": "https://static.wikia.nocookie.net/jujutsu-kaisen/images/d/d4/Fushiguro_using_Chimera.png/revision/latest?cb=20200130211109",
+	"Max Elephant":
+		"https://static.wikia.nocookie.net/jujutsu-kaisen/images/3/38/Max_Elephant.png/revision/latest?cb=20210205075414"
+}

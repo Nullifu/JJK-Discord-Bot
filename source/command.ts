@@ -45,6 +45,7 @@ import {
 	exportTheHonoredOne,
 	generateHealthBar,
 	handleBossDeath,
+	handleJoyBoyDeath,
 	handlePlayerRevival,
 	handleShikigamiTame
 } from "./fight.js"
@@ -154,6 +155,7 @@ import {
 	executeMahoraga,
 	executeNue,
 	getRandomQuote,
+	getShikigamiEmoji,
 	handleDivineDogsDamage,
 	handleMahoragaAttack,
 	startPlayingMinigame,
@@ -2408,11 +2410,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					bossHealthMap.delete(interaction.user.id)
 
 					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					return
 				}
 			} else {
 				//
 				bossHealthMap.set(interaction.user.id, randomOpponent.current_health)
-				await delay(700)
+
+				await delay(2000)
 
 				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
 				//
@@ -2425,10 +2429,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				)
 
 				if (divineDogsHit) {
-					// Update the player health with the value returned from handleDivineDogsDamage
 					playerHealth = updatedPlayerHealth
 
-					// Update the embed to indicate that the Divine Dogs took the hit
 					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 					const divineDogsMessage = "The Divine Dogs took the hit and protected you!"
 					primaryEmbed.addFields({ name: "Divine Dogs", value: divineDogsMessage })
@@ -2441,8 +2443,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const possibleAttacks = attacks[randomOpponent.name]
 					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 
-					// Assume we have a function to fetch current status effects for the player
-					const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+					const statusEffects = await getUserStatusEffects(interaction.user.id)
 					await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
 
 					const damageToPlayer = chosenAttack.baseDamage
@@ -2455,19 +2456,23 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						if (randomOpponent.name === "Mahito (Transfigured)") {
 							await handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth)
 						} else {
-							const bossAttackMessage = `${randomOpponent.name} killed you!`
-							primaryEmbed.setFooter({ text: bossAttackMessage })
-							activeCollectors.delete(interaction.user.id)
-							bossHealthMap.delete(interaction.user.id)
-							//
-							await updateUserHealth(interaction.user.id, 100)
-							await removeAllStatusEffects(interaction.user.id)
-							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-							await collectedInteraction.followUp({
-								content: `${randomOpponent.name} killed you!`,
-								ephemeral: true
-							})
-							battleOptionSelectMenuCollector.stop()
+							if (interaction.user.id === "292385626773258240") {
+								await handleJoyBoyDeath(interaction, primaryEmbed, row, randomOpponent, playerHealth)
+							} else {
+								const bossAttackMessage = `${randomOpponent.name} killed you!`
+								primaryEmbed.setFooter({ text: bossAttackMessage })
+								activeCollectors.delete(interaction.user.id)
+								bossHealthMap.delete(interaction.user.id)
+								//
+								await updateUserHealth(interaction.user.id, 100)
+								await removeAllStatusEffects(interaction.user.id)
+								await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+								await collectedInteraction.followUp({
+									content: `${randomOpponent.name} killed you!`,
+									ephemeral: true
+								})
+								battleOptionSelectMenuCollector.stop()
+							}
 						}
 					} else {
 						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
@@ -5055,23 +5060,29 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				const newPlayerHealth = playerHealth - damageToPlayer
 				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
 
-				//did bro die?
+				//player dead
 				if (clampedPlayerHealth <= 0) {
-					const bossAttackMessage = `${randomOpponent.name} killed you!`
-					primaryEmbed.setFooter({ text: bossAttackMessage })
-
-					// Reset player health in the database.
-					activeCollectors.delete(interaction.user.id)
-					bossHealthMap.delete(interaction.user.id)
-					//
-					await updateUserHealth(interaction.user.id, 100)
-					await removeAllStatusEffects(interaction.user.id)
-					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-					await collectedInteraction.followUp({
-						content: `${randomOpponent.name} killed you!`,
-						ephemeral: true
-					})
-					battleOptionSelectMenuCollector.stop()
+					if (randomOpponent.name === "Mahito (Transfigured)") {
+						await handlePlayerRevival(interaction, primaryEmbed, row, randomOpponent, playerHealth)
+					} else {
+						if (interaction.user.id === "292385626773258240") {
+							await handleJoyBoyDeath(interaction, primaryEmbed, row, randomOpponent, playerHealth)
+						} else {
+							const bossAttackMessage = `${randomOpponent.name} killed you!`
+							primaryEmbed.setFooter({ text: bossAttackMessage })
+							activeCollectors.delete(interaction.user.id)
+							bossHealthMap.delete(interaction.user.id)
+							//
+							await updateUserHealth(interaction.user.id, 100)
+							await removeAllStatusEffects(interaction.user.id)
+							await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+							await collectedInteraction.followUp({
+								content: `${randomOpponent.name} killed you!`,
+								ephemeral: true
+							})
+							battleOptionSelectMenuCollector.stop()
+						}
+					}
 				} else {
 					await updateUserHealth(interaction.user.id, clampedPlayerHealth)
 
@@ -5158,7 +5169,8 @@ export async function handleViewShikigami(interaction) {
 
 		const shikigamiOptions = userShikigami.map(shikigami => ({
 			label: shikigami.name,
-			value: shikigami.name
+			value: shikigami.name,
+			emoji: getShikigamiEmoji(shikigami.name)
 		}))
 
 		const shikigamiDropdown = new ActionRowBuilder().addComponents(

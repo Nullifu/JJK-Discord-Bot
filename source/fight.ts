@@ -597,6 +597,21 @@ export async function handlePlayerRevival(interaction, primaryEmbed, row, random
 	})
 }
 
+export async function handleJoyBoyDeath(interaction, primaryEmbed, row, randomOpponent, playerHealth) {
+	const userMaxHealth = await getUserMaxHealth(interaction.user.id)
+	//
+	await updateUserHealth(interaction.user.id, userMaxHealth) // Reset player health to max
+	//
+
+	primaryEmbed.setDescription(`This fight is far from over, ${randomOpponent.name}..`)
+	primaryEmbed.setImage("https://media1.tenor.com/m/Q9E7kfKz9CsAAAAd/ultra-instinct-ultra-instinct-goku.gif")
+
+	await interaction.editReply({
+		embeds: [primaryEmbed],
+		components: [row]
+	})
+}
+
 const gifs = [
 	"https://media1.tenor.com/m/O7x4NwNSGx0AAAAC/jjk.gif",
 	"https://media1.tenor.com/m/hQd_-MwNT5AAAAAd/jjk-jujutsu-kaisen.gif",

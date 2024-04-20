@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
 import { attacks } from "./attacks.js"
-import { createBar } from "./interface.js"
+import { createBar, shikigamiThumbnails } from "./interface.js"
 import { getUserShikigami, increaseBond, updateShikigamiHealth } from "./mongodb.js"
 import { applyStatusEffect, calculateDamageWithEffects } from "./statuseffects.js"
 
@@ -742,6 +742,9 @@ export function createShikigamiEmbed(selectedShikigami) {
 				inline: true
 			}
 		)
+	if (shikigamiThumbnails[selectedShikigami.name]) {
+		embed.setThumbnail(shikigamiThumbnails[selectedShikigami.name])
+	}
 
 	if (selectedShikigami.health !== undefined) {
 		embed.addFields({
@@ -752,33 +755,82 @@ export function createShikigamiEmbed(selectedShikigami) {
 			inline: true
 		})
 	}
+
 	if (selectedShikigami.name === "Divine-General Mahoraga") {
 		embed.setThumbnail("https://i.redd.it/e99r17yyf31c1.jpg")
 		embed.setColor("Gold")
-
-		// Add a special badge or icon
 		const shinyBadge = "✨"
 		embed.setTitle(`${shinyBadge} ${selectedShikigami.name} ${getShikigamiEmoji(selectedShikigami.name)}`)
 
-		// Modify the description
+		// Add general witty lines for Divine-General Mahoraga
+		const divineMahoragaQuotes = [
+			"Divine-General Mahoraga wonders if you're worthy of its divine presence.",
+			"Divine-General Mahoraga silently judges your every move. No pressure!",
+			"Divine-General Mahoraga reminds you that with great power comes great responsibility... and occasional attitude.",
+			"Divine-General Mahoraga is not impressed by your mortal antics. Step up your game!",
+			"Divine-General Mahoraga demands tribute in the form of premium shikigami treats. Or else..."
+		]
+		const randomDivineMahoragaQuote = divineMahoragaQuotes[Math.floor(Math.random() * divineMahoragaQuotes.length)]
+		embed.addFields({
+			name: "Divine-General Mahoraga's Divine Wisdom",
+			value: randomDivineMahoragaQuote,
+			inline: false
+		})
 
-		// Include additional fields
+		// Add friendship-based witty lines for Divine-General Mahoraga
+		if (selectedShikigami.friendship <= 50) {
+			embed.addFields({
+				name: "Divine-General Mahoraga's Thoughts",
+				value: "Divine-General Mahoraga grows tired of your presence. Perhaps it's time to step up your game?",
+				inline: false
+			})
+		} else {
+			embed.addFields({
+				name: "Divine-General Mahoraga's Thoughts",
+				value: "Divine-General Mahoraga acknowledges your efforts. Keep up the good work, mortal!",
+				inline: false
+			})
+		}
+
 		embed.addFields({
 			name: "Special Abilities",
 			value: "- Enhanced Divine Power\n- Increased Damage Output",
 			inline: false
 		})
 	}
+
+	if (selectedShikigami.name === "Mahoraga") {
+		// Add general witty lines for regular Mahoraga
+		const mahoragaQuotes = [
+			"Mahoraga gives you a stern look, as if questioning your life choices.",
+			"Mahoraga lets out a yawn, clearly unimpressed by your presence.",
+			"Mahoraga wonders if you have any tasty cursed spirits to snack on.",
+			"Mahoraga contemplates the meaning of life... and whether you're feeding it enough.",
+			"Mahoraga plots world domination... starting with taking over your snack stash."
+		]
+		const randomMahoragaQuote = mahoragaQuotes[Math.floor(Math.random() * mahoragaQuotes.length)]
+		description += `\n${randomMahoragaQuote}`
+
+		// Add friendship-based witty lines for regular Mahoraga
+		if (selectedShikigami.friendship <= 50) {
+			embed.addFields({
+				name: "Mahoraga's Thoughts",
+				value: "Mahoraga wonders if it chose the wrong master. Maybe it's time to reconsider your bond.",
+				inline: false
+			})
+		} else {
+			embed.addFields({
+				name: "Mahoraga's Thoughts",
+				value: "Mahoraga seems to have warmed up to you. Keep nurturing your friendship!",
+				inline: false
+			})
+		}
+	}
+
 	if (selectedShikigami.name === "Garuda") {
 		embed.setColor("DarkVividPink")
-
-		// Add a special badge or icon
 		const shinyBadge = "✨"
 		embed.setTitle(`${shinyBadge} ${selectedShikigami.name} ${getShikigamiEmoji(selectedShikigami.name)}`)
-
-		// Modify the description
-
-		// Include additional fields
 		embed.addFields({
 			name: "Special Abilities",
 			value: "- Friendly and Loyal\n- Increased Speed and Agility",
