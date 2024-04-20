@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
 import { attacks } from "./attacks.js"
+import { logger } from "./bot.js"
 import { createBar, shikigamiThumbnails } from "./interface.js"
 import { getUserShikigami, increaseBond, updateShikigamiHealth } from "./mongodb.js"
 import { applyStatusEffect, calculateDamageWithEffects } from "./statuseffects.js"
@@ -386,10 +387,11 @@ export async function handleMahoragaAttack(
 	userTechniquesFight
 ) {
 	const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
-
 	if (!hasMahoragaAdaptation) {
 		return
 	}
+
+	logger.info("Mahoraga attack")
 
 	const userShikigami = await getUserShikigami(collectedInteraction.user.id)
 	const hasDivineGeneralMahoraga = userShikigami.some(shikigami => shikigami.name === "Divine-General Mahoraga")
@@ -401,7 +403,6 @@ export async function handleMahoragaAttack(
 		userTechniquesFight.set(`${collectedInteraction.user.id}_mahoraga_adaptation`, mahoragaAdaptation)
 
 		let mahoragaDamage = Math.floor(Math.random() * 20) + 75
-
 		if (hasDivineGeneralMahoraga) {
 			mahoragaDamage += 50
 		}
@@ -426,9 +427,11 @@ export async function handleMahoragaAttack(
 			primaryEmbed.setDescription("The Divine-General Mahoraga unleashes its sacred power!")
 		}
 
+		await collectedInteraction.editReply({ embeds: [primaryEmbed] })
+
 		if (mahoragaAdaptation === 6) {
-			const mahoragaSpecialDamage = Math.floor(Math.random() * 200) + 100 // Random damage between 100 and 300
-			const additionalDamage = hasDivineGeneralMahoraga ? 100 : 0 // Additional damage for Divine-General Mahoraga
+			const mahoragaSpecialDamage = Math.floor(Math.random() * 200) + 100
+			const additionalDamage = hasDivineGeneralMahoraga ? 100 : 0
 			const totalSpecialDamage = mahoragaSpecialDamage + additionalDamage
 
 			const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
@@ -446,11 +449,11 @@ export async function handleMahoragaAttack(
 				`Mahoraga has unleashed its full power, dealing ${totalSpecialDamage} damage to the enemy!`
 			)
 			primaryEmbed.setImage("https://media1.tenor.com/m/pYgj13yEW_wAAAAC/sukuna-mahoraga.gif")
-
 			userTechniquesFight.delete(`${collectedInteraction.user.id}_mahoraga_adaptation`)
 
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 			await new Promise(resolve => setTimeout(resolve, 3000))
+
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 		}
 	}

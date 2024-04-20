@@ -2338,6 +2338,21 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - damage))
 			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
 
+			await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
+
+			const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
+
+			if (hasMahoragaAdaptation) {
+				await handleMahoragaAttack(
+					collectedInteraction,
+					bossHealthMap,
+					randomOpponent,
+					primaryEmbed,
+					row,
+					userTechniquesFight
+				)
+			}
+
 			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 			primaryEmbed.setDescription(fightResult)
 
@@ -2355,19 +2370,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			)
 
 			await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
-
-			const hasMahoragaAdaptation = userTechniquesFight.has(`${collectedInteraction.user.id}_mahoraga_adaptation`)
-
-			if (hasMahoragaAdaptation) {
-				await handleMahoragaAttack(
-					collectedInteraction,
-					bossHealthMap,
-					randomOpponent,
-					primaryEmbed,
-					row,
-					userTechniquesFight
-				)
-			}
 
 			// is boss dead?
 			if (randomOpponent.current_health <= 0) {
@@ -2419,6 +2421,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				await delay(2000)
 
 				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+
 				//
 
 				const { divineDogsHit, newPlayerHealth: updatedPlayerHealth } = await handleDivineDogsDamage(
@@ -2938,7 +2941,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 			await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
 		}
-		if (supatechnique && !userTechniques.includes("Prayer Songt")) {
+		if (supatechnique && !userTechniques.includes("Prayer Song")) {
 			await addUserTechnique(userId, "Prayer Song")
 			const techniqueEmbed = new EmbedBuilder()
 				.setColor("#FFD700")
@@ -3063,7 +3066,7 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 // handle sell command
 
 export async function handleSellCommand(interaction) {
-	const itemToSell = interaction.options.getString("item").toLowerCase() // Normalize input for case-insensitive comparison
+	const itemToSell = interaction.options.getString("item").toLowerCase()
 	const quantity = interaction.options.getInteger("quantity") || 1
 
 	const userInventory = await getUserInventory(interaction.user.id)
@@ -3077,7 +3080,6 @@ export async function handleSellCommand(interaction) {
 	const price = itemDetails ? itemDetails.price : 5000
 	const earnings = price * quantity
 
-	// Prepare the confirmation embed
 	const confirmationEmbed = new EmbedBuilder()
 		.setColor(0x0099ff)
 		.setTitle("Confirm Sale")
@@ -3085,22 +3087,18 @@ export async function handleSellCommand(interaction) {
 			`Are you sure you want to sell ${quantity} x ${inventoryItem.name} for ${earnings.toLocaleString()} coins?`
 		)
 
-	// Prepare "Confirm" and "Cancel" buttons
 	const row = new ActionRowBuilder().addComponents(
 		new ButtonBuilder().setCustomId("confirm_sell").setLabel("Confirm").setStyle(ButtonStyle.Success),
 		new ButtonBuilder().setCustomId("cancel_sell").setLabel("Cancel").setStyle(ButtonStyle.Danger)
 	)
 
-	// Send the confirmation message with buttons
 	await interaction.reply({ embeds: [confirmationEmbed], components: [row], ephemeral: true })
 
-	// Button interaction handling
 	const filter = i => ["confirm_sell", "cancel_sell"].includes(i.customId) && i.user.id === interaction.user.id
 	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 })
 
 	collector.on("collect", async i => {
 		if (i.customId === "confirm_sell") {
-			// Proceed with the sale
 			await removeItemFromUserInventory(interaction.user.id, inventoryItem.name, quantity)
 			await updateBalance(interaction.user.id, earnings)
 			const balance = await getBalance(interaction.user.id)
@@ -3113,7 +3111,6 @@ export async function handleSellCommand(interaction) {
 				components: []
 			})
 		} else {
-			// Cancel the sale
 			await i.update({ content: "Sale cancelled.", embeds: [], components: [] })
 		}
 	})
@@ -3130,20 +3127,19 @@ function getRewardString(quest) {
 	let rewards = ""
 	if (quest.item) rewards += `${quest.item} (x${quest.itemQuantity})\n`
 	if (quest.items) {
-		// Handle multiple items
 		Object.entries(quest.items).forEach(([itemName, quantity]) => {
 			rewards += `${itemName} (x${quantity})\n`
 		})
 	}
-	return rewards || "None" // If no rewards, display "None"
+	return rewards || "None" //
 }
 // Ban...KAI!
 export async function handleQuestCommand(interaction: ChatInputCommandInteraction) {
 	console.log(questsArray)
 	const userId = interaction.user.id
 
-	const userActiveQuests = await getUserQuests(userId) // Fetch the user's active quests
-	const activeQuestNames = userActiveQuests.quests.map(q => q.id) // Extract the active quest names
+	const userActiveQuests = await getUserQuests(userId)
+	const activeQuestNames = userActiveQuests.quests.map(q => q.id)
 
 	const availableQuests = questsArray.filter(quest => !activeQuestNames.includes(quest.name) && !quest.special)
 
@@ -3154,7 +3150,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 	const questOptions = availableQuests.map(quest => ({
 		label: quest.name,
 		value: quest.name,
-		description: quest.description.substring(0, 100) // Description is truncated to fit within the 100 character limit
+		description: quest.description.substring(0, 100)
 	}))
 
 	if (questOptions.length === 0) {
@@ -3201,19 +3197,16 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 			const questEmbed = new EmbedBuilder()
 				.setTitle(selectedQuest.name)
 				.setDescription(selectedQuest.description)
-				.setColor("#0099ff") // Adjust color as needed
+				.setColor("#0099ff")
 
-				// Basic Quest Info
 				.addFields(
 					{ name: "Coins", value: selectedQuest.coins.toString(), inline: true },
 					{ name: "EXP", value: selectedQuest.experience.toString(), inline: true },
 					{ name: "Task", value: selectedQuest.task, inline: false } // Wider field
 				)
 
-				// Rewards
 				.addFields({ name: "Rewards", value: getRewardString(selectedQuest), inline: false })
 
-			// Multi-Task Quests
 			if (selectedQuest.tasks) {
 				selectedQuest.tasks.forEach((task, index) => {
 					questEmbed.addFields({
