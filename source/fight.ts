@@ -159,12 +159,6 @@ export async function handleShikigamiTame(
 
 	const hasShikigami = userShikigami.some(shikigami => shikigami.name === tamedShikigami.name)
 
-	// Update the user's shikigami with the tamed boss
-	await updateUserShikigami(interaction.user.id, tamedShikigami)
-
-	// Update the user's shikigami with the tamed boss
-	await updateUserShikigami(interaction.user.id, tamedShikigami)
-
 	const privateEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Battle Rewards")
 
 	if (!hasShikigami) {

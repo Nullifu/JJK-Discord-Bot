@@ -2260,7 +2260,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 3,
-					imageUrl: "https://media1.tenor.com/m/blvmSHjEGFsAAAAd/jjk-jujutsu-kaisen.gif",
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1094302755960664255/1231296159050633349/ezgif-5-4e8c15c666.gif?ex=66254d68&is=6623fbe8&hm=229aa5f92f55cb990cea75086e49ed65d89a0cff2d85a9a0a0405c35f91174b4&",
 					description: `Dissect! ${randomOpponent.name}`,
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
