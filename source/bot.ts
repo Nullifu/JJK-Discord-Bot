@@ -232,7 +232,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(100)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
@@ -388,29 +388,29 @@ const commands = [
 		.setName("useitem")
 		.setDescription("Use an item from your inventory")
 		.addStringOption(option =>
-			option
-				.setName("item")
-				.setDescription("The name of the item to use")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Sukuna Finger", value: "Sukuna Finger" },
-					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
-					{ name: "Six Eyes", value: "Six Eyes" },
-					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
-					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
-					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
-					{ name: "Sacred Eye", value: "Sacred Eye" },
-					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
-					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
-					{ name: "Cursed Chest", value: "Cursed Chest" },
-					{ name: "Soul Bundle", value: "Soul Bundle" },
-					{ name: "Curse Repellent", value: "Curse Repellent" },
-					{
-						name: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
-						value: "Special-Grade Cursed Object"
-					},
-					{ name: "Cleaning Sponge", value: "Cleaning Sponge" }
-				)
+			option.setName("item").setDescription("The name of the item to use").setRequired(true).addChoices(
+				{ name: "Sukuna Finger", value: "Sukuna Finger" },
+				{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
+				{ name: "Six Eyes", value: "Six Eyes" },
+				{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
+				{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
+				{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
+				{ name: "Sacred Eye", value: "Sacred Eye" },
+				{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
+				{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
+				{ name: "Cursed Chest", value: "Cursed Chest" },
+				{ name: "Soul Bundle", value: "Soul Bundle" },
+				{ name: "Curse Repellent", value: "Curse Repellent" },
+				{
+					name: "Special-Grade Cursed Object",
+					value: "Special-Grade Cursed Object"
+				},
+				{
+					name: "Special Grade Cursed Object",
+					value: "Special Grade Cursed Object"
+				},
+				{ name: "Cleaning Sponge", value: "Cleaning Sponge" }
+			)
 		)
 		.addStringOption(option =>
 			option

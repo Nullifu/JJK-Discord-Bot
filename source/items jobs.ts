@@ -802,7 +802,7 @@ export const benefactors = [
 	{ name: "Go", coins: 9500, item: "Go", itemQuantity: 1, weight: 1 },
 	{ name: "Jo", coins: 9500, item: "Jo", itemQuantity: 1, weight: 1 },
 	{ name: "Kento Nanami", coins: 1500, weight: 8 },
-	{ name: "Yuji Itadori", item: "Special Grade Cursed Object", itemQuantity: 1, weight: 2 },
+	{ name: "Yuji Itadori", item: "Special-Grade Cursed Object", itemQuantity: 1, weight: 2 },
 	{ name: "Hakari Kinji", coins: 3000, item: "Gambler Token", itemQuantity: 1, weight: 5 },
 	{ name: "Curse King", coins: 1, item: "Sukuna Finger", itemQuantity: 1, weight: 3 },
 	{ name: "Nobara Kugisaki", coins: 3000, item: "Nobara's Right Eye", itemQuantity: 1, weight: 3 },

@@ -4306,7 +4306,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const randomChance = Math.random()
 
 	// Define the probability of getting a Divine-General Mahoraga (e.g., 5% chance)
-	const divineGeneralChance = 95
+	const divineGeneralChance = 0.008
 
 	// Check if the user is lucky enough to get a Divine-General Mahoraga
 	if (chosenShikigami.name === "Mahoraga" && randomChance < divineGeneralChance) {
