@@ -1457,7 +1457,7 @@ export const items1: Item1[] = [
 
 			setTimeout(async () => {
 				const findChance = Math.random()
-				const chanceToFindYuta = 0.2
+				const chanceToFindYuta = 0.4
 
 				if (findChance <= chanceToFindYuta) {
 					const gains =
