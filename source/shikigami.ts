@@ -64,7 +64,7 @@ export async function executeMahoraga({
 	if (techniqueName === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
 		const userShikigami = await getUserShikigami(collectedInteraction.user.id)
 
-		const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga")
+		const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga" || "Divine-General Mahoraga")
 
 		if (hasMahoraga) {
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
