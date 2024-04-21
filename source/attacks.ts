@@ -1,11 +1,25 @@
-import { EmbedBuilder } from "discord.js"
-
-export interface Attack {
+interface Attack {
 	name: string
-	baseDamage: number
-	probability: number // Probability of the attack happening from 0% to 100%
-	embedUpdate: (embed: EmbedBuilder) => EmbedBuilder // Optional function to update the embed
-	// Other attack properties if needed (damage calculation, special effects, etc.)
+	probability: number
+	baseDamage: (playerGrade: string) => number
+}
+
+function getGradeDamageBonus(grade: string): number {
+	switch (grade) {
+		case "Special Grade":
+			return 2.0
+		case "Grade 1":
+			return 1.7
+		case "Semi-Grade 1":
+			return 1.4
+		case "Grade 2":
+			return 1.2
+		case "Grade 3":
+			return 1.1
+		case "Grade 4":
+		default:
+			return 1.0
+	}
 }
 
 export const attacks: Record<string, Attack[]> = {
@@ -14,26 +28,25 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Cleave",
 			probability: 60,
-			baseDamage: 25,
-			embedUpdate: embed => embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Domain Expansion: Malevolent Shrine!",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed =>
-				embed.setImage(
-					"https://tenor.com/en-GB/view/jjk-jujutsu-kaisen-jjk-fight-jujutsu-kaisen-fight-sukuna-gif-15525695609492803291"
-				)
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Flame Arrow",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => {
-				embed.setImage("https://i.pinimg.com/originals/80/8a/92/808a927200ed3552e01bf77b6349d2b8.gif")
-				embed.setDescription("Fuga... Never seen this one before have you?")
-				return embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
 			}
 		}
 	],
@@ -43,20 +56,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Black Flash",
 			probability: 50,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("A surge of cursed energy... BLACK FLASH!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Divergent Fist: Hundred Folds!",
 			probability: 30,
-			baseDamage: 25,
-			embedUpdate: embed => embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Divergent Fist: Collapsing Spear",
 			probability: 20,
-			baseDamage: 25,
-			embedUpdate: embed => embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		}
 	],
 
@@ -65,20 +84,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Limitless: Blue!",
 			probability: 40,
-			baseDamage: 35,
-			embedUpdate: embed => embed.setColor("#0000FF")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Reversal: Red",
 			probability: 40,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setColor("#0000FF")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Hollow: PURPLE!",
 			probability: 20,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setColor("#0000FF")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		}
 	],
 	// Itadori's attacks
@@ -86,14 +111,18 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Brotherly Bond: Chain Blitz!",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Let's go BROTHER!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Unison Impact",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		}
 	],
 	// Itadori's attacks
@@ -101,24 +130,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Divine Dogs: Shadow Pursuit",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Demon Dogs!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Domain Expansion: Chimera Shadow Garden",
 			probability: 20,
-			baseDamage: 25,
-			embedUpdate: embed => {
-				embed.setImage("https://i.imgur.com/eGaZjlO.gif")
-				embed.setDescription("HAHAHAHA WHY THE HELL NOT!")
-				return embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
 			}
 		},
 		{
 			name: "Shikigami Fusion: Shadow Behemoth",
 			probability: 30,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Let's ramp this up!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		}
 	],
 	// Itadori's attacks
@@ -126,24 +157,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Soul Severance",
 			probability: 50,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("Slice!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Chain Snare",
 			probability: 20,
-			baseDamage: 35,
-			embedUpdate: embed => {
-				embed.setImage("https://www.icegif.com/wp-content/uploads/2023/12/icegif-997.gif")
-				embed.setDescription("I'm going to lose huh?")
-				return embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
 			}
 		},
 		{
 			name: "Null Strike",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("This fight's not over.")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		}
 	],
 	// Itadori's attacks
@@ -151,20 +184,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Fire Manipulation (Weakened)",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BURN!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Barrage of punches",
 			probability: 20,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Pathetic!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Null Strike",
 			probability: 30,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("This fight's not over.")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		}
 	],
 	// geto
@@ -172,20 +211,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Cursed Spirit Manipulation",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Cursed Spirit Manipulation!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Energy Blast",
 			probability: 20,
-			baseDamage: 14,
-			embedUpdate: embed => embed.setDescription("Cursed Energy Blast!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 14 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Energy Barrier",
 			probability: 30,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Cursed Energy Barrier!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		}
 	],
 	// Jogo
@@ -193,23 +238,25 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Fire Manipulation",
 			probability: 50,
-			baseDamage: 19,
-			embedUpdate: embed => embed.setDescription("Fire Manipulation!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 19 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Fireball",
 			probability: 20,
-			baseDamage: 18,
-			embedUpdate: embed => embed.setDescription("Fireball!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 18 * gradeDamageBonus
+			}
 		},
 		{
 			name: "MAXIMUM TECHNIQUE: METEOR!!!!",
 			probability: 30,
-			baseDamage: 30,
-			embedUpdate: embed => {
-				embed.setImage("https://media1.tenor.com/m/pNvg0g4K4VMAAAAd/sukuna-skate-sukuna-skating.gif")
-				embed.setDescription("I'LL BURN YOU TO A CRISP! ")
-				return embed
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
 			}
 		}
 	],
@@ -218,20 +265,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Transfiguration",
 			probability: 50,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setDescription("Transfiguration!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Polymorphic Soul Isomer",
 			probability: 20,
-			baseDamage: 60,
-			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Mewetenpen",
 			probability: 30,
-			baseDamage: 60,
-			embedUpdate: embed => embed.setDescription("I'll show you the true nature of the soul.")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
 		}
 	],
 	// Mahito
@@ -239,25 +292,26 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Awakened: Lapse Blue",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("Blue!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Awakened: Reversal Red",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Aka!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Imaginary Technique: Purple",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed =>
-				embed
-					.setImage(
-						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif"
-					)
-					.setDescription("Hollow.. Purple")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
 	// Mahito
@@ -265,127 +319,161 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Adapted: Strike",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("......")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Pummel",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription(".......")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Adapted: Blast",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("......")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
 
-	// Mahito
 	"Mahito Instant Spirit Body of Distorted Killing": [
 		{
 			name: "Soul Multiplicity",
 			probability: 50,
-			baseDamage: 56,
-			embedUpdate: embed => embed.setDescription("Transfiguration!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 56 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Soul Snatch",
 			probability: 30,
-			baseDamage: 45,
-			embedUpdate: embed => embed.setDescription("DISAPPEAR!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 45 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Domain Expansion: Self Embodiment of Perfection",
 			probability: 20,
-			baseDamage: 110,
-			embedUpdate: embed =>
-				embed
-					.setImage("https://media1.tenor.com/m/J_g_1B1HK0oAAAAC/koogender.gif")
-					.setDescription("I'll show you the true nature of the soul.")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 110 * gradeDamageBonus
+			}
 		}
 	],
-	// Mahito
+
 	"Kashimo": [
 		{
 			name: "Electricity Manipulation",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Electricity Blast",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Electrified Strike",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
-	// Mahito
+
 	"Hakari Kinji": [
 		{
 			name: "Barrage",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Gamblers Strike",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Jackpot: Cargo Rush",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Hakari (Jackpot)": [
 		{
 			name: "Jackpot: Fleeting Rush",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Private Pure Love Train: Pachinko Rush",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Private Pure Love Train: Cargo Rush",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Finger Bearer": [
 		{
 			name: "Strike",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Energy Blast",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Explosion",
 			probability: 20,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		}
 	],
 
@@ -393,160 +481,215 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Black Flash",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Steel Arm: Freeze Flash",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Vengeance: Executioner's Blade",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Yuta Okkotsu (Rika)": [
 		{
 			name: "Combined Attack: Black Flash",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Curse Queen: Rika's Rampage",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Pure Love: Rika's Embrace",
 			probability: 20,
-			baseDamage: 70,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 70 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Yuki Tsukumo": [
 		{
 			name: "Star Rage: Virtual Mass",
 			probability: 20,
-			baseDamage: 70,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 70 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Star Rage: Virtual Mars",
 			probability: 50,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Star Rage: Virtual Earth",
 			probability: 30,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Sukuna (Heian Era)": [
 		{
 			name: "Kamutoke",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Spiderweb",
 			probability: 30,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "World Cutting Slash",
 			probability: 20,
-			baseDamage: 70,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 70 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Zenin Toji (Reincarnated)": [
 		{
 			name: "Purgatory",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Bloodlusted: Skull Crush",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Racism: World Cutting Slash",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Disaster Curses": [
 		{
 			name: "Combined: Stream",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Combined: Waterfall",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Combined: Fluxing Stream",
 			probability: 20,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Dagon": [
 		{
 			name: "Oceanic: Stream",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Disaster Tides: Death Swarm",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Horizon of the Captivating Skandha",
 			probability: 20,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Hanami": [
 		{
 			name: "Flower Garden",
 			probability: 50,
-			baseDamage: 25,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 25 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Bud",
 			probability: 30,
-			baseDamage: 17,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 17 * gradeDamageBonus
+			}
 		},
 		{
 			name: "World of Cursed Blossoms",
 			probability: 20,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		}
 	],
 
@@ -554,360 +697,482 @@ export const attacks: Record<string, Attack[]> = {
 		{
 			name: "Transfiguration",
 			probability: 50,
-			baseDamage: 14,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 14 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Soul Touch",
 			probability: 30,
-			baseDamage: 41,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 41 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cloning Technique",
 			probability: 20,
-			baseDamage: 26,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 26 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Mahito (120%)": [
 		{
 			name: "Limit-Broken: Transfiguration",
 			probability: 50,
-			baseDamage: 32,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 32 * gradeDamageBonus
+			}
 		},
 		{
 			name: "120% Soul Touch",
 			probability: 30,
-			baseDamage: 28,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 28 * gradeDamageBonus
+			}
 		},
 		{
 			name: "120% Cloning Technique",
 			probability: 20,
-			baseDamage: 42,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 42 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Panda": [
 		{
 			name: "Panda Punch",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Panda Rage",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Panda Pultz",
 			probability: 20,
-			baseDamage: 24,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 24 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Cursed Spirit": [
 		{
 			name: "Cursed Spirit Blast",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Spiritual Strike",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Spiritual Pultz",
 			probability: 20,
-			baseDamage: 24,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 24 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Inumaki": [
 		{
 			name: "Cursed Speech: Die",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Speech: Twist",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Cursed Speech: Bind",
 			probability: 20,
-			baseDamage: 24,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 24 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Maki Zenin": [
 		{
 			name: "Zenin Style: Strike",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
-			name: "Blitz ",
+			name: "Blitz",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Acrobatic Strike",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Kento Nanami": [
 		{
 			name: "Overtime: Ratio",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Overtime: Maximum",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Overtime: Limit",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Roppongi Curse": [
 		{
 			name: "Curse Blast",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Curse Strike",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Curse Pultz",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
-	"Yasohachi Bridge Curse ": [
+	"Yasohachi Bridge Curse": [
 		{
 			name: "Curse Blast",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Curse Strike",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Curse Pultz",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
 	"Nobara Kugisaki": [
 		{
 			name: "Hairpin",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Resonance",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Black Flash",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
 	"Aoi Todo": [
 		{
 			name: "Boogie Woogie: Surplex",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Boogie Woogie: Swap",
 			probability: 30,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Black Flash",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Satoru Gojo Limit-Broken": [
 		{
 			name: "100% Maximum Technique: Blue!",
 			probability: 50,
-			baseDamage: 50,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 50 * gradeDamageBonus
+			}
 		},
 		{
 			name: "100% Reversal Red",
 			probability: 30,
-			baseDamage: 60,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
 		},
 		{
 			name: "200% Hollow Purple",
 			probability: 20,
-			baseDamage: 80,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 80 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Divine Dogs": [
 		{
 			name: "Divine Dogs: Bite",
 			probability: 50,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Divine Dogs: Shadow Pursuit",
 			probability: 30,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Divine Dogs: Twin Wolves",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Nue": [
 		{
 			name: "Nue: Bite",
 			probability: 50,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Nue: Dropdown Strike",
 			probability: 30,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Nut: Lightning Manipulation",
 			probability: 20,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Toad": [
 		{
 			name: "ribbit",
 			probability: 50,
-			baseDamage: 1,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 1 * gradeDamageBonus
+			}
 		},
 		{
 			name: "ribbit1",
 			probability: 30,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Domain Expansion: ribbit2",
 			probability: 20,
-			baseDamage: 120,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 120 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Great Serpent": [
 		{
 			name: "Ssss-Strike",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Worm Strike",
 			probability: 30,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Serpent Strike",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Max Elephant": [
 		{
 			name: "Water Manipulation",
 			probability: 50,
-			baseDamage: 20,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Belly Flop",
 			probability: 30,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Elephant Charge",
 			probability: 20,
-			baseDamage: 30,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
 		}
 	],
+
 	"Divine-General Mahoraga": [
 		{
 			name: "Foresight Adaption",
 			probability: 50,
-			baseDamage: 40,
-			embedUpdate: embed => embed.setDescription("BLAST!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
 		},
 		{
 			name: "?$!h!@",
 			probability: 30,
-			baseDamage: 60,
-			embedUpdate: embed => embed.setDescription("Strike!")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
 		},
 		{
 			name: "Divine-General Blade",
 			probability: 20,
-			baseDamage: 175,
-			embedUpdate: embed => embed.setDescription("ZAP")
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 175 * gradeDamageBonus
+			}
 		}
 	]
 }

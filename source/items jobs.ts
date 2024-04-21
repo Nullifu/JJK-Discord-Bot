@@ -11,6 +11,7 @@ import {
 	getUserInventory,
 	getUserQuests,
 	getUserUnlockedTransformations,
+	removeAllItemEffects,
 	removeItemFromUserInventory,
 	resetBetLimit,
 	updateBalance,
@@ -199,7 +200,7 @@ export const craftingRecipes = {
 		requiredItems: [
 			{ name: "Prison Realm Fragment", quantity: 6 },
 			{ name: "Rikugan Eye", quantity: 2 },
-			{ name: "Special Grade Cursed Object", quantity: 4 },
+			{ name: "Special Grade Cursed Object" || "Special-Grade Cursed Object", quantity: 4 },
 			{ name: "Sukuna Finger", quantity: 1 }
 		],
 		craftedItemName: "Special-Grade Geo Locator",
@@ -578,7 +579,7 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Rikugan Eye", quantity: 1 }]
 		}
 	],
-	"Fushiguro": [
+	"Ten Shadows": [
 		{
 			name: "Ten Shadows Technique: Divergent Sila Divine General Mahoraga",
 			description: "With this treasure i summon...",
@@ -1623,8 +1624,8 @@ export const items1: Item1[] = [
 		}
 	},
 	{
-		itemName: "Soul Bundle",
-		description: "Soul Bundle",
+		itemName: "Starter Bundle",
+		description: "Starter Bundle",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
@@ -1641,6 +1642,23 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You open the Starter Bundle and get! 1x Sukuna Finger, 5x Tailsman. + 20,000 Coins! And a free technique! [ Fist of the Cursed ], Have fun!"
 				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+		}
+	},
+	{
+		itemName: "Special-Grade Anti Effect Spray",
+		description: "Special-Grade Anti Effect Spray",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await removeAllItemEffects(interaction.user.id)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Anti Effect Spray")
+				.setDescription("You spray yourself and remove all effects!")
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},

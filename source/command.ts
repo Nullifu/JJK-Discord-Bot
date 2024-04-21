@@ -2470,11 +2470,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					const possibleAttacks = attacks[randomOpponent.name]
 					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 
-					const statusEffects = await getUserStatusEffects(interaction.user.id)
-					await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
+					// Assume we have a function to fetch current status effects for the player
+					const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
 
-					const damageToPlayer = chosenAttack.baseDamage
+					// Assume we have a function to get the player's grade
+					const playerGrade = await getUserGrade(interaction.user.id)
 
+					// Calculate the base damage using the player's grade
+					const baseDamage = chosenAttack.baseDamage(playerGrade)
+
+					// Calculate the damage with effects
+					await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
+
+					const damageToPlayer = baseDamage
 					const newPlayerHealth = playerHealth - damageToPlayer
 					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
 
@@ -5042,10 +5050,17 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 
 				// Assume we have a function to fetch current status effects for the player
 				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
-				await calculateDamageWithEffects(interaction.user.id, chosenAttack.baseDamage, statusEffects)
 
-				const damageToPlayer = chosenAttack.baseDamage
+				// Assume we have a function to get the player's grade
+				const playerGrade = await getUserGrade(interaction.user.id)
 
+				// Calculate the base damage using the player's grade
+				const baseDamage = chosenAttack.baseDamage(playerGrade)
+
+				// Calculate the damage with effects
+				await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
+
+				const damageToPlayer = baseDamage
 				const newPlayerHealth = playerHealth - damageToPlayer
 				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
 

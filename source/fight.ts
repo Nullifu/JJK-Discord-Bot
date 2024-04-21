@@ -27,7 +27,6 @@ export async function handleBossDeath(
 	row: ActionRowBuilder<SelectMenuBuilder>,
 	opponent: BossData
 ) {
-	// Show victory embed
 	const victoryMessage = "You won"
 	embed.setDescription(victoryMessage)
 
@@ -44,18 +43,15 @@ export async function handleBossDeath(
 		return Math.floor(Math.random() * (max - min + 1)) + min
 	}
 
-	// Calculate experience they get
 	const experienceGain = getRandomXPGain()
 	const coinsGained = getrandommoney()
 
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
 	}
-
 	if (opponent.name === "Satoru Gojo") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
 	}
-
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
 	}
@@ -78,7 +74,6 @@ export async function handleBossDeath(
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
 	}
 
-	// Update values in the database
 	activeCollectors.delete(interaction.user.id)
 	await updateUserHealth(interaction.user.id, 100)
 	await updateUserExperience(interaction.user.id, experienceGain)
@@ -87,7 +82,6 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 
-	// Show a loot drop embed & add to database
 	const drop = getBossDrop(opponent.name)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
 	await updateBalance(interaction.user.id, coinsGained)
@@ -118,12 +112,10 @@ export async function handleShikigamiTame(
 		hunger: number
 		friendship: number
 	}
-	// Show victory embed
 	const victoryMessage = "You won"
 	embed.setDescription(victoryMessage)
 	const drop = getBossDrop(opponent.name)
 
-	// Update values in the database
 	activeCollectors.delete(interaction.user.id)
 	await updateUserHealth(interaction.user.id, 100)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
@@ -162,7 +154,6 @@ export async function handleShikigamiTame(
 	const privateEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Battle Rewards")
 
 	if (!hasShikigami) {
-		// Update the user's shikigami with the tamed boss only if they don't already have it
 		await updateUserShikigami(interaction.user.id, tamedShikigami)
 		privateEmbed.addFields({ name: "Tamed", value: `You've tamed ${opponent.name}!` })
 	} else {
@@ -175,7 +166,6 @@ export async function handleShikigamiTame(
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
 }
 
-// Function to handle the execution of special techniques
 export async function executeSpecialTechnique({
 	collectedInteraction,
 	techniqueName,
@@ -189,14 +179,14 @@ export async function executeSpecialTechnique({
 }) {
 	const techniquesUsed = userTechniquesFight.get(userId) || []
 	techniquesUsed.push(techniqueName)
-	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new array
+	userTechniquesFight.set(userId, techniquesUsed)
 
 	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
 	const playerGradeString = playerGradeData
 
 	// Technique hasn't been used, proceed
 	techniquesUsed.push(techniqueName)
-	userTechniquesFight.set(userId, techniquesUsed) // Update the map with the new techniques list
+	userTechniquesFight.set(userId, techniquesUsed)
 
 	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
 
@@ -251,15 +241,12 @@ function getJujutsuFlavorText(bossName: string): FlavorText | null {
 		return { name: "(curse noises)", value: "........." }
 	}
 
-	// Add a default case if you'd like
 	return null
 }
 
-// handleTheHonoredOne if boss name is curse king he comes back to life with new name and max hp
 export async function exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
 
-	// Initially, it seems like the boss is defeated
 	if (random < 0.4) {
 		const fakeDeathEmbed = new EmbedBuilder()
 			.setTitle("You won!")
@@ -273,7 +260,7 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 			)
 		await interaction.editReply({ embeds: [fakeDeathEmbed], components: [] })
 
-		await new Promise(resolve => setTimeout(resolve, 4000)) // 5 seconds delay
+		await new Promise(resolve => setTimeout(resolve, 4000))
 
 		const reawakeningEmbed = new EmbedBuilder()
 			.setDescription("Yo... It's been awhile.")
@@ -281,18 +268,18 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 				name: "FOR REAL REAL IM STILL ALIVE AND KICKING!",
 				value: "YOUR GOING TO LOSE BECAUSE YOU DIDNT USE THAT CURSE TOOL TO FINISH ME OFF"
 			})
-			.setImage("https://media1.tenor.com/m/c67XWC0HaEwAAAAC/gojo-toji.gif") // GIF of Gojo reawakening
+			.setImage("https://media1.tenor.com/m/c67XWC0HaEwAAAAC/gojo-toji.gif")
 			.setColor("#00FF00")
 
 		await interaction.editReply({ embeds: [reawakeningEmbed], components: [] })
 
-		await new Promise(resolve => setTimeout(resolve, 3000)) // 3 seconds delay
+		await new Promise(resolve => setTimeout(resolve, 3000))
 
 		randomOpponent.name = "The Honored One"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = await getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, usermaxhealth)
 
 		primaryEmbed
 			.setDescription("Gojo Satoru has reawakened as The Honored One!")
@@ -302,7 +289,6 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 				{ name: "Player Health", value: playerHealth.toString() }
 			)
 
-		// Update the message with the fight's continuation
 		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 		return true
@@ -338,10 +324,10 @@ export async function exportGambler(interaction, randomOpponent, primaryEmbed, r
 	const random = Math.random()
 	if (random < 0.7) {
 		randomOpponent.name = "Hakari (Jackpot)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription("Hakari has entered jackpot mode!")
 		primaryEmbed.setImage("https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif")
@@ -363,10 +349,10 @@ export async function exportTheFraud(interaction, randomOpponent, primaryEmbed, 
 	const random = Math.random()
 	if (random < 0.4) {
 		randomOpponent.name = "Sukuna (Suppressed)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription(
 			"Hmph, pathetic brat. Look at the state you've gotten yourself into, **SUKUNA HAS TAKEN OVER YUJI ITADORI'S BODY AND IS NOW IN CONTROL! DEFEAT HIM BEFORE HE FULLY TAKES OVER**"
@@ -389,10 +375,10 @@ export async function exportReincarnation(interaction, randomOpponent, primaryEm
 	const random = Math.random()
 	if (random < 0.5) {
 		randomOpponent.name = "Zenin Toji (Reincarnated)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription(
 			"Those who inherited the curse of the Zen'in family… The one who couldn't fully leave behind that curse… They would all bear witness to the bare flesh of the one who is free… To the one.. Who stands before you with this curse."
@@ -429,7 +415,6 @@ export async function exportRika(interaction, randomOpponent, primaryEmbed, row,
 			const userMaxHealth = await getUserMaxHealth(interaction.user.id)
 			await updateUserHealth(interaction.user.id, userMaxHealth)
 
-			// Set the image and health fields in the embed
 			primaryEmbed.setImage("https://media1.tenor.com/m/BhgnUENmzrkAAAAC/jujutsu-kaisen0-yuta-okkotsu.gif")
 			primaryEmbed.setDescription("Rika.. Lend me your strength. **CURSE QUEEN RIKA HAS JOINED THE BATTLE!**")
 			primaryEmbed.setFields(
@@ -437,24 +422,23 @@ export async function exportRika(interaction, randomOpponent, primaryEmbed, row,
 				{ name: "Player Health", value: playerHealth.toString() }
 			)
 
-			// Send the updated reply
 			await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
 
 			return true
 		}
 	}
 
-	return false // If the battle doesn't result in defeating Yuta, continue with existing logic
+	return false
 }
 
 export async function exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
 	if (random < 0.4) {
 		randomOpponent.name = "Mahoraga"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription(`Hey ${interaction.user.username}.. I'll be dying first. Give it your best shot...`)
 		primaryEmbed.setImage("https://media1.tenor.com/m/mC0Tc7Xm7iUAAAAC/megumi-megumifushiguro.gif")
@@ -474,10 +458,10 @@ export async function exportSukuna2(interaction, randomOpponent, primaryEmbed, r
 	const random = Math.random()
 	if (random < 0.3) {
 		randomOpponent.name = "Sukuna Full Power"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription(
 			`HAHHAHAHAHAHAHAHAHAHAHAH YOU CAN SEE IT ${interaction.user.username}! YOU CAN SEE MY CURSED TECHNIQUE!`
@@ -499,10 +483,10 @@ export async function exportMahito(interaction, randomOpponent, primaryEmbed, ro
 	const random = Math.random()
 	if (random < 0.3) {
 		randomOpponent.name = "Mahito Instant Spirit Body of Distorted Killing"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription("Ahhh the nature of the soul TRULY FASCINATING!")
 		primaryEmbed.setImage("https://media1.tenor.com/m/1tna9DzZLccAAAAd/jjk-jujutsu-kaisen.gif")
@@ -522,10 +506,10 @@ export async function export120(interaction, randomOpponent, primaryEmbed, row, 
 	const random = Math.random()
 	if (random < 0.9) {
 		randomOpponent.name = "Mahito (120%)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
 		primaryEmbed.setDescription(
 			`BROTHER! This cursed spirit successfully used Black Flash, now the person whos' left behind is me. You have become stronger, ${interaction.user.username} Are you willing to maintain the status quo, AOI TODO? ARE YOU GOING TO LEAVE ${interaction.user.username} ALONE AGAIN, AOI TODO? **KOKUSEN!**`
@@ -535,7 +519,7 @@ export async function export120(interaction, randomOpponent, primaryEmbed, row, 
 		//
 		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
 
-		await new Promise(resolve => setTimeout(resolve, 4000)) // 3 seconds delay
+		await new Promise(resolve => setTimeout(resolve, 4000))
 
 		primaryEmbed.setDescription("However, from now on, all three of them... have reached 120% of their potential.")
 		primaryEmbed.setImage("https://media1.tenor.com/m/oydgFq051r8AAAAC/todo-itadori.gif")
@@ -660,7 +644,7 @@ export async function executeBlackFlash({
 		primaryEmbed.setFields([{ name: techniqueName, value: `Attempt ${attempts + 1} of ${maxAttempts}` }])
 
 		const button = new ButtonBuilder()
-			.setCustomId(`again-${attempts}`) // Unique ID for each attempt
+			.setCustomId(`again-${attempts}`)
 			.setLabel(buttonLabels[attempts % buttonLabels.length])
 			.setStyle(ButtonStyle.Primary)
 

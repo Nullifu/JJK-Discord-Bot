@@ -209,7 +209,7 @@ cron.schedule("*/5 * * * *", async () => {
 
 		const statsEmbed = generateStatsEmbed(client, discordTimestamp)
 
-		await message.edit({ embeds: [statsEmbed] }).catch(console.error)
+		await message.edit({ embeds: [statsEmbed] }).catch(logger.error)
 	}
 })
 cron.schedule("*/30 * * * *", async () => {
@@ -219,7 +219,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 		const embed = await generateShopEmbed()
 
-		await message.edit({ embeds: [embed] }).catch(console.error)
+		await message.edit({ embeds: [embed] }).catch(logger.error)
 	}
 })
 
@@ -395,6 +395,7 @@ const commands = [
 				{ name: "Cursed Chest", value: "Cursed Chest" },
 				{ name: "Soul Bundle", value: "Soul Bundle" },
 				{ name: "Curse Repellent", value: "Curse Repellent" },
+				{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
 				{
 					name: "Special-Grade Cursed Object",
 					value: "Special-Grade Cursed Object"
@@ -665,12 +666,12 @@ client.on("interactionCreate", async interaction => {
 	client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
 			if (interaction.customId.startsWith("accept_trade_select_")) {
-				console.log("Handling trade selection...")
+				logger.info("Handling trade selection...")
 				await interaction
 					.deferReply({ ephemeral: false })
-					.catch(error => console.error("Error deferring reply:", error))
+					.catch(error => logger.error("Error deferring reply:", error))
 				await processTradeSelection(interaction).catch(error =>
-					console.error("Error during trade selection processing:", error)
+					logger.error("Error during trade selection processing:", error)
 				)
 			}
 		}
