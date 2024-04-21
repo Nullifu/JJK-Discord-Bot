@@ -586,8 +586,8 @@ export const CLAN_SKILLS = {
 			cost: "3250000",
 			clan: "Fushiguro",
 			items: [
-				{ name: "Mahoraga's Wheel", quantity: 1 },
-				{ name: "Mahoraga's Soul", quantity: 1 }
+				{ name: "Mahoragas Wheel", quantity: 1 },
+				{ name: "Mahoragas Soul", quantity: 1 }
 			]
 		},
 		{
