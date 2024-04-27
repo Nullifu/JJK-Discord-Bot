@@ -208,7 +208,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		// await updateInateclanField(client.db(mongoDatabase))
+		await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
@@ -244,18 +244,18 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	try {
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ stats: { $exists: false } }]
+				$or: [{ cooldowns: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [{ stats: { $exists: false } }]
+					$or: [{ cooldowns: { $exists: false } }]
 				},
 				{
 					$set: {
-						stats: []
+						cooldowns: []
 					}
 				}
 			)

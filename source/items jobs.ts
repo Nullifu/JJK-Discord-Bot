@@ -1517,7 +1517,6 @@ export const items1: Item1[] = [
 
 				const INCREASE_PERCENT = 10
 
-				// Call updateUserItemEffects function to update the user's document
 				try {
 					await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
 					await resetBetLimit(interaction.user.id)

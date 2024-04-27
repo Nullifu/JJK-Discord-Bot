@@ -246,7 +246,7 @@ cron.schedule("*/30 * * * *", async () => {
 //
 //
 const clientId = "991443928790335518"
-client.setMaxListeners(100)
+client.setMaxListeners(170)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
