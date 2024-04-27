@@ -1242,7 +1242,7 @@ export async function handleUpdateCommand(interaction) {
 				},
 				{
 					name: "Profile Customization",
-					value: "New ways to customize your profile, This system is very WIP. Please keep that in mind if you want to get a custom profile use /updateprofileimage. for more info use /guide profiles"
+					value: "New ways to customize your profile, This system is very WIP. Please keep that in mind if you want to get a custom profile use /updateprofileimage."
 				},
 				{
 					name: "Shikigami Shop Update!",

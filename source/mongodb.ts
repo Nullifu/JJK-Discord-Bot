@@ -11,7 +11,7 @@ dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "devuser"
+const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -208,7 +208,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		//await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
+		// await updateInateclanField(client.db(mongoDatabase))
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
@@ -224,12 +224,12 @@ async function updateInateclanField(database) {
 	try {
 		// Update documents where 'inateclan' is an array
 		const updateResult = await usersCollection.updateMany(
-			{ purchases: { $exists: true, $type: "array" } }, // Match only if 'inateclan' is an array
-			{ $set: { inateclan: {} } } // Set 'inateclan' to an empty object
+			{ cooldowns: { $exists: true, $type: "object" } },
+			{ $set: { cooldowns: [] } }
 		)
 
 		if (updateResult.matchedCount > 0) {
-			console.log(`Converted 'inateclan' from array to object in ${updateResult.matchedCount} user documents`)
+			console.log(`Converted cooldown from object to array in ${updateResult.matchedCount} user documents`)
 		} else {
 			console.log("No user documents found with 'inateclan' as an array")
 		}
@@ -244,18 +244,18 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	try {
 		const usersToUpdate = await usersCollection
 			.find({
-				$or: [{ shikigami: { $exists: false } }]
+				$or: [{ stats: { $exists: false } }]
 			})
 			.toArray()
 
 		if (usersToUpdate.length > 0) {
 			await usersCollection.updateMany(
 				{
-					$or: [{ shikigami: { $exists: false } }]
+					$or: [{ stats: { $exists: false } }]
 				},
 				{
 					$set: {
-						shikigami: []
+						stats: []
 					}
 				}
 			)
