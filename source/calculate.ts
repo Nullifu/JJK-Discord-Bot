@@ -1,7 +1,19 @@
 import { EmbedBuilder } from "discord.js"
 import { BossDrop, bossDrops } from "./bossdrops.js"
 import { itemEffects } from "./items jobs.js"
-import { checkUserHasHeavenlyRestriction, getUserInateClan, getUserItemEffects, getUserShikigami } from "./mongodb.js"
+import {
+	checkUserHasHeavenlyRestriction,
+	getUserFavouriteCommand,
+	getUserInateClan,
+	getUserItemEffects,
+	getUserProfile,
+	getUserRegisteredDate,
+	getUserShikigami,
+	getUserStats,
+	getUserWorked,
+	updateUserCommandsUsed
+} from "./mongodb.js"
+import { getRandomQuote } from "./shikigami.js"
 
 export function calculateDamage(
 	playerGrade: string,
@@ -227,7 +239,8 @@ export function getRandomAmount(min: number, max: number): number {
 }
 
 export function calculateEarnings(userProfile) {
-	let earnings = 0
+	let earnings
+
 	switch (userProfile.job) {
 		case "Student":
 			earnings = getRandomAmount(250, 750)
@@ -256,9 +269,10 @@ export function calculateEarnings(userProfile) {
 		case "Veil Caster":
 			earnings = getRandomAmount(275000, 542000)
 			break
-		default: // Non-Sorcerer and any other jobs
+		default:
 			earnings = getRandomAmount(100, 1000)
 	}
+
 	return earnings
 }
 
@@ -267,4 +281,64 @@ export function getBossDrop(bossName: string): BossDrop {
 	if (!drops || drops.length === 0) throw new Error("No drops found for the boss!")
 	const dropIndex = Math.floor(Math.random() * drops.length)
 	return drops[dropIndex]
+}
+
+export async function createStatsEmbed(user) {
+	await updateUserCommandsUsed(user.id)
+
+	const favoriteCommandData = await getUserFavouriteCommand(user.id)
+	console.log("Favorite Command Data:", favoriteCommandData) // Inspect the object
+	const favouriteCommand = `**${favoriteCommandData.command}**\n\`Time's Used: ${favoriteCommandData.count}\``
+
+	const userStats = await getUserStats(user.id)
+	const favoriteTechData = userStats.stats.filter(stat => stat.technique)
+	let favouriteTech = "No favorite technique yet"
+	let maxTechCount = 0
+
+	for (const { technique, count } of favoriteTechData) {
+		if (count > maxTechCount) {
+			maxTechCount = count
+			favouriteTech = `**${technique}**\n\`Time's Used: ${maxTechCount}\``
+		}
+	}
+
+	const registeredDate = await getUserRegisteredDate(user.id)
+	const registeredTimestamp = registeredDate ? Math.floor(registeredDate.getTime() / 1000) : null
+	const worked = await getUserWorked(user.id)
+	const userProfile = await getUserProfile(user.id)
+
+	return new EmbedBuilder()
+		.setTitle(`Stats for ${user.username}`)
+		.setDescription("Here are your personal stats for using the JJK Bot!")
+		.setColor("#00FF00")
+		.setThumbnail(user.displayAvatarURL({ dynamic: true }))
+		.addFields(
+			{
+				name: "General Stats",
+				value: `**Total Times Worked:** ${worked || "0"}\n**Total Commands Used:** ${
+					userStats.totalCommandsUsed || "0"
+				}\n**Total Techniques Used:** ${userStats.totalTechniques || "0"}\n**Registered At:** ${
+					registeredTimestamp ? `<t:${registeredTimestamp}:f>` : "N/A"
+				}`,
+				inline: false
+			},
+			{
+				name: "Work Stats",
+				value: `**Total Times Worked:** ${worked || "0"}\n**Current Job:** ${userProfile.job || "N/A"}`,
+				inline: false
+			},
+			{
+				name: "Fight Stats",
+				value: `**Fights Won This Month:** ${userStats.monthlyFightsWon || "0"}\n**Total Fights Won:** ${
+					userStats.totalFightsWon || "0"
+				}\n**Favorite Technique:** ${favouriteTech}`,
+				inline: false
+			},
+			{
+				name: "Command Stats",
+				value: `**Favorite Command:** ${favouriteCommand}`,
+				inline: false
+			}
+		)
+		.setFooter({ text: getRandomQuote() })
 }

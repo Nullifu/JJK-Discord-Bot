@@ -5,16 +5,17 @@ import { Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
-import { questsArray, shopItems, titles } from "./items jobs.js"
+import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
+const imageCollectionName = "imageLogs"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
@@ -50,6 +51,12 @@ async function runScheduledTasks() {
 	} catch (error) {
 		logger.error("Error resetting bet counts:", error)
 	}
+	try {
+		await resetProfileChangeCooldown()
+		logger.info("Profile Change Cooldown reset completed successfully.")
+	} catch (error) {
+		logger.error("Error resetting bet counts:", error)
+	}
 }
 
 const job = schedule.scheduleJob("0 15 * * *", function () {
@@ -63,6 +70,15 @@ cron.schedule("0 */3 * * *", async () => {
 		logger.info("Decreased shikigami hunger and hygiene")
 	} catch (error) {
 		logger.error("Error decreasing shikigami hunger:", error)
+	}
+})
+
+cron.schedule("0 0 1 * *", async () => {
+	try {
+		await resetMonthlyFightsWon()
+		logger.info("Monthly fights won reset completed successfully.")
+	} catch (error) {
+		logger.error("Error resetting monthly fights won:", error)
 	}
 })
 
@@ -94,6 +110,7 @@ export async function addUser(
 
 		const insertResult = await usersCollection.insertOne({
 			id,
+			registered: new Date().toISOString(),
 			balance: initialBalance,
 			bankBalance: initialBankBalance,
 			job: initialJob,
@@ -126,6 +143,8 @@ export async function addUser(
 			honours: [],
 			purchases: [],
 			itemEffects: [],
+			cooldowns: [],
+			stats: [],
 			unlockedmentors: [],
 			mentors: null,
 			shikigami: [],
@@ -329,7 +348,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 					job: 1,
 					activeTitle: 1,
 					heavenlyrestriction: 1,
-					inateclan: 1
+					inateclan: 1,
+					shikigami: 1
 				}
 			}
 		)
@@ -347,7 +367,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			job: userDocument.job || "Non-Sorcerer",
 			activeTitle: userDocument.activeTitle || null,
 			heavenlyrestriction: userDocument.heavenlyrestriction || null,
-			inateclan: userDocument.clan || "None"
+			inateclan: userDocument.clan || "None",
+			shikigami: userDocument.shikigami || [] // Initialize with an empty array if shikigami is not present
 		}
 
 		logger.log(`User profile found for ID: ${userId}`, userProfile)
@@ -857,6 +878,23 @@ export async function awardTitlesForAchievements(userId: string): Promise<void> 
 	}
 }
 
+// update user unlocked titles
+export async function updateUserUnlockedTitles(userId: string, newTitles: string[]): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { unlockedTitles: newTitles } })
+
+		if (updateResult.matchedCount === 0) {
+			logger.log("No user found with the specified ID")
+		}
+	} catch (error) {
+		logger.error("Error updating user unlocked titles:", error)
+		throw error
+	}
+}
 // get user unlocked titles
 export async function getUserUnlockedTitles(userId: string): Promise<string[]> {
 	try {
@@ -1351,35 +1389,6 @@ async function dailyReset() {
 }
 
 cron.schedule("0 0 * * *", dailyReset)
-
-export async function getUserWorkCooldown(userId: string): Promise<number> {
-	try {
-		await client.connect()
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		const user = await usersCollection.findOne({ id: userId })
-
-		return user?.cooldowns?.work || 0
-	} catch (error) {
-		logger.error(`Error when retrieving work cooldown for user with ID: ${userId}`, error)
-		throw error
-	}
-}
-
-// update user work cooldown
-export async function updateUserCooldown(userId: string, jobType: string, newCooldown: number): Promise<void> {
-	try {
-		await client.connect()
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		await usersCollection.updateOne({ id: userId }, { $set: { [`cooldowns.${jobType}`]: newCooldown } })
-	} catch (error) {
-		logger.error("Error updating user work cooldown:", error)
-		throw error
-	}
-}
 
 // has user recieved vote reward
 export async function hasUserReceivedVoteReward(userId: string): Promise<boolean> {
@@ -2552,7 +2561,6 @@ export async function decreaseShikigamiHunger(): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
-
 		const hungerDecrement = 10
 
 		await usersCollection.updateMany(
@@ -2565,7 +2573,7 @@ export async function decreaseShikigamiHunger(): Promise<void> {
 			{
 				arrayFilters: [
 					{
-						"elem.hunger": { $gt: 0 }
+						"elem.hunger": { $gt: hungerDecrement }
 					}
 				]
 			}
@@ -2575,11 +2583,11 @@ export async function decreaseShikigamiHunger(): Promise<void> {
 		throw error
 	}
 }
+
 export async function decreaseShikigamiHygiene(): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
-
 		const hygieneDecrement = 10
 
 		await usersCollection.updateMany(
@@ -2592,7 +2600,7 @@ export async function decreaseShikigamiHygiene(): Promise<void> {
 			{
 				arrayFilters: [
 					{
-						"elem.hygiene": { $gt: 0 }
+						"elem.hygiene": { $gt: hygieneDecrement }
 					}
 				]
 			}
@@ -2686,5 +2694,830 @@ export async function getUserVoteTime(userId: string): Promise<Date> {
 	} catch (error) {
 		logger.error(`Error when retrieving vote time for user with ID: ${userId}`, error)
 		throw error
+	}
+}
+
+export async function updateUserFavoriteCommand(userId: string, commandName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user || !user.stats) {
+			console.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const favoriteCommandsIndex = user.stats.findIndex(stat =>
+			Object.prototype.hasOwnProperty.call(stat, "favoriteCommands")
+		)
+
+		if (favoriteCommandsIndex !== -1) {
+			const currentFavoriteCommands = user.stats[favoriteCommandsIndex].favoriteCommands || {}
+			const currentCount = currentFavoriteCommands[commandName] || 0
+			const updatedCount = currentCount + 1
+
+			const updatedFavoriteCommands = { ...currentFavoriteCommands, [commandName]: updatedCount }
+
+			const updatedStats = [...user.stats]
+			updatedStats[favoriteCommandsIndex] = { favoriteCommands: updatedFavoriteCommands }
+
+			await usersCollection.updateOne({ id: userId }, { $set: { stats: updatedStats } })
+		} else {
+			const updatedStats = [...user.stats, { favoriteCommands: { [commandName]: 1 } }]
+
+			await usersCollection.updateOne({ id: userId }, { $set: { stats: updatedStats } })
+		}
+	} catch (error) {
+		logger.error(`Error when adding favorite command for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function getUserFavouriteCommand(userId) {
+	try {
+		const userStats = await getUserStats(userId)
+		const favoriteCommandsData = userStats.stats.find(stat => stat.favoriteCommands)
+		if (!favoriteCommandsData) return { command: "No favorite command yet", count: 0 }
+
+		let maxCount = 0
+		let favoriteCommand = null
+
+		for (const command in favoriteCommandsData.favoriteCommands) {
+			const count = favoriteCommandsData.favoriteCommands[command]
+			if (count > maxCount) {
+				maxCount = count
+				favoriteCommand = command
+			}
+		}
+
+		return favoriteCommand
+			? { command: favoriteCommand, count: maxCount }
+			: { command: "No favorite command yet", count: 0 }
+	} catch (error) {
+		console.error(`Error retrieving favorite command for user ${userId}:`, error)
+		throw error
+	}
+}
+
+// get user favourite technique name and count
+export async function getUserFavouriteTechnique(userId: string): Promise<{ technique: string; count: number }[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.stats : []
+	} catch (error) {
+		logger.error(`Error when retrieving favourite technique for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get all stats for user
+export async function getUserStats(userId: string) {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (user && user.stats && user.stats.length > 0) {
+			const totalTechniques = user.stats.reduce((total, stat) => {
+				if (stat.technique) {
+					return total + stat.count
+				}
+				return total
+			}, 0)
+
+			const totalCommandsUsedStat = user.stats.find(stat => stat.totalCommandsUsed !== undefined)
+			const totalCommandsUsed = totalCommandsUsedStat ? totalCommandsUsedStat.totalCommandsUsed : 0
+
+			const totalFightsWon = user.stats.reduce((total, stat) => {
+				if (stat.totalFightsWon) {
+					return total + stat.totalFightsWon
+				}
+				return total
+			}, 0)
+
+			const monthlyFightsWonStat = user.stats.find(stat => stat.monthlyFightsWon !== undefined)
+			const monthlyFightsWon = monthlyFightsWonStat ? monthlyFightsWonStat.monthlyFightsWon : 0
+
+			const favoriteTechData = user.stats.filter(stat => stat.technique)
+			const favoriteCommands = user.stats.find(stat => stat.favoriteCommands)?.favoriteCommands || {}
+
+			return {
+				stats: user.stats,
+				totalTechniques,
+				totalCommandsUsed,
+				totalFightsWon,
+				monthlyFightsWon,
+				favoriteTechData,
+				favoriteCommands
+			}
+		}
+
+		return {
+			stats: [],
+			totalTechniques: 0,
+			totalCommandsUsed: 0,
+			totalFightsWon: 0,
+			monthlyFightsWon: 0,
+			favoriteTechData: [],
+			favoriteCommands: {}
+		}
+	} catch (error) {
+		logger.error("Error retrieving user stats:", error)
+		return {
+			stats: [],
+			totalTechniques: 0,
+			totalCommandsUsed: 0,
+			totalFightsWon: 0,
+			monthlyFightsWon: 0,
+			favoriteTechData: [],
+			favoriteCommands: {}
+		}
+	}
+}
+
+export async function updateMonthlyFightsWon(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (user && user.stats) {
+			const monthlyFightsWonStat = user.stats.find(stat => stat.monthlyFightsWon !== undefined)
+
+			if (monthlyFightsWonStat) {
+				const updatedMonthlyFightsWon = monthlyFightsWonStat.monthlyFightsWon + 1
+
+				await usersCollection.updateOne(
+					{ "id": userId, "stats.monthlyFightsWon": monthlyFightsWonStat.monthlyFightsWon },
+					{ $set: { "stats.$[elem].monthlyFightsWon": updatedMonthlyFightsWon } },
+					{ arrayFilters: [{ "elem.monthlyFightsWon": { $exists: true } }] }
+				)
+			} else {
+				await usersCollection.updateOne({ id: userId }, { $push: { stats: { monthlyFightsWon: 1 } } })
+			}
+		} else {
+			await usersCollection.updateOne(
+				{ id: userId },
+				{ $set: { stats: [{ monthlyFightsWon: 1 }] } },
+				{ upsert: true }
+			)
+		}
+	} catch (error) {
+		logger.error(`Error when updating monthly fights won for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function getUserMonthlyFightsWon(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (user && user.stats) {
+			const monthlyFightsWonStat = user.stats.find(stat => stat.monthlyFightsWon !== undefined)
+			return monthlyFightsWonStat ? monthlyFightsWonStat.monthlyFightsWon : 0
+		}
+
+		return 0
+	} catch (error) {
+		logger.error(`Error when retrieving monthly fights won for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function resetMonthlyFightsWon(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		await usersCollection.updateMany(
+			{ "stats.monthlyFightsWon": { $exists: true } },
+			{ $set: { "stats.$[elem].monthlyFightsWon": 0 } },
+			{ arrayFilters: [{ "elem.monthlyFightsWon": { $exists: true } }] }
+		)
+	} catch (error) {
+		logger.error("Error when resetting monthly fights won", error)
+		throw error
+	}
+}
+
+export async function getMonthlyFightsWonLeaderboard(): Promise<{ userId: string; monthlyFightsWon: number }[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const users = await usersCollection.find({ "stats.monthlyFightsWon": { $exists: true } }).toArray()
+
+		const leaderboard = users.map(user => {
+			const monthlyFightsWonStat = user.stats.find(stat => stat.monthlyFightsWon !== undefined)
+			const monthlyFightsWon = monthlyFightsWonStat ? monthlyFightsWonStat.monthlyFightsWon : 0
+			return { userId: user.id, monthlyFightsWon }
+		})
+
+		return leaderboard
+	} catch (error) {
+		logger.error("Error when retrieving monthly fights won leaderboard", error)
+		throw error
+	}
+}
+// update total commands used
+export async function updateUserCommandsUsed(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			console.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const commandsIndex = user.stats.findIndex(s => s.totalCommandsUsed)
+
+		if (commandsIndex !== -1) {
+			user.stats[commandsIndex].totalCommandsUsed++
+		} else {
+			user.stats.push({ totalCommandsUsed: 1 })
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { stats: user.stats } })
+	} catch (error) {
+		logger.error(`Error when adding commands used for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update total amount worked
+export async function updateUserWorked(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			console.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const workedIndex = user.stats.findIndex(s => s.totalWorked)
+
+		if (workedIndex !== -1) {
+			user.stats[workedIndex].totalWorked++
+		} else {
+			user.stats.push({ totalWorked: 1 })
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { stats: user.stats } })
+	} catch (error) {
+		logger.error(`Error when adding worked for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get user total worked
+export async function getUserWorked(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (user && user.stats && user.stats.length > 0) {
+			const workedStat = user.stats.find(stat => Object.prototype.hasOwnProperty.call(stat, "totalWorked"))
+			return workedStat ? workedStat.totalWorked : 0
+		}
+
+		return 0
+	} catch (error) {
+		logger.error(`Error when retrieving worked for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+// update user favourite technique name and count
+export async function updateUserFavouriteTechnique(userId: string, techniqueName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			logger.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const techniqueIndex = user.stats.findIndex(s => s.technique === techniqueName)
+
+		if (techniqueIndex !== -1) {
+			user.stats[techniqueIndex].count++
+		} else {
+			user.stats.push({ technique: techniqueName, count: 1 })
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { stats: user.stats } })
+	} catch (error) {
+		logger.error(`Error when adding favourite technique for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user fights won count
+export async function updateUserFightsWon(userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			logger.error(`User with ID ${userId} not found`)
+			throw new Error(`User with ID ${userId} not found`)
+		}
+
+		const fightsWonIndex = user.stats.findIndex(s => s.totalFightsWon)
+
+		if (fightsWonIndex !== -1) {
+			user.stats[fightsWonIndex].totalFightsWon++
+		} else {
+			user.stats.push({ totalFightsWon: 1 })
+		}
+
+		await usersCollection.updateOne({ id: userId }, { $set: { stats: user.stats } })
+	} catch (error) {
+		logger.error(`Error when adding fights won for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get user fights won count
+export async function getUserFightsWon(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.stats.fightsWon : 0
+	} catch (error) {
+		logger.error(`Error when retrieving fights won for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get user registered date
+export async function getUserRegisteredDate(userId: string): Promise<Date | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user ? new Date(user.registered) : null
+	} catch (error) {
+		logger.error(`Error when retrieving registered date for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+export async function updateUserProfileImage(userId: string, imageUrl: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$set: {
+					profileImage: imageUrl
+				}
+			}
+		)
+	} catch (error) {
+		logger.error("Error updating user profile image:", error)
+		throw error
+	}
+}
+// update user profile header
+export async function updateUserProfileHeader(userId: string, imageUrl: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$set: {
+					profileHeader: imageUrl
+				}
+			}
+		)
+	} catch (error) {
+		logger.error("Error updating user profile header:", error)
+		throw error
+	}
+}
+
+// get user profile image
+export async function getUserProfileImage(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.profileImage : ""
+	} catch (error) {
+		logger.error(`Error when retrieving profile image for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// get user profile header
+export async function getUserProfileHeader(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.profileHeader : ""
+	} catch (error) {
+		logger.error(`Error when retrieving profile header for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// log image url
+export async function logImageUrl(imageUrl: string, userId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		await logsCollection.insertOne({
+			userId,
+			imageUrl,
+			timestamp: new Date(),
+			reviewerId: null,
+			reviewed: false
+		})
+	} catch (error) {
+		console.error("Error logging image URL:", error)
+	}
+}
+
+export async function getImageUrl(userId: string): Promise<string> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const image = await logsCollection.findOne({ userId })
+		return image ? image.imageUrl : ""
+	} catch (error) {
+		console.error("Error getting image URL:", error)
+		throw error
+	}
+}
+// getUserIdByImageUrl
+export async function getUserIdByImageUrl(imageUrl: string): Promise<string | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const result = await logsCollection.findOne({ imageUrl })
+		return result?.userId || null
+	} catch (error) {
+		console.error("Error fetching user ID by image URL:", error)
+		return null
+	}
+}
+
+// update cooldowns array add new object
+export async function updateUserCooldowns(userId: string, operation: string, jobName?: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		if (operation === "profileChange") {
+			const user = await usersCollection.findOne({ id: userId })
+
+			if (user) {
+				const cooldown = user.cooldowns.find(cd => cd.type === "profileChangeCooldown")
+
+				if (cooldown) {
+					if (cooldown.currentUsed < 3) {
+						await usersCollection.updateOne(
+							{ "id": userId, "cooldowns.type": "profileChangeCooldown" },
+							{ $inc: { "cooldowns.$.currentUsed": 1 } }
+						)
+					}
+				} else {
+					await usersCollection.updateOne(
+						{ id: userId },
+						{ $push: { cooldowns: { type: "profileChangeCooldown", currentUsed: 1, maxAllowed: 3 } } }
+					)
+				}
+			}
+		} else if (operation === "workCooldown") {
+			if (jobName) {
+				const user = await usersCollection.findOne({ id: userId })
+
+				if (user) {
+					const cooldown = user.cooldowns.find(cd => cd.type === `workCooldown_${jobName}`)
+
+					if (cooldown) {
+						await usersCollection.updateOne(
+							{ "id": userId, "cooldowns.type": `workCooldown_${jobName}` },
+							{ $set: { "cooldowns.$.lastUsed": new Date() } }
+						)
+					} else {
+						const job = jobs.find(job => job.name === jobName)
+						if (job) {
+							await usersCollection.updateOne(
+								{ id: userId },
+								{
+									$push: {
+										cooldowns: {
+											type: `workCooldown_${jobName}`,
+											lastUsed: new Date(),
+											duration: job.cooldown
+										}
+									}
+								}
+							)
+						}
+					}
+				}
+			}
+		} else if (operation === "questCooldown") {
+			const user = await usersCollection.findOne({ id: userId })
+
+			if (user) {
+				const cooldown = user.cooldowns.find(cd => cd.type === "questCooldown")
+
+				if (cooldown) {
+					await usersCollection.updateOne(
+						{ "id": userId, "cooldowns.type": "questCooldown" },
+						{ $set: { "cooldowns.$.lastUsed": new Date() } }
+					)
+				} else {
+					await usersCollection.updateOne(
+						{ id: userId },
+						{
+							$push: {
+								cooldowns: {
+									type: "questCooldown",
+									lastUsed: new Date(),
+									duration: 24 * 60 * 60 * 1000
+								}
+							}
+						}
+					)
+				}
+			}
+		} else if (operation === "dailyCooldown") {
+			const user = await usersCollection.findOne({ id: userId })
+
+			if (user) {
+				const cooldown = user.cooldowns.find(cd => cd.type === "dailyCooldown")
+
+				if (cooldown) {
+					await usersCollection.updateOne(
+						{ "id": userId, "cooldowns.type": "dailyCooldown" },
+						{ $set: { "cooldowns.$.lastUsed": new Date() } }
+					)
+				} else {
+					await usersCollection.updateOne(
+						{ id: userId },
+						{
+							$push: {
+								cooldowns: {
+									type: "dailyCooldown",
+									lastUsed: new Date(),
+									duration: 24 * 60 * 60 * 1000
+								}
+							}
+						}
+					)
+				}
+			}
+		}
+	} catch (error) {
+		logger.error("Error updating user cooldowns:", error)
+		throw error
+	}
+}
+
+// reset profileChangeCooldown for all users
+export async function resetProfileChangeCooldown(): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateMany(
+			{ "cooldowns.type": "profileChangeCooldown" },
+			{ $set: { "cooldowns.$.currentUsed": 0 } }
+		)
+	} catch (error) {
+		logger.error("Error resetting profile change cooldown:", error)
+		throw error
+	}
+}
+
+let nextDailyResetTimestamp = getTimestampForTodayAt4PM() // Or for tomorrow if it's already past 4 PM today
+
+function getTimestampForTodayAt4PM() {
+	const now = new Date()
+	const today4PM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 0, 0)
+	return Math.floor(today4PM.getTime() / 1000)
+}
+
+// get specified cooldown
+export async function checkProfileChangeCooldown(
+	userId: string
+): Promise<{ limitReached: boolean; nextResetTimestamp: number | null }> {
+	const database = client.db(mongoDatabase)
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		const user = await usersCollection.findOne({ id: userId })
+		if (user && user.cooldowns) {
+			const cooldown = user.cooldowns.find(cd => cd.type === "profileChangeCooldown")
+			if (cooldown) {
+				if (cooldown.currentUsed >= 3) {
+					const now = new Date()
+
+					if (now.getTime() / 1000 >= nextDailyResetTimestamp) {
+						nextDailyResetTimestamp = getTimestampForTodayAt4PM()
+					}
+
+					return {
+						limitReached: true,
+						nextResetTimestamp: nextDailyResetTimestamp
+					}
+				}
+			}
+		}
+		return { limitReached: false, nextResetTimestamp: null }
+	} catch (error) {
+		console.error("Error checking cooldown:", error)
+		throw error
+	}
+}
+
+export async function checkWorkCooldown(
+	userId: string,
+	jobName: string
+): Promise<{ limitReached: boolean; nextResetTimestamp: number | null }> {
+	const database = client.db(mongoDatabase)
+	const usersCollection = database.collection<User>(usersCollectionName)
+
+	try {
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (user && user.cooldowns) {
+			const cooldown = user.cooldowns.find(cd => cd.type === `workCooldown_${jobName}`)
+
+			if (cooldown) {
+				const now = new Date()
+				const nextResetTimestamp = Math.floor(cooldown.lastUsed.getTime() + cooldown.duration)
+
+				if (now.getTime() < nextResetTimestamp) {
+					return {
+						limitReached: true,
+						nextResetTimestamp: nextResetTimestamp
+					}
+				}
+			}
+		}
+
+		return { limitReached: false, nextResetTimestamp: null }
+	} catch (error) {
+		logger.error("Error checking work cooldown:", error)
+		throw error
+	}
+}
+
+export async function updateUserWorkCooldown(userId: string, cooldownDuration: number): Promise<void> {
+	const database = client.db(mongoDatabase)
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$set: {
+					"cooldowns.$[elem].lastUsed": new Date(),
+					"cooldowns.$[elem].duration": cooldownDuration
+				}
+			},
+			{
+				arrayFilters: [
+					{
+						"elem.type": "workCooldown"
+					}
+				]
+			}
+		)
+	} catch (error) {
+		console.error("Error updating work cooldown:", error)
+		throw error
+	}
+}
+
+// update techniques used
+export async function getImageUrlAndUserIdByReviewerId(
+	reviewerId: string
+): Promise<{ userId: string | null; imageUrl: string | null }> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const result = await logsCollection.findOne({ reviewerId })
+		return {
+			userId: result?.userId || null,
+			imageUrl: result?.imageUrl || null
+		}
+	} catch (error) {
+		console.error("Error fetching user ID and image URL by reviewer ID:", error)
+		return { userId: null, imageUrl: null }
+	}
+}
+
+export async function getImageUrlAndUserIdByImageUrl(
+	imageUrl: string
+): Promise<{ userId: string | null; imageUrl: string | null }> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const result = await logsCollection.findOne({ imageUrl })
+		return {
+			userId: result?.userId || null,
+			imageUrl: result?.imageUrl || null
+		}
+	} catch (error) {
+		console.error("Error fetching user ID and image URL:", error)
+		return { userId: null, imageUrl: null }
+	}
+}
+
+export async function updateReviewerIdAndStatus(
+	imageUrl: string,
+	reviewerId: string,
+	reviewed: boolean
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		await logsCollection.updateOne({ imageUrl }, { $set: { reviewerId, reviewed } })
+	} catch (error) {
+		console.error("Error updating reviewer ID and review status:", error)
+	}
+}
+
+export async function getImageUrlByReviewerId(reviewerId: string): Promise<string | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const result = await logsCollection.findOne({ reviewerId })
+		return result?.imageUrl || null
+	} catch (error) {
+		console.error("Error fetching image URL by reviewer ID:", error)
+		return null
+	}
+}
+
+export async function updateReviewStatus(imageUrl: string, reviewed: boolean): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		await logsCollection.updateOne({ imageUrl }, { $set: { reviewed } })
+	} catch (error) {
+		console.error("Error updating review status:", error)
+	}
+}
+
+export async function getImageUrlByUserId(userId: string): Promise<string | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		const result = await logsCollection.findOne({ userId, reviewed: false })
+		return result?.imageUrl || null
+	} catch (error) {
+		console.error("Error fetching image URL by user ID:", error)
+		return null
+	}
+}
+
+export async function updateReviewerId(imageUrl: string, reviewerId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const logsCollection = database.collection(imageCollectionName)
+		await logsCollection.updateOne({ imageUrl }, { $set: { reviewerId } })
+	} catch (error) {
+		console.error("Error updating reviewer ID:", error)
 	}
 }

@@ -1,17 +1,17 @@
 interface User {
 	lastAlertedVersion?: string
 }
-const CURRENT_VERSION = "1.1.2"
+const CURRENT_VERSION = "1.1.5"
 //
 //
 
 import { EmbedBuilder } from "@discordjs/builders"
 import { ChatInputCommandInteraction } from "discord.js"
-import { getUser, updateLastAlertedVersion } from "./mongodb.js"
 import { logger } from "./bot.js"
+import { getUser, updateLastAlertedVersion } from "./mongodb.js"
 
 export async function checkRegistrationMiddleware(interaction: ChatInputCommandInteraction): Promise<boolean> {
-	console.log("Middleware started")
+	logger.debug("Middleware started")
 
 	try {
 		const discordId = interaction.user.id
@@ -43,7 +43,7 @@ export async function checkRegistrationMiddleware(interaction: ChatInputCommandI
 }
 
 export async function checkVersionMiddleware1(interaction: ChatInputCommandInteraction): Promise<boolean> {
-	console.log("Version check middleware started")
+	logger.debug("Version check middleware started")
 
 	const discordId = interaction.user.id
 	let shouldProceed = true
@@ -104,7 +104,7 @@ export async function postCommandMiddleware(interaction: ChatInputCommandInterac
 		} else if (lastAlertedVersion !== CURRENT_VERSION) {
 			await updateLastAlertedVersion(discordId, CURRENT_VERSION)
 			await interaction.followUp({
-				content: "Alert from the develepor Please use `/alert` to see what's new. 🚀",
+				content: "Alert from the dev Please use `/alert` to see what's new. 🚀",
 				ephemeral: true
 			})
 		}

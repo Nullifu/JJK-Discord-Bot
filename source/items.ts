@@ -15,6 +15,7 @@ function generateItems(baseChances, modifiers = {}) {
 		{ name: "Special-Grade Medicine", rarity: "Grade 1" },
 		//
 		{ name: "Sukuna Finger", rarity: "Special Grade" },
+		{ name: "Cursed Energy Vial", rarity: "Special Grade" },
 		{ name: "Cleaning Sponge", rarity: "Special Grade" },
 		{ name: "Rikugan Eye", rarity: "Special Grade" }
 	]
@@ -52,4 +53,12 @@ export function getRandomItem() {
 	}
 
 	return null
+}
+
+export const rarityAbbreviations = {
+	"common": "C",
+	"rare": "R",
+	"ultra rare": "UR",
+	"special grade": "SG"
+	// ... add more as needed
 }

@@ -14,8 +14,10 @@ import {
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
+	updateMonthlyFightsWon,
 	updatePlayerGrade,
 	updateUserExperience,
+	updateUserFightsWon,
 	updateUserHealth,
 	updateUserShikigami,
 	updateUserUnlockedTransformations
@@ -81,6 +83,8 @@ export async function handleBossDeath(
 	await removeAllStatusEffects(interaction.user.id)
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
+	await updateUserFightsWon(interaction.user.id)
+	await updateMonthlyFightsWon(interaction.user.id)
 
 	const drop = getBossDrop(opponent.name)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
@@ -205,43 +209,6 @@ export function generateHealthBar(current, max) {
 	const filledBars = Math.round((current / max) * totalBars)
 	const emptyBars = totalBars - filledBars
 	return "▮".repeat(filledBars) + "▯".repeat(emptyBars)
-}
-
-interface FlavorText {
-	name: string
-	value: string
-}
-
-function getJujutsuFlavorText(bossName: string): FlavorText | null {
-	if (bossName === "Sukuna") {
-		return { name: "Sukuna says...", value: "Show me what you can do." }
-	} else if (bossName === "Satoru Gojo") {
-		return { name: "Gojo's Challenge", value: "Let's see if you're worthy." }
-	} else if (bossName === "Itadori") {
-		return { name: "Itadori's Determination", value: "I won't lose!" }
-	} else if (bossName === "Aoi Todo & Itadori") {
-		return { name: "Brotherly Bond", value: "Let's start cooking.. Brother" }
-	} else if (bossName === "Megumi Fushiguro") {
-		return { name: "Fushiguro's Willpower", value: "With this treasure.. I SUMMON" }
-	} else if (bossName === "Zenin Toji") {
-		return { name: "Heavenly Restriction", value: "Cursed since birth." }
-	} else if (bossName === "Sukuna (Suppressed)") {
-		return { name: "King of curses", value: "This will be over quickly." }
-	} else if (bossName === "Jogo") {
-		return { name: "Jogo's Challenge", value: "I'll burn you to a crisp." }
-	} else if (bossName === "Mahito (Transfigured)") {
-		return { name: "Mahito's Challenge", value: "I'll show you the true nature of the soul." }
-	} else if (bossName === "Suguru Geto") {
-		return { name: "Geto's Challenge", value: "Filthy Monkey" }
-	} else if (bossName === "Dagon") {
-		return { name: "Dagon's Instincts", value: "blorp blorg (fish noises)" }
-	} else if (bossName === "Yuta") {
-		return { name: "Yutas Curse", value: "Rika.." }
-	} else if (bossName === "Finger Bearer") {
-		return { name: "(curse noises)", value: "........." }
-	}
-
-	return null
 }
 
 export async function exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
@@ -696,5 +663,3 @@ export function generateBloodlustBar(currentBloodlust) {
 
 	return `${filledBar}${emptyBar} (${currentBloodlust}/100)`
 }
-
-export { getJujutsuFlavorText }

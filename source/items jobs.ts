@@ -1,7 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
 import { logger } from "./bot.js"
 import { dirtyToCleanItemMap } from "./interface.js"
 import {
+	UserShikigami,
 	addItemToUserInventory,
 	addUserQuest,
 	addUserQuestProgress,
@@ -27,7 +28,9 @@ import {
 	updateUserItemEffects,
 	updateUserMaxHealth,
 	updateUserOwnedInateClan,
+	updateUserShikigami,
 	updateUserUnlockedBosses,
+	updateUserUnlockedTitles,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
@@ -1183,7 +1186,6 @@ export const items1: Item1[] = [
 			await addUserQuestProgress(interaction.user.id, "Curse King's Task", 1)
 			await updateUserInateClanExperience(userId, 125, "Demon Vessel")
 			await updatePlayerClanTier(userId)
-			await updateUserMaxHealth(userId, 30)
 			//
 			if (userClanData.clan === "Demon Vessel") {
 				const curseKingsTaskQuest = (await getUserQuests(userId)).quests.find(
@@ -1334,7 +1336,6 @@ export const items1: Item1[] = [
 
 			if (randomNumber <= 30) {
 				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
-				await updateUserMaxHealth(interaction.user.id, 30)
 				await addUserQuest(interaction.user.id, "Satoru Gojo's Mission")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
 				isLimitless = true
@@ -1400,7 +1401,6 @@ export const items1: Item1[] = [
 				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
-				await updateUserMaxHealth(interaction.user.id, 30)
 				isLimitless = true
 			}
 
@@ -1663,6 +1663,59 @@ export const items1: Item1[] = [
 		}
 	},
 	{
+		itemName: "#1 Fighting Box",
+		description: "#1 Fighting Box",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const today = new Date()
+			const formattedDate = today.toLocaleDateString("en-US") // Example: 04/26/202
+
+			const newShikigami: UserShikigami = {
+				name: "Ghost",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 20)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 12)
+			await updateBalance(interaction.user.id, 2500000)
+			await updateUserShikigami(interaction.user.id, newShikigami)
+			await updateUserUnlockedTitles(interaction.user.id, ["#1 Fighter (LB 1)"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle(`#1 Fighter (LB 1 - ${formattedDate})`)
+				.setDescription(
+					"You opened the box and received: 20x Sukuna Finger, X12 Six Eyes, 2.5M Coins, a Ghost Pet, and the title: #1 Fighter!"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+		}
+	},
+	{
+		itemName: "Cursed Energy Vial",
+		description: "Cursed Energy Vial",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await updateUserMaxHealth(interaction.user.id, 30)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Vial of Cursed Energy")
+				.setDescription("You drink the contents and gain a health increase! + 30")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+		}
+	},
+	{
 		itemName: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
 		description: "Special-Grade Cursed Object",
 		rarity: "Special",
@@ -1878,3 +1931,402 @@ export const shopItems = [
 	{ name: "Rikugan Eye", rarity: "Special Grade", price: 1000000, maxPurchases: 2 },
 	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 }
 ]
+export interface MiniGameResult {
+	success: "full" | "partial" | "fail"
+	message: string
+}
+
+export async function playStudentMinigame(
+	interaction: ChatInputCommandInteraction,
+	earnings: number
+): Promise<MiniGameResult> {
+	const subjects = ["Math", "Science", "History", "Literature", "Art", "Music"]
+	const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
+
+	const button1Options = ["Study", "Focus", "Prepare", "Review", "Concentrate", "Practice"]
+	const button2Options = ["Skim", "Glance", "Browse", "Scan", "Peek", "Glimpse"]
+	const button3Options = ["Ignore", "Disregard", "Neglect", "Overlook", "Dismiss", "Avoid"]
+
+	const randomButton1 = button1Options[Math.floor(Math.random() * button1Options.length)]
+	const randomButton2 = button2Options[Math.floor(Math.random() * button2Options.length)]
+	const randomButton3 = button3Options[Math.floor(Math.random() * button3Options.length)]
+
+	const studyOptions = [
+		"Pull an all-nighter",
+		"Form a study group",
+		"Beg Sukuna to help you study",
+		"Create flashcards",
+		"Watch online tutorials",
+		"Seek help from a tutor",
+		"Review past exams"
+	]
+	const randomStudyOption = studyOptions[Math.floor(Math.random() * studyOptions.length)]
+
+	const skimOptions = [
+		"Read chapter summaries",
+		"Skim through key topics",
+		"Memorize important formulas",
+		"Focus on bold text and headlines",
+		"Rely on your photographic memory",
+		"Hope for the best"
+	]
+	const randomSkimOption = skimOptions[Math.floor(Math.random() * skimOptions.length)]
+
+	const ignoreOptions = [
+		"Daydream about your future",
+		"Doodle in your notebook",
+		"Plan your weekend",
+		"Catch up on sleep",
+		"Chat with your classmates",
+		"Pretend to be invisible",
+		"Stare out the window",
+		"Count the ceiling tiles",
+		"Try to domain"
+	]
+	const randomIgnoreOption = ignoreOptions[Math.floor(Math.random() * ignoreOptions.length)]
+
+	const embed = new EmbedBuilder()
+		.setColor(0x00ff00)
+		.setTitle("Student Mini-Game")
+		.setDescription(`You have a surprise quiz on ${randomSubject}! Choose your action:`)
+		.addFields(
+			{ name: "1️⃣", value: randomStudyOption },
+			{ name: "2️⃣", value: randomSkimOption },
+			{ name: "3️⃣", value: randomIgnoreOption }
+		)
+
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("1").setLabel(randomButton1).setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("2").setLabel(randomButton2).setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("3").setLabel(randomButton3).setStyle(ButtonStyle.Primary)
+	)
+
+	const message = await interaction.reply({ embeds: [embed], components: [actionRow], fetchReply: true })
+
+	const collector = message.createMessageComponentCollector({ time: 15000 })
+
+	return new Promise(resolve => {
+		collector.on("collect", async i => {
+			if (i.customId === "1") {
+				embed.setDescription(
+					`You ${randomStudyOption.toLowerCase()} for the ${randomSubject} quiz. Your hard work paid off, and you aced it!`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Your dedication to studying ${randomSubject} resulted in a perfect score! You got **${earnings}** coins!`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({
+					success: "full",
+					message: ""
+				})
+				collector.stop()
+			} else if (i.customId === "2") {
+				embed.setDescription(
+					`You ${randomSkimOption.toLowerCase()} for the ${randomSubject} quiz. You managed to pass, but it was a close call.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Your quick skimming skills saved you from failing, but there's room for improvement. You got a partial reward of **${earnings}** coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({
+					success: "partial",
+					message: ""
+				})
+				collector.stop()
+			} else if (i.customId === "3") {
+				embed.setDescription(
+					`You chose to ${randomIgnoreOption.toLowerCase()} during the ${randomSubject} quiz.`
+				)
+				embed.setFields({ name: "Result", value: "You failed the quiz and didn't gain any reward." })
+				await i.update({ embeds: [embed], components: [] })
+
+				const sukunaTakeover = Math.random() < 0.1 // 10% chance of Sukuna taking over
+				if (sukunaTakeover) {
+					resolve({
+						success: "fail",
+						message:
+							"Sukuna has taken over! He goes on a rampage, causing destruction and chaos. You gain no reward and have to face the consequences of Sukuna's actions."
+					})
+				} else {
+					resolve({
+						success: "fail",
+						message: ""
+					})
+				}
+				collector.stop()
+			}
+		})
+
+		collector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				embed.setDescription("You took too long to respond. The quiz ended, and you got a zero.")
+				embed.setFields({ name: "Result", value: "You missed the quiz and didn't gain any reward." })
+				await interaction.editReply({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+			}
+		})
+	})
+}
+
+export async function playJujutsuSorcererMinigame(
+	interaction: ChatInputCommandInteraction,
+	earnings: number
+): Promise<MiniGameResult> {
+	const curses = ["Cursed Spirit", "Special Grade Curse", "Cursed Puppet", "Cursed Object", "Curse User"]
+	const randomCurse = curses[Math.floor(Math.random() * curses.length)]
+
+	const techniques = [
+		"Cursed Energy Manipulation",
+		"Domain Expansion",
+		"Barrier Technique",
+		"Cursed Tool Wielding",
+		"Reversal Technique"
+	]
+	const randomTechnique = techniques[Math.floor(Math.random() * techniques.length)]
+
+	const embed = new EmbedBuilder()
+		.setColor(0x00ff00)
+		.setTitle("Jujutsu Sorcerer Mini-Game")
+		.setDescription(`You encounter a ${randomCurse}! Choose your jujutsu technique to battle it:`)
+		.addFields(
+			{ name: "1️⃣", value: randomTechnique },
+			{ name: "2️⃣", value: "Physical Combat" },
+			{ name: "3️⃣", value: "Flee the Battle" }
+		)
+
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("1").setLabel("Technique").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("2").setLabel("Combat").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("3").setLabel("Flee").setStyle(ButtonStyle.Primary)
+	)
+
+	const message = await interaction.reply({ embeds: [embed], components: [actionRow], fetchReply: true })
+
+	const collector = message.createMessageComponentCollector({ time: 15000 })
+
+	return new Promise(resolve => {
+		collector.on("collect", async i => {
+			if (i.customId === "1") {
+				embed.setDescription(
+					`You used ${randomTechnique} against the ${randomCurse}. Your technique was effective, and you defeated the curse!`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `You successfully exorcised the ${randomCurse} using your jujutsu technique. You earned ${earnings} coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "full", message: "" })
+				collector.stop()
+			} else if (i.customId === "2") {
+				embed.setDescription(
+					`You engaged in physical combat with the ${randomCurse}. It was a tough battle, but you managed to defeat the curse.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Through your combat skills, you successfully defeated the ${randomCurse}. You earned ${Math.floor(
+						earnings * 0.8
+					)} coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "partial", message: "" })
+				collector.stop()
+			} else if (i.customId === "3") {
+				embed.setDescription(
+					`You chose to flee from the battle against the ${randomCurse}. The curse remains undefeated.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: "You avoided the battle, but the curse continues to roam free. You didn't earn any coins."
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+				collector.stop()
+			}
+		})
+
+		collector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				embed.setDescription(
+					"You took too long to respond. The curse escaped, and you missed your chance to exorcise it."
+				)
+				embed.setFields({ name: "Result", value: "You didn't earn any coins due to your indecision." })
+				await interaction.editReply({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+			}
+		})
+	})
+}
+
+export async function playCurseHunterMinigame(
+	interaction: ChatInputCommandInteraction,
+	earnings: number
+): Promise<MiniGameResult> {
+	const curses = ["Curse Spirit", "Cursed Artifact", "Cursed Location", "Curse Talisman", "Cursed Corpse"]
+	const randomCurse = curses[Math.floor(Math.random() * curses.length)]
+
+	const actions = ["Investigate", "Set a Trap", "Call for Backup", "Engage in Combat", "Purify the Curse"]
+	const randomAction = actions[Math.floor(Math.random() * actions.length)]
+
+	const embed = new EmbedBuilder()
+		.setColor(0x00ff00)
+		.setTitle("Curse Hunter Mini-Game")
+		.setDescription(`You are tasked with hunting down a ${randomCurse}. Choose your action:`)
+		.addFields(
+			{ name: "1️⃣", value: randomAction },
+			{ name: "2️⃣", value: "Gather More Information" },
+			{ name: "3️⃣", value: "Abandon the Hunt" }
+		)
+
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("1").setLabel("Action").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("2").setLabel("Gather Info").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("3").setLabel("Abandon").setStyle(ButtonStyle.Primary)
+	)
+
+	const message = await interaction.reply({ embeds: [embed], components: [actionRow], fetchReply: true })
+
+	const collector = message.createMessageComponentCollector({ time: 15000 })
+
+	return new Promise(resolve => {
+		collector.on("collect", async i => {
+			if (i.customId === "1") {
+				embed.setDescription(
+					`You chose to ${randomAction.toLowerCase()} the ${randomCurse}. Your action was successful, and you eliminated the curse!`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Your decision to ${randomAction.toLowerCase()} proved to be effective. You earned ${earnings} coins for your efforts.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "full", message: "" })
+				collector.stop()
+			} else if (i.customId === "2") {
+				embed.setDescription(
+					`You decided to gather more information about the ${randomCurse} before taking action. The intel you gathered will aid you in future hunts.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `While you didn't directly eliminate the curse, your information gathering will prove useful. You earned ${Math.floor(
+						earnings * 0.6
+					)} coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "partial", message: "" })
+				collector.stop()
+			} else if (i.customId === "3") {
+				embed.setDescription(
+					`You chose to abandon the hunt for the ${randomCurse}. The curse remains at large, posing a threat to others.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: "Your decision to abandon the hunt means the curse continues to roam freely. You didn't earn any coins."
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+				collector.stop()
+			}
+		})
+
+		collector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				embed.setDescription(
+					"You took too long to decide on your action. The curse has moved on, and the hunt is lost."
+				)
+				embed.setFields({
+					name: "Result",
+					value: "Your indecision cost you the hunt. You didn't earn any coins."
+				})
+				await interaction.editReply({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+			}
+		})
+	})
+}
+
+export async function playVeilCasterMinigame(
+	interaction: ChatInputCommandInteraction,
+	earnings: number
+): Promise<MiniGameResult> {
+	const veils = ["Concealment Veil", "Barrier Veil", "Illusion Veil", "Sealing Veil", "Protective Veil"]
+	const randomVeil = veils[Math.floor(Math.random() * veils.length)]
+
+	const targets = ["Cursed Spirit", "Cursed Energy", "Jujutsu Sorcerer", "Innocent Bystander", "Cursed Object"]
+	const randomTarget = targets[Math.floor(Math.random() * targets.length)]
+
+	const embed = new EmbedBuilder()
+		.setColor(0x00ff00)
+		.setTitle("Veil Caster Mini-Game")
+		.setDescription(`You need to cast a ${randomVeil} on a ${randomTarget}. Choose your casting method:`)
+		.addFields(
+			{ name: "1️⃣", value: "Precise Casting" },
+			{ name: "2️⃣", value: "Quick Casting" },
+			{ name: "3️⃣", value: "Delayed Casting" }
+		)
+
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("1").setLabel("Precise").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("2").setLabel("Quick").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("3").setLabel("Delayed").setStyle(ButtonStyle.Primary)
+	)
+
+	const message = await interaction.reply({ embeds: [embed], components: [actionRow], fetchReply: true })
+
+	const collector = message.createMessageComponentCollector({ time: 15000 })
+
+	return new Promise(resolve => {
+		collector.on("collect", async i => {
+			if (i.customId === "1") {
+				embed.setDescription(
+					`You chose to cast the ${randomVeil} on the ${randomTarget} using precise casting. Your veil was successfully cast, achieving the desired effect.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Your precise casting technique ensured the ${randomVeil} was applied correctly. You earned ${earnings} coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "full", message: "" })
+				collector.stop()
+			} else if (i.customId === "2") {
+				embed.setDescription(
+					`You opted for quick casting to apply the ${randomVeil} on the ${randomTarget}. While the veil was cast, its effectiveness was slightly diminished.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: `Your quick casting allowed you to apply the veil, but its potency was reduced. You earned ${Math.floor(
+						earnings * 0.7
+					)} coins.`
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "partial", message: "" })
+				collector.stop()
+			} else if (i.customId === "3") {
+				embed.setDescription(
+					`You decided to delay the casting of the ${randomVeil} on the ${randomTarget}. The delay caused the veil to dissipate before it could take effect.`
+				)
+				embed.setFields({
+					name: "Result",
+					value: "Your delayed casting resulted in the veil failing to apply. You didn't earn any coins."
+				})
+				await i.update({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+				collector.stop()
+			}
+		})
+
+		collector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				embed.setDescription(
+					"You took too long to choose your casting method. The opportunity to cast the veil has passed."
+				)
+				embed.setFields({
+					name: "Result",
+					value: "Your indecision caused you to miss the chance to cast the veil. You didn't earn any coins."
+				})
+				await interaction.editReply({ embeds: [embed], components: [] })
+				resolve({ success: "fail", message: "" })
+			}
+		})
+	})
+}

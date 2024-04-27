@@ -501,6 +501,8 @@ export async function handleDivineDogsDamage(interaction, randomOpponent, player
 }
 
 const quotes = [
+	"Greetings from the author! I'm Akutami, the creator of Jujutsu Kaisen. I'm very happy to meet you all!",
+	"Greetings from the developer!",
 	"Nice to meet you. Long time no see to the people who followed me in GIGA magazine. I'll do my very best!",
 	"It was through my editor, but a senpai creator complimented my first chapter. It really got me going!",
 	"I told someone the meal they treated me to was 'as tasty as snacks' and was told that was not an appropriate comparison.",
@@ -939,10 +941,10 @@ export function getRandomItemDescription(itemName: string): string {
 
 export function getShikigamiEmoji(shikigamiName) {
 	const shikigamiEmojis = {
-		"Divine Dogs": "🐺",
+		"Divine Dogs": "<a:beatrizconradohappyjoy:1231815833689395213>",
 		"Toad": "🐸",
 		"Max Elephant": "🐘",
-		"Divine-General Mahoraga": "👿",
+		"Divine-General Mahoraga": "<:mahoragapixe:1231814681350635530>",
 		"Mahoraga": "😈",
 		"Great Serpent": "🐍",
 		"Nue": "🦚",
@@ -950,8 +952,32 @@ export function getShikigamiEmoji(shikigamiName) {
 		"Kitsune": "<:6861shirohappynoises:1230889537761316924>",
 		"Mythical Dragon": "<:2087dragon:1230896152950476880>",
 		"Mystical Fox": "<:6702foxed:1230903814517686293>",
-		"Garuda": "🦅"
+		"Garuda": "🦅",
+		"Black Cat": "<a:4349sleepycat:1231732752362242168>"
 	}
 
 	return shikigamiEmojis[shikigamiName] || "❓"
 }
+
+export const shinyShikigamis = ["Divine-General Mahoraga", "Garuda"]
+
+export const shikigamiEmojis = {
+	"Divine Dogs": "<a:beatrizconradohappyjoy:1231815833689395213>",
+	"Toad": "🐸",
+	"Max Elephant": "🐘",
+	"Divine-General Mahoraga": "<:mahoragapixe:1231814681350635530>",
+	"Mahoraga": "😈",
+	"Great Serpent": "🐍",
+	"Nue": "🦚",
+	"Noj": "<:73062buwumask:1230903140703015035>",
+	"Kitsune": "<:6861shirohappynoises:1230889537761316924>",
+	"Mythical Dragon": "<:2087dragon:1230896152950476880>",
+	"Mystical Fox": "<:6702foxed:1230903814517686293>",
+	"Garuda": "🦅",
+	"Black Cat": "<a:4349sleepycat:1231732752362242168>"
+}
+
+export const shikigamiItems2 = [
+	{ name: "Special-Grade Medicine", rarity: "Special", price: 85000 },
+	{ name: "Shikigami food", rarity: "Special", price: 50000 }
+]

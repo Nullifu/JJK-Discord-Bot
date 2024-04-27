@@ -8,11 +8,13 @@ import {
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
+	ModalBuilder,
 	Partials,
 	PermissionFlagsBits,
 	REST,
 	Routes,
-	SlashCommandBuilder
+	SlashCommandBuilder,
+	TextChannel
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 
@@ -51,6 +53,7 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
+	handleShikigamiShop,
 	handleShopCommand,
 	handleSupportCommand,
 	handleTame,
@@ -60,23 +63,36 @@ import {
 	handleUnequipQuestCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
+	handleUpdateProfileImageCommand,
 	handleUseItemCommand,
 	handleViewEffectsCommand,
 	handleViewShikigami,
+	handleViewStats,
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
+	handlecreditcommand,
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
-import { getShopLastReset, handleToggleHeavenlyRestrictionCommand, initializeDatabase } from "./mongodb.js"
+import {
+	getShopLastReset,
+	getUserIdByImageUrl,
+	handleToggleHeavenlyRestrictionCommand,
+	initializeDatabase,
+	logImageUrl,
+	updateReviewStatus,
+	updateReviewerId,
+	updateUserProfileHeader,
+	updateUserProfileImage
+} from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 
 dotenv()
 
-const client = new Client({
+export const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
@@ -88,6 +104,8 @@ const client = new Client({
 })
 
 import log4js from "log4js"
+import { createModerationModal } from "./aws.js"
+import { getRandomQuote } from "./shikigami.js"
 
 // Configure log4js
 log4js.configure({
@@ -194,6 +212,8 @@ client.on("guildCreate", guild => {
 const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 
+export const MODERATION_CHANNEL_ID = "1233723111619166329"
+
 const channelId2 = "1228378327769808926"
 const shomessageId = "1228380084851703922"
 
@@ -260,17 +280,20 @@ const commands = [
 	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
+	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
-	new SlashCommandBuilder().setName("alert").setDescription("Alert users about an update"),
+	new SlashCommandBuilder().setName("alert").setDescription("DEV Alerts"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
+	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
+	new SlashCommandBuilder().setName("stats").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -311,6 +334,25 @@ const commands = [
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
 	new SlashCommandBuilder()
+		.setName("updateprofileimage")
+		.setDescription("Update your profile image")
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("avatar")
+				.setDescription("Update your profile avatar")
+				.addAttachmentOption(option =>
+					option.setName("image").setDescription("The image to set as your profile avatar").setRequired(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("header")
+				.setDescription("Update your profile header")
+				.addAttachmentOption(option =>
+					option.setName("image").setDescription("The image to set as your profile header").setRequired(true)
+				)
+		),
+	new SlashCommandBuilder()
 		.setName("sell")
 		.setDescription("Sell an item from your inventory.")
 		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
@@ -330,7 +372,11 @@ const commands = [
 				.setName("type")
 				.setDescription("The type of leaderboard")
 				.setRequired(true)
-				.addChoices({ name: "xp", value: "xp" }, { name: "Wealth", value: "wealth" })
+				.addChoices(
+					{ name: "xp", value: "xp" },
+					{ name: "Wealth", value: "wealth" },
+					{ name: "Fights", value: "fight" }
+				)
 		),
 	new SlashCommandBuilder()
 		.setName("toggleheavenlyrestriction")
@@ -349,7 +395,9 @@ const commands = [
 					{ name: "Special", value: "special" },
 					{ name: "Starter", value: "starter" },
 					{ name: "Fighting", value: "fighting" },
-					{ name: "Shikigami", value: "shikigami" }
+					{ name: "Shikigami", value: "shikigami" },
+					{ name: "Quests", value: "quests" },
+					{ name: "Items", value: "items" }
 				)
 		),
 
@@ -382,30 +430,28 @@ const commands = [
 		.setName("useitem")
 		.setDescription("Use an item from your inventory")
 		.addStringOption(option =>
-			option.setName("item").setDescription("The name of the item to use").setRequired(true).addChoices(
-				{ name: "Sukuna Finger", value: "Sukuna Finger" },
-				{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
-				{ name: "Six Eyes", value: "Six Eyes" },
-				{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
-				{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
-				{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
-				{ name: "Sacred Eye", value: "Sacred Eye" },
-				{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
-				{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
-				{ name: "Cursed Chest", value: "Cursed Chest" },
-				{ name: "Soul Bundle", value: "Soul Bundle" },
-				{ name: "Curse Repellent", value: "Curse Repellent" },
-				{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
-				{
-					name: "Special-Grade Cursed Object",
-					value: "Special-Grade Cursed Object"
-				},
-				{
-					name: "Special Grade Cursed Object",
-					value: "Special Grade Cursed Object"
-				},
-				{ name: "Cleaning Sponge", value: "Cleaning Sponge" }
-			)
+			option
+				.setName("item")
+				.setDescription("The name of the item to use")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Sukuna Finger", value: "Sukuna Finger" },
+					{ name: "Heavenly Restricted Blood", value: "Heavenly Restricted Blood" },
+					{ name: "Six Eyes", value: "Six Eyes" },
+					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
+					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
+					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
+					{ name: "Sacred Eye", value: "Sacred Eye" },
+					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
+					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
+					{ name: "Cursed Chest", value: "Cursed Chest" },
+					{ name: "Soul Bundle", value: "Soul Bundle" },
+					{ name: "Curse Repellent", value: "Curse Repellent" },
+					{ name: "Starter Bundle", value: "Starter Bundle" },
+					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
+					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
+					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
+				)
 		)
 		.addStringOption(option =>
 			option
@@ -453,58 +499,9 @@ const commands = [
 				.setDescription("Unequip a technique.")
 				.addStringOption(option =>
 					option
-						.setName("technique2")
-						.setDescription("Second technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique10")
-						.setDescription("Tenth technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique3")
-						.setDescription("Third technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique4")
-						.setDescription("Fourth technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique5")
-						.setDescription("Fifth technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique7")
-						.setDescription("Seventh technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique8")
-						.setDescription("Eight technique to unequip")
-						.setRequired(false)
-						.setAutocomplete(false)
-				)
-				.addStringOption(option =>
-					option
-						.setName("technique9")
-						.setDescription("Ninth technique to unequip")
-						.setRequired(false)
+						.setName("techniques")
+						.setDescription("Comma-separated list of techniques to unequip")
+						.setRequired(true)
 						.setAutocomplete(false)
 				)
 		)
@@ -600,33 +597,40 @@ client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
 	const chatInputInteraction = interaction
 	const { commandName } = chatInputInteraction
+
 	if (commandName === "help") {
 		const helpEmbed = new EmbedBuilder()
-
 			.setAuthor({
 				name: "Jujutsu Kaisen Bot",
-				iconURL: "https://bit.ly/4cfWISM"
+				iconURL:
+					"https://media.discordapp.net/attachments/1186763353494925404/1231808785090220042/Snapinsta.app_391524227_1278065773589666_2455587178141689864_n_1080.jpg?ex=66384e54&is=6625d954&hm=d208ac0a522cfc6446265782671b04d4207dd6fd6c102d779f8956ba25d9bec6&=&format=webp&width=554&height=554"
 			})
-			.setColor(0x000000)
-			.setThumbnail("https://bit.ly/3wWCEEQ")
-			.setTitle("↓↓↓↓ **Cursed Commands** ↓↓↓↓")
-			.setDescription(
-				"Dive into the world of Jujutsu Sorcerers with your very own Cursed Techniques. Each command is a step into the thrilling universe of curses and battles. Ready to unleash your potential?"
-			)
-			.addFields([
+			.setColor(0x390baa)
+			.setTitle("Cursed Commands")
+			.setDescription("JJK Bot Commands!")
+			.addFields(
 				{
 					name: "**General Commands**",
-					value: "Gamble - I think we all know what this is\nBeg - Beg some innocent people for money!\nGuide - Stuck? Refer to this!\nSupport - Link for the support server\nUpdate -  View recent updates!\nRegister - Join the ranks of sorcerers\nDig - Unearth cursed objects\nInventory - Review your collected items\nProfile - Display your sorcerer profile\nBalance - Check your yen balance\nWork - Earn yen through missions\nDaily - Claim your daily curse"
+					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `VoteClaim`, `Guide`"
 				},
 				{
-					name: "**Jujutsu System!**",
-					value: "Fight - Engage in battles using your cursed energy\nCraft - Create cursed objects or tools\nUseItem - Activate a cursed object\nDomainSelection - Manifest your domain expansion!\nJujutsuStatus - Check your jujutsu stats!\nTechniqueShop - Check out the shop for some new techniques!"
+					name: "**Economy Commands**",
+					value: "`Work`, `Dig`, `Gamble`, `Beg`, `Donate`"
+				},
+				{
+					name: "**Battle Commands**",
+					value: "`Fight`, `Tame`"
+				},
+				{
+					name: "**Other Commands**",
+					value: "`Alert`, `Update`, `Search`, `SelectJob`, `SelectTitle`"
 				}
-			])
+			)
 			.setTimestamp()
-			.setFooter({
-				text: "Explore and enjoy the world of curses!"
-			})
+			.setImage(
+				"https://64.media.tumblr.com/f17b9a4b1c06e60da80cd727d15bad45/73b1b994021421f6-69/s1280x1920/29829ea2f358a23eb7dd17a12631a864e374d4f4.png"
+			)
+			.setFooter({ text: getRandomQuote() })
 
 		await interaction.reply({ embeds: [helpEmbed], ephemeral: true })
 	}
@@ -639,6 +643,10 @@ client.on("interactionCreate", async interaction => {
 	const { commandName } = chatInputInteraction
 	if (commandName === "register") {
 		await handleRegisterCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "credits") {
+		await handlecreditcommand(chatInputInteraction)
 		return
 	}
 
@@ -762,6 +770,9 @@ client.on("interactionCreate", async interaction => {
 			case "balance":
 				await handleBalanceCommand(chatInputInteraction)
 				break
+			case "updateprofileimage":
+				await handleUpdateProfileImageCommand(chatInputInteraction)
+				break
 			case "dailyshop":
 				await handleShopCommand(chatInputInteraction)
 				break
@@ -787,9 +798,6 @@ client.on("interactionCreate", async interaction => {
 			case "dig":
 				await handleDigCommand(chatInputInteraction)
 				break
-			case "work":
-				await handleWorkCommand(chatInputInteraction)
-				break
 			case "daily":
 				await handleDailyCommand(chatInputInteraction)
 				break
@@ -810,6 +818,9 @@ client.on("interactionCreate", async interaction => {
 
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
+				break
+			case "work":
+				await handleWorkCommand(chatInputInteraction)
 				break
 			case "voteclaim":
 				await handleClaimVoteRewards(chatInputInteraction)
@@ -842,6 +853,9 @@ client.on("interactionCreate", async interaction => {
 			case "beg":
 				await handleBegCommand(chatInputInteraction)
 				break
+			case "stats":
+				await handleViewStats(chatInputInteraction)
+				break
 			case "donate":
 				await handleDonateCommand(chatInputInteraction)
 				break
@@ -857,6 +871,139 @@ client.on("interactionCreate", async interaction => {
 			case "owner-addtechnique":
 				await handleADDTECHNIQUE(chatInputInteraction)
 				break
+			case "shikigamishop":
+				await handleShikigamiShop(chatInputInteraction)
+				break
+		}
+	}
+})
+
+///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
+
+import { AutoPoster } from "topgg-autoposter"
+
+const poster = AutoPoster(process.env.TOPGG, client)
+
+poster.on("posted", stats => {
+	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+})
+
+///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
+
+export async function sendForManualReview(imageUrl: string, interaction, subcommand: string): Promise<void> {
+	try {
+		const moderationChannel = await client.channels.fetch(MODERATION_CHANNEL_ID)
+		if (moderationChannel && moderationChannel.type === ChannelType.GuildText) {
+			const textChannel = moderationChannel as TextChannel
+			const message = await textChannel.send({
+				content: `Hey <@292385626773258240> Review needed for the following ${subcommand} image from ${interaction.user.username}:`,
+				embeds: [
+					new EmbedBuilder()
+						.setImage(imageUrl)
+						.setTitle(`Review ${subcommand.charAt(0).toUpperCase() + subcommand.slice(1)} Image`)
+				]
+			})
+
+			logger.info("Manual review message sent for image:", message.attachments)
+
+			const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder()
+					.setCustomId(`confirm_accept_${message.id}`)
+					.setLabel("Confirm")
+					.setStyle(ButtonStyle.Success),
+				new ButtonBuilder()
+					.setCustomId(`confirm_deny_${message.id}`)
+					.setLabel("Deny")
+					.setStyle(ButtonStyle.Danger)
+			)
+
+			await message.edit({ components: [row] })
+
+			await logImageUrl(imageUrl, interaction.user.id)
+		} else {
+			logger.error("The fetched channel is not a text channel.")
+			throw new Error("Incorrect channel type")
+		}
+	} catch (error) {
+		logger.error("Failed to send message for manual review:", error)
+		throw error
+	}
+}
+
+client.on("interactionCreate", async interaction => {
+	if (interaction.isButton()) {
+		const buttonInteraction = interaction
+		const [action, originalMessageId] = buttonInteraction.customId.split("_")
+
+		if (action === "confirm") {
+			let modal = new ModalBuilder()
+				.setCustomId(`confirmModal_${action}_${originalMessageId}`)
+				.setTitle("Confirmation")
+
+			if (interaction.customId.includes("accept")) {
+				modal = createModerationModal(
+					`confirmModal_accept_${originalMessageId}`,
+					"Confirm Acceptance",
+					"Reason for Acceptance:"
+				)
+			} else if (interaction.customId.includes("deny")) {
+				modal = createModerationModal(
+					`confirmModal_deny_${originalMessageId}`,
+					"Confirm Denial",
+					"Reason for Denial:"
+				)
+			}
+
+			if (modal) {
+				await interaction.showModal(modal)
+			}
+		}
+	} else if (interaction.isModalSubmit()) {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const [_, action, __] = interaction.customId.split("_")
+		const reason = interaction.fields.getTextInputValue("reason_input")
+		const isAccepted = action === "accept"
+
+		await interaction.reply({
+			ephemeral: true,
+			content: "The review has been processed.",
+			components: []
+		})
+
+		try {
+			const imageUrl = interaction.message.embeds[0].image.url
+			const userId = await getUserIdByImageUrl(imageUrl)
+
+			if (userId) {
+				const user = await client.users.fetch(userId)
+				if (user) {
+					const isHeader = interaction.message.content.includes("header")
+					const content = isAccepted
+						? `🎉 Awesome! Your new ${
+								isHeader ? "header" : "avatar"
+						  } has been approved and is now live on your profile!`
+						: `Image denied as inappropriate. Reason: ${reason}`
+
+					await user.send(content)
+
+					if (isAccepted) {
+						if (isHeader) {
+							await updateUserProfileHeader(userId, imageUrl)
+							logger.info(`Updated profile header for user ${userId}`)
+						} else {
+							await updateUserProfileImage(userId, imageUrl)
+							logger.info(`Updated profile avatar for user ${userId}`)
+						}
+					}
+
+					await updateReviewStatus(imageUrl, true)
+					await updateReviewerId(imageUrl, interaction.user.id)
+				}
+			} else {
+				logger.warn(`No user ID found for image URL: ${imageUrl}`)
+			}
+		} catch (error) {
+			logger.error("Failed to process manual review:", error)
 		}
 	}
 })

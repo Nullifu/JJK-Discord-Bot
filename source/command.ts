@@ -3,9 +3,10 @@
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
-import { SelectMenuBuilder } from "@discordjs/builders"
+import { MessageActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
 import {
 	ActionRowBuilder,
+	Attachment,
 	ButtonBuilder,
 	ButtonStyle,
 	CacheType,
@@ -20,11 +21,14 @@ import {
 	StringSelectMenuInteraction
 } from "discord.js"
 import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks, heavenlyrestrictionskills } from "./attacks.js"
-import { digCooldown, digCooldownBypassIDs, digCooldowns, logger } from "./bot.js"
+import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
+import { bossDrops } from "./bossdrops.js"
+import { digCooldown, digCooldownBypassIDs, digCooldowns, logger, sendForManualReview } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
 	createInventoryPage,
+	createStatsEmbed,
 	getRandomAmount,
 	getRandomLocation,
 	handleClanDataEmbed,
@@ -49,19 +53,12 @@ import {
 	handlePlayerRevival,
 	handleShikigamiTame
 } from "./fight.js"
-import {
-	BossData,
-	buildGamblersProfile,
-	formatDomainExpansion,
-	gojoCommentary,
-	gradeMappings,
-	itadoriCommentary,
-	sukunaCommentary
-} from "./interface.js"
+import { BossData, buildGamblersProfile, formatDomainExpansion, gradeMappings } from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
 	INVENTORY_CLAN,
+	MiniGameResult,
 	allAchievements,
 	benefactors,
 	craftingRecipes,
@@ -71,6 +68,10 @@ import {
 	items1,
 	jobs,
 	lookupItems,
+	playCurseHunterMinigame,
+	playJujutsuSorcererMinigame,
+	playStudentMinigame,
+	playVeilCasterMinigame,
 	questsArray
 } from "./items jobs.js"
 import { getRandomItem } from "./items.js"
@@ -82,7 +83,9 @@ import {
 	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
+	checkProfileChangeCooldown,
 	checkUserHasHeavenlyRestriction,
+	checkWorkCooldown,
 	cleanShikigami,
 	createTradeRequest,
 	feedShikigami,
@@ -93,6 +96,7 @@ import {
 	getBalance,
 	getBosses,
 	getGamblersData,
+	getMonthlyFightsWonLeaderboard,
 	getPreviousTrades,
 	getShikigami,
 	getShopLastReset,
@@ -101,6 +105,7 @@ import {
 	getUserActiveTechniques,
 	getUserDailyData,
 	getUserDomain,
+	getUserFavouriteCommand,
 	getUserGambleInfo,
 	getUserGrade,
 	getUserHealth,
@@ -108,21 +113,25 @@ import {
 	getUserInventory,
 	getUserItemEffects,
 	getUserMaxHealth,
-	getUserMentor,
 	getUserOwnedInateClan,
 	getUserProfile,
+	getUserProfileHeader,
+	getUserProfileImage,
 	getUserPurchases,
 	getUserQuests,
+	getUserRegisteredDate,
 	getUserShikigami,
+	getUserStats,
 	getUserStatusEffects,
 	getUserTechniques,
 	getUserTransformation,
 	getUserUnlockedBosses,
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
-	getUserWorkCooldown,
+	getUserWorked,
 	handleTradeAcceptance,
 	healShikigami,
+	logImageUrl,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
@@ -131,20 +140,26 @@ import {
 	updatePlayerGrade,
 	updateUserAchievements,
 	updateUserActiveTechniques,
-	updateUserCooldown,
+	updateUserCommandsUsed,
+	updateUserCooldowns,
 	updateUserDailyData,
 	updateUserDomainExpansion,
 	updateUserExperience,
+	updateUserFavoriteCommand,
+	updateUserFavouriteTechnique,
 	updateUserGambleInfo,
 	updateUserHealth,
 	updateUserHeavenlyTechniques,
 	updateUserHonours,
 	updateUserInateClan,
 	updateUserJob,
+	updateUserProfileHeader,
+	updateUserProfileImage,
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
 	updateUserUnlockedTransformations,
+	updateUserWorked,
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
@@ -158,6 +173,7 @@ import {
 	getShikigamiEmoji,
 	handleDivineDogsDamage,
 	handleMahoragaAttack,
+	shikigamiItems2,
 	startPlayingMinigame,
 	updateShikigamiField
 } from "./shikigami.js"
@@ -225,7 +241,9 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
 	const targetUser = interaction.options.getUser("user") || interaction.user
+
 	await interaction.deferReply()
+	await updateUserCommandsUsed(interaction.user.id)
 
 	const balance = await getBalance(targetUser.id)
 
@@ -245,37 +263,37 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 export async function handleProfileCommand(interaction: ChatInputCommandInteraction) {
 	const targetUser = interaction.options.getUser("user") || interaction.user
 
+	await updateUserCommandsUsed(interaction.user.id)
+
 	const createProfileEmbed = async user => {
 		const userProfile = await getUserProfile(user.id)
-
 		if (!userProfile) throw new Error("Profile not found.")
 
+		const profileImage = getUserProfileImage(user.id)
+		const profileHeader = await getUserProfileHeader(user.id)
 		const hasHeavenlyRestriction = !!userProfile.heavenlyrestriction
-
-		let domainExpansionValue
-		if (hasHeavenlyRestriction) {
-			domainExpansionValue = "Not applicable due to Heavenly Restriction"
-		} else {
-			domainExpansionValue = formatDomainExpansion(userProfile.domain)
-		}
+		const domainExpansionValue = hasHeavenlyRestriction
+			? "Not applicable due to Heavenly Restriction"
+			: formatDomainExpansion(userProfile.domain)
+		const shikigamiEmojis = userProfile.shikigami.map(shiki => getShikigamiEmoji(shiki.name))
 
 		const embed = new EmbedBuilder()
 			.setColor(0x1f6b4e)
-			.setTitle(`Jujutsu Profile: ${targetUser.username} 🌀`)
-			.setThumbnail(targetUser.displayAvatarURL())
+			.setTitle(`Jujutsu Profile: ${user.username} 🌀`)
+			.setImage(profileHeader || user.displayAvatarURL())
+			.setThumbnail(await profileImage)
 			.addFields(
-				{ name: "**Clan** 🏆", value: userProfile.inateclan || "None", inline: false },
-				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: false },
+				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: true },
+				{ name: "**Sorcerer Grade** 🏅", value: userProfile.grade || "Unranked", inline: true },
 				{ name: "**Balance** 💰", value: `\`${userProfile.balance.toLocaleString()}\``, inline: false },
 				{ name: "**Experience** ✨", value: userProfile.experience.toLocaleString(), inline: false },
-				{ name: "**Sorcerer Rank** 🏅", value: userProfile.grade || "Unranked", inline: false },
 				{ name: "**Job** 💼", value: userProfile.job || "None", inline: false },
 				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false },
-				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false }
+				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false },
+				{ name: "**Shikigami** 🐾", value: shikigamiEmojis.join(" ") || "None", inline: false }
 			)
 			.setFooter({ text: getRandomQuote() })
 
-		// Check if the user ID matches the special user ID
 		if (user.id === "292385626773258240") {
 			embed.setColor("LuminousVividPink")
 			embed.addFields({ name: "**All-Knowing**", value: "This user is all knowing! 🤔", inline: false })
@@ -287,15 +305,53 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 
 	try {
 		const profileEmbed = await createProfileEmbed(targetUser)
-		await interaction.reply({ embeds: [profileEmbed] })
+
+		const selectMenu = new StringSelectMenuBuilder()
+			.setCustomId("selectMenu")
+			.setPlaceholder("Select an option")
+			.addOptions([
+				{ label: "Main Profile", description: "View your main profile", value: "mainProfile" },
+				{ label: "User Stats", description: "View clan data", value: "userStats" }
+			])
+
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+		await interaction.reply({ embeds: [profileEmbed], components: [row] })
+
+		const filter = i => i.customId === "selectMenu" && i.user.id === interaction.user.id
+		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+		collector.on("collect", async i => {
+			if (!i.isStringSelectMenu()) return
+
+			let newEmbed
+
+			switch (i.values[0]) {
+				case "mainProfile":
+					newEmbed = profileEmbed
+					break
+				case "userStats":
+					newEmbed = await createStatsEmbed(targetUser)
+					break
+				default:
+					await i.update({ content: "No profile found for this selection.", components: [] })
+					return
+			}
+
+			await i.update({ embeds: [newEmbed] })
+		})
+
+		collector.on("end", collected => console.log(`Collected ${collected.size} interactions.`))
 	} catch (error) {
-		logger.error("Error handling profile command:", error)
+		console.error("Error handling profile command:", error)
 		await interaction.reply({ content: "There was an error retrieving your profile.", ephemeral: true })
 	}
 }
 
 export async function handleInventoryCommand(interaction) {
 	await interaction.deferReply()
+
+	await updateUserCommandsUsed(interaction.user.id)
 
 	const mentionedUser = interaction.options.getUser("user") || interaction.user
 	const inventoryItems = await getUserInventory(mentionedUser.id)
@@ -352,6 +408,8 @@ export async function handleInventoryCommand(interaction) {
 export async function handleDigCommand(interaction) {
 	await interaction.deferReply()
 
+	await updateUserCommandsUsed(interaction.user.id)
+
 	const currentTime = Date.now()
 	const authorId = interaction.user.id
 	const timestamp = digCooldowns.get(authorId)
@@ -382,6 +440,7 @@ export async function handleDigCommand(interaction) {
 	const coinsFound = Math.floor(Math.random() * 20000) + 1
 
 	await updateBalance(interaction.user.id, coinsFound)
+	await updateUserFavoriteCommand(interaction.user.id, "Dig")
 
 	if (doesDiscoverItem) {
 		const itemFound = getRandomItem()
@@ -416,6 +475,8 @@ export async function handleDigCommand(interaction) {
 
 export async function handleJobSelection(interaction: CommandInteraction) {
 	if (!interaction.isChatInputCommand()) return
+
+	await updateUserCommandsUsed(interaction.user.id)
 
 	const jobOptions = jobs.map(job => ({
 		label: job.name,
@@ -484,60 +545,8 @@ export async function handleJobSelection(interaction: CommandInteraction) {
 	})
 }
 
-export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-	const userId = interaction.user.id
-	const userProfile = await getUserProfile(userId)
-	const currentJobName = userProfile.job || "Student"
-	const currentJob = jobs.find(job => job.name === currentJobName)
-
-	if (!currentJob) {
-		await interaction.reply({ content: "Error: Invalid job specified.", ephemeral: true })
-		return
-	}
-
-	const currentTime = Date.now()
-
-	try {
-		const lastWorkTime = await getUserWorkCooldown(userId)
-
-		if (currentTime - lastWorkTime < currentJob.cooldown) {
-			const endCooldownTime = Math.floor((lastWorkTime + currentJob.cooldown) / 1000)
-			await interaction.reply({
-				content: `You're too tired to work as a ${currentJobName} right now. You can work again <t:${endCooldownTime}:R>.`,
-				ephemeral: true
-			})
-			return
-		}
-
-		// If the cooldown has passed, continue with work command logic...
-		const earnings = calculateEarnings(userProfile)
-		const experienceGain = getRandomAmount(20, 50)
-
-		// Update user data
-		await updateBalance(userId, earnings)
-		await updateUserExperience(userId, experienceGain)
-		await updatePlayerGrade(userId)
-
-		// Update the work cooldown (using 'work' as the jobType)
-		await updateUserCooldown(userId, "work", currentTime)
-
-		// Reply with the earnings
-		const embed = new EmbedBuilder()
-			.setColor(0x00ff00)
-			.setTitle("Work Completed")
-			.setDescription(`You worked hard as a ${currentJobName} and earned **${earnings}** coins!`)
-			.setTimestamp()
-
-		await interaction.reply({ embeds: [embed] })
-	} catch (error) {
-		console.error("Failed to process work command:", error)
-		await interaction.reply({
-			content: "An error occurred while trying to work. Please try again later.",
-			ephemeral: true
-		})
-	}
-}
 export async function handleDailyCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
 	const currentTime = Date.now()
 	const oneDayMs = 24 * 60 * 60 * 1000
@@ -590,21 +599,6 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 
 	await interaction.reply({ embeds: [dailyEmbed] })
 	await postCommandMiddleware(interaction)
-}
-
-function checkCraftability(recipe, userInventory) {
-	// Check if requiredMaterials and userInventory are properly defined
-	if (!recipe.requiredMaterials || !userInventory) {
-		console.error("Missing required materials or user inventory data")
-		return false // Cannot craft if data is missing
-	}
-
-	for (const [item, requiredAmount] of Object.entries(recipe.requiredMaterials)) {
-		if (!userInventory[item] || userInventory[item] < requiredAmount) {
-			return false // The user does not have enough of this item
-		}
-	}
-	return true // All required items are available in the necessary quantities
 }
 
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>) {
@@ -751,6 +745,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					}
 
 					buttonCollector.stop()
+					menuCollector.stop
 				})
 			}
 		})
@@ -855,7 +850,7 @@ export async function handleDomainSelection(interaction) {
 	const domaincollector = interaction.channel.createMessageComponentCollector({ filter })
 
 	domaincollector.on("collect", async collectedInteraction => {
-		if (collectedInteraction.isSelectMenu() && collectedInteraction.customId === "select-domain") {
+		if (collectedInteraction.isStringSelectMenu() && collectedInteraction.customId === "select-domain") {
 			const selectedDomainName = collectedInteraction.values[0]
 
 			// Find Domain Information
@@ -882,6 +877,9 @@ export async function handleDomainSelection(interaction) {
 			}
 			if (selectedDomain.effects) {
 				infoEmbed.addFields({ name: "•  Effects", value: selectedDomain.effects })
+			}
+			if (selectedDomain.requirement) {
+				infoEmbed.addFields({ name: "•  Requirement", value: selectedDomain.requirement })
 			}
 
 			// Add the "Buy" button
@@ -1215,7 +1213,7 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 	await sendAchievementsEmbed(currentPage)
 
 	const filter = (i: { user: { id: string }; customId: string }) => i.user.id === userId
-	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 120000 }) // Collector for 2 minutes
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 120000 })
 
 	collector.on("collect", async i => {
 		if (i.customId === "previous_page" && currentPage > 0) {
@@ -1235,32 +1233,32 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 6.0", // Replace with your actual version number
-			date: "19-04-24", // Adjust the date as needed
+			version: "Update 6.5", // Replace with your actual version number
+			date: "27-04-24", // Adjust the date as needed
 			changes: [
 				{
-					name: "**Biggest Update Yet!**",
-					value: "Reworked Fushiguro, Added Pets. + Shikigami!"
+					name: "**Exciting Changes!**",
+					value: "New profile customization + more!"
 				},
 				{
-					name: "Shikigami",
-					value: "Earn shikigami through the tame command."
+					name: "Profile Customization",
+					value: "New ways to customize your profile, This system is very WIP. Please keep that in mind if you want to get a custom profile use /updateprofileimage. for more info use /guide profiles"
 				},
 				{
-					name: "Did you know?",
-					value: "Shikigami can also be used as pets! using shikigami [view, shop] Remember to feed them and keep them healthy!"
+					name: "Shikigami Shop Update!",
+					value: "Shikigami shop has been updated with new items!"
 				},
 				{
-					name: "+ More in the discord!",
-					value: "Join the discord for more information on the update!"
+					name: "Reworks",
+					value: "Completely reworked how the work command is handled, Some jobs now have minigames!"
 				},
 				{
 					name: "Found a bug? Report it!",
 					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
 				},
 				{
-					name: "**sorry guys forgot to update this command about updates.. **",
-					value: "I will try to keep this updated from now on, but if i forget just check the support server for updates."
+					name: "**Thank you everybody who uses the bot!**",
+					value: "I appreciate all the support and feedback i've received so far. Thank you!"
 				}
 			]
 		}
@@ -1273,16 +1271,13 @@ export async function handleUpdateCommand(interaction) {
 		.setDescription(`Released on: **${recentUpdates[0].date}**\nHere's what's new:`)
 		.setTimestamp()
 
-	// Add each change as a field in the embed
 	recentUpdates[0].changes.forEach(change => {
 		updateEmbed.addFields({ name: change.name, value: change.value })
 	})
 
-	// Reply to the interaction with the update information
 	await interaction.reply({ embeds: [updateEmbed], ephemeral: true })
 }
 
-// quick reply command with support server no embed needed ephemeral
 export async function handleSupportCommand(interaction: ChatInputCommandInteraction) {
 	await interaction.reply({ content: "https://discord.gg/wmVyBpqWgs", ephemeral: true })
 }
@@ -1290,7 +1285,6 @@ export async function handleSupportCommand(interaction: ChatInputCommandInteract
 export async function handleLookupCommand(interaction) {
 	const itemName = interaction.options.getString("name").toLowerCase().replace(/\s+/g, "_")
 
-	// Find the item using the transformed input.
 	const item = lookupItems.find(i => i.name.toLowerCase().replace(/\s+/g, "_") === itemName)
 
 	if (!item) {
@@ -1307,7 +1301,6 @@ export async function handleLookupCommand(interaction) {
 	await interaction.reply({ embeds: [embed], ephemeral: true })
 }
 
-// Function to find a technique's clan
 function findTechniqueClan(techniqueName: string): string {
 	for (const clanName in INVENTORY_CLAN) {
 		if (
@@ -1325,7 +1318,6 @@ function findTechniqueClan(techniqueName: string): string {
 function simplifyTechniqueName(fullName: string): string {
 	const nameMap = {
 		"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga": "Divine General Mahoraga"
-		// Add other simplifications as needed
 	}
 	return nameMap[fullName] || fullName
 }
@@ -1335,9 +1327,10 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	const userId = targetUser.id
 
 	try {
+		await updateUserFavoriteCommand(interaction.user.id, "Jujutsu Stats")
 		const userDomain = await getUserDomain(userId)
 		const userMaxHealth = await getUserMaxHealth(userId)
-		const honors = (await getUserHonours(userId)) || [] // Ensure honors is never undefined
+		const honors = (await getUserHonours(userId)) || []
 		const transform = await getUserTransformation(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 
@@ -1346,10 +1339,8 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			? getUserActiveHeavenlyTechniques(userId)
 			: getUserActiveTechniques(userId))
 
-		// Ensure userTechniques is an array
 		userTechniques = Array.isArray(userTechniques) ? userTechniques : []
 
-		// Enrich techniques with clan information
 		const userTechniquesWithClan = userTechniques.map(technique => {
 			return {
 				name: technique,
@@ -1364,20 +1355,19 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			return acc
 		}, {})
 
-		// Sort clans and techniques alphabetically and create the display string
 		let techniquesDisplay = Object.keys(techniquesByClan)
 			.sort()
 			.map(clan => {
 				const techniques = techniquesByClan[clan]
 					.sort()
-					.map(technique => `> • ${simplifyTechniqueName(technique)}`) // Using block quote for indentation
-				return `**${clan}**\n${techniques.join("\n")}` // Clan name in bold
+					.map(technique => `> • ${simplifyTechniqueName(technique)}`)
+				return `**${clan}**\n${techniques.join("\n")}`
 			})
 			.join("\n\n")
 
 		// Add domain expansion if present at the top
 		if (userDomain && userDomain !== "None") {
-			techniquesDisplay = `**Domain Expansion: ${userDomain}**\n\n` + techniquesDisplay // Domain name in bold
+			techniquesDisplay = `**Domain Expansion: ${userDomain}**\n\n` + techniquesDisplay
 		}
 
 		// Construct the embed
@@ -1469,57 +1459,221 @@ function formatCooldown(cooldown) {
 	return `${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "m " : ""}${seconds > 0 ? seconds + "s" : ""}`
 }
 
+function generateBossDropFields(bossDrops, startIndex, endIndex) {
+	const rarityAbbreviations = {
+		"common": "C",
+		"rare": "R",
+		"ultra rare": "UR"
+	}
+
+	const fields = []
+	for (let i = startIndex; i < endIndex; i++) {
+		const bossName = Object.keys(bossDrops)[i]
+		const drops = bossDrops[bossName]
+
+		const shortDropList =
+			drops.length > 3
+				? drops
+						.slice(0, 3)
+						.map(drop => `**${drop.name}** (${rarityAbbreviations[drop.rarity.toLowerCase()]})`)
+						.join(", ") + " ..."
+				: drops.map(drop => `${drop.name} (${rarityAbbreviations[drop.rarity.toLowerCase()]})`).join(", ")
+
+		fields.push({
+			name: `**${bossName}**`,
+			value: shortDropList,
+			inline: true
+		})
+	}
+	return fields
+}
+
 // guide command
 export async function handleGuideCommand(interaction) {
 	const topic = interaction.options.getString("topic")
 
-	const guideEmbed = new EmbedBuilder().setColor("#0099ff")
-
 	switch (topic) {
-		case "special":
-			guideEmbed
+		case "special": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
 				.setTitle("Special Items")
-				.setDescription("Information on unique//special items")
+				.setDescription("Information on unique/special items")
 				.addFields({
-					name: "Basic Crafting",
-					value: "There are special techniques, pets, and items in the bot.. For techniques you'd use a item like a sukuna finger or the six eyes, And if your lucky you should get a embed that looks a bit like this!"
+					name: "Basic Usages",
+					value: "Main item's you can use is as follows, Sukuna Finger, Six Eyes, Cursed Energy Vial, and more. Rewards: Cursed Energy Vial = +30hp, Six Eyes, Various effects, Sukuna Finger, Various effects."
 				})
 				.setImage(
 					"https://cdn.discordapp.com/attachments/1094302755960664255/1231374487774040074/image.png?ex=6636b9db&is=662444db&hm=b80646a17ca3cb4c205170abc51a1616810afb548d8746c80a313b7587aa195a&"
 				)
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		case "crafting":
-			guideEmbed.setTitle("Crafting Guide").setDescription("Here's how you can craft items.").addFields({
-				name: "Basic Crafting",
-				value: "To start crafting, use `/craft [item]`. You can find item materials by using /beg /dig /search /fight /quest"
-			})
+		}
+
+		case "items": {
+			await interaction.deferReply({ ephemeral: true })
+
+			try {
+				const guideEmbed = new EmbedBuilder()
+					.setColor("#0099ff")
+					.setTitle("Items Guide")
+					.setDescription("Main methods of getting items")
+					.addFields({
+						name: "Item Rarities\n`C` - Common\n`R` - Rare\n`UR` - Ultra Rare",
+						value: "You can get items from /fight, /dig, /search, /beg, /quest, /daily.  Boss drops are as follows:\n"
+					})
+
+				const bossDropCount = Object.keys(bossDrops).length
+				const fieldsPerPage = 5
+				const totalPages = Math.ceil(bossDropCount / fieldsPerPage)
+
+				let currentPage = 1
+				let startIndex = 0
+				let endIndex = Math.min(startIndex + fieldsPerPage, bossDropCount)
+
+				const bossDropFields = generateBossDropFields(bossDrops, startIndex, endIndex)
+				guideEmbed.addFields(...bossDropFields)
+
+				const prevButton = new ButtonBuilder()
+					.setCustomId("prevPage")
+					.setLabel("Previous")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(currentPage === 1)
+
+				const nextButton = new ButtonBuilder()
+					.setCustomId("nextPage")
+					.setLabel("Next")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(currentPage === totalPages)
+
+				const pageInfo = `Page ${currentPage} of ${totalPages}`
+				const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+					prevButton,
+					nextButton
+				)
+
+				const message = await interaction.followUp({
+					embeds: [guideEmbed],
+					components: [row],
+					content: pageInfo,
+					ephemeral: true
+				})
+
+				const collector = message.createMessageComponentCollector({
+					time: 60000
+				})
+
+				collector.on("collect", async i => {
+					if (i.customId === "prevPage") {
+						currentPage--
+					} else if (i.customId === "nextPage") {
+						currentPage++
+					}
+
+					startIndex = (currentPage - 1) * fieldsPerPage
+					endIndex = Math.min(startIndex + fieldsPerPage, bossDropCount)
+
+					const newBossDropFields = generateBossDropFields(bossDrops, startIndex, endIndex)
+					const existingFieldCount = guideEmbed.data.fields?.length ?? 0
+					guideEmbed.spliceFields(
+						existingFieldCount - bossDropFields.length,
+						bossDropFields.length,
+						...newBossDropFields
+					)
+
+					prevButton.setDisabled(currentPage === 1)
+					nextButton.setDisabled(currentPage === totalPages)
+
+					const newPageInfo = `Page ${currentPage} of ${totalPages}`
+
+					await i.update({
+						embeds: [guideEmbed],
+						components: [row],
+						content: newPageInfo
+					})
+				})
+			} catch (error) {
+				logger.error("Error handling items guide command:", error)
+			}
+
 			break
-		case "starter":
-			guideEmbed.setTitle("Starter Guide").setDescription("Here's how you can begin").addFields({
-				name: "Basic",
-				value: "You can aquire jobs with /jobselection some jobs require money and experience, You can get Money, XP, Items. by using /beg /dig /search /fight /quest, I'd reccomend working and searching til you have enough money to buy a technique, and then start fighting cursed spirits."
-			})
+		}
+
+		case "quests": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Quest Guide")
+				.setDescription("Information on various quests!")
+				.addFields({
+					name: "Quests",
+					value: "There are certain types of quests in the bot. Some give you techniques, while others give you transformations.\n\n- Sukuna Acknowledgment Quest: You have to eat a Sukuna Finger until he notices you. There's a base 30% chance for this to happen. When you eat another finger, a quest shall start."
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		case "technique":
-			guideEmbed.setTitle("Technique Guide").setDescription("Here's how you can aquire techniques.").addFields({
-				name: "Techniques",
-				value: "To aquire a technique, use `/technique shop` All techniques require items and money, after you've bought a technique you can equip it with `/technique equip [TECHNIQUE NAME]` command, And unequip it with /unequip [TECHNIQUE NAME]\n\n\n"
-			})
+		}
+
+		case "starter": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Starter Guide")
+				.setDescription("Here's how you can begin")
+				.addFields({
+					name: "Basic",
+					value: "You can acquire jobs with /jobselection. Some jobs require money and experience. You can get Money, XP, and Items by using /beg, /dig, /search, /fight, and /quest. I recommend working and searching until you have enough money to buy a technique, and then start fighting cursed spirits."
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		case "shikigami":
-			guideEmbed.setTitle("Shikigami Guide").setDescription("Here's how you can aquire Shikigami.").addFields({
-				name: "Shikigami",
-				value: "To aquire a shikigami you must tame one through the /tame command, now they are quite difficult so be prepared!, once you've tamed a shikigami you can use /shikigami view to view the stats//status of it once you aquire the right shikigami you can go onto to summoning mahoraga."
-			})
+		}
+
+		case "technique": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Technique Guide")
+				.setDescription("Here's how you can acquire techniques.")
+				.addFields({
+					name: "Techniques",
+					value: "To acquire a technique, use `/technique shop`. All techniques require items and money. After you've bought a technique, you can equip it with the `/technique equip [TECHNIQUE NAME]` command and unequip it with `/unequip [TECHNIQUE NAME]`."
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		case "fighting":
-			guideEmbed.setTitle("Fighting Guide").setDescription("Guide to the fight command").addFields({
-				name: "Fighting",
-				value: "Probably the most unique thing about this bot, To start a fight use /fight now remember you need techniques to fight these bosses.. But have no fear for you get a free technique when registering for the first time! It's not strong but it'll help you in the start.. once you begin to aquire more items and cash, you can buy newer and greater techniques to rise up the ranks!"
-			})
+		}
+
+		case "shikigami": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Shikigami Guide")
+				.setDescription("Here's how you can acquire Shikigami.")
+				.addFields({
+					name: "Shikigami",
+					value: "To acquire a shikigami, you must tame one through the /tame command. They are quite difficult, so be prepared! Once you've tamed a shikigami, you can use /shikigami view to view its stats and status. Once you acquire the right shikigami, you can go on to summon Mahoraga."
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		case "jobs":
-			guideEmbed.setTitle("Jobs Information").setDescription("All info on jobs")
+		}
+
+		case "fighting": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Fighting Guide")
+				.setDescription("Guide to the fight command")
+				.addFields({
+					name: "Fighting",
+					value: "Probably the most unique thing about this bot. To start a fight, use /fight. Remember, you need techniques to fight these bosses. But have no fear, for you get a free technique when registering for the first time! It's not strong, but it'll help you in the start. Once you begin to acquire more items and cash, you can buy newer and greater techniques to rise up the ranks!"
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
+			break
+		}
+
+		case "jobs": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Jobs Information")
+				.setDescription("All info on jobs")
 
 			jobs.forEach(job => {
 				const jobDetails =
@@ -1535,68 +1689,85 @@ export async function handleGuideCommand(interaction) {
 				})
 			})
 
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
-		default:
-			guideEmbed
+		}
+
+		default: {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
 				.setTitle("Jujutsu Kaisen Bot Guide")
 				.setDescription(
-					"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [ Very WIP ]"
+					"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [Very WIP]"
 				)
 				.addFields(
 					{
 						name: "Commands",
-						value: "1. `/search` - Search for items!.\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
+						value: "1. `/search` - Search for items!\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
 					},
 					{
 						name: "Additional Information",
-						value: "Use these commands to explore the world of Jujutsu Kaisen and grow your cursed energy. Good luck!"
+						value: "If you need more information on a specific topic, use `/guide [topic]` to get more details. For example, `/guide items` will provide information on items."
 					}
 				)
-	}
 
-	await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
+		}
+	}
 }
 
 export async function handleLeaderBoardCommand(interaction) {
 	try {
-		// Assuming there's an option in the slash command where `choice` is either 'xp' or 'wealth'
-		const choice = interaction.options.getString("type") // Get the user's choice from the command options
+		const choice = interaction.options.getString("type")
 
-		const leaderboardEmbed = new EmbedBuilder().setColor("#00FF00").setTimestamp()
+		const leaderboardEmbed = new EmbedBuilder()
+			.setColor("#FFA500") // Set a nice orange color
+			.setTimestamp()
+
 		const rankEmojis = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 		if (choice === "xp") {
 			const userExperiences = await getAllUserExperience()
 			userExperiences.sort((a, b) => b.experience - a.experience)
-
 			leaderboardEmbed
-				.setTitle("🏆 Leaderboard - Top Performers 🏆")
-				.setDescription("Here are the top performers based on XP earned:")
-
+				.setTitle("🏆  Experience Leaderboard 🏆 ")
+				.setDescription("Here are the top users with the most experience:")
 			userExperiences.slice(0, 10).forEach((user, index) => {
 				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
 				const text = `${rank} <@${user.id}> - **${user.experience} XP**`
-				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false })
+				leaderboardEmbed.addFields({ name: "\\u200B", value: text, inline: false })
 			})
 		} else if (choice === "wealth") {
 			const userBalances = await getAllUsersBalance()
 			userBalances.sort((a, b) => b.balance - a.balance)
-
 			leaderboardEmbed
-				.setTitle("💰 Leaderboard - Top Wealth 💰")
-				.setDescription("Here are the top users based on balance:")
-
+				.setTitle("💰 Wealth Leaderboard 💰")
+				.setDescription("Here are the top users with the most wealth:")
 			userBalances.slice(0, 10).forEach((user, index) => {
 				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
-				const text = `${rank} <@${user.id}> - **$${user.balance.toLocaleString()}**`
-				leaderboardEmbed.addFields({ name: "\u200B", value: text, inline: false })
+				const text = `${rank} <@${user.id}> - **$${user.balance}**`
+				leaderboardEmbed.addFields({ name: "\\u200B", value: text, inline: false })
+			})
+		} else if (choice === "fight") {
+			const monthlyFightsWonLeaderboard = await getMonthlyFightsWonLeaderboard()
+
+			monthlyFightsWonLeaderboard.sort((a, b) => b.monthlyFightsWon - a.monthlyFightsWon)
+
+			leaderboardEmbed
+				.setTitle("⚔️ Monthly Fights Won Leaderboard ⚔️")
+				.setDescription("Here are the top fighters for this month:")
+
+			monthlyFightsWonLeaderboard.slice(0, 10).forEach((user, index) => {
+				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
+				const text = `${rank} <@${user.userId}> - **${user.monthlyFightsWon} fights won**`
+
+				leaderboardEmbed.addFields({ name: "\u200B\n", value: text, inline: false })
 			})
 		} else {
-			await interaction.reply("Invalid choice! Please choose between 'xp' and 'wealth'.")
+			await interaction.reply("Invalid choice! Please choose between 'XP', 'Wealth', or 'Fight'.")
 			return
 		}
 
-		// Reply with the chosen type of leaderboard
 		await interaction.reply({ embeds: [leaderboardEmbed] })
 	} catch (error) {
 		logger.error("Failed to handle leaderboard command:", error)
@@ -1605,11 +1776,11 @@ export async function handleLeaderBoardCommand(interaction) {
 }
 
 export async function handleVoteCommand(interaction) {
-	// Enhanced embed message
+	await updateUserFavoriteCommand(interaction.user.id, "Vote")
 	const voteEmbed = new EmbedBuilder()
-		.setColor("#55AAFF") // A slightly softer blue
+		.setColor("#55AAFF")
 		.setTitle("⭐ Vote for Our Bot! ⭐")
-		.setDescription("Help us grow and improve by voting:") // Concise focus
+		.setDescription("Help us grow and improve by voting:")
 		.setThumbnail(
 			"https://cdn.discordapp.com/attachments/1094302755960664255/1225954487739355176/helpprofile.jpg?ex=66230217&is=66108d17&hm=9f851af9539aee1912faece3236d4c222617bec567b5bf952448abe7881a36fb&"
 		)
@@ -1633,10 +1804,8 @@ export async function handleVoteCommand(interaction) {
 		.setURL("https://botlist.me/bots/991443928790335518/vote")
 		.setEmoji("👍")
 
-	// Action row - no changes needed
 	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme, TOPGGReview)
 
-	// Reply with the updated components
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
 }
 async function delay(ms) {
@@ -1653,6 +1822,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	let userTechniquesFight = new Map<string, any>()
 
 	await updateUserHealth(interaction.user.id, playerHealth1)
+	await updateUserFavoriteCommand(interaction.user.id, "Fight")
 
 	await interaction.deferReply()
 
@@ -1714,7 +1884,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		{
 			label: "Domain Expansion",
 			value: "domain",
-			description: domainname || "🔒 Domain Not Unlocked", // Default value if undefined
+			description: domainname || "🔒 Domain Not Unlocked",
 			emoji: {
 				name: "1564maskedgojode",
 				id: "1220626413141622794"
@@ -1723,7 +1893,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		{
 			label: "Transform",
 			value: "transform",
-			description: transformname || "No transformation available", // Default value if undefined
+			description: transformname || "No transformation available",
 			emoji: {
 				name: "a:blueflame",
 				id: "990539090418098246"
@@ -2359,6 +2529,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				})
 			}
 
+			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
+
 			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - damage))
 			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
 
@@ -2704,6 +2876,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 
 			if (userBalance < parseInt(selectedSkill.cost, 10)) {
 				await i.followUp({
+					ephemeral: true,
 					content: `You do not have enough coins to purchase ${selectedSkill.name}.`
 				})
 				return
@@ -2716,6 +2889,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 
 			if (!hasRequiredItems) {
 				await i.followUp({
+					ephemeral: true,
 					content: `You do not have the required items to purchase ${selectedSkill.name}.`
 				})
 				return
@@ -3258,6 +3432,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 
 export async function claimQuestsCommand(interaction) {
 	try {
+		await updateUserCommandsUsed(interaction.user.id)
 		const userId = interaction.user.id // Get the user's ID from the interaction
 		const userQuests = await getUserQuests(userId) // Fetch user quests
 		if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
@@ -3411,6 +3586,7 @@ export async function claimQuestsCommand(interaction) {
 
 // view all active quests using getuserquest
 export async function viewQuestsCommand(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
 
@@ -3462,6 +3638,7 @@ export async function viewQuestsCommand(interaction) {
 }
 // abandon quest with dropdown menu using getuserquest
 export async function abandonQuestCommand(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
 
@@ -3508,6 +3685,8 @@ export async function abandonQuestCommand(interaction) {
 }
 export async function handleUseItemCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	console.log("useCommand function initiated.")
+
+	await updateUserCommandsUsed(interaction.user.id)
 
 	const userId = interaction.user.id
 	const itemName = interaction.options.getString("item")
@@ -3614,6 +3793,7 @@ export async function handleTradeCommand(interaction) {
 }
 export async function handleViewEffectsCommand(interaction) {
 	const userId = interaction.user.id
+	await updateUserCommandsUsed(interaction.user.id)
 	const userEffects = await getUserItemEffects(userId)
 
 	if (!userEffects || userEffects.length === 0) {
@@ -3633,9 +3813,8 @@ export async function handleViewEffectsCommand(interaction) {
 			const endTime = new Date(effect.endTime)
 			const now = new Date()
 			const remainingTime = endTime.getTime() - now.getTime()
-			const remainingMinutes = Math.round(remainingTime / 60000) // Convert milliseconds to minutes
+			const remainingMinutes = Math.round(remainingTime / 60000)
 
-			// Build the value string with a bullet point and a timestamp
 			let valueString = `• ${effectDetails.description}`
 			if (remainingTime > 0) {
 				valueString += `\n• Time remaining: ${remainingMinutes} minutes`
@@ -3657,11 +3836,12 @@ export async function handleViewEffectsCommand(interaction) {
 
 // Handle alert command
 export async function handleAlertCommand(interaction: ChatInputCommandInteraction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
 		.setDescription(
-			"Update 6.0, **BIGGEST UPDATE YET!** Is now out! if you get any bugs please lmk in the support server!\nFull update log in server! Have fun!"
+			"Update 6.5, Is now out.. Please note the new profile customization is HIGHLY WIP, If you find a bug report it immediatly due to the fact that it is still in development.\n Also for registered stats, i'm sorry but i cannot put it to when you actually registered so its just set to when this update came out."
 		)
 		.setFooter({ text: "hi - from dev" })
 
@@ -3732,6 +3912,7 @@ export async function processTradeSelection(interaction) {
 
 // view trade command, it has a selectmenu with two options. active trades and previous trades active trades shows all current pending and outgoing trades and previous trades shows all completed trades
 export async function handlePreviousTradesCommand(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
 
 	try {
@@ -3815,6 +3996,7 @@ async function paginateTrades(interaction, trades, title) {
 }
 
 export async function handleDonateCommand(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const targetUser = interaction.options.getUser("user")
 	const amount = interaction.options.getInteger("amount")
 	if (amount <= 0) {
@@ -3839,6 +4021,8 @@ export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	const inputTechniquesString = interaction.options.getString("techniques")
 	const inputTechniqueNames = inputTechniquesString.split(",").map(name => name.trim())
+
+	await updateUserCommandsUsed(interaction.user.id)
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
@@ -3879,50 +4063,44 @@ export async function handleEquipTechniqueCommand(interaction) {
 }
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
+	await updateUserCommandsUsed(interaction.user.id)
 
-	const techniqueNamesInput = []
-	for (let i = 1; i <= 10; i++) {
-		const optionName = `technique${i === 1 ? "" : i}`
-		const techniqueName = interaction.options.getString(optionName)
-		if (techniqueName) {
-			techniqueNamesInput.push(techniqueName.trim())
-		}
-	}
+	// Get comma-separated list (assuming there's one 'techniques' option)
+	const techniqueNamesInput = interaction.options.getString("techniques")
 
-	if (techniqueNamesInput.length === 0) {
+	if (!techniqueNamesInput) {
 		return await interaction.reply({
-			content: "Please specify a technique name.",
+			content: "Please provide a comma-separated list of technique names.",
 			ephemeral: true
 		})
 	}
 
+	// Process the list
+	const techniqueNames = techniqueNamesInput.split(",").map(name => name.trim())
+
 	try {
 		let activeTechniques = await getUserActiveTechniques(userId)
-
 		activeTechniques = Array.isArray(activeTechniques)
 			? activeTechniques.filter(name => name != null).map(name => name.trim())
 			: []
 
 		const unequippedTechniques = []
+		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
 
-		for (const techniqueNameInput of techniqueNamesInput) {
-			const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
-
-			const techniqueNameLowercase = techniqueNameInput.toLowerCase()
+		for (const techniqueName of techniqueNames) {
+			const techniqueNameLowercase = techniqueName.toLowerCase()
 			if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
 				return await interaction.reply({
-					content: `The technique "${techniqueNameInput}" is not currently equipped.`,
+					content: `The technique "${techniqueName}" is not currently equipped.`,
 					ephemeral: true
 				})
 			}
 
 			activeTechniques = activeTechniques.filter(technique => technique.toLowerCase() !== techniqueNameLowercase)
-
 			unequippedTechniques.push(activeTechniquesLowercaseMap.get(techniqueNameLowercase))
 		}
 
 		await updateUserActiveTechniques(userId, activeTechniques)
-
 		await interaction.reply(`Technique(s) '${unequippedTechniques.join(", ")}' unequipped!`)
 	} catch (error) {
 		console.error("Error unequipping technique:", error)
@@ -3932,12 +4110,12 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 }
-
 export async function handleViewTechniquesCommand(interaction) {
 	const userId = interaction.user.id
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
+		await updateUserCommandsUsed(interaction.user.id)
 
 		if (userTechniques.length === 0) {
 			return await interaction.reply({ content: "You do not own any techniques.", ephemeral: true })
@@ -4024,7 +4202,7 @@ export async function handleUnequipQuestCommand(interaction) {
 export async function handleEquipTransformationCommand(interaction: ChatInputCommandInteraction) {
 	try {
 		const unlockedtransformations = await getUserUnlockedTransformations(interaction.user.id)
-
+		await updateUserCommandsUsed(interaction.user.id)
 		const currentTransformation = await getUserTransformation(interaction.user.id) // Assuming this still returns a single string
 		const availableTransformations = unlockedtransformations.filter(transformationName => {
 			return transformationName && transformationName.trim() !== currentTransformation
@@ -4083,6 +4261,7 @@ function createTransformationSelectMenu(transformations) {
 const userVoteTimestamps = {}
 
 export async function handleClaimVoteRewards(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const Topgg = import("@top-gg/sdk")
 	const userId = interaction.user.id
 	const top = new (await Topgg).Api(process.env.TOPGG)
@@ -4131,6 +4310,7 @@ export async function handleClaimVoteRewards(interaction) {
 		.setDescription(`You have claimed your vote rewards of ${voteReward} coins! + 1 Cursed Vote Chest`)
 	await interaction.followUp({ embeds: [claimedEmbed] })
 }
+
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
 	const balance = await getBalance(interaction.user.id)
@@ -4232,87 +4412,18 @@ export async function handleShopCommand(interaction) {
 		})
 
 		collector.on("end", collected => {
-			console.log(`Collected ${collected.size} interactions.`)
+			logger.info(`Collected ${collected.size} interactions.`)
 		})
 		collector.stop
 	} catch (error) {
-		console.error("Error fetching shop items:", error)
+		logger.error("Error fetching shop items:", error)
 		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
 	}
 }
 
-const mentorGifs = {
-	"Satoru Gojo": "https://media1.tenor.com/m/S1XOmNm6Zs0AAAAd/jujutsu-kaisen-gojou.gif",
-	"Ryomen Sukuna": "https://media1.tenor.com/m/akvtD2Ewc_8AAAAC/sukuna-jujutsu-kaisen.gif",
-	"Itadori": "https://media1.tenor.com/m/AKp3ByyVnGcAAAAC/jujutsu-kaisen-itadori-yuji.gif"
-}
-
-export async function handleMentorCommand(interaction) {
-	try {
-		await interaction.deferReply()
-
-		const userId = interaction.user.id
-		const userMentors = await getUserMentor(userId) // Fetch the mentor data
-
-		if (!userMentors.length) {
-			await interaction.editReply("You currently do not have a mentor.")
-			return
-		}
-
-		// Assume the first mentor is the current one
-		const currentMentor = userMentors[0]
-
-		if (!currentMentor) {
-			await interaction.editReply("You currently do not have a mentor.")
-			return
-		}
-
-		const { quests } = await getUserQuests(userId) // Fetch the user's quests with progress
-
-		if (!quests.length) {
-			await interaction.editReply("You currently do not have any quests.")
-			return
-		}
-
-		// Generate mentor comments based on quest progress
-		const comments = quests.map(quest => generateMentorComment(quest, currentMentor)).join("\n")
-
-		// Create the embed
-		const embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle(`Mentor Guidance: ${currentMentor}`)
-			.setDescription(comments)
-			.setTimestamp()
-
-		// Send the embed with the mentor's comments
-		await interaction.editReply({ embeds: [embed] })
-	} catch (error) {
-		console.error("Failed to handle mentor command:", error)
-		await interaction.editReply("An error occurred while trying to display mentor information.")
-	}
-}
-
-// Function to generate a mentor's comment based on the quest progress
-function generateMentorComment(quest, mentor) {
-	let comment = `**${quest.name}:** `
-	switch (mentor.name) {
-		case "Satoru Gojo":
-			comment += gojoCommentary(quest)
-			break
-		case "Ryomen Sukuna":
-			comment += sukunaCommentary(quest)
-			break
-		case "Itadori":
-			comment += itadoriCommentary(quest)
-			break
-		default:
-			comment += "Your mentor has not provided specific advice on this quest."
-	}
-	return comment
-}
-
 // equip inate clan use getuserownedinateclan
 export async function handleEquipInateClanCommand(interaction) {
+	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
 	const clanName = interaction.options.getString("clan")
 
@@ -4332,6 +4443,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const userTechniquesTame = new Map<string, any>()
 	await updateUserHealth(interaction.user.id, playerHealth1)
 	await interaction.deferReply()
+	await updateUserCommandsUsed(interaction.user.id)
 
 	// Get the chosen shikigami name from the user input
 	const chosenShikigamiName = interaction.options.getString("shikigami")
@@ -5125,14 +5237,14 @@ const petOptions = [
 		emoji: "🐶"
 	},
 	{
-		name: "Fluffy Bunny",
+		name: "Turtle",
 		price: 500000,
 		formattedPrice: "500,000",
-		description: "A soft and gentle creature that hops with joy.",
+		description: "A slow and steady turtle.",
 		info: "Type: Normal | Rarity: Common",
-		emoji: "🐰"
+		emoji: "<:8034tropicalpixelturtle:1231732755893846026>"
 	},
-	// Cursed Pets
+	//
 	{
 		name: "Mythical Dragon",
 		price: 35000000,
@@ -5165,6 +5277,7 @@ const petOptions = [
 export async function handleViewShikigami(interaction) {
 	try {
 		const userShikigami = await getUserShikigami(interaction.user.id)
+		await updateUserCommandsUsed(interaction.user.id)
 
 		if (userShikigami.length === 0) {
 			await interaction.reply("You don't have any shikigami yet.")
@@ -5189,7 +5302,8 @@ export async function handleViewShikigami(interaction) {
 		})
 
 		const selectionInteraction = await interaction.channel.awaitMessageComponent({
-			filter: i => i.customId === "shikigami_select" && i.user.id === interaction.user.id
+			filter: i =>
+				i.customId === "shikigami_select" && i.user.id === interaction.user.id && i.isStringSelectMenu()
 		})
 
 		const selectedShikigami = userShikigami.find(shikigami => shikigami.name === selectionInteraction.values[0])
@@ -5268,7 +5382,7 @@ export async function handleViewShikigami(interaction) {
 						break
 
 					case "play_shikigami":
-						await buttonInteraction.deferReply() // Defer the initial reply
+						await buttonInteraction.deferReply()
 						try {
 							if (selectedShikigami.friendship === 100) {
 								await buttonInteraction.followUp({
@@ -5362,6 +5476,8 @@ export async function handleViewShikigami(interaction) {
 
 export async function handlePetShop(interaction) {
 	const defaultPets = petOptions.filter(pet => pet.info.includes("Type: Normal"))
+
+	await updateUserCommandsUsed(interaction.user.id)
 
 	const defaultVersion = "Normal"
 	const userShikigami = await getUserShikigami(interaction.user.id)
@@ -5466,7 +5582,6 @@ export async function handlePetShop(interaction) {
 				const userBalance = await getBalance(i.user.id)
 				const userInventory = await getUserInventory(i.user.id)
 
-				// Check if the user has the required items
 				const hasRequiredItems =
 					!pet.requiredItems?.length ||
 					pet.requiredItems.every(requiredItem => {
@@ -5487,7 +5602,6 @@ export async function handlePetShop(interaction) {
 				if (userBalance >= pet.price) {
 					await updateBalance(i.user.id, -pet.price)
 
-					// Remove the required items from the user's inventory
 					for (const requiredItem of pet.requiredItems || []) {
 						await removeItemFromUserInventory(i.user.id, requiredItem.name, -requiredItem.quantity)
 					}
@@ -5518,4 +5632,335 @@ export async function handlePetShop(interaction) {
 			}
 		}
 	})
+}
+
+export async function handlecreditcommand(interaction) {
+	const creditEmbed = new EmbedBuilder()
+		.setTitle("Credits")
+		.addFields(
+			{ name: "Founder", value: "- .gwennnnn", inline: true },
+			{ name: "Testers", value: "- Drane\n- v3x\n- Noj\n- Raix\n- Mrboby", inline: false },
+			{ name: "Special Thanks", value: "disi\n + Everyone else who was there in the early stages!" }
+		)
+		.setFooter({ text: "Thank you for using JJK Bot!" })
+		.setColor("#FFC0CB")
+
+	await interaction.reply({ embeds: [creditEmbed], ephemeral: true })
+}
+
+export async function handleViewStats(interaction) {
+	const user = interaction.user
+
+	await updateUserCommandsUsed(user.id)
+
+	const favoriteCommandData = await getUserFavouriteCommand(user.id)
+	const favouriteCommand = `**${favoriteCommandData.command}**\n\`Time's Used: ${favoriteCommandData.count}\``
+
+	const userStats = await getUserStats(user.id)
+	const favoriteTechData = userStats.stats.filter(stat => stat.technique)
+
+	let favouriteTech
+	if (favoriteTechData && favoriteTechData.length > 0) {
+		let maxCount = 0
+		let maxTechnique = null
+
+		for (const { technique, count } of favoriteTechData) {
+			if (count > maxCount) {
+				maxCount = count
+				maxTechnique = technique
+			}
+		}
+
+		if (maxTechnique) {
+			favouriteTech = `**${maxTechnique}**\n\`Time's Used: ${maxCount}\``
+		} else {
+			favouriteTech = "No favorite technique yet"
+		}
+	} else {
+		favouriteTech = "No favorite technique yet"
+	}
+
+	const registeredDate = await getUserRegisteredDate(user.id)
+	const registeredTimestamp = registeredDate ? Math.floor(registeredDate.getTime() / 1000) : null
+	const worked = await getUserWorked(user.id)
+	const userProfile = await getUserProfile(user.id)
+
+	const statsEmbed = new EmbedBuilder()
+		.setTitle(`Stats for ${user.username}`)
+		.setDescription("Here are your personal stats for using the JJK Bot!")
+		.setColor("#00FF00")
+		.setThumbnail(user.displayAvatarURL({ dynamic: true }))
+		.addFields(
+			{
+				name: "General Stats",
+				value: `
+			**Total Times Worked:** ${worked || "0"}
+			**Total Commands Used:** ${userStats.totalCommandsUsed || "0"}
+			**Total Techniques Used:** ${userStats.totalTechniques || "0"}
+			**Registered At:** ${registeredTimestamp ? `<t:${registeredTimestamp}:f>` : "N/A"}
+		  `,
+				inline: false
+			},
+			{
+				name: "Work Stats",
+				value: `
+			**Total Times Worked:** ${worked || "0"}
+			**Current Job:** ${userProfile.job || "N/A"}
+		  `,
+				inline: false
+			},
+			{
+				name: "Fight Stats",
+				value: `
+			**Fights Won This Month:** ${userStats.monthlyFightsWon || "0"}
+			**Total Fights Won:** ${userStats.totalFightsWon || "0"}
+			**Favorite Technique:** ${favouriteTech}
+		  `,
+				inline: false
+			},
+			{
+				name: "Command Stats",
+				value: `
+			**Favorite Command:** ${favouriteCommand}
+		  `,
+				inline: false
+			}
+		)
+		.setFooter({ text: getRandomQuote() })
+
+	return statsEmbed
+}
+
+async function getBufferFromAttachment(attachment: Attachment): Promise<Buffer> {
+	const url = attachment.url
+	const response = await fetch(url)
+	const arrayBuffer = await response.arrayBuffer()
+	return Buffer.from(arrayBuffer)
+}
+
+export async function handleUpdateProfileImageCommand(interaction: ChatInputCommandInteraction) {
+	const userid = interaction.user.id
+
+	await interaction.deferReply({ ephemeral: true })
+
+	const cooldownStatus = await checkProfileChangeCooldown(userid)
+
+	if (cooldownStatus.limitReached) {
+		await interaction.followUp({
+			content: `Oops! You've hit the limit for profile updates. You can change your profile image again at <t:${cooldownStatus.nextResetTimestamp}:R>.`,
+			ephemeral: true
+		})
+		return
+	} else {
+		const subcommand = interaction.options.getSubcommand()
+		const imageAttachment = interaction.options.getAttachment("image", true)
+
+		if (!imageAttachment || !imageAttachment.contentType?.startsWith("image/")) {
+			await interaction.editReply({ content: "Please provide a valid image." })
+			return
+		}
+
+		const imageBuffer = await getBufferFromAttachment(imageAttachment)
+		const fileName = `${userid}_${subcommand}_${Date.now()}.${imageAttachment.contentType?.split("/")[1]}`
+		const contentType = imageAttachment.contentType ?? ""
+		const imageUrl = await uploadImageToGoogleStorage(imageBuffer, fileName, contentType)
+
+		await updateUserCooldowns(userid, "profileChange")
+		await logImageUrl(imageUrl, userid)
+		const { isSafe, requiresManualReview } = await checkImageForNSFW(imageUrl)
+
+		if (isSafe) {
+			try {
+				if (subcommand === "avatar") {
+					await updateUserProfileImage(userid, imageUrl)
+				} else if (subcommand === "header") {
+					await updateUserProfileHeader(userid, imageUrl)
+				}
+
+				await interaction.followUp(`Profile ${subcommand} updated successfully!`)
+			} catch (error) {
+				await interaction.followUp(`Failed to update profile ${subcommand}.`)
+			}
+		} else {
+			if (requiresManualReview) {
+				await sendForManualReview(imageUrl, interaction, subcommand)
+				await interaction.followUp({
+					ephemeral: true,
+					content: `Your ${subcommand} image has been sent for manual review. We will notify you once the review is completed, Please note this process may take awhile!`
+				})
+			} else {
+				await interaction.followUp({
+					ephemeral: true,
+					content: `**Warning:** Our image moderation system has detected potentially sensitive or explicit content in this ${subcommand} image. Please try again with a different image. If you believe this is a mistake, please open a support ticket.`
+				})
+			}
+		}
+	}
+}
+
+export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+	const userId = interaction.user.id
+	const userProfile = await getUserProfile(userId)
+	const currentJobName = userProfile.job || "Student"
+	const currentJob = jobs.find(job => job.name === currentJobName)
+
+	if (!currentJob) {
+		await interaction.reply({ content: "Error: Invalid job specified.", ephemeral: true })
+		return
+	}
+
+	const { limitReached, nextResetTimestamp } = await checkWorkCooldown(userId, currentJobName)
+	console.log("Work Cooldown:", limitReached, nextResetTimestamp)
+
+	if (limitReached) {
+		await interaction.reply({
+			content: `You're too tired to work as a ${currentJobName} right now. You can work again <t:${Math.round(
+				nextResetTimestamp / 1000
+			)}:R>.`,
+			ephemeral: true
+		})
+		return
+	}
+
+	let earnings = calculateEarnings(userProfile)
+	const experienceGain = getRandomAmount(20, 50)
+
+	let minigameResult: MiniGameResult
+	switch (currentJobName) {
+		case "Student":
+			minigameResult = await playStudentMinigame(interaction, earnings)
+			break
+		case "Jujutsu Sorcerer":
+			minigameResult = await playJujutsuSorcererMinigame(interaction, earnings)
+			break
+		case "Curse Hunter":
+			minigameResult = await playCurseHunterMinigame(interaction, earnings)
+			break
+		case "Veil Caster":
+			minigameResult = await playVeilCasterMinigame(interaction, earnings)
+			break
+		default:
+			minigameResult = {
+				success: "full",
+				message: `You diligently worked your shift as a ${currentJobName}.`
+			}
+	}
+
+	if (minigameResult.success === "partial") {
+		earnings = Math.floor(earnings / 2)
+	} else if (minigameResult.success === "fail") {
+		earnings = 0
+	}
+
+	await updateBalance(userId, earnings)
+	await updateUserExperience(userId, experienceGain)
+	await updatePlayerGrade(userId)
+	await updateUserFavoriteCommand(interaction.user.id, "Work")
+	await updateUserCooldowns(userId, "workCooldown", currentJobName)
+	await updateUserWorked(userId)
+
+	const workEmbed = new EmbedBuilder().setColor("Green").setTitle(`Work Complete: ${currentJobName}`)
+
+	if (minigameResult.message) {
+		workEmbed.setDescription(minigameResult.message)
+	} else {
+		workEmbed.setDescription("Oops, something unexpected happened while you were working. Try again later!")
+	}
+
+	workEmbed.addFields({ name: "Earnings", value: `${earnings}`, inline: true })
+
+	await interaction.reply({ embeds: [workEmbed] })
+}
+
+export async function handleShikigamiShop(interaction) {
+	const shopItems = shikigamiItems2
+	const balance = await getBalance(interaction.user.id)
+	const balance2 = balance.toLocaleString("en-US")
+
+	if (!shopItems || shopItems.length === 0) {
+		await interaction.reply("The shop is currently empty.")
+		return
+	}
+
+	try {
+		const embed = new EmbedBuilder()
+			.setColor("#FFD700") // Gold color
+			.setTitle("✨ Shop Items ✨")
+			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
+			.setFooter({ text: "Use the buttons below to purchase items." })
+
+		shopItems.forEach(item => {
+			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+				embed.addFields([
+					{
+						name: `**${item.name}** - ${item.rarity} Rarity`,
+						value: `Price: **${item.price || "None"}** coins`,
+						inline: false
+					}
+				])
+			}
+		})
+		//
+		const row = new ActionRowBuilder()
+		shopItems.forEach((item, index) => {
+			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+				const button = new ButtonBuilder()
+					.setCustomId(`buy_${index}`)
+					.setLabel(item.name)
+					.setStyle(ButtonStyle.Primary)
+				row.addComponents(button)
+			}
+		})
+
+		//
+		const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true })
+
+		const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 })
+
+		collector.on("collect", async i => {
+			if (!i.isButton()) return
+
+			await i.deferUpdate()
+
+			const userId = i.user.id
+			const itemIndex = parseInt(i.customId.replace("buy_", ""))
+			const itemToBuy = shopItems[itemIndex]
+
+			if (!itemToBuy) {
+				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
+				return
+			}
+
+			const userPurchases = await getUserPurchases(userId)
+			const userItemPurchase = userPurchases.find(p => p.itemName === itemToBuy.name) || {
+				itemName: itemToBuy.name,
+				purchasedAmount: 0
+			}
+
+			const balance = await getBalance(userId)
+			if (balance >= itemToBuy.price) {
+				await addItemToUserInventory(userId, itemToBuy.name, 1)
+				await updateBalance(userId, -itemToBuy.price)
+				await addUserPurchases(userId, itemToBuy.name, 1)
+
+				await i.followUp({
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} coins.`,
+					ephemeral: true
+				})
+			} else {
+				await i.followUp({
+					content: `You do not have enough coins to purchase ${itemToBuy.name}.`,
+					ephemeral: true
+				})
+			}
+		})
+
+		collector.on("end", collected => {
+			logger.info(`Collected ${collected.size} interactions.`)
+		})
+		collector.stop
+	} catch (error) {
+		logger.error("Error fetching shop items:", error)
+		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
+	}
 }

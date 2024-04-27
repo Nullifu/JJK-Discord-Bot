@@ -10,6 +10,11 @@ export interface Item {
 	price: number
 }
 
+interface Shikigami {
+	name: string
+	type: string
+}
+
 export interface UserProfile {
 	balance: number
 	experience: number
@@ -19,6 +24,7 @@ export interface UserProfile {
 	activeTitle: string
 	heavenlyrestriction: string | null
 	inateclan: string
+	shikigami: Shikigami[] // Shikigami is now an array of Shikigami objects
 }
 
 export const gradeMappings = {
@@ -100,12 +106,34 @@ export interface User {
 	statusEffects: string[]
 	itemEffects: []
 	purchases: Purchase[]
+	cooldowns: Cooldown[]
+	stats: Stat[]
 	gamblersData: {
-		limit: 5000000 // Default limit of 5 million
+		limit: 5000000
 		amountGambled: number
 		amountWon: number
 		amountLost: number
 	}
+	shikigami: []
+}
+
+interface Stat {
+	technique?: string
+	count?: number
+	totalFightsWon?: number
+	totalCommandsUsed?: number
+	totalWorked?: number
+	command?: string
+	favoriteCommands?: { [commandName: string]: number }
+	monthlyFightsWon?: number // Added this line
+}
+
+export interface Cooldown {
+	type: string
+	currentUsed?: number
+	maxAllowed?: number
+	lastUsed?: Date // Add the lastUsed property
+	duration?: number // If duration is relevant
 }
 
 export interface ItemEffect {
@@ -136,7 +164,6 @@ export interface Achievement {
 }
 
 export function determineDomainAchievements(domainName) {
-	// Example - hardcoded for simplicity, you'll need your real logic here
 	switch (domainName) {
 		case "Idle Deaths Gamble":
 			return ["unlockIdleDeathsGamble"]
