@@ -112,6 +112,13 @@ export const craftingRecipes = {
 		craftedItemName: "Mahoragas Wheel",
 		emoji: "<:wheel2:1231282696563458118>"
 	},
+	health_vial: {
+		requiredItems: [
+			{ name: "Empty Bottle", quantity: 6 },
+			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 }
+		],
+		craftedItemName: "Cursed Energy Vial"
+	},
 	specialgradespray: {
 		requiredItems: [
 			{ name: "Empty Bottle", quantity: 1 },
