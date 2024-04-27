@@ -1342,6 +1342,7 @@ export const items1: Item1[] = [
 			let isLimitless = false
 
 			if (randomNumber <= 30) {
+				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
 				await addUserQuest(interaction.user.id, "Satoru Gojo's Mission")
 				await addUserQuestProgress(interaction.user.id, "The Honored One", 1)
@@ -1363,7 +1364,11 @@ export const items1: Item1[] = [
 
 			let embedFinal
 			if (isLimitless) {
-				const gains = "You have gained:\n" + "• Inate Clan: Limitless\n" + "• Max Health +30"
+				const gains =
+					"You have gained:\n" +
+					"• Inate Clan: Limitless\n" +
+					"• Max Health +30\n" +
+					"• Technique: Imaginary Technique: Purple\n"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")
@@ -1932,10 +1937,10 @@ export const shopItems = [
 	{ name: "Dragon Scales", rarity: "Grade 1", price: 250000 },
 	//
 	{ name: "Gamblers Token", rarity: "Special Grade", price: 250000, maxPurchases: 5 },
-	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 1 },
+	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 2 },
 	{ name: "Curse Repellent", rarity: "Special Grade", price: 200000, maxPurchases: 8 },
 	{ name: "Sukuna Finger", rarity: "Special Grade", price: 350000, maxPurchases: 8 },
-	{ name: "Rikugan Eye", rarity: "Special Grade", price: 1000000, maxPurchases: 2 },
+	{ name: "Rikugan Eye", rarity: "Special Grade", price: 750000, maxPurchases: 6 },
 	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 }
 ]
 export interface MiniGameResult {
