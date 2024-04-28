@@ -3802,7 +3802,6 @@ export async function handleTradeCommand(interaction) {
 		)
 		.setFooter({ text: "Trade requests are time-sensitive and subject to item availability." })
 
-	// --- Send to the Target User ---
 	try {
 		await targetUser.send({ embeds: [tradeEmbed] })
 		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
