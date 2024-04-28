@@ -245,7 +245,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(170)
 export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
@@ -293,7 +293,6 @@ const commands = [
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
-	new SlashCommandBuilder().setName("stats").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -880,13 +879,13 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
-import { AutoPoster } from "topgg-autoposter"
+//import { AutoPoster } from "topgg-autoposter"
 
-const poster = AutoPoster(process.env.TOPGG, client)
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 

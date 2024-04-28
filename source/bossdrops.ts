@@ -41,7 +41,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Go//Jo", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Malevolent Shrine (Upgrade", rarity: "rare" }
+		{ name: "Malevolent Shrine (Upgrade)", rarity: "rare" }
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
@@ -52,6 +52,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Fractured Chain", rarity: "ultra rare" }
 	],
 	"Megumi Fushiguro": [
+		{ name: "Shikigami Soul", rarity: "common" },
 		{ name: "Super Glue", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "(Broken) Divine General Wheel", rarity: "ultra rare" }

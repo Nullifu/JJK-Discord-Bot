@@ -36,7 +36,6 @@ import {
 	handleShikigamiEmbed
 } from "./calculate.js"
 import {
-	executeBlackFlash,
 	executeSpecialTechnique,
 	export120,
 	exportCrashOut,
@@ -827,7 +826,7 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 }
 
 export async function handleDomainSelection(interaction) {
-	const domainOptions = DOMAIN_EXPANSIONS.map(domain => ({
+	const domainOptions = DOMAIN_INFORMATION.map(domain => ({
 		label: domain.name,
 		description: domain.description,
 		value: domain.name
@@ -2289,18 +2288,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					primaryEmbed
 				})
 				await applyVirtualMass(collectedInteraction.user.id)
-			} else if (selectedValue === "Black Flash") {
-				damage = await executeBlackFlash({
-					collectedInteraction,
-					techniqueName: selectedValue,
-					damageMultiplier: 8,
-					imageUrl: "https://media1.tenor.com/m/qgIrrl1kvo8AAAAd/jujutsu-kaisen.gif",
-					description: "KOKUSEN! BLACK FLASH!",
-					fieldValue: selectedValue,
-					userTechniques: userTechniquesFight,
-					userId: collectedInteraction.user.id,
-					primaryEmbed
-				})
 			} else if (selectedValue === "Disaster Curses: Full Flux") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -3841,7 +3828,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
 		.setDescription(
-			"Update 6.5, Is now out.. Please note the new profile customization is HIGHLY WIP, If you find a bug report it immediatly due to the fact that it is still in development.\n Also for registered stats, i'm sorry but i cannot put it to when you actually registered so its just set to when this update came out."
+			"Had to remove black flash LOGIC, due to some issues, will be back soon. Thanks for your patience. THIS DOES NOT MEAN THE SKILL IS COMPLETELY GONE."
 		)
 		.setFooter({ text: "hi - from dev" })
 
@@ -5092,6 +5079,18 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					damageMultiplier: 5,
 					imageUrl: "https://media1.tenor.com/m/ZGlpNTqs6xcAAAAd/jjk0-yuta.gif",
 					description: `**How Rude ${randomOpponent.name}, It's pure love.**`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Black Flash") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 4,
+					imageUrl: "https://media1.tenor.com/m/gy7FlaPfYSAAAAAC/jjk-jujutsu-kaisen.gif",
+					description: "**KOKUSEN!**",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesTame,
 					userId: collectedInteraction.user.id,

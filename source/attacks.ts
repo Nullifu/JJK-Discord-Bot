@@ -7,11 +7,11 @@ interface Attack {
 function getGradeDamageBonus(grade: string): number {
 	switch (grade) {
 		case "Special Grade":
-			return 1.5
-		case "Grade 1":
 			return 1.3
-		case "Semi-Grade 1":
+		case "Grade 1":
 			return 1.1
+		case "Semi-Grade 1":
+			return 1.0
 		case "Grade 2":
 			return 1.0
 		case "Grade 3":
@@ -1202,12 +1202,21 @@ export const DOMAIN_INFORMATION = [
 			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
 		image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
 		effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
-		requirement: "Malevolent Token"
+		requirement: "Malevolent Token",
+		variations: [
+			{
+				name: "Malevolent Shrine - Full Power",
+				description: "No",
+				image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
+				effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+				requirement: "Malevolent Token"
+			}
+		]
 	},
 	{
 		name: "Unlimited Void",
 		description: "This domain overwhelms the target with an infinite thought, rendering them powerless...",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
+		image: "https://storage.googleapis.com/jjk_bot/FWv4Sg9WIAUmp8k.jpg",
 		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Limitless Token"
 	},
@@ -1215,8 +1224,8 @@ export const DOMAIN_INFORMATION = [
 		name: "Chimera Shadow Garden",
 		description:
 			"Chimera Shadow Garden is a domain that creates a nightmarish world of shadows, where the users shikigami can attack from any angle.",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
-		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
+		image: "https://storage.googleapis.com/jjk_bot/EjfyNxvUwAAj485.jpg",
+		effects: "Shadows, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Shadow Token"
 	},
 	{
@@ -1267,7 +1276,7 @@ export const TRANSFORMATIONS = [
 	{
 		name: "Bloodlusted",
 		description: "I'm going to enjoy this...",
-		image: "https://cdn.discordapp.com/attachments/681985000521990179/1229927990419263529/ezgif-7-394c1f41b7.gif?ex=663176b3&is=661f01b3&hm=bb8b80783961ac45faa2e325317abcc10322e23304a10f3018d13526a3fd9760&",
+		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-394c1f41b7.gif",
 		effects: "Bloodlust, 30% Damage Increase, 11% Damage Taken Increase"
 	},
 	{
@@ -1279,15 +1288,14 @@ export const TRANSFORMATIONS = [
 	{
 		name: "Six Eyes Release",
 		description: "Come on, let's get serious.",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1229378135192244234/ezgif-7-e770a26839.gif?ex=662f769c&is=661d019c&hm=9d16d32deb25b0acc9709b2557945e88d98e9c97a53d2da49857b25665d225b6&",
+		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-e770a26839.gif",
 		effects: "All-Seeing, 25% Damage Reduction, 16% Damage Increase"
 	},
 	{
 		name: "Curse Queen",
 		description: "Rika.. Lend me your strength.",
 		image: "https://64.media.tumblr.com/33cacf2a119115bcdb869f76c68e16d9/df6ff4dc29f5c53a-f9/s540x810/71e5c78b6b6ed34d000aee942ff70641e18414f6.gif",
-		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction",
-		time: "3 Minutes"
+		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction"
 	},
 	{
 		name: "Cursed Energy Reinforcement",
@@ -1300,6 +1308,12 @@ export const TRANSFORMATIONS = [
 		description: "Good Grief man, I'm tired of this job.",
 		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
 		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
+	},
+	{
+		name: "Maximum Output",
+		description: "TURN UP THE VOLUME!",
+		image: "https://storage.googleapis.com/jjk_bot/ezgif-7-836d9bbead.gif",
+		effects: "Electrified, 25% Damage Increase."
 	},
 	// Owner
 	{

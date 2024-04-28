@@ -104,6 +104,13 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	shadow_token: {
+		requiredItems: [
+			{ name: "Shikigami Soul", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 2 }
+		],
+		craftedItemName: "Shadow Token"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
@@ -1673,6 +1680,7 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
+
 	{
 		itemName: "#1 Fighting Box",
 		description: "#1 Fighting Box",
