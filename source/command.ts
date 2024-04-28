@@ -2366,7 +2366,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 6,
+					damageMultiplier: 8,
 					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
 					description:
 						"Nine point.. Polarized light. Crow and Shomyo chant. The gap between within and without. Hollow Technique: PURPLE!",
@@ -2379,7 +2379,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 2,
+					damageMultiplier: 4,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1225688422551785544/image.png?ex=66220a4c&is=660f954c&hm=df32c017b95d2a118b22ff2999990e6ab413e14acbe354b059bee5ced017db16&",
 					description: "**You synchronize with your opponent's movements... it's absolutely chilling.**",
@@ -2406,7 +2406,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 2,
+					damageMultiplier: 6,
 					imageUrl: "https://media1.tenor.com/m/BufoLoGxC9sAAAAd/toji-dagon.gif",
 					description: `PERISH ${randomOpponent.name}`,
 					fieldValue: selectedValue,
@@ -2418,7 +2418,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 4,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1186763190835613748/1226088236397629562/ezgif-2-b2f2996757.gif?ex=66237ea7&is=661109a7&hm=e7eeb0b3305213ae20f0fee49b77dbfc873ca875e61dbd22e629543b33f2c0bf&",
 					description: `Fuga.. Don't worry. I won't do anything petty like revealing my technique.. Now.. Arm yourself. ${randomOpponent.name} `,
@@ -2455,7 +2455,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 6,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1231296159050633349/ezgif-5-4e8c15c666.gif?ex=66254d68&is=6623fbe8&hm=229aa5f92f55cb990cea75086e49ed65d89a0cff2d85a9a0a0405c35f91174b4&",
 					description: `Dissect! ${randomOpponent.name}`,

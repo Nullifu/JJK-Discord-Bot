@@ -391,6 +391,13 @@ export async function handleMahoragaAttack(
 		return
 	}
 
+	const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
+
+	// Check if the boss's current health is already 0
+	if (currentBossHealth <= 0) {
+		return // If the boss's health is 0, exit the function early
+	}
+
 	logger.info("Mahoraga attack")
 
 	const userShikigami = await getUserShikigami(collectedInteraction.user.id)
