@@ -826,7 +826,7 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 }
 
 export async function handleDomainSelection(interaction) {
-	const domainOptions = DOMAIN_INFORMATION.map(domain => ({
+	const domainOptions = DOMAIN_EXPANSIONS.map(domain => ({
 		label: domain.name,
 		description: domain.description,
 		value: domain.name
@@ -866,27 +866,63 @@ export async function handleDomainSelection(interaction) {
 				return
 			}
 
-			const infoEmbed = new EmbedBuilder()
-				.setTitle(selectedDomain.name)
-				.setDescription(selectedDomain.description)
-				.setColor("#552288")
+			let variationIndex = 0
 
-			if (selectedDomain.image) {
-				infoEmbed.setImage(selectedDomain.image)
-			}
-			if (selectedDomain.effects) {
-				infoEmbed.addFields({ name: "•  Effects", value: selectedDomain.effects })
-			}
-			if (selectedDomain.requirement) {
-				infoEmbed.addFields({ name: "•  Requirement", value: selectedDomain.requirement })
+			const updateEmbed = async () => {
+				const variation = selectedDomain.variations[variationIndex]
+
+				const infoEmbed = new EmbedBuilder()
+					.setTitle(variation.name)
+					.setDescription(variation.description)
+					.setColor("#552288")
+
+				if (variation.image) {
+					infoEmbed.setImage(variation.image)
+				}
+				if (variation.effects) {
+					infoEmbed.addFields({ name: "•  Effects", value: variation.effects })
+				}
+				if (variation.requirement) {
+					infoEmbed.addFields({ name: "•  Requirement", value: variation.requirement })
+				}
+
+				const navigationRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder()
+						.setCustomId("previous-variation")
+						.setLabel("Previous")
+						.setStyle(ButtonStyle.Primary)
+						.setDisabled(variationIndex === 0),
+					new ButtonBuilder()
+						.setCustomId("next-variation")
+						.setLabel("Next")
+						.setStyle(ButtonStyle.Primary)
+						.setDisabled(variationIndex === selectedDomain.variations.length - 1)
+				)
+
+				const buyRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder().setCustomId("buy-domain").setLabel("Buy").setStyle(ButtonStyle.Success)
+				)
+
+				await collectedInteraction.update({ embeds: [infoEmbed], components: [navigationRow, buyRow, row] })
 			}
 
-			// Add the "Buy" button
-			const buyRow = new ActionRowBuilder().addComponents(
-				new ButtonBuilder().setCustomId("buy-domain").setLabel("Buy").setStyle(ButtonStyle.Success)
-			)
+			await updateEmbed()
 
-			await collectedInteraction.update({ embeds: [infoEmbed], components: [buyRow, row] })
+			const navigationFilter = i =>
+				i.user.id === interaction.user.id &&
+				(i.customId === "previous-variation" || i.customId === "next-variation")
+			const navigationCollector = interaction.channel.createMessageComponentCollector({ navigationFilter })
+
+			navigationCollector.on("collect", async navigationInteraction => {
+				if (navigationInteraction.customId === "previous-variation") {
+					variationIndex = Math.max(0, variationIndex - 1)
+				} else if (navigationInteraction.customId === "next-variation") {
+					variationIndex = Math.min(selectedDomain.variations.length - 1, variationIndex + 1)
+				}
+
+				await navigationInteraction.deferUpdate()
+				await updateEmbed()
+			})
 		} else if (collectedInteraction.isButton() && collectedInteraction.customId === "buy-domain") {
 			await collectedInteraction.deferUpdate()
 
