@@ -5869,7 +5869,7 @@ export async function handleWorkCommand(interaction: ChatInputCommandInteraction
 
 	workEmbed.addFields({ name: "Earnings", value: `${earnings}`, inline: true })
 
-	await interaction.reply({ embeds: [workEmbed] })
+	await interaction.editReply({ embeds: [workEmbed] })
 }
 
 export async function handleShikigamiShop(interaction) {

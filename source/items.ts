@@ -1,4 +1,5 @@
-function generateItems(baseChances, modifiers = {}) {
+/* eslint-disable indent */
+function generateItems(baseChances, weekendChances, isWeekend = false, modifiers = {}) {
 	const items = [
 		{ name: "Tailsman", rarity: "Grade 4" },
 		{ name: "Jogos left testicle", rarity: "Grade 4" },
@@ -20,11 +21,17 @@ function generateItems(baseChances, modifiers = {}) {
 		{ name: "Rikugan Eye", rarity: "Special Grade" }
 	]
 
-	const rarityChances = {
-		"Grade 4": baseChances.grade4 || 0.12, // 12% chance
-		"Grade 1": baseChances.grade1 || 0.08, // 8% chance
-		"Special Grade": baseChances.specialGrade || 0.02 // 2% chance
-	}
+	const rarityChances = isWeekend
+		? {
+				"Grade 4": weekendChances.grade4 || 0.24,
+				"Grade 1": weekendChances.grade1 || 0.16,
+				"Special Grade": weekendChances.specialGrade || 0.04
+		  }
+		: {
+				"Grade 4": baseChances.grade4 || 0.12,
+				"Grade 1": baseChances.grade1 || 0.08,
+				"Special Grade": baseChances.specialGrade || 0.02
+		  }
 
 	return items.map(item => ({
 		...item,
@@ -38,14 +45,22 @@ const defaultChances = {
 	specialGrade: 0.02
 }
 
-const digitems = generateItems(defaultChances)
+const weekendChances = {
+	grade4: 0.24,
+	grade1: 0.16,
+	specialGrade: 0.04
+}
+
+//const regularItems = generateItems(defaultChances, weekendChances)
+
+const weekendItems = generateItems(defaultChances, weekendChances, true)
 
 export function getRandomItem() {
-	const totalChance = digitems.reduce((sum, item) => sum + item.chance, 0)
+	const totalChance = weekendItems.reduce((sum, item) => sum + item.chance, 0)
 	const randomValue = Math.random() * totalChance
 
 	let cumulativeChance = 0
-	for (const item of digitems) {
+	for (const item of weekendItems) {
 		cumulativeChance += item.chance
 		if (randomValue <= cumulativeChance) {
 			return item
