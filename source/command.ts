@@ -23,7 +23,7 @@ import {
 import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks, heavenlyrestrictionskills } from "./attacks.js"
 import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
 import { bossDrops } from "./bossdrops.js"
-import { digCooldown, digCooldownBypassIDs, digCooldowns, logger, sendForManualReview } from "./bot.js"
+import { digCooldown, digCooldowns, logger, sendForManualReview } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -416,10 +416,9 @@ export async function handleDigCommand(interaction) {
 
 	if (timestamp) {
 		const expirationTime = timestamp + digCooldown
-		if (currentTime < expirationTime && !digCooldownBypassIDs.includes(authorId)) {
-			// User is on cooldown, send a themed message
+		if (currentTime < expirationTime) {
 			const digCooldownEmbed = new EmbedBuilder()
-				.setColor(0x4b0082) // Red color for alert
+				.setColor(0x4b0082)
 				.setTitle("Energy Recharge Needed")
 				.setTimestamp()
 				.setDescription(
@@ -456,7 +455,7 @@ export async function handleDigCommand(interaction) {
 			await interaction.editReply({ embeds: [digEmbed] })
 		} else {
 			const digEmbed = new EmbedBuilder()
-				.setColor(0x00ff00) // Success color
+				.setColor(0x00ff00)
 				.setTitle("Digging Results")
 				.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
 				.setTimestamp()
@@ -464,7 +463,7 @@ export async function handleDigCommand(interaction) {
 		}
 	} else {
 		const digEmbed = new EmbedBuilder()
-			.setColor(0x00ff00) // Success color
+			.setColor(0x00ff00)
 			.setTitle("Digging Results")
 			.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
 			.setTimestamp()

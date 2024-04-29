@@ -247,10 +247,8 @@ cron.schedule("*/30 * * * *", async () => {
 //
 const clientId = "991443928790335518"
 client.setMaxListeners(170)
-export const workCooldowns = new Map<string, number>()
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
-export const digCooldownBypassIDs = ["292385626773258240"]
 export const randomdig2 = [
 	"Burrowed",
 	"Found",
@@ -451,6 +449,7 @@ const commands = [
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
 					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
+					{ name: "Special-Grade Cursed Object", value: "Special-Grade Cursed Object" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
 				)
 		)
