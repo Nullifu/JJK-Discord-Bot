@@ -111,6 +111,15 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Shadow Token"
 	},
+	void: {
+		requiredItems: [
+			{ name: "Cursed Energy Reinforcement", quantity: 1 },
+			{ name: "Overtime", quantity: 1 },
+			{ name: "Satoru Gojo's Respect", quantity: 1 },
+			{ name: "Sukuna's Honour", quantity: 1 }
+		],
+		craftedItemName: "Unknown Substance"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },

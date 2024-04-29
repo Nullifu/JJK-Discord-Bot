@@ -246,10 +246,10 @@ export async function handleBalanceCommand(interaction: ChatInputCommandInteract
 
 	const balance = await getBalance(targetUser.id)
 
-	const cursedCoins = balance.toLocaleString("en-US") // Adjust 'en-US' as needed for your locale
+	const cursedCoins = balance.toLocaleString("en-US")
 
 	const balanceEmbed = new EmbedBuilder()
-		.setColor(0xa00000) // A deep red for a mystical, cursed energy vibe
+		.setColor(0xa00000)
 		.setTitle(`${targetUser.username}'s Cursed Wallet`)
 		.setThumbnail(targetUser.displayAvatarURL())
 		.addFields({ name: "Cursed Wallet", value: `${cursedCoins} `, inline: false })
@@ -903,7 +903,7 @@ export async function handleDomainSelection(interaction) {
 					new ButtonBuilder().setCustomId("buy-domain").setLabel("Buy").setStyle(ButtonStyle.Success)
 				)
 
-				await collectedInteraction.update({ embeds: [infoEmbed], components: [navigationRow, buyRow, row] })
+				await collectedInteraction.editReply({ embeds: [infoEmbed], components: [navigationRow, buyRow, row] })
 			}
 
 			await updateEmbed()
@@ -2222,6 +2222,17 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			let damage = calculateDamage(playerGradeString, interaction.user.id, true)
 
 			if (selectedValue === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
+				const isMahoragaSummoned =
+					userTechniquesFight.get(`${collectedInteraction.user.id}_mahoraga_summoned`) || false
+
+				if (isMahoragaSummoned) {
+					await collectedInteraction.followUp({
+						content: "You have already summoned Mahoraga in this fight. You cannot summon him again.",
+						ephemeral: true
+					})
+					return
+				}
+
 				const result = await executeMahoraga({
 					playerHealth: playerHealth,
 					bossHealthMap: bossHealthMap,

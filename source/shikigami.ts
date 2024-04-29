@@ -52,6 +52,7 @@ export async function executeMahoraga({
 	row
 }): Promise<number | { damage: number; userTechniques: Map<string, unknown> }> {
 	summonedShikigami.set(userId, shikigamiName)
+
 	//
 	primaryEmbed.setImage("https://media1.tenor.com/m/sbiTK_XDYoUAAAAC/sukuna-mahoraga.gif")
 	//
@@ -61,139 +62,138 @@ export async function executeMahoraga({
 	techniquesUsed.push(techniqueName)
 	userTechniquesFight.set(userId, techniquesUsed)
 
-	if (techniqueName === "Ten Shadows Technique: Divergent Sila Divine General Mahoraga") {
-		const userShikigami = await getUserShikigami(collectedInteraction.user.id)
+	const userShikigami = await getUserShikigami(collectedInteraction.user.id)
 
-		const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga" || "Divine-General Mahoraga")
+	const hasMahoraga = userShikigami.some(shikigami => shikigami.name === "Mahoraga" || "Divine-General Mahoraga")
 
-		if (hasMahoraga) {
+	if (hasMahoraga) {
+		await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+		await new Promise(resolve => setTimeout(resolve, 3000))
+
+		const mahoragaAdaptation = userTechniquesFight.get(`${userId}_mahoraga_adaptation`) || 0
+		userTechniquesFight.set(`${userId}_mahoraga_adaptation`, mahoragaAdaptation + 1)
+
+		userTechniquesFight.set(`${userId}_mahoraga_summoned`, true)
+
+		const enemyDamage = Math.floor(Math.random() * 100) + 50
+		const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
+		const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
+		bossHealthMap.set(userId, newBossHealth)
+		randomOpponent.current_health = newBossHealth
+
+		primaryEmbed.setImage("https://media1.tenor.com/m/sFvgffc0uM8AAAAC/season-2-jujutsu-kaisen.gif")
+		primaryEmbed.setFields({
+			name: "Mahoraga's Opening Attack",
+			value: `Mahoraga is summoned and begins to adapt to the enemy's technique! The enemy takes ${enemyDamage} damage.`,
+			inline: true
+		})
+
+		await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+
+		await new Promise(resolve => setTimeout(resolve, 3000))
+
+		return { damage: enemyDamage, userTechniques: userTechniquesFight }
+	} else {
+		const confirmationEmbed = new EmbedBuilder()
+			.setTitle("Summon Mahoraga")
+			.setDescription("You don't have Mahoraga tamed. Do you want to take a risk and summon him anyway?")
+			.setColor("#FF0000")
+
+		const confirmationRow = new ActionRowBuilder().addComponents(
+			new ButtonBuilder().setCustomId("confirm_summon").setLabel("Summon").setStyle(ButtonStyle.Danger),
+			new ButtonBuilder().setCustomId("cancel_summon").setLabel("Cancel").setStyle(ButtonStyle.Secondary)
+		)
+		await collectedInteraction.followUp({
+			embeds: [confirmationEmbed],
+			components: [confirmationRow],
+			ephemeral: true
+		})
+
+		const confirmationCollector = collectedInteraction.channel.createMessageComponentCollector({
+			filter: i => i.user.id === collectedInteraction.user.id,
+			time: 15000,
+			max: 1
+		})
+
+		const confirmationResult = await new Promise(resolve => {
+			confirmationCollector.on("collect", async i => {
+				if (i.customId === "confirm_summon") {
+					await i.update({
+						content: "You decided to summon Mahoraga. Brace yourself!",
+						embeds: [],
+						components: []
+					})
+					resolve(true)
+				} else if (i.customId === "cancel_summon") {
+					await i.update({
+						content: "You decided not to summon Mahoraga.",
+						embeds: [],
+						components: []
+					})
+					resolve(false)
+				}
+			})
+
+			confirmationCollector.on("end", async collected => {
+				if (collected.size === 0) {
+					await collectedInteraction.followUp({
+						content: "Mahoraga was not summoned. You took too long to decide, And mahoraga went to sleep",
+						ephemeral: true
+					})
+					resolve(false)
+				}
+			})
+		})
+
+		if (!confirmationResult) {
+			return 0
+		}
+
+		await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+		await new Promise(resolve => setTimeout(resolve, 4000))
+
+		const outcome = Math.random()
+		if (outcome < 0.5) {
+			const userDamage = Math.floor(Math.random() * 50) + 10
+			const newPlayerHealth = playerHealth - userDamage
+			const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+			primaryEmbed.setImage("https://media1.tenor.com/m/xF0ATXhH9zoAAAAC/jujutsu-kaisen-megumi-fushiguro.gif")
+			primaryEmbed.setDescription(`Mahoraga is untamed and attacks you! You take ${userDamage} damage.`)
+
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-			await new Promise(resolve => setTimeout(resolve, 3000))
+			await new Promise(resolve => setTimeout(resolve, 4000))
 
-			const mahoragaAdaptation = userTechniquesFight.get(`${userId}_mahoraga_adaptation`) || 0
-			userTechniquesFight.set(`${userId}_mahoraga_adaptation`, mahoragaAdaptation + 1)
+			primaryEmbed.setFields(
+				{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+				{ name: "Technique", value: fieldValue },
+				{ name: "Shikigami", value: shikigamiName }
+			)
 
-			const enemyDamage = Math.floor(Math.random() * 100) + 50
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+
+			return { damage: clampedPlayerHealth, userTechniques: userTechniquesFight }
+		} else {
+			const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
 			const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
 			const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
 			bossHealthMap.set(userId, newBossHealth)
 			randomOpponent.current_health = newBossHealth
 
 			primaryEmbed.setImage("https://media1.tenor.com/m/sFvgffc0uM8AAAAC/season-2-jujutsu-kaisen.gif")
-			primaryEmbed.setFields({
-				name: "Mahoraga's Opening Attack",
-				value: `Mahoraga is summoned and begins to adapt to the enemy's technique! The enemy takes ${enemyDamage} damage.`,
-				inline: true
-			})
-
-			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-
-			await new Promise(resolve => setTimeout(resolve, 3000))
-
-			return { damage: enemyDamage, userTechniques: userTechniquesFight }
-		} else {
-			const confirmationEmbed = new EmbedBuilder()
-				.setTitle("Summon Mahoraga")
-				.setDescription("You don't have Mahoraga tamed. Do you want to take a risk and summon him anyway?")
-				.setColor("#FF0000")
-
-			const confirmationRow = new ActionRowBuilder().addComponents(
-				new ButtonBuilder().setCustomId("confirm_summon").setLabel("Summon").setStyle(ButtonStyle.Danger),
-				new ButtonBuilder().setCustomId("cancel_summon").setLabel("Cancel").setStyle(ButtonStyle.Secondary)
+			primaryEmbed.setDescription(
+				`Mahoraga is untamed but attacks the enemy! The enemy takes ${enemyDamage} damage.`
 			)
-			await collectedInteraction.followUp({
-				embeds: [confirmationEmbed],
-				components: [confirmationRow],
-				ephemeral: true
-			})
-
-			const confirmationCollector = collectedInteraction.channel.createMessageComponentCollector({
-				filter: i => i.user.id === collectedInteraction.user.id,
-				time: 15000,
-				max: 1
-			})
-
-			const confirmationResult = await new Promise(resolve => {
-				confirmationCollector.on("collect", async i => {
-					if (i.customId === "confirm_summon") {
-						await i.update({
-							content: "You decided to summon Mahoraga. Brace yourself!",
-							embeds: [],
-							components: []
-						})
-						resolve(true)
-					} else if (i.customId === "cancel_summon") {
-						await i.update({
-							content: "You decided not to summon Mahoraga.",
-							embeds: [],
-							components: []
-						})
-						resolve(false)
-					}
-				})
-
-				confirmationCollector.on("end", async collected => {
-					if (collected.size === 0) {
-						await collectedInteraction.followUp({
-							content:
-								"Mahoraga was not summoned. You took too long to decide, And mahoraga went to sleep",
-							ephemeral: true
-						})
-						resolve(false)
-					}
-				})
-			})
-
-			if (!confirmationResult) {
-				return 0
-			}
 
 			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 			await new Promise(resolve => setTimeout(resolve, 4000))
 
-			const outcome = Math.random()
-			if (outcome < 0.5) {
-				const userDamage = Math.floor(Math.random() * 50) + 10
-				const newPlayerHealth = playerHealth - userDamage
-				const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+			await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 
-				primaryEmbed.setImage("https://media1.tenor.com/m/xF0ATXhH9zoAAAAC/jujutsu-kaisen-megumi-fushiguro.gif")
-				primaryEmbed.setDescription(`Mahoraga is untamed and attacks you! You take ${userDamage} damage.`)
-
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-				await new Promise(resolve => setTimeout(resolve, 4000))
-
-				primaryEmbed.setFields(
-					{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
-					{ name: "Technique", value: fieldValue },
-					{ name: "Shikigami", value: shikigamiName }
-				)
-
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-				await new Promise(resolve => setTimeout(resolve, 4000))
-
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-				return { damage: clampedPlayerHealth, userTechniques: userTechniquesFight }
-			} else {
-				const enemyDamage = Math.floor(Math.random() * 100) + 50 // Random damage between 50 and 150
-				const currentBossHealth = bossHealthMap.get(userId) || randomOpponent.max_health
-				const newBossHealth = Math.max(0, currentBossHealth - enemyDamage)
-				bossHealthMap.set(userId, newBossHealth)
-				randomOpponent.current_health = newBossHealth
-
-				primaryEmbed.setImage("https://media1.tenor.com/m/sFvgffc0uM8AAAAC/season-2-jujutsu-kaisen.gif")
-				primaryEmbed.setDescription(
-					`Mahoraga is untamed but attacks the enemy! The enemy takes ${enemyDamage} damage.`
-				)
-
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
-				await new Promise(resolve => setTimeout(resolve, 4000))
-
-				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
-
-				return { damage: enemyDamage, userTechniques: userTechniquesFight }
-			}
+			return { damage: enemyDamage, userTechniques: userTechniquesFight }
 		}
 	}
 }

@@ -1201,14 +1201,21 @@ export const DOMAIN_INFORMATION = [
 		description:
 			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
 		image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
-		effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
 		requirement: "Malevolent Token",
 		variations: [
 			{
-				name: "Malevolent Shrine - Full Power",
+				name: "Malevolent Shrine - Weakened",
 				description: "No",
 				image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
-				effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+				effects: "Curse King (Weakened), 12% Damage Increase, 7% Damage Reduction",
+				requirement: "Sukuna Finger",
+				itemquantity: 3
+			},
+			{
+				name: "Malevolent Shrine - Full Power",
+				description: "No",
+				image: "https://media1.tenor.com/m/TKkwQ9A3ADEAAAAC/malevolent-shrine-jujutsu-kaisen.gif",
+				effects: "Fear, 33% Damage Increase, 20% Damage Reduction",
 				requirement: "Malevolent Token"
 			}
 		]
