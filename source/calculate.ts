@@ -20,7 +20,7 @@ export function calculateDamage(
 	userId: string,
 	ignoreHeavenlyRestriction: boolean = false
 ): number {
-	const baseDamage = 10
+	const baseDamage = 20
 	const gradeDamageBonus = getGradeDamageBonus(playerGrade)
 	const randomVariationPercentage = 0.2
 	const heavenlyRestrictionMultiplier = 1.5
