@@ -570,7 +570,7 @@ export async function getUserHealth(userId: string): Promise<number> {
 }
 
 const gradeToBossGrade = {
-	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1"],
+	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
 	"Grade 1": ["Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"],
 	"Semi-Grade 1": ["Semi-Grade 1", "Grade 2", "Grade 3"],
 	"Grade 2": ["Grade 2", "Grade 3", "Grade 4"],
