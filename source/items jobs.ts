@@ -104,6 +104,13 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	gojo: {
+		requiredItems: [
+			{ name: "Go", quantity: 1 },
+			{ name: "Jo", quantity: 1 }
+		],
+		craftedItemName: "Go//Jo"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
