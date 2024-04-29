@@ -149,15 +149,6 @@ app.use((request, response, next) => {
 	next()
 })
 
-app.use((request, response) => {
-	response.status(404).send({
-		code: error_code,
-		data: {
-			message: "Not Found"
-		}
-	})
-})
-
 app.get("/", (request, response) => {
 	response.status(200).send({
 		code: success_code,
@@ -200,6 +191,15 @@ app.post("/topgg", async (request, response) => {
 	response.status(200).send({
 		code: success_code,
 		data: {}
+	})
+})
+
+app.use((request, response) => {
+	response.status(404).send({
+		code: error_code,
+		data: {
+			message: "Not Found"
+		}
 	})
 })
 
