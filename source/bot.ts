@@ -78,11 +78,13 @@ import {
 import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 import {
+	addItemToUserInventory,
 	getShopLastReset,
 	getUserIdByImageUrl,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
 	logImageUrl,
+	updateBalance,
 	updateReviewStatus,
 	updateReviewerId,
 	updateUserProfileHeader,
@@ -129,6 +131,87 @@ logger.fatal("This is a fatal message")
 
 let activities = []
 let index = 0
+
+const success_code = 0
+const error_code = 1
+
+const app = express()
+
+app.use(express.json())
+
+app.use((request, response, next) => {
+	logger.info(`-> HTTP ${request.method} ${request.url} '${JSON.stringify(request.body ?? "{}")}'`)
+
+	response.on("finish", () => {
+		logger.info(`<- HTTP ${response.statusCode} ${response.statusMessage}`)
+	})
+
+	next()
+})
+
+app.use((request, response) => {
+	response.status(404).send({
+		code: error_code,
+		data: {
+			message: "Not Found"
+		}
+	})
+})
+
+app.get("/", (request, response) => {
+	response.status(200).send({
+		code: success_code,
+		data: {
+			message: "Hello, World!"
+		}
+	})
+})
+
+const API_SECRET = process.env["API_SECRET"]
+
+app.post("/topgg", async (request, response) => {
+	logger.info(`Received a webhook: ${JSON.stringify(request.body)}`)
+
+	const auth = request.header("Authorization")
+	if (auth !== `Bearer ${API_SECRET}`) {
+		response.status(401).send({
+			code: error_code,
+			data: {
+				message: "Unauthorized"
+			}
+		})
+		return
+	}
+
+	const data = request.body as { user: string; isWeekend?: boolean }
+	logger.info("Received vote from user:", data.user)
+	const user = await client.users.fetch(data.user)
+	if (user) {
+		try {
+			await user.send("Thank you for voting!")
+			await updateBalance(user.id, 100000)
+			await addItemToUserInventory(user.id, "Cursed Vote Chest", 1)
+			logger.info(`Sent a direct message to user: ${user.tag}`)
+		} catch (error) {
+			logger.error(`Failed to send a direct message to user: ${user.tag}`, error)
+		}
+	}
+
+	response.status(200).send({
+		code: success_code,
+		data: {}
+	})
+})
+
+app.listen(parseInt(process.env["EXPRESS_PORT"] ?? "3000"), process.env["EXPRESS_ADDRESS"] ?? "0.0.0.0", () => {
+	logger.info(
+		`BOT API running on http://${process.env["EXPRESS_ADDRESS"] ?? "0.0.0.0"}:${
+			process.env["EXPRESS_PORT"] ?? "3000"
+		}`
+	)
+})
+
+////////
 
 client.on("ready", async () => {
 	logger.info(`Logged in as ${client.user.tag}!`)
@@ -880,6 +963,7 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
+import express from "express"
 import { AutoPoster } from "topgg-autoposter"
 
 const poster = AutoPoster(process.env.TOPGG, client)
