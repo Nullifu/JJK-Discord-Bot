@@ -45,6 +45,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
+		{ name: "Heavenly Chain", rarity: "rare" },
 		{ name: "Zenin Toji's Blood", rarity: "ultra rare" }
 	],
 	"Zenin Toji (Reincarnation)": [
@@ -60,12 +61,14 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Go//Jo", rarity: "ultra rare" },
 		{ name: "Fraud Poster", rarity: "ultra rare" },
+		{ name: "Heavenly Chain", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" }
 	],
 	"Itadori": [
 		{ name: "Tailsman", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" },
-		{ name: "Fraud Poster", rarity: "ultra rare" }
+		{ name: "Fraud Poster", rarity: "ultra rare" },
+		{ name: "Heavenly Chain", rarity: "rare" }
 	],
 	"Aoi Todo & Itadori": [
 		{ name: "Brotherly Bracelet", rarity: "rare" },
