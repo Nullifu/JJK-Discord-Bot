@@ -450,6 +450,7 @@ const commands = [
 					{ name: "Starter Bundle", value: "Starter Bundle" },
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
+					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
 				)
 		)
