@@ -179,7 +179,7 @@ app.post("/topgg", async (request, response) => {
 	const user = await client.users.fetch(data.user)
 	if (user) {
 		try {
-			await user.send("Thank you for voting!")
+			await user.send("Thank's for the vote! You got 100,000 Coins + A vote chest!")
 			await updateBalance(user.id, 100000)
 			await addItemToUserInventory(user.id, "Cursed Vote Chest", 1)
 			logger.info(`Sent a direct message to user: ${user.tag}`)
@@ -360,7 +360,6 @@ const commands = [
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
-	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
