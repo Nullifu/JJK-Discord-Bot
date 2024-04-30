@@ -2328,7 +2328,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 7,
+					damageMultiplier: 16,
 					imageUrl: "https://media1.tenor.com/m/LXmbPm21NagAAAAC/gojo-starou-satoru-gojo.gif",
 					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
 					fieldValue: selectedValue,
@@ -2340,7 +2340,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 8,
+					damageMultiplier: 14,
 					imageUrl: "https://media1.tenor.com/m/iyzTuWFxU2cAAAAd/gojo-gojo-satoru.gif",
 					description: "Reversal.. Red",
 					fieldValue: selectedValue,
@@ -2352,7 +2352,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 16,
+					damageMultiplier: 20,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-6-d461f56638.gif",
 					description:
 						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
