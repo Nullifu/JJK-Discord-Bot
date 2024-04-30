@@ -391,11 +391,10 @@ export async function handleMahoragaAttack(
 		return
 	}
 
-	const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
+	const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || 0
 
-	// Check if the boss's current health is already 0
 	if (currentBossHealth <= 0) {
-		return // If the boss's health is 0, exit the function early
+		return
 	}
 
 	logger.info("Mahoraga attack")
@@ -414,7 +413,7 @@ export async function handleMahoragaAttack(
 			mahoragaDamage += 50
 		}
 
-		const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
+		const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || 0
 		const newBossHealth = Math.max(0, currentBossHealth - mahoragaDamage)
 		bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
 		randomOpponent.current_health = newBossHealth
@@ -441,7 +440,7 @@ export async function handleMahoragaAttack(
 			const additionalDamage = hasDivineGeneralMahoraga ? 100 : 0
 			const totalSpecialDamage = mahoragaSpecialDamage + additionalDamage
 
-			const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || randomOpponent.max_health
+			const currentBossHealth = bossHealthMap.get(collectedInteraction.user.id) || 0
 			const newBossHealth = Math.max(0, currentBossHealth - totalSpecialDamage)
 			bossHealthMap.set(collectedInteraction.user.id, newBossHealth)
 			randomOpponent.current_health = newBossHealth
