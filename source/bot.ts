@@ -72,6 +72,7 @@ import {
 	handleVoteCommand,
 	handleWorkCommand,
 	handlecreditcommand,
+	mentorNPCCommand,
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
@@ -279,6 +280,7 @@ const commands = [
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
+	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
 	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
@@ -449,7 +451,8 @@ const commands = [
 					{ name: "Starter Bundle", value: "Starter Bundle" },
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
-					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
+					{ name: "#1 Fighting Box", value: "#1 Fighting Box" },
+					{ name: "Unknown Substance", value: "Unknown Substance" }
 				)
 		)
 		.addStringOption(option =>
@@ -777,6 +780,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)
+				break
+			case "mentor":
+				await mentorNPCCommand(chatInputInteraction)
 				break
 			case "alert":
 				await handleAlertCommand(chatInputInteraction)

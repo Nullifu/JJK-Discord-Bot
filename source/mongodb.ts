@@ -9,9 +9,9 @@ import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
+const bossCollectionName = "devboss"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -3519,5 +3519,95 @@ export async function updateReviewerId(imageUrl: string, reviewerId: string): Pr
 		await logsCollection.updateOne({ imageUrl }, { $set: { reviewerId } })
 	} catch (error) {
 		console.error("Error updating reviewer ID:", error)
+	}
+}
+
+// update user awakening
+export async function updateUserAwakening(userId: string, awakening: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { awakening } })
+	} catch (error) {
+		logger.error("Error updating user awakening:", error)
+		throw error
+	}
+}
+
+// get user awakening if it doesnt exist return null
+export async function getUserAwakening(userId: string): Promise<string | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.awakening : null
+	} catch (error) {
+		logger.error(`Error when retrieving awakening for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user unlocked mentors
+export async function updateUserUnlockedMentors(userId: string, unlockedMentors: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { unlockedMentors } })
+	} catch (error) {
+		logger.error("Error updating user unlocked mentors:", error)
+		throw error
+	}
+}
+
+/**
+ * Marks an awakening stage as messaged for a user.
+ * @param {string} userId - The ID of the user.
+ * @param {string} awakeningStage - The awakening stage to mark as messaged (e.g., "Stage One").
+ */
+export async function markStageAsMessaged(userId: string, awakeningStage: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const updateResult = await usersCollection.updateOne(
+			{ id: userId },
+			{ $addToSet: { stagesMessaged: awakeningStage } } // Using $addToSet to prevent duplicate entries for the same stage
+		)
+
+		if (updateResult.matchedCount === 0) {
+			logger.info(`No user found with ID: ${userId}`)
+		} else if (updateResult.modifiedCount === 0) {
+			logger.info(`User with ID: ${userId} was not updated (possibly already marked this stage).`)
+		} else {
+			logger.info(`Stage "${awakeningStage}" marked as messaged for user with ID: ${userId}.`)
+		}
+	} catch (error) {
+		logger.error(`Error marking stage as messaged for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+/**
+ * Checks if an awakening stage has already been messaged to a user.
+ * @param {string} userId - The ID of the user.
+ * @param {string} awakeningStage - The awakening stage to check (e.g., "Stage One").
+ * @returns {Promise<boolean>} True if the stage has been messaged, otherwise false.
+ */
+export async function checkStageMessaged(userId: string, awakeningStage: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId, stagesMessaged: { $in: [awakeningStage] } })
+		return !!user // Returns true if user is found with the stage in stagesMessaged array, otherwise false.
+	} catch (error) {
+		logger.error(`Error checking if stage has been messaged for user with ID: ${userId}`, error)
+		throw error
 	}
 }

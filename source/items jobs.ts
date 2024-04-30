@@ -20,6 +20,7 @@ import {
 	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserActiveTechniques,
+	updateUserAwakening,
 	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
@@ -828,6 +829,58 @@ export const CLAN_SKILLS = {
 			clan: "Overtime",
 			items: [{ name: "(Shattered) Overtime Watch", quantity: 1 }]
 		}
+	],
+	"Curse King (Heian Era)": [
+		{
+			name: "Divine Flames",
+			cost: "5280000",
+			clan: "Curse King (Heian Era)",
+			items: [
+				{ name: "Sukuna Finger", quantity: 20 },
+				{ name: "Heian Era Scraps", quantity: 2 }
+			],
+			stage: "Stage Two"
+		},
+		{
+			name: "Pure Dismantle",
+			cost: "2380000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage Two"
+		},
+		{
+			name: "Fire Extinguisher",
+			cost: "450000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage Two"
+		}
+	],
+	"God of Lightning (Heian Era)": [
+		{
+			name: "Mythical Beast Amber",
+			cost: "5280000",
+			clan: "God of Lightning (Heian Era)",
+			items: [
+				{ name: "Electrified Cursed Shard", quantity: 2 },
+				{ name: "Heian Era Scraps", quantity: 6 }
+			],
+			stage: "Stage One"
+		},
+		{
+			name: "Piece of the Heavens",
+			cost: "3800000",
+			clan: "God of Lightning (Heian Era)",
+			items: [{ name: "Heian Era Scrapsh", quantity: 6 }],
+			stage: "Stage One"
+		},
+		{
+			name: "Focused Lightning",
+			cost: "938000",
+			clan: "God of Lightning (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 4 }],
+			stage: "Stage One"
+		}
 	]
 }
 
@@ -903,6 +956,18 @@ export const questsArray = [
 		itemQuantity: 1,
 		task: "Exorcise 20 Foes!",
 		totalProgress: 20
+	},
+	{
+		name: "Awakening",
+		description: "???",
+		coins: 0,
+		experience: 0,
+		items: { "Awakening Shard": 1 },
+		itemQuantity: 1,
+		tasks: [
+			{ description: "Defeat Foes", progress: 0, totalProgress: 25 },
+			{ description: "Defeat Ryomen Sukuna", progress: 0, totalProgress: 1 }
+		]
 	},
 	{
 		name: "Training with Itadori",
@@ -1740,6 +1805,25 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Vial of Cursed Energy")
 				.setDescription("You drink the contents and gain a health increase! + 30")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+		}
+	},
+	{
+		itemName: "Unknown Substance",
+		description: "Unknown Substance",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await updateUserAwakening(interaction.user.id, "Stage One")
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("? ? ?")
+				.setDescription(
+					"You drink the contents.. You feel a strange power awaken within you.. Ryomen Sukuna, And Gojo Satoru may have a intrest in you.."
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},

@@ -102,6 +102,7 @@ import {
 	getUserAchievements,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
+	getUserAwakening,
 	getUserDailyData,
 	getUserDomain,
 	getUserFavouriteCommand,
@@ -112,6 +113,7 @@ import {
 	getUserInventory,
 	getUserItemEffects,
 	getUserMaxHealth,
+	getUserMentor,
 	getUserOwnedInateClan,
 	getUserProfile,
 	getUserProfileHeader,
@@ -183,6 +185,7 @@ import {
 	calculateDamageWithEffects,
 	fetchAndFormatStatusEffects
 } from "./statuseffects.js"
+import { getMentorDetails } from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
@@ -2754,9 +2757,9 @@ const latestSessionTimestampPerUser = new Map()
 export async function handleTechniqueShopCommand(interaction: ChatInputCommandInteraction) {
 	await interaction.deferReply()
 
-	//
 	const userId = interaction.user.id
 	const interactionId = interaction.id
+	const userAwakeningStage = await getUserAwakening(userId)
 	const sessionTimestamp = Date.now()
 	const userTechniques = (await getUserTechniques(userId)) || []
 	const userBalance = await getBalance(userId)
@@ -2769,11 +2772,9 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		existingCollector.stop("A new shop session was initiated.")
 	}
 
-	//
 	latestInteractionIdPerUser.set(userId, interactionId)
 	latestSessionTimestampPerUser.set(userId, sessionTimestamp)
 
-	// Initialize clanOptions based on heavenly restriction
 	let clanOptions
 	if (hasHeavenlyRestriction) {
 		clanOptions = [
@@ -2784,12 +2785,20 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			}
 		]
 	} else {
-		const clans = Object.keys(CLAN_SKILLS)
-		clanOptions = clans.map(clan => ({
-			label: clan,
-			value: clan.toLowerCase().replace(/\s+/g, "_"),
-			description: `Select to view ${clan}'s techniques`
-		}))
+		clanOptions = clans
+			.filter(clan => {
+				if (clan === "Curse King (Heian Era)") {
+					return userAwakeningStage === "Stage Two" // Include this clan only if the awakening stage is "Stage Two"
+				} else if (clan === "God of Lightning (Heian Era)") {
+					return userAwakeningStage === "Stage One" // Include this clan only if the awakening stage is 1
+				}
+				return true // Include all other clans by default
+			})
+			.map(clan => ({
+				label: clan,
+				value: clan.toLowerCase().replace(/\s+/g, "_"),
+				description: `Select to view ${clan}'s techniques`
+			}))
 	}
 
 	clanOptions = clanOptions.filter(
@@ -2836,6 +2845,18 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				skillsToDisplay = heavenlyrestrictionskills.filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = "Heavenly Restriction Techniques"
 				customIdPrefix = "buy_heavenly_technique_"
+			} else if (i.values[0] === "curse_king_(heian_era)") {
+				skillsToDisplay = CLAN_SKILLS["Curse King (Heian Era)"].filter(
+					skill => !userTechniques.includes(skill.name)
+				)
+				embedTitle = "Curse King (Heian Era) Techniques"
+				customIdPrefix = "buy_technique_"
+			} else if (i.values[0] === "god_of_lightning_(heian_era)") {
+				skillsToDisplay = CLAN_SKILLS["God of Lightning (Heian Era)"].filter(
+					skill => !userTechniques.includes(skill.name)
+				)
+				embedTitle = "God of Lightning (Heian Era) Techniques"
+				customIdPrefix = "buy_technique_"
 			} else {
 				const selectedClan = clans.find(clan => clan.toLowerCase().replace(/\s+/g, "_") === i.values[0])
 				skillsToDisplay = CLAN_SKILLS[selectedClan].filter(skill => !userTechniques.includes(skill.name))
@@ -2947,13 +2968,12 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			})
 		}
 	})
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 	techniqueshopcollector.on("end", _collected => {
 		techniqueshopcollector.stop()
 		userCollectors.delete(userId)
 	})
 }
-
 // Helper function for formatting uptime
 function formatUptime(uptime: number): string {
 	const totalSeconds = uptime / 1000
@@ -3528,9 +3548,27 @@ export async function claimQuestsCommand(interaction) {
 			await removeUserQuest(userId, completedQuest.id)
 		}
 
+		// Create the questRewards array
+		const questRewards = completedQuests.map(completedQuest => {
+			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+			if (!questDetails) return `**${completedQuest.id}**`
+
+			const { coins, experience, item, itemQuantity } = questDetails
+			const rewards = [
+				`Coins: ${coins}`,
+				`Experience: ${experience}`,
+				item ? `Item: ${item} x ${itemQuantity}` : null
+			]
+				.filter(Boolean)
+				.join("\n")
+
+			return `**${completedQuest.id}**\n${rewards}`
+		})
+
 		const specialEmbeds = []
 
 		if (claimedSukunasHonour) {
+			await updateUserHonours(userId, ["Sukuna's Honour"])
 			const sukunasHonourEmbed = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("Sukuna's Honour Claimed!")
@@ -3544,6 +3582,7 @@ export async function claimQuestsCommand(interaction) {
 		}
 
 		if (claimedReinforcement) {
+			await updateUserUnlockedTransformations(userId, ["Cursed Energy Reinforcement"])
 			const reinforcementEmbed = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("Power Released!")
@@ -3602,7 +3641,7 @@ export async function claimQuestsCommand(interaction) {
 			const genericEmbed = new EmbedBuilder()
 				.setColor(0x0099ff)
 				.setTitle("Quest Rewards Claimed")
-				.setDescription(completedQuests.map(quest => `**${quest.id}**`).join("\n"))
+				.setDescription(questRewards.join("\n\n"))
 
 			await interaction.reply({ embeds: [genericEmbed] })
 		}
@@ -5071,9 +5110,47 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 4,
 					imageUrl: "https://media1.tenor.com/m/O8RVjFsdWI8AAAAC/sukuna-ryomen.gif",
 					description: `Dissect! ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Divine Flames") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 14,
+					imageUrl:
+						"https://storage.googleapis.com/jjk_bot_personal/sukuna-holding-out-his-arm-in-front-of-him-engulfed-with-flames-as-he-uses-his-fire-technique-in-jujutsu-kaisen%20%5BMConverter.eu%5D.png",
+					description: `Pathetic.. ${randomOpponent.name}.. I'll burn you to a crisp..`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Pure Dismantle") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/GDPkQiBWkAALc51.jpg",
+					description: "Purify..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Fire Extinguisher") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl:
+						"https://storage.googleapis.com/jjk_bot_personal/who-winning-this-clash-of-techniques-v0-r97dr3o8a5kb1.png",
+					description: "You throw a fire extinguisher at the opponent...? ",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesTame,
 					userId: collectedInteraction.user.id,
@@ -6008,4 +6085,80 @@ export async function handleShikigamiShop(interaction) {
 		logger.error("Error fetching shop items:", error)
 		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
 	}
+}
+
+export async function mentorNPCCommand(interaction: CommandInteraction) {
+	try {
+		const userId = interaction.user.id
+		const mentor = await getUserMentor(userId)
+		const awakening = await getUserAwakening(userId)
+		const hasAwakening = awakening !== null
+		const hasAwakeningShardItem = await getUserInventory(userId, "Awakening Shard")
+
+		const { message, imageUrl, line } = getMentorDetails(mentor, hasAwakening)
+
+		const initialEmbed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Mentor Details")
+			.setDescription(`${message}`)
+			.setImage(imageUrl)
+			.addFields([
+				{ name: `**${mentor} says:**`, value: `${line}`, inline: true },
+				{ name: "Mentor", value: mentor, inline: true },
+				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+			])
+
+		const initialReply = await interaction.reply({ embeds: [initialEmbed], fetchReply: true })
+
+		if (hasAwakeningShardItem) {
+			// Delay before updating the embed
+			setTimeout(async () => {
+				const attackEmbed = createAwakeningShardEmbed(interaction, mentor, awakening, hasAwakening)
+				await initialReply.edit({ embeds: [attackEmbed] })
+			}, 5000) // Change the delay time (5000 ms = 5 seconds) as needed
+		}
+	} catch (error) {
+		console.error("Error handling mentor NPC command:", error)
+		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
+	}
+}
+
+function createAwakeningShardEmbed(interaction, mentor, awakening, hasAwakening) {
+	let embed
+
+	if (mentor === "Satoru Gojo") {
+		// If the mentor is Satoru Gojo and the user has the "Awakening Shard" item
+		embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Sukuna Attacks!")
+			.setDescription("Sukuna has sensed your Awakening Shard and is attacking you!")
+			.setImage("https://example.com/sukuna-attack.png")
+			.addFields([
+				{
+					name: "**Satoru Gojo says:**",
+					value: "Quickly, use your Awakening Shard to defend yourself!",
+					inline: true
+				},
+				{ name: "Mentor", value: "Satoru Gojo", inline: true },
+				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+			])
+	} else if (mentor === "Sukuna") {
+		// If the mentor is Sukuna and the user has the "Awakening Shard" item
+		embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Gojo Attacks!")
+			.setDescription("Gojo has sensed your Awakening Shard and is attacking you!")
+			.setImage("https://example.com/gojo-attack.png")
+			.addFields([
+				{
+					name: "**Sukuna says:**",
+					value: "Use your Awakening Shard to defeat that pesky Gojo!",
+					inline: true
+				},
+				{ name: "Mentor", value: "Sukuna", inline: true },
+				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+			])
+	}
+
+	return embed
 }
