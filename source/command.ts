@@ -2352,8 +2352,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 20,
-					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-6-d461f56638.gif",
+					damageMultiplier: 18,
+					imageUrl: "https://media1.tenor.com/m/uxzlDwND2RkAAAAd/roxo-hollow-purple.gif",
 					description:
 						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
 					fieldValue: selectedValue,
