@@ -1597,6 +1597,8 @@ export const items1: Item1[] = [
 				"Rikugan Eye",
 				"Special-Grade Geo Locator",
 				"Special-Grade Cursed Object",
+				"Bet Slip",
+				"Fraud Poster",
 				"Hakari Kinji's Token"
 			]
 			function getRandomItem() {
