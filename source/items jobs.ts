@@ -1570,27 +1570,17 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			const possibleItems = [
-				"Sukuna Finger",
-				"Six Eyes",
-				"Special-Grade Cursed Object",
-				"Hakari Kinji's Token",
-				"Special-Grade Geo Locator",
-				"Fused Star"
-			]
-			function getRandomItem() {
-				const randomIndex = Math.floor(Math.random() * possibleItems.length)
-				return possibleItems[randomIndex]
-			}
-
-			const chestitem = getRandomItem()
-
-			await addItemToUserInventory(interaction.user.id, chestitem, 1)
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 4)
+			await addItemToUserInventory(interaction.user.id, "Rikugan Eye", 2)
+			await addItemToUserInventory(interaction.user.id, "Special-Grade Geo Locator", 1)
+			await updateBalance(interaction.user.id, 200000)
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
 				.setTitle("Opening...")
-				.setDescription(`You open the cursed chest and get! ${chestitem}`)
+				.setDescription(
+					"You open the cursed chest and get! 2x Rikugan Eye, 4x Sukuna Finger, Special-Grade Geo Locator + 200,000 Coins!"
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
@@ -1605,6 +1595,7 @@ export const items1: Item1[] = [
 			const possibleItems = [
 				"Sukuna Finger",
 				"Rikugan Eye",
+				"Special-Grade Geo Locator",
 				"Special-Grade Cursed Object",
 				"Hakari Kinji's Token"
 			]
