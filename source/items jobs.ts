@@ -10,6 +10,7 @@ import {
 	getGamblersData,
 	getUserInateClan,
 	getUserInventory,
+	getUserMentor,
 	getUserQuests,
 	getUserUnlockedTransformations,
 	removeAllItemEffects,
@@ -807,6 +808,7 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
 		}
 	],
+
 	"Overtime": [
 		{
 			name: "Overtime: Collapse",
@@ -828,6 +830,33 @@ export const CLAN_SKILLS = {
 			cost: "45000",
 			clan: "Overtime",
 			items: [{ name: "(Shattered) Overtime Watch", quantity: 1 }]
+		}
+	],
+
+	"God of Lightning (Heian Era)": [
+		{
+			name: "Mythical Beast Amber",
+			cost: "5280000",
+			clan: "God of Lightning (Heian Era)",
+			items: [
+				{ name: "Electrified Cursed Shard", quantity: 2 },
+				{ name: "Heian Era Scraps", quantity: 6 }
+			],
+			stage: "Stage One"
+		},
+		{
+			name: "Piece of the Heavens",
+			cost: "3800000",
+			clan: "God of Lightning (Heian Era)",
+			items: [{ name: "Heian Era Scrapsh", quantity: 6 }],
+			stage: "Stage One"
+		},
+		{
+			name: "Focused Lightning",
+			cost: "938000",
+			clan: "God of Lightning (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 4 }],
+			stage: "Stage One"
 		}
 	],
 	"Curse King (Heian Era)": [
@@ -856,30 +885,23 @@ export const CLAN_SKILLS = {
 			stage: "Stage Two"
 		}
 	],
-	"God of Lightning (Heian Era)": [
+	"Demon Vessel (Awoken)": [
 		{
-			name: "Mythical Beast Amber",
+			name: "Re-imagined BLACK FLASH",
 			cost: "5280000",
-			clan: "God of Lightning (Heian Era)",
+			clan: "Demon Vessel (Awoken)",
 			items: [
-				{ name: "Electrified Cursed Shard", quantity: 2 },
-				{ name: "Heian Era Scraps", quantity: 6 }
+				{ name: "Sukuna Finger", quantity: 2 },
+				{ name: "Split Shard", quantity: 3 }
 			],
-			stage: "Stage One"
+			stage: "Stage Three"
 		},
 		{
-			name: "Piece of the Heavens",
+			name: "Convergence",
 			cost: "3800000",
-			clan: "God of Lightning (Heian Era)",
-			items: [{ name: "Heian Era Scrapsh", quantity: 6 }],
-			stage: "Stage One"
-		},
-		{
-			name: "Focused Lightning",
-			cost: "938000",
-			clan: "God of Lightning (Heian Era)",
-			items: [{ name: "Heian Era Scraps", quantity: 4 }],
-			stage: "Stage One"
+			clan: "Demon Vessel (Awoken)",
+			items: [{ name: "Split Shard", quantity: 1 }],
+			stage: "Stage Three"
 		}
 	]
 }
@@ -937,6 +959,26 @@ export const benefactors = [
 // quests array
 export const questsArray = [
 	{
+		name: "Mentor: Curse King",
+		description: "Mentor: Curse King",
+		coins: 0,
+		experience: 0,
+		item: "Curse King Medal",
+		itemQuantity: 1,
+		task: "Defeat Sukuna",
+		totalProgress: 2
+	},
+	{
+		name: "Mentor: The Strongest",
+		description: "Mentor: The Strongest",
+		coins: 0,
+		experience: 0,
+		item: "Strongest Medal",
+		itemQuantity: 1,
+		task: "Defeat Satoru Gojo",
+		totalProgress: 2
+	},
+	{
 		name: "Gamblers Fever",
 		description: "Defeat Hakari Kinji 5 times and earn his token.",
 		coins: 45000,
@@ -962,8 +1004,8 @@ export const questsArray = [
 		description: "???",
 		coins: 0,
 		experience: 0,
-		items: { "Awakening Shard": 1 },
-		itemQuantity: 1,
+		items: "Split Shard",
+		itemQuantity: 12,
 		tasks: [
 			{ description: "Defeat Foes", progress: 0, totalProgress: 25 },
 			{ description: "Defeat Ryomen Sukuna", progress: 0, totalProgress: 1 }
@@ -1066,6 +1108,10 @@ export const questsArray = [
 export const INVENTORY_CLAN = {
 	"Demon Vessel": [
 		{
+			name: "World Cutting Slash",
+			clan: "Demon Vessel"
+		},
+		{
 			name: "Flame Arrow",
 			description: "Fuga...",
 			clan: "Demon Vessel"
@@ -1098,18 +1144,28 @@ export const INVENTORY_CLAN = {
 	],
 	"Limitless": [
 		{
+			name: "Maximum Technique: Purple",
+			clan: "Limitless"
+		},
+		{
+			name: "Maximum Technique: Blue",
+			clan: "Limitless"
+		},
+		{
+			name: "Maximum Technique: Red",
+			clan: "Limitless"
+		},
+
+		{
 			name: "Hollow Purple",
-			description: "Throughout heaven and earth..",
 			clan: "Limitless"
 		},
 		{
 			name: "Lapse: Blue",
-			description: " Jutsushiki Junten・Ao!",
 			clan: "Limitless"
 		},
 		{
 			name: "Limitless: Red",
-			description: "Aka..",
 			clan: "Limitless"
 		}
 	],
@@ -1121,6 +1177,11 @@ export const INVENTORY_CLAN = {
 		},
 		{
 			name: "Ten Shadows Technique: Divine Dogs",
+			description: "Divine Dogs!",
+			clan: "Fushiguro"
+		},
+		{
+			name: "Ten Shadows Technique: Toad",
 			description: "Divine Dogs!",
 			clan: "Fushiguro"
 		},
@@ -1148,6 +1209,10 @@ export const INVENTORY_CLAN = {
 		}
 	],
 	"Disaster Flames": [
+		{
+			name: "Disaster Flames: Full Fire Formation",
+			clan: "Disaster Flames"
+		},
 		{
 			name: "Maximum: METEOR!",
 			description: "I'LL TURN YOU INTO A CRISP!",
@@ -1814,8 +1879,16 @@ export const items1: Item1[] = [
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
-			await interaction.deferReply()
+			const userId = interaction.user.id
+			const mentor = await getUserMentor(userId)
 
+			// Check if the user has a mentor
+			if (!mentor) {
+				await interaction.reply("You don't have a mentor yet. Please find a mentor before using this item.")
+				return
+			}
+
+			await interaction.deferReply()
 			await updateUserAwakening(interaction.user.id, "Stage One")
 
 			const embedFinal = new EmbedBuilder()
@@ -1824,6 +1897,7 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You drink the contents.. You feel a strange power awaken within you.. Ryomen Sukuna, And Gojo Satoru may have a intrest in you.."
 				)
+
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},

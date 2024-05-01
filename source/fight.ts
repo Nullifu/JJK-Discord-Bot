@@ -54,6 +54,7 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
 	}
 	if (opponent.name === "Itadori") {
 		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
@@ -79,8 +80,11 @@ export async function handleBossDeath(
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
+	//
+	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
+	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
 

@@ -1,5 +1,6 @@
 import { randomInt } from "crypto"
-import { EmbedBuilder } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
+import { addItemToUserInventory, removeItemFromUserInventory } from "./mongodb.js"
 
 // Define mentor details with messages, images, and lines
 const mentorDetails: { [key: string]: { message: string; imageUrl: string; lines: string[] } } = {
@@ -51,22 +52,66 @@ export function getAwakeningDialogue(mentor: string): string {
 	)
 }
 
-export function createAwakeningShardEmbed(interaction, mentor, awakening, hasAwakening) {
+export function createAwakeningShardInitialEmbed(interaction, mentor) {
 	const embed = new EmbedBuilder()
 		.setColor(0x0099ff)
-		.setTitle("Awakening Shard Mentor Details")
-		.setDescription("You have an Awakening Shard in your inventory!")
+		.setTitle("Awakening Shard Encounter")
+		.setImage("https://media1.tenor.com/m/cfC-_AdHfKIAAAAC/gojo-satoru.gif")
+		.setDescription("You sense a powerful energy emanating from your Awakening Shard...")
 		.addFields([
 			{
 				name: `**${mentor} says:**`,
-				value: "So you've done the quest i gave you huh? Well, Lucky for you i have a spare shard.. Take it, and awaken your true potential.",
+				value: `Be wary, ${interaction.user.username}. Something is not right...`,
 				inline: true
-			},
-			{ name: "Mentor", value: mentor, inline: true },
-			{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+			}
 		])
 
-	// Add any additional fields or information specific to the "Awakening Shard" embed
-
 	return embed
+}
+
+export async function createAwakeningShardEmbed(interaction, mentor) {
+	let embed
+
+	if (mentor === "Satoru Gojo") {
+		await removeItemFromUserInventory(interaction.user.id, "Awakening Shard", 1)
+		await addItemToUserInventory(interaction.user.id, "Split Shard", 1)
+
+		embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Sukuna Attacks!")
+			.setDescription("Sukuna has sensed your Awakening Shard and is attacking you, He's shattered the shard!")
+			.setImage("https://media1.tenor.com/m/hGAOy9OYEBAAAAAC/jjk-jujutsu-kaisen.gif")
+			.addFields([
+				{
+					name: "**Satoru Gojo says:**",
+					value: "Quickly, Run! I'll hold him off!",
+					inline: true
+				}
+			])
+	} else if (mentor === "Sukuna") {
+		await removeItemFromUserInventory(interaction.user.id, "Awakening Shard", 1)
+		await addItemToUserInventory(interaction.user.id, "Split Shard", 1)
+
+		embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("Gojo Attacks!")
+			.setDescription("Gojo has sensed your Awakening Shard and is attacking you, He's shattered the shard!")
+			.setImage("https://media1.tenor.com/m/7wtqfZcsbHUAAAAd/gojou-gojo.gif")
+			.addFields([
+				{
+					name: "**Sukuna says:**",
+					value: "Quickly, Run! I'll hold him off!",
+					inline: true
+				}
+			])
+	}
+
+	// Create buttons
+	const fightButton = new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary)
+
+	const runButton = new ButtonBuilder().setCustomId("run").setLabel("Run").setStyle(ButtonStyle.Secondary)
+
+	const actionRow = new ActionRowBuilder().addComponents(fightButton, runButton)
+
+	return { embeds: [embed], components: [actionRow] }
 }

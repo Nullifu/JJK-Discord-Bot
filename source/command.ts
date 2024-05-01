@@ -83,6 +83,7 @@ import {
 	addUserQuest,
 	addUserTechnique,
 	checkProfileChangeCooldown,
+	checkStageMessaged,
 	checkUserHasHeavenlyRestriction,
 	checkWorkCooldown,
 	cleanShikigami,
@@ -127,12 +128,14 @@ import {
 	getUserTechniques,
 	getUserTransformation,
 	getUserUnlockedBosses,
+	getUserUnlockedMentors,
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
 	getUserWorked,
 	handleTradeAcceptance,
 	healShikigami,
 	logImageUrl,
+	markStageAsMessaged,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
@@ -154,11 +157,13 @@ import {
 	updateUserHonours,
 	updateUserInateClan,
 	updateUserJob,
+	updateUserMentors,
 	updateUserProfileHeader,
 	updateUserProfileImage,
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
+	updateUserUnlockedMentors,
 	updateUserUnlockedTransformations,
 	updateUserWorked,
 	userExists,
@@ -185,7 +190,7 @@ import {
 	calculateDamageWithEffects,
 	fetchAndFormatStatusEffects
 } from "./statuseffects.js"
-import { getMentorDetails } from "./utils.js"
+import { getAwakeningDialogue, getMentorDetails } from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
@@ -2427,6 +2432,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				})
 				await applyPrayerSongEffect(collectedInteraction.user.id)
 				//
+			} else if (selectedValue === "Re-imagined BLACK FLASH") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 20,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/PE1OPKzVJ8mUIabr2jBW1712379026.png",
+					description: "I'm done playing around with you.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Maximum: METEOR") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2788,9 +2805,9 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		clanOptions = clans
 			.filter(clan => {
 				if (clan === "Curse King (Heian Era)") {
-					return userAwakeningStage === "Stage Two" // Include this clan only if the awakening stage is "Stage Two"
+					return userAwakeningStage === "Stage Two"
 				} else if (clan === "God of Lightning (Heian Era)") {
-					return userAwakeningStage === "Stage One" // Include this clan only if the awakening stage is 1
+					return userAwakeningStage === "Stage One" || "Stage Two" || "Stage Three"
 				}
 				return true // Include all other clans by default
 			})
@@ -2880,7 +2897,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				.setDescription(
 					skillsToDisplay
 						.map(skill => {
-							return `**${skill.name}** - ${skill.cost} Coins${
+							const formattedCost = skill.cost.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+							return `**${skill.name}** - ${formattedCost} Coins${
 								skill.items && skill.items.length > 0
 									? ` - Requires: ${skill.items
 											.map(item => `${item.quantity}x ${item.name}`)
@@ -3396,6 +3414,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 	const availableQuests = questsArray.filter(quest => !activeQuestNames.includes(quest.name) && !quest.special)
 
 	if (availableQuests.length === 0) {
+		await interaction.reply("There are no available quests.")
 		throw new Error("There are no available quests.")
 	}
 
@@ -3517,6 +3536,8 @@ export async function claimQuestsCommand(interaction) {
 		let claimedReinforcement = false
 		let claimedSatoru = false
 		let claimedNanami = false
+		let claimedMentorSatoru = false
+		let claimedMentorSukuna = false
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
@@ -3540,6 +3561,10 @@ export async function claimQuestsCommand(interaction) {
 						claimedSatoru = true
 					} else if (itemName === "Overtime") {
 						claimedNanami = true
+					} else if (itemName === "Curse King Medal") {
+						claimedMentorSukuna = true
+					} else if (itemName === "Strongest Medal") {
+						claimedMentorSatoru = true
 					}
 				}
 			}
@@ -3629,6 +3654,34 @@ export async function claimQuestsCommand(interaction) {
 				})
 
 			specialEmbeds.push(claimedNanami)
+		}
+		if (claimedMentorSatoru) {
+			await updateUserUnlockedMentors(userId, ["Satoru Gojo"])
+			const satorumentor = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("The Strongest")
+				.setDescription("Your pretty strong.. i'll mentor you.")
+				.setImage("https://media1.tenor.com/m/_NCxT6vyWvwAAAAC/gojo-satoru-look-side-eye.gif")
+				.addFields({
+					name: "Mentor",
+					value: "Satoru Gojo has taken you under his wing..."
+				})
+
+			specialEmbeds.push(satorumentor)
+		}
+		if (claimedMentorSukuna) {
+			await updateUserUnlockedMentors(userId, ["Curse King"])
+			const curseking = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("The Fearful King")
+				.setDescription("Hmph, Fine.. I'll mentor you.. but don't get too cocky kid")
+				.setImage("https://media1.tenor.com/m/tp8gToTKFksAAAAC/ryomen-sukuna-sukuna.gif")
+				.addFields({
+					name: "Mentor",
+					value: "The King Of Curses has taken you under his wing..."
+				})
+
+			specialEmbeds.push(curseking)
 		}
 
 		// Reply with special embeds or a generic completion message
@@ -4954,6 +5007,18 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Re-imagined BLACK FLASH") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 20,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/PE1OPKzVJ8mUIabr2jBW1712379026.png",
+					description: "I'm done playing around with you.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Star Rage: Virtual Mass") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -6093,11 +6158,10 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		const mentor = await getUserMentor(userId)
 		const awakening = await getUserAwakening(userId)
 		const hasAwakening = awakening !== null
-		const hasAwakeningShardItem = await getUserInventory(userId, "Awakening Shard")
 
 		const { message, imageUrl, line } = getMentorDetails(mentor, hasAwakening)
 
-		const initialEmbed = new EmbedBuilder()
+		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("Mentor Details")
 			.setDescription(`${message}`)
@@ -6108,57 +6172,57 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
 			])
 
-		const initialReply = await interaction.reply({ embeds: [initialEmbed], fetchReply: true })
-
-		if (hasAwakeningShardItem) {
-			// Delay before updating the embed
-			setTimeout(async () => {
-				const attackEmbed = createAwakeningShardEmbed(interaction, mentor, awakening, hasAwakening)
-				await initialReply.edit({ embeds: [attackEmbed] })
-			}, 5000) // Change the delay time (5000 ms = 5 seconds) as needed
+		if (hasAwakening && !(await checkStageMessaged(userId, `${awakening}`))) {
+			const awakeningDialogue = getAwakeningDialogue(mentor)
+			embed.addFields({ name: "Awakening Insight", value: awakeningDialogue })
+			await addUserQuest(userId, "Awakening")
+			await markStageAsMessaged(userId, `${awakening}`)
+		} else if (!hasAwakening || (hasAwakening && !(await checkStageMessaged(userId, awakening)))) {
+			const { quests } = await getUserQuests(userId)
+			if (quests.length > 0) {
+				const questsText = quests
+					.map(quest => `${quest.id}: ${quest.progress} / ${quest.totalProgress}`)
+					.join("\n")
+				embed.addFields({ name: "Your Quests", value: questsText })
+			} else {
+				embed.addFields({ name: "Your Quests", value: "No quests currently." })
+			}
 		}
+
+		await interaction.reply({ embeds: [embed] })
 	} catch (error) {
 		console.error("Error handling mentor NPC command:", error)
 		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
 	}
 }
 
-function createAwakeningShardEmbed(interaction, mentor, awakening, hasAwakening) {
-	let embed
+// command to switch between unlocked mentors use getuserunlockedmentors to actually check
+export async function handleMentorSwitchCommand(interaction: CommandInteraction) {
+	const userId = interaction.user.id
+	const unlockedMentors = await getUserUnlockedMentors(userId)
+	const mentorOptions = unlockedMentors.map(mentor => ({
+		label: mentor,
+		value: mentor
+	}))
 
-	if (mentor === "Satoru Gojo") {
-		// If the mentor is Satoru Gojo and the user has the "Awakening Shard" item
-		embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle("Sukuna Attacks!")
-			.setDescription("Sukuna has sensed your Awakening Shard and is attacking you!")
-			.setImage("https://example.com/sukuna-attack.png")
-			.addFields([
-				{
-					name: "**Satoru Gojo says:**",
-					value: "Quickly, use your Awakening Shard to defend yourself!",
-					inline: true
-				},
-				{ name: "Mentor", value: "Satoru Gojo", inline: true },
-				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
-			])
-	} else if (mentor === "Sukuna") {
-		// If the mentor is Sukuna and the user has the "Awakening Shard" item
-		embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle("Gojo Attacks!")
-			.setDescription("Gojo has sensed your Awakening Shard and is attacking you!")
-			.setImage("https://example.com/gojo-attack.png")
-			.addFields([
-				{
-					name: "**Sukuna says:**",
-					value: "Use your Awakening Shard to defeat that pesky Gojo!",
-					inline: true
-				},
-				{ name: "Mentor", value: "Sukuna", inline: true },
-				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
-			])
+	const mentorSelectMenu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("mentor_select")
+			.setPlaceholder("Select a mentor")
+			.addOptions(mentorOptions)
+	)
+
+	await interaction.reply({ components: [mentorSelectMenu] })
+
+	const selectionInteraction = await interaction.channel.awaitMessageComponent({
+		filter: i => i.customId === "mentor_select" && i.user.id === interaction.user.id && i.isStringSelectMenu()
+	})
+
+	if ("values" in selectionInteraction) {
+		const selectedMentor = selectionInteraction.values[0]
+
+		await updateUserMentors(userId, selectedMentor)
+
+		await selectionInteraction.update({ content: `You have selected ${selectedMentor} as your mentor.` })
 	}
-
-	return embed
 }

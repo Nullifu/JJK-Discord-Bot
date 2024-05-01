@@ -2422,7 +2422,7 @@ export async function getUserMentor(userId: string): Promise<string> {
 	}
 }
 // update user mentors if it doesnt exist create it then update
-export async function updateUserMentors(userId: string, mentors: string[]): Promise<void> {
+export async function updateUserMentors(userId: string, mentors: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
@@ -2510,6 +2510,21 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 		)
 	} catch (error) {
 		logger.error("Error updating user shikigami:", error)
+		throw error
+	}
+}
+
+// get user unlocked mentors
+export async function getUserUnlockedMentors(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.unlockedmentors : []
+	} catch (error) {
+		logger.error(`Error when retrieving unlocked mentors for user with ID: ${userId}`, error)
 		throw error
 	}
 }
