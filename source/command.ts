@@ -3493,9 +3493,27 @@ export async function claimQuestsCommand(interaction) {
 			await removeUserQuest(userId, completedQuest.id)
 		}
 
+		// Create the questRewards array
+		const questRewards = completedQuests.map(completedQuest => {
+			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+			if (!questDetails) return `**${completedQuest.id}**`
+
+			const { coins, experience, item, itemQuantity } = questDetails
+			const rewards = [
+				`Coins: ${coins}`,
+				`Experience: ${experience}`,
+				item ? `Item: ${item} x ${itemQuantity}` : null
+			]
+				.filter(Boolean)
+				.join("\n")
+
+			return `**${completedQuest.id}**\n${rewards}`
+		})
+
 		const specialEmbeds = []
 
 		if (claimedSukunasHonour) {
+			await updateUserHonours(userId, ["Sukuna's Honour"])
 			const sukunasHonourEmbed = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("Sukuna's Honour Claimed!")
@@ -3509,6 +3527,7 @@ export async function claimQuestsCommand(interaction) {
 		}
 
 		if (claimedReinforcement) {
+			await updateUserUnlockedTransformations(userId, ["Cursed Energy Reinforcement"])
 			const reinforcementEmbed = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("Power Released!")
@@ -3567,7 +3586,7 @@ export async function claimQuestsCommand(interaction) {
 			const genericEmbed = new EmbedBuilder()
 				.setColor(0x0099ff)
 				.setTitle("Quest Rewards Claimed")
-				.setDescription(completedQuests.map(quest => `**${quest.id}**`).join("\n"))
+				.setDescription(questRewards.join("\n\n"))
 
 			await interaction.reply({ embeds: [genericEmbed] })
 		}
