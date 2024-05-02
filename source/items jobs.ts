@@ -20,7 +20,6 @@ import {
 	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserActiveTechniques,
-	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
@@ -1417,7 +1416,6 @@ export const items1: Item1[] = [
 			let isLimitless = false
 
 			if (randomNumber <= 30) {
-				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
 				isLimitless = true
@@ -1438,11 +1436,7 @@ export const items1: Item1[] = [
 
 			let embedFinal
 			if (isLimitless) {
-				const gains =
-					"You have gained:\n" +
-					"• Technique: Hollow Purple: Nuke\n" +
-					"• Technique: Prayer Song\n" +
-					"• Max Health +30"
+				const gains = "You have gained:\n" + "• Technique: Hollow Purple: Nuke\n" + "• Technique: Prayer Song\n"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Holy Power")

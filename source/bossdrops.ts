@@ -180,7 +180,8 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" },
 		{ name: "Rikugan Eye", rarity: "ultra rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" },
-		{ name: "Six Eyes", rarity: "ultra rare" }
+		{ name: "Six Eyes", rarity: "ultra rare" },
+		{ name: "Sacred Eye", rarity: "ultra rare" }
 	],
 
 	"Mahito": [
