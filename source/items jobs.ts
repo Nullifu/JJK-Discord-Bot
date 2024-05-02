@@ -110,6 +110,14 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Go//Jo"
 	},
+	gojo2: {
+		requiredItems: [
+			{ name: "Go//Jo", quantity: 1 },
+			{ name: "Super Glue", quantity: 1 },
+			{ name: "Six Eyes", quantity: 1 }
+		],
+		craftedItemName: "Sacred Eye"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
