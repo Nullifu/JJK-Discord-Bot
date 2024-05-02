@@ -54,6 +54,7 @@ export interface BossData {
 	image_url: string
 	grade: string
 	curse: boolean
+	awakeningStage: string
 }
 
 export interface Item {

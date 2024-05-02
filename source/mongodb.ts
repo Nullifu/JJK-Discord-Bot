@@ -588,11 +588,27 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 
 		const database = client.db(mongoDatabase)
 		const domainsCollection = database.collection(bossCollectionName)
+
 		const allowedBossGrades = gradeToBossGrade[userGrade] || []
+
+		const userAwakening = await getUserAwakening(userId)
+		const userAwakeningStage = userAwakening ? userAwakening.split(" ")[1] : "Zero"
 
 		let query: { [key: string]: unknown } = {
 			grade: { $in: allowedBossGrades },
 			name: { $nin: ["Divine Dogs", "Nue", "Toad", "Great Serpent", "Max Elephant"] }
+		}
+
+		if (userAwakeningStage !== "Zero") {
+			query = {
+				...query,
+				awakeningStage: { $in: [userAwakeningStage, getNextAwakeningStage(userAwakeningStage)] }
+			}
+		} else {
+			query = {
+				...query,
+				awakeningStage: "Zero"
+			}
 		}
 
 		if (isCursed && !isNonCursed) {
@@ -610,7 +626,8 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL,
 			grade: boss.grade,
-			curse: boss.curse
+			curse: boss.curse,
+			awakeningStage: boss.awakeningStage
 		}))
 
 		return bosses
@@ -618,6 +635,12 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		logger.error("Error when retrieving bosses:", error)
 		throw error
 	}
+}
+
+export function getNextAwakeningStage(currentStage: string): string {
+	const stages = ["Stage One", "Two", "Three", "Four", "Five"]
+	const currentIndex = stages.indexOf(currentStage)
+	return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : "Five"
 }
 
 export async function getShikigami(userId: string): Promise<BossData[]> {
@@ -637,7 +660,8 @@ export async function getShikigami(userId: string): Promise<BossData[]> {
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL,
 			grade: boss.grade,
-			curse: boss.curse
+			curse: boss.curse,
+			awakeningStage: boss.awakeningStage
 		}))
 
 		return bosses

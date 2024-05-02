@@ -20,7 +20,13 @@ import {
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction
 } from "discord.js"
-import { DOMAIN_INFORMATION, TRANSFORMATIONS, attacks, heavenlyrestrictionskills } from "./attacks.js"
+import {
+	DOMAIN_INFORMATION,
+	TRANSFORMATIONS,
+	attacks,
+	executeBossAttack,
+	heavenlyrestrictionskills
+} from "./attacks.js"
 import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
 import { bossDrops } from "./bossdrops.js"
 import { digCooldown, digCooldownBypassIDs, digCooldowns, logger, sendForManualReview } from "./bot.js"
@@ -97,6 +103,7 @@ import {
 	getBosses,
 	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
+	getNextAwakeningStage,
 	getPreviousTrades,
 	getShikigami,
 	getShopLastReset,
@@ -1870,7 +1877,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	await interaction.deferReply()
 
 	const allBosses = await getBosses(interaction.user.id)
-
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
 	if (allBosses.length === 0) {
@@ -1879,26 +1885,39 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		return
 	}
 
+	const userAwakening = await getUserAwakening(interaction.user.id)
+	const userAwakeningStage = userAwakening ? userAwakening.split(" ")[1] : "Zero"
+
 	let randomOpponent
 	let attempts = 0
+
 	do {
-		const randomIndex = Math.floor(Math.random() * allBosses.length)
-		randomOpponent = allBosses[randomIndex]
+		const filteredBosses = allBosses.filter(
+			boss =>
+				(boss.awakeningStage === userAwakeningStage ||
+					boss.awakeningStage === getNextAwakeningStage(userAwakeningStage)) &&
+				(!specialBosses.includes(boss.name) || unlockedBosses.includes(boss.name))
+		)
 
+		if (filteredBosses.length === 0) {
+			logger.error("No suitable bosses found for the user. Initiating Fallback.")
+			const randomIndex = Math.floor(Math.random() * allBosses.length)
+			randomOpponent = allBosses[randomIndex]
+			break
+		}
+
+		const randomIndex = Math.floor(Math.random() * filteredBosses.length)
+		randomOpponent = filteredBosses[randomIndex]
 		attempts++
-	} while (
-		specialBosses.includes(randomOpponent.name) &&
-		!unlockedBosses.includes(randomOpponent.name) &&
-		attempts < allBosses.length
-	)
+	} while (attempts < allBosses.length)
 
-	if (!randomOpponent || attempts >= allBosses.length) {
+	if (!randomOpponent) {
 		await interaction.editReply({
 			content: "Couldn't find a suitable boss for you to fight. Try unlocking more bosses!"
 		})
 		return
 	}
-
+	//
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
 	//
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
@@ -1961,6 +1980,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${randomOpponent.current_health.toString()}`, inline: true },
 			{ name: "Boss Grade", value: `${randomOpponent.grade}`, inline: true },
+			{ name: "Boss Awakening", value: `${randomOpponent.awakeningStage}` || "Zero", inline: true },
 			{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true }
 		)
 		.addFields(
@@ -1981,9 +2001,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			{ name: "Status Effect Player", value: "None", inline: true }
 		)
 
-	const remainingHealthPercentage = randomOpponent.current_health / randomOpponent.max_health
-	if (remainingHealthPercentage < 0.5) {
-		primaryEmbed.setFooter({ text: "The opponent is getting weaker!" })
+	if (randomOpponent.awakeningStage === "Stage Five") {
+		primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
 	}
 
 	await interaction.editReply({
@@ -2569,6 +2588,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Fist of the Cursed") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 1,
+					imageUrl: "https://media1.tenor.com/m/SQQ4VD6igHIAAAAC/yuji-itadori-yuji.gif",
+					description: "I'm gonna hit you with everything I've got!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Private Pure Love Train: Jackpot") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2585,8 +2616,23 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
 
-			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - damage))
-			randomOpponent.current_health = Math.max(0, currentBossHealth - damage)
+			let damageReduction = 1
+			if (randomOpponent.awakeningStage === "Stage One") {
+				damageReduction = 0.9
+			} else if (randomOpponent.awakeningStage === "Stage Two") {
+				damageReduction = 0.8
+			} else if (randomOpponent.awakeningStage === "Stage Three") {
+				damageReduction = 0.7
+			} else if (randomOpponent.awakeningStage === "Stage Four") {
+				damageReduction = 0.6
+			} else if (randomOpponent.awakeningStage === "Stage Five") {
+				damageReduction = 0.5
+			}
+
+			const reducedDamage = damage * damageReduction
+
+			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - reducedDamage))
+			randomOpponent.current_health = Math.max(0, currentBossHealth - reducedDamage)
 
 			await updateShikigamiField(primaryEmbed, activeShikigami, collectedInteraction.user.id)
 
@@ -2670,7 +2716,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				await delay(2000)
 
-				const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
+				const statusEffects = await getUserStatusEffects(interaction.user.id)
 
 				//
 
@@ -2692,25 +2738,22 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 					logger.info("after divine dogs")
 				} else {
-					// boss attack
 					const possibleAttacks = attacks[randomOpponent.name]
 					const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]
 
-					// Assume we have a function to fetch current status effects for the player
-					const statusEffects = await getUserStatusEffects(interaction.user.id) // You'll need the player's ID
-
-					// Assume we have a function to get the player's grade
+					const statusEffects = await getUserStatusEffects(interaction.user.id)
 					const playerGrade = await getUserGrade(interaction.user.id)
 
-					// Calculate the base damage using the player's grade
-					const baseDamage = chosenAttack.baseDamage(playerGrade)
-
-					// Calculate the damage with effects
-					await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
-
-					const damageToPlayer = baseDamage
-					const newPlayerHealth = playerHealth - damageToPlayer
-					const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+					const clampedPlayerHealth = await executeBossAttack(
+						interaction,
+						randomOpponent,
+						chosenAttack,
+						playerGrade,
+						primaryEmbed,
+						playerHealth,
+						statusEffects,
+						row
+					)
 
 					//did bro die?
 					if (clampedPlayerHealth <= 0) {
@@ -2738,7 +2781,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					} else {
 						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
 						const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
-						const bossAttackMessage = `${randomOpponent.name} dealt ${damageToPlayer} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
+						const bossAttackMessage = `${randomOpponent.name} dealt ${chosenAttack.baseDamage(
+							playerGrade
+						)} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
 						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
 						primaryEmbed.addFields([
 							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }

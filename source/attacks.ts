@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { CommandInteraction } from "discord.js"
+import { calculateDamageWithEffects } from "./statuseffects.js"
+
 interface Attack {
 	name: string
 	probability: number
@@ -1174,6 +1178,32 @@ export const attacks: Record<string, Attack[]> = {
 				return 175 * gradeDamageBonus
 			}
 		}
+	],
+	"Satoru Gojo (Shinjuku Showdown Arc)": [
+		{
+			name: "Hollow Nuke",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 1 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Close Up: Reversal Red",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 1 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Domain Expansion: Infinite Void",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 1 * gradeDamageBonus
+			}
+		}
 	]
 }
 
@@ -1418,3 +1448,61 @@ export const heavenlyrestrictionskills = [
 		]
 	}
 ]
+
+export async function executeBossAttack(
+	interaction: CommandInteraction,
+	randomOpponent: any,
+	chosenAttack: any,
+	playerGrade: string,
+	primaryEmbed: any,
+	playerHealth: number,
+	statusEffects: any[],
+	row: any
+) {
+	if (
+		chosenAttack.name === "Domain Expansion: Infinite Void" &&
+		randomOpponent.name === "Satoru Gojo (Shinjuku Showdown Arc)"
+	) {
+		// copilot you are not jarvis...
+		primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+		primaryEmbed.setImage("https://media1.tenor.com/m/9ZHCYYVz5VcAAAAC/notl-gojo-vs-sukuna.gif")
+
+		// Remove the select menu
+		await interaction.editReply({
+			embeds: [primaryEmbed],
+			components: []
+		})
+
+		// Co-Pilot, we have a problem
+		await new Promise(resolve => setTimeout(resolve, 3000))
+
+		// CO-PILOT, WE HAVE A PROBLEM
+		const baseDamage = chosenAttack.baseDamage(playerGrade)
+		await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
+		const damageToPlayer = baseDamage
+		const newPlayerHealth = playerHealth - damageToPlayer
+		const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+		// COPILIT STOP TOUCHING MY FUCKINB CODE
+		primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
+		primaryEmbed.setImage(randomOpponent.image_url)
+
+		await interaction.editReply({
+			embeds: [primaryEmbed],
+			components: [row]
+		})
+
+		return clampedPlayerHealth
+	} else {
+		const baseDamage = chosenAttack.baseDamage(playerGrade)
+		await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
+		const damageToPlayer = baseDamage
+		const newPlayerHealth = playerHealth - damageToPlayer
+		const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+		primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+		primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
+
+		return clampedPlayerHealth
+	}
+}

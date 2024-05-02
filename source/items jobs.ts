@@ -22,7 +22,6 @@ import {
 	updateUserAchievements,
 	updateUserActiveTechniques,
 	updateUserAwakening,
-	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
@@ -1555,8 +1554,7 @@ export const items1: Item1[] = [
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isLimitless = false
 
-			if (randomNumber <= 30) {
-				await updateUserClan(interaction.user.id, "Limitless")
+			if (randomNumber <= 60) {
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
 				isLimitless = true
