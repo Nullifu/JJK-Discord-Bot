@@ -244,7 +244,7 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 6.0", type: ActivityType.Playing }, // Dynamic member count
+		{ name: "Update 7.0 | Part One!", type: ActivityType.Playing }, // Dynamic member count
 		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
@@ -329,8 +329,8 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "1216889497980112958"
-client.setMaxListeners(170)
+const clientId = "991443928790335518"
+client.setMaxListeners(200)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
 export const randomdig2 = [
@@ -966,7 +966,7 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
-import { AutoPoster } from "topgg-autoposter"
+import express from "express"
 
 //const poster = AutoPoster(process.env.TOPGG, client)
 

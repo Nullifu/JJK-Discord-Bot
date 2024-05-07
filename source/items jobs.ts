@@ -24,6 +24,7 @@ import {
 	updateUserAchievements,
 	updateUserActiveTechniques,
 	updateUserAwakening,
+	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
@@ -1717,39 +1718,7 @@ export const items1: Item1[] = [
 			})
 		}
 	},
-	{
-		itemName: "Blessful Charm",
-		description: "???",
-		rarity: "Special",
-		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
-		effect: async interaction => {
-			await interaction.deferReply()
 
-			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 60 * 60000) // Add 60 minutes (1 hour)
-
-			const itemEffect = {
-				itemName: "Blessful Charm",
-				effectName: "Blessed",
-				effectTime: 25,
-				startTime: startTime.toISOString(),
-				endTime: endTime.toISOString()
-			}
-			const itemEffectsArray = [itemEffect]
-
-			try {
-				await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
-				const embedFinal = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("Gamblers Potential")
-					.setDescription("You feel a warm glow around you.. Foes your level seem more common..")
-				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
-			} catch (error) {
-				logger.error("Error applying item effect:", error)
-				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
-			}
-		}
-	},
 	{
 		itemName: "Jogos (Fixed) Balls",
 		description: "Jogos (Fixed) Balls",
@@ -1786,7 +1755,9 @@ export const items1: Item1[] = [
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
 				.setTitle("Opening...")
-				.setDescription(`You open the cursed chest and get! ${chestitem}`)
+				.setDescription(
+					"You open the cursed chest and get! 4x Sukuna Finger, 2x Rikugan Eye, 1x Special-Grade Geo Locator, + 200,000 Coins!"
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
@@ -1947,8 +1918,14 @@ export const items1: Item1[] = [
 				return
 			}
 
-			await interaction.deferReply()
+			// Check if the user has already reached Stage One or higher
+			const userAwakening = await getUserAwakening(userId)
+			if (userAwakening && (userAwakening === "Stage One" || userAwakening.includes("Stage"))) {
+				await interaction.reply("You have already used this item and reached Stage One or higher.")
+				return
+			}
 
+			await interaction.deferReply()
 			await updateUserAwakening(interaction.user.id, "Stage One")
 
 			const embedFinal = new EmbedBuilder()
