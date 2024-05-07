@@ -24,7 +24,7 @@ export interface UserProfile {
 	activeTitle: string
 	heavenlyrestriction: string | null
 	inateclan: string
-	shikigami: Shikigami[] // Shikigami is now an array of Shikigami objects
+	shikigami: Shikigami[]
 }
 
 export const gradeMappings = {
@@ -54,6 +54,7 @@ export interface BossData {
 	image_url: string
 	grade: string
 	curse: boolean
+	awakeningStage: string
 }
 
 export interface Item {
@@ -90,7 +91,7 @@ export function createBar(value: number, maxValue: number): string {
 }
 
 export interface User {
-	id: string // Assuming 'id' is the field you use to identify users.
+	id: string
 	inventory: InventoryItem[]
 	balance: number
 	experience: number

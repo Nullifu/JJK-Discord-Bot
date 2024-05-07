@@ -41,7 +41,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Go//Jo", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Malevolent Shrine (Upgrade", rarity: "rare" }
+		{ name: "Malevolent Shrine (Upgrade)", rarity: "rare" }
 	],
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
@@ -53,6 +53,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Fractured Chain", rarity: "ultra rare" }
 	],
 	"Megumi Fushiguro": [
+		{ name: "Shikigami Soul", rarity: "common" },
 		{ name: "Super Glue", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "(Broken) Divine General Wheel", rarity: "ultra rare" }
@@ -237,6 +238,43 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Special-Grade Medicine", rarity: "rare" },
 		{ name: "Sacred Eye", rarity: "ultra rare" }
+	],
+	"Choso": [
+		{ name: "Cursed Womb Death Painting", rarity: "rare" },
+		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" },
+		{ name: "Rikugan Eye", rarity: "ultra rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" }
+	],
+	"Yuji Itadori (Awoken)": [
+		{ name: "Heian Era Scraps", rarity: "rare" },
+		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Heian Era Scraps", rarity: "ultra rare" },
+		{ name: "Awakening Remnant", rarity: "ultra rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" }
+	],
+	"Satoru Gojo (Shinjuku Showdown Arc)": [
+		{ name: "Six Eyes", rarity: "rare" },
+		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Heian Era Scraps", rarity: "ultra rare" },
+		{ name: "Awakening Remnant", rarity: "ultra rare" },
+		{ name: "Sukuna Finger", rarity: "ultra rare" }
+	],
+	"Maki Zenin (Full Strength)": [
+		{ name: "Heavenly Blood", rarity: "rare" },
+		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Awakening Remnant", rarity: "ultra rare" },
+		{ name: "Heian Era Scraps", rarity: "ultra rare" }
+	],
+	"Lightning God (Heian Era)": [
+		{ name: "Heavenly Blood", rarity: "rare" },
+		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Heian Era Scraps", rarity: "ultra rare" },
+		{ name: "Awakening Remnant", rarity: "ultra rare" }
+	],
+	"Kenjaku": [
+		{ name: "Mahitos Soul", rarity: "rare" },
+		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Heian Era Scraps", rarity: "ultra rare" }
 	],
 	"Mahoraga": [{ name: "Mahoraga's Soul", rarity: "rare" }],
 	"Divine Dogs": [{ name: "Divine Dogs Shikigami's Soul", rarity: "rare" }],

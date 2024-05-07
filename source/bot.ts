@@ -72,6 +72,7 @@ import {
 	handleVoteCommand,
 	handleWorkCommand,
 	handlecreditcommand,
+	mentorNPCCommand,
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
@@ -328,7 +329,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(170)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -360,6 +361,8 @@ const commands = [
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
+	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
+	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
@@ -373,7 +376,6 @@ const commands = [
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
-	new SlashCommandBuilder().setName("stats").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -529,9 +531,8 @@ const commands = [
 					{ name: "Curse Repellent", value: "Curse Repellent" },
 					{ name: "Starter Bundle", value: "Starter Bundle" },
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
-					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
-					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "Special-Grade Cursed Object", value: "Special-Grade Cursed Object" },
+					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
 				)
 		)
@@ -861,6 +862,9 @@ client.on("interactionCreate", async interaction => {
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)
 				break
+			case "mentor":
+				await mentorNPCCommand(chatInputInteraction)
+				break
 			case "alert":
 				await handleAlertCommand(chatInputInteraction)
 				break
@@ -962,14 +966,13 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
-import express from "express"
 import { AutoPoster } from "topgg-autoposter"
 
-const poster = AutoPoster(process.env.TOPGG, client)
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 

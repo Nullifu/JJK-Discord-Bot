@@ -63,7 +63,7 @@ async function analyzeWithRekognition(imageBuffer: Buffer): Promise<AnalysisResu
 		rekognition.detectModerationLabels(params, (err, data) => {
 			logger.info("AWS Rekognition result:", data)
 			if (err) {
-				console.error(err)
+				logger.error(err)
 				reject(err)
 			} else {
 				const isSafe = !data.ModerationLabels.find(
@@ -149,7 +149,7 @@ export async function uploadImageToGoogleStorage(imageBuffer, filename, contentT
 		const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`
 		return publicUrl
 	} catch (err) {
-		console.error("Error uploading image to Google Storage:", err)
+		logger.error("Error uploading image to Google Storage:", err)
 		throw err
 	}
 }

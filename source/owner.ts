@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, InteractionResponse } from "discord.js"
 import { addItemToUserInventory, updateBalance, updateUserActiveTechniques } from "./mongodb.js"
+import { logger } from "./bot.js"
 
 export async function handleGiveItemCommand(
 	interaction: ChatInputCommandInteraction
@@ -25,7 +26,7 @@ export async function handleGiveItemCommand(
 			ephemeral: true
 		})
 	} catch (error) {
-		console.error("Error in giveitem command", error)
+		logger.error("Error in giveitem command", error)
 		return interaction.reply({ content: "...", ephemeral: true })
 	}
 }
@@ -54,7 +55,7 @@ export async function handleUpdateBalanceCommand(
 			ephemeral: true
 		})
 	} catch (error) {
-		console.error("Error in updateBalance command", error)
+		logger.error("Error in updateBalance command", error)
 		return interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
 	}
 }
@@ -81,7 +82,7 @@ export async function handleREMOVE(interaction: ChatInputCommandInteraction): Pr
 			ephemeral: true
 		})
 	} catch (error) {
-		console.error("Error in updateBalance command", error)
+		logger.error("Error in updateBalance command", error)
 		return interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
 	}
 }
@@ -110,7 +111,7 @@ export async function handleADDTECHNIQUE(interaction: ChatInputCommandInteractio
 			ephemeral: true
 		})
 	} catch (error) {
-		console.error("Error in handleADDTECHNIQUE command", error)
+		logger.error("Error in handleADDTECHNIQUE command", error)
 		await interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
 	}
 }

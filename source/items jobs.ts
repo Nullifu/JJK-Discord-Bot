@@ -8,8 +8,11 @@ import {
 	addUserQuestProgress,
 	addUserTechnique,
 	getGamblersData,
+	getNextAwakeningStage,
+	getUserAwakening,
 	getUserInateClan,
 	getUserInventory,
+	getUserMentor,
 	getUserQuests,
 	getUserUnlockedTransformations,
 	removeAllItemEffects,
@@ -20,6 +23,7 @@ import {
 	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserActiveTechniques,
+	updateUserAwakening,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
 	updateUserInateClan,
@@ -102,21 +106,6 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
-	},
-	gojo: {
-		requiredItems: [
-			{ name: "Go", quantity: 1 },
-			{ name: "Jo", quantity: 1 }
-		],
-		craftedItemName: "Go//Jo"
-	},
-	gojo2: {
-		requiredItems: [
-			{ name: "Go//Jo", quantity: 1 },
-			{ name: "Super Glue", quantity: 1 },
-			{ name: "Six Eyes", quantity: 1 }
-		],
-		craftedItemName: "Sacred Eye"
 	},
 	wheel_fixed: {
 		requiredItems: [
@@ -804,6 +793,30 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
 		}
 	],
+	"Blood Manipulation": [
+		{
+			name: "Supernova",
+			cost: "528000",
+			clan: "Blood Manipulation",
+			items: [
+				{ name: "Malevolent Shrine (Blood Vial)", quantity: 2 },
+				{ name: "Cursed Womb Death Painting", quantity: 1 }
+			]
+		},
+		{
+			name: "Blood Edge",
+			cost: "120000",
+			clan: "Blood Manipulation",
+			items: [{ name: "Cursed Womb Death Painting", quantity: 1 }]
+		},
+		{
+			name: "Slicing Exorcism",
+			cost: "45000",
+			clan: "Blood Manipulation",
+			items: [{ name: "Cursed Womb Death Painting", quantity: 1 }]
+		}
+	],
+
 	"Overtime": [
 		{
 			name: "Overtime: Collapse",
@@ -825,6 +838,100 @@ export const CLAN_SKILLS = {
 			cost: "45000",
 			clan: "Overtime",
 			items: [{ name: "(Shattered) Overtime Watch", quantity: 1 }]
+		}
+	],
+
+	"God of Lightning (Heian Era)": [
+		{
+			name: "Mythical Beast Amber",
+			cost: "5280000",
+			clan: "God of Lightning (Heian Era)",
+			items: [
+				{ name: "Electrified Cursed Shard", quantity: 2 },
+				{ name: "Heian Era Scraps", quantity: 6 }
+			],
+			stage: "Stage One"
+		},
+		{
+			name: "Lightning Discharge",
+			cost: "3800000",
+			clan: "God of Lightning (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage One"
+		}
+	],
+	"Curse King (Heian Era)": [
+		{
+			name: "Divine Flames",
+			cost: "5280000",
+			clan: "Curse King (Heian Era)",
+			items: [
+				{ name: "Sukuna Finger", quantity: 20 },
+				{ name: "Heian Era Scraps", quantity: 2 }
+			],
+			stage: "Stage Two"
+		},
+		{
+			name: "Pure Dismantle",
+			cost: "2380000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage Two"
+		},
+		{
+			name: "Fire Extinguisher",
+			cost: "450000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage Two"
+		}
+	],
+	"Demon Vessel (Awoken)": [
+		{
+			name: "Re-imagined BLACK FLASH",
+			cost: "5280000",
+			clan: "Demon Vessel (Awoken)",
+			items: [
+				{ name: "Sukuna Finger", quantity: 2 },
+				{ name: "Split Shard", quantity: 3 }
+			],
+			stage: "Stage Three"
+		},
+		{
+			name: "Piercing Blood",
+			cost: "3800000",
+			clan: "Demon Vessel (Awoken)",
+			items: [{ name: "Split Shard", quantity: 1 }],
+			stage: "Stage Three"
+		}
+	],
+	"The Strongest": [
+		{
+			name: "Lapse Blue X Red: Combo",
+			cost: "5280000",
+			clan: "Limitless 100%",
+			items: [
+				{ name: "Six Eyes", quantity: 2 },
+				{ name: "Heian Era Scraps", quantity: 3 }
+			],
+			stage: "Stage Four"
+		},
+		{
+			name: "Close-up Reversal Red",
+			cost: "5280000",
+			clan: "Limitless 100%",
+			items: [
+				{ name: "Six Eyes", quantity: 2 },
+				{ name: "Heian Era Scraps", quantity: 3 }
+			],
+			stage: "Stage Four"
+		},
+		{
+			name: "Hollow Purple: Nuke",
+			cost: "380000",
+			clan: "Limitless 100%",
+			items: [{ name: "Heian Era Scraps", quantity: 1 }],
+			stage: "Stage Four"
 		}
 	]
 }
@@ -882,6 +989,26 @@ export const benefactors = [
 // quests array
 export const questsArray = [
 	{
+		name: "Mentor: Curse King",
+		description: "Mentor: Curse King",
+		coins: 0,
+		experience: 0,
+		item: "Curse King Medal",
+		itemQuantity: 1,
+		task: "Defeat Sukuna",
+		totalProgress: 1
+	},
+	{
+		name: "Mentor: The Strongest",
+		description: "Mentor: The Strongest",
+		coins: 0,
+		experience: 0,
+		item: "Strongest Medal",
+		itemQuantity: 1,
+		task: "Defeat Satoru Gojo",
+		totalProgress: 1
+	},
+	{
 		name: "Gamblers Fever",
 		description: "Defeat Hakari Kinji 5 times and earn his token.",
 		coins: 45000,
@@ -901,6 +1028,32 @@ export const questsArray = [
 		itemQuantity: 1,
 		task: "Exorcise 20 Foes!",
 		totalProgress: 20
+	},
+	{
+		name: "Awakening",
+		description: "???",
+		coins: 0,
+		experience: 0,
+		items: { "Split Shard": 12, "Heian Era Scraps": 12, "Awakening Remnant": 1 },
+		itemQuantity: 12,
+		tasks: [
+			{ description: "Defeat Foes", progress: 0, totalProgress: 25 },
+			{ description: "Defeat Ryomen Sukuna", progress: 0, totalProgress: 1 }
+		],
+		special: true
+	},
+	{
+		name: "Stage Three Unleashed",
+		description: "???",
+		coins: 0,
+		experience: 0,
+		items: { "Awakening Release": 1 },
+		itemQuantity: 1,
+		tasks: [
+			{ description: "Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
+			{ description: "Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
+		],
+		special: true
 	},
 	{
 		name: "Training with Itadori",
@@ -928,8 +1081,7 @@ export const questsArray = [
 	},
 	{
 		name: "Nature of Curses",
-		description:
-			"Mahito, in his true form, threatens the balance between our world and the supernatural. Defeating him will not only require strength but the will to overcome the twisted nature of curses.",
+		description: "Defeat Evolved-Mahito",
 		coins: 23000,
 		experience: 320,
 		item: "Mahito's Soul",
@@ -939,8 +1091,7 @@ export const questsArray = [
 	},
 	{
 		name: "Curse King",
-		description:
-			"Sukuna, the King of Curses, demands acknowledgment. Prove your worth and be bestowed with Sukuna Fingers, a testament to your courage and strength in the face of ancient power.",
+		description: "Get acknowledged by the Curse King!",
 		coins: 23000,
 		experience: 320,
 		items: { "Sukuna Finger": 3 },
@@ -949,8 +1100,7 @@ export const questsArray = [
 	},
 	{
 		name: "Curse King's Task",
-		description:
-			"The quest for Sukuna's Fingers is not for the faint of heart. Collect all twenty to achieve an unprecedented feat, securing a place among legends with Sukuna's Honour.",
+		description: "Gather the Sukuna Fingers!",
 		coins: 100000,
 		experience: 850,
 		items: { "Sukuna's Honour": 1 },
@@ -974,8 +1124,7 @@ export const questsArray = [
 	},
 	{
 		name: "Find Yuta!",
-		description:
-			"Yuta Okkotsu remains elusive, hidden away by deceptive magic and trickery. Unveil the truth, confront the fraud, and claim Yuta's Token along with a Fraud Poster as evidence of your deed.",
+		description: "Yuta Okkotsu remains elusive, Try locate him using a Special-Grade Geo Locator!",
 		coins: 34000,
 		experience: 250,
 		items: { "Yuta's Token": 2, "Fraud Poster": 1 },
@@ -998,6 +1147,10 @@ export const questsArray = [
 
 export const INVENTORY_CLAN = {
 	"Demon Vessel": [
+		{
+			name: "World Cutting Slash",
+			clan: "Demon Vessel"
+		},
 		{
 			name: "Flame Arrow",
 			description: "Fuga...",
@@ -1031,18 +1184,28 @@ export const INVENTORY_CLAN = {
 	],
 	"Limitless": [
 		{
+			name: "Maximum Technique: Purple",
+			clan: "Limitless"
+		},
+		{
+			name: "Maximum Technique: Blue",
+			clan: "Limitless"
+		},
+		{
+			name: "Maximum Technique: Red",
+			clan: "Limitless"
+		},
+
+		{
 			name: "Hollow Purple",
-			description: "Throughout heaven and earth..",
 			clan: "Limitless"
 		},
 		{
 			name: "Lapse: Blue",
-			description: " Jutsushiki Junten・Ao!",
 			clan: "Limitless"
 		},
 		{
 			name: "Limitless: Red",
-			description: "Aka..",
 			clan: "Limitless"
 		}
 	],
@@ -1054,6 +1217,11 @@ export const INVENTORY_CLAN = {
 		},
 		{
 			name: "Ten Shadows Technique: Divine Dogs",
+			description: "Divine Dogs!",
+			clan: "Fushiguro"
+		},
+		{
+			name: "Ten Shadows Technique: Toad",
 			description: "Divine Dogs!",
 			clan: "Fushiguro"
 		},
@@ -1081,6 +1249,10 @@ export const INVENTORY_CLAN = {
 		}
 	],
 	"Disaster Flames": [
+		{
+			name: "Disaster Flames: Full Fire Formation",
+			clan: "Disaster Flames"
+		},
 		{
 			name: "Maximum: METEOR!",
 			description: "I'LL TURN YOU INTO A CRISP!",
@@ -1178,7 +1350,7 @@ export const items1: Item1[] = [
 					"As the blood enters your body, You feel your cursed energy depleting.. What have you done?"
 				)
 				.setImage(embedFirst.data.image?.url)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error) // Adding catch to handle any potential errors
 		}
 	},
 	{
@@ -1266,7 +1438,7 @@ export const items1: Item1[] = [
 						.setImage("https://media1.tenor.com/m/OvmsFkMM2PwAAAAC/ryomen-sukuna-sukuna.gif")
 					await interaction.editReply({ embeds: [embedClanAndQuest] })
 				} else {
-					console.log("Quest Not Found")
+					logger.info("Quest Not Found")
 					await addUserQuest(interaction.user.id, "Curse King's Task")
 					const embedAlreadyDemonVessel = new EmbedBuilder()
 						.setColor("#8b0000")
@@ -1424,6 +1596,7 @@ export const items1: Item1[] = [
 			let isLimitless = false
 
 			if (randomNumber <= 30) {
+				await updateUserClan(interaction.user.id, "Limitless")
 				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
 				await addUserTechnique(interaction.user.id, "Prayer Song")
 				isLimitless = true
@@ -1536,12 +1709,45 @@ export const items1: Item1[] = [
 						.setDescription(
 							"As the coin flips.. YOU HIT BIG GAINS\n+15% Bet Limit INC, + Reset Bet Limit **SOME STUFF MAY BE BROKEN OR NOT ADDED THIS IS VERY WIP**"
 						)
-					await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+					await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 				} catch (error) {
 					logger.error("Error applying item effect:", error)
 					await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 				}
 			})
+		}
+	},
+	{
+		itemName: "Blessful Charm",
+		description: "???",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 60 * 60000) // Add 60 minutes (1 hour)
+
+			const itemEffect = {
+				itemName: "Blessful Charm",
+				effectName: "Blessed",
+				effectTime: 25,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+
+			try {
+				await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Gamblers Potential")
+					.setDescription("You feel a warm glow around you.. Foes your level seem more common..")
+				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
 		}
 	},
 	{
@@ -1560,7 +1766,7 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!  [ MORE STUFF TO COME ]\n+Disaster Flames: Full Fire Formation"
 				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error) // Adding catch to handle any potential errors
 		}
 	},
 
@@ -1580,9 +1786,7 @@ export const items1: Item1[] = [
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
 				.setTitle("Opening...")
-				.setDescription(
-					"You open the cursed chest and get! 2x Rikugan Eye, 4x Sukuna Finger, Special-Grade Geo Locator + 200,000 Coins!"
-				)
+				.setDescription(`You open the cursed chest and get! ${chestitem}`)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
 		}
 	},
@@ -1616,7 +1820,7 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription(`You open the cursed chest and get! ${chestitem}`)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{
@@ -1633,7 +1837,7 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("? ? ?")
 				.setDescription("You consume the souls and unlock Body of Distorted Killing!")
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{
@@ -1655,7 +1859,7 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You open the Starter Bundle and get! 1x Sukuna Finger, 5x Tailsman. + 20,000 Coins! And a free technique! [ Fist of the Cursed ], Have fun!"
 				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{
@@ -1672,9 +1876,10 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Anti Effect Spray")
 				.setDescription("You spray yourself and remove all effects!")
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
+
 	{
 		itemName: "#1 Fighting Box",
 		description: "#1 Fighting Box",
@@ -1708,7 +1913,7 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You opened the box and received: 20x Sukuna Finger, X12 Six Eyes, 2.5M Coins, a Ghost Pet, and the title: #1 Fighter!"
 				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{
@@ -1725,7 +1930,60 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Vial of Cursed Energy")
 				.setDescription("You drink the contents and gain a health increase! + 30")
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Unknown Substance",
+		description: "Unknown Substance",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			const userId = interaction.user.id
+			const mentor = await getUserMentor(userId)
+
+			if (!mentor) {
+				await interaction.reply("You don't have a mentor yet. Please find a mentor before using this item.")
+				return
+			}
+
+			await interaction.deferReply()
+
+			await updateUserAwakening(interaction.user.id, "Stage One")
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("? ? ?")
+				.setDescription(
+					"You drink the contents.. You feel a strange power awaken within you.. your mentor seems to be pleased.."
+				)
+
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Heian Era Awakening Remnant",
+		description: "Heian Era Awakening Remnant",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			const userId = interaction.user.id
+
+			await interaction.deferReply()
+
+			const currentAwakeningStage = await getUserAwakening(userId)
+			const nextAwakeningStage = getNextAwakeningStage(currentAwakeningStage || "Stage Zero")
+
+			await updateUserAwakening(interaction.user.id, nextAwakeningStage)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("? ? ?")
+				.setDescription(
+					"You hold the shard close.. It begins to glow.. You feel a strange power awaken within you.."
+				)
+
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{

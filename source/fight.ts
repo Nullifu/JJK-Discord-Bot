@@ -34,9 +34,7 @@ export async function handleBossDeath(
 
 	if (opponent.name === "Mahito Instant Spirit Body of Distorted Killing") {
 		embed.setDescription("I admit it, Mahito i am you.")
-		embed.setImage(
-			"https://cdn.discordapp.com/attachments/681985000521990179/1222162641620041798/ezgif-2-cc9a6b6268.gif?ex=661536a8&is=6602c1a8&hm=591265d694ffde07b30eef7cfc538c2055643d8e349500cd4fd9be4484ffe4e7&f"
-		)
+		embed.setImage("https://storage.googleapis.com/jjk_bot_personal/yuji-snow-mahito-snow.gif")
 	}
 
 	await interaction.editReply({ embeds: [embed], components: [] })
@@ -56,6 +54,7 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
 	}
 	if (opponent.name === "Itadori") {
 		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
@@ -81,8 +80,11 @@ export async function handleBossDeath(
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
+	//
+	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
+	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
 

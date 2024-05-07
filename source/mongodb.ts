@@ -9,9 +9,9 @@ import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
+const bossCollectionName = "devboss"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -140,13 +140,14 @@ export async function addUser(
 			permEffects: [],
 			statusEffects: [],
 			betCount: 0,
-			honours: [],
+			Honours: [],
 			purchases: [],
 			itemEffects: [],
 			cooldowns: [],
 			stats: [],
 			unlockedmentors: [],
 			mentors: null,
+			awakening: null,
 			shikigami: [],
 			gamblersData: {
 				limit: 5000000,
@@ -156,10 +157,10 @@ export async function addUser(
 			}
 		})
 
-		console.log(`Inserted user with ID: ${insertResult.insertedId}`)
+		logger.info(`Inserted user with ID: ${insertResult.insertedId}`)
 		return { insertedId: insertResult.insertedId }
 	} catch (error) {
-		console.error(`Error when adding user with ID: ${id}`, error)
+		logger.error(`Error when adding user with ID: ${id}`, error)
 		return { error: "Failed to add user." }
 	}
 }
@@ -171,9 +172,9 @@ async function resetBetCounts() {
 
 		const updateResult = await usersCollection.updateMany({}, { $set: { betCount: 0 } })
 
-		console.log(`Bet counts reset for ${updateResult.modifiedCount} users.`)
+		logger.info(`Bet counts reset for ${updateResult.modifiedCount} users.`)
 	} catch (error) {
-		console.error("Error resetting bet counts:", error)
+		logger.error("Error resetting bet counts:", error)
 	}
 }
 
@@ -198,7 +199,7 @@ async function removeExpiredItemEffects() {
 
 		logger.info(`Removed ${updateResult.modifiedCount} expired item effects`)
 	} catch (error) {
-		console.error("Error removing expired item effects:", error)
+		logger.error("Error removing expired item effects:", error)
 	}
 }
 
@@ -229,12 +230,12 @@ async function updateInateclanField(database) {
 		)
 
 		if (updateResult.matchedCount > 0) {
-			console.log(`Converted cooldown from object to array in ${updateResult.matchedCount} user documents`)
+			logger.info(`Converted cooldown from object to array in ${updateResult.matchedCount} user documents`)
 		} else {
-			console.log("No user documents found with 'inateclan' as an array")
+			logger.info("No user documents found with 'inateclan' as an array")
 		}
 	} catch (error) {
-		console.error("Error updating 'inateclan' fields:", error)
+		logger.error("Error updating 'inateclan' fields:", error)
 	}
 }
 
@@ -260,10 +261,10 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 				}
 			)
 
-			console.log("Added missing fields to existing user documents")
+			logger.info("Added missing fields to existing user documents")
 		}
 	} catch (error) {
-		console.error("Error initializing fields:", error)
+		logger.error("Error initializing fields:", error)
 	}
 }
 
@@ -277,12 +278,12 @@ async function renameUserDocumentFields(database) {
 		)
 
 		if (updateResult.matchedCount > 0) {
-			console.log(`Renamed 'honours' to 'Honours' in ${updateResult.matchedCount} user documents`)
+			logger.info(`Renamed 'honours' to 'Honours' in ${updateResult.matchedCount} user documents`)
 		} else {
-			console.log("No user documents found with 'honours' field")
+			logger.info("No user documents found with 'honours' field")
 		}
 	} catch (error) {
-		console.error("Error renaming fields:", error)
+		logger.error("Error renaming fields:", error)
 	}
 }
 
@@ -309,7 +310,7 @@ export async function updateBalance(id: string, amount: number): Promise<void> {
 
 		const user = await usersCollection.findOne({ id: id })
 		if (!user) {
-			console.log(`No user found with ID: ${id}`)
+			logger.info(`No user found with ID: ${id}`)
 			throw new Error(`No user found with ID: ${id}`)
 		}
 
@@ -355,7 +356,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 		)
 
 		if (!userDocument) {
-			console.log(`No user profile found for ID: ${userId}`)
+			logger.info(`No user profile found for ID: ${userId}`)
 			return null
 		}
 
@@ -387,7 +388,7 @@ export async function updateUserDomainExpansion(userId: string, domainName: stri
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { domain: { name: domainName } } })
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No user found with the specified ID")
+			logger.info("No user found with the specified ID")
 			return false
 		}
 
@@ -464,7 +465,7 @@ export async function updateUserJob(userId: string, newJob: string): Promise<boo
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { job: newJob } })
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No user found with the specified ID")
+			logger.info("No user found with the specified ID")
 			return false
 		}
 
@@ -493,7 +494,7 @@ export async function updateUserExperience(userId: string, experienceToAdd: numb
 			logger.log(`No user found with the specified ID: ${userId}`)
 		}
 	} catch (error) {
-		console.error("Error updating user experience:", error)
+		logger.error("Error updating user experience:", error)
 		throw error
 	}
 }
@@ -508,7 +509,7 @@ export async function updateUserTitle(userId: string, newTitle: string): Promise
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { activeTitle: newTitle } })
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No user found with the specified ID")
+			logger.info("No user found with the specified ID")
 			return false
 		}
 
@@ -583,34 +584,93 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		const userEffects = await getUserItemEffects(userId)
 		const isCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "cursed")
 		const isNonCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "curse repellent")
+		const isBlessed = userEffects.some(effect => effect.effectName.toLowerCase() === "blessed")
+
 		const userGrade = await getUserGrade(userId)
 		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
 
 		const database = client.db(mongoDatabase)
 		const domainsCollection = database.collection(bossCollectionName)
+
 		const allowedBossGrades = gradeToBossGrade[userGrade] || []
+
+		const userAwakening = await getUserAwakening(userId)
 
 		let query: { [key: string]: unknown } = {
 			grade: { $in: allowedBossGrades },
 			name: { $nin: ["Divine Dogs", "Nue", "Toad", "Great Serpent", "Max Elephant"] }
 		}
 
+		if (userAwakening) {
+			const awakeningStages = ["Stage Zero", "Stage One", "Stage Two", "Stage Three", "Stage Four", "Stage Five"]
+			const currentStageIndex = awakeningStages.indexOf(userAwakening)
+			const allowedAwakeningStages = awakeningStages.slice(currentStageIndex, currentStageIndex + 1)
+
+			query = {
+				...query,
+				awakeningStage: { $in: allowedAwakeningStages }
+			}
+
+			if (isBlessed) {
+				const currentStage = userAwakening
+				const nextStage = getNextAwakeningStage(currentStage)
+
+				logger.debug("Current stage:", currentStage)
+				logger.debug("Next stage:", nextStage)
+				logger.debug("Allowed stages:", allowedAwakeningStages)
+				/*
+				logger.debug(
+					"Allowed stages filtered:",
+					allowedAwakeningStages.filter(stage => stage !== currentStage && stage !== nextStage).join(", ")
+				)
+				*/
+
+				query = {
+					...query,
+					$or: [
+						//{ awakeningStage: currentStage },
+						{ awakeningStage: nextStage }
+						/*
+						{
+							awakeningStage: {
+								$in: allowedAwakeningStages.filter(
+									stage => stage !== currentStage && stage !== nextStage
+								)
+							}
+						}
+						*/
+					]
+				}
+			}
+		} else {
+			query = {
+				...query,
+				$or: [{ awakeningStage: "Stage Zero" }, { awakeningStage: { $exists: true } }]
+			}
+		}
+
 		if (isCursed && !isNonCursed) {
 			query = { ...query, curse: true }
-		} else if (!isCursed && isNonCursed) {
+		} else if (!isNonCursed && isNonCursed) {
 			query = { ...query, curse: false }
 		}
 
-		console.log("user cursed:", isCursed)
+		logger.debug("Boss query:", query)
+		logger.debug("User grade:", userGrade)
+		logger.debug("User awakening:", userAwakening)
+		logger.debug("User effects:", userEffects)
 
-		const bosses = (await domainsCollection.find(query).toArray()).map(boss => ({
+		const a = await domainsCollection.find(query).toArray()
+		logger.debug("Bosses found:", a)
+		const bosses = a.map(boss => ({
 			id: boss._id.toString(),
 			name: boss.name,
 			max_health: Math.round(boss.max_health * healthMultiplier),
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL,
 			grade: boss.grade,
-			curse: boss.curse
+			curse: boss.curse,
+			awakeningStage: boss.awakeningStage
 		}))
 
 		return bosses
@@ -618,6 +678,12 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		logger.error("Error when retrieving bosses:", error)
 		throw error
 	}
+}
+
+export function getNextAwakeningStage(currentStage: string): string {
+	const stages = ["Stage Zero", "Stage One", "Stage Two", "Stage Three", "Stage Four", "Stage Five"]
+	const currentIndex = stages.indexOf(currentStage)
+	return currentIndex < stages.length - 1 ? stages[currentIndex + 1] : "Stage Five"
 }
 
 export async function getShikigami(userId: string): Promise<BossData[]> {
@@ -637,7 +703,8 @@ export async function getShikigami(userId: string): Promise<BossData[]> {
 			current_health: Math.round(boss.current_health * healthMultiplier),
 			image_url: boss.image_URL,
 			grade: boss.grade,
-			curse: boss.curse
+			curse: boss.curse,
+			awakeningStage: boss.awakeningStage
 		}))
 
 		return bosses
@@ -657,7 +724,7 @@ export async function getUserGrade(userId: string): Promise<string> {
 
 		return user ? user.grade : "Grade 4"
 	} catch (error) {
-		console.error(`Error when retrieving grade for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving grade for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -693,7 +760,7 @@ export async function updateUserHealth(userId: string, newHealth: number): Promi
 		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { health: newHealth } })
 
 		if (updateResult.matchedCount === 0) {
-			console.log("No user found with the specified ID")
+			logger.info("No user found with the specified ID")
 		}
 	} catch (error) {
 		logger.error("Error updating user health:", error)
@@ -758,7 +825,7 @@ export async function updatePlayerGrade(userId) {
 
 		const player = await usersCollection.findOne({ id: userId })
 		if (!player) {
-			console.log("No user found with the specified ID in the users collection.")
+			logger.info("No user found with the specified ID in the users collection.")
 			return
 		}
 
@@ -820,11 +887,11 @@ export async function updateUserAchievements(userId, achievementId) {
 		)
 
 		if (updateResult.matchedCount === 0) {
-			console.log("User not found.")
+			logger.info("User not found.")
 		} else if (updateResult.modifiedCount === 0) {
-			console.log("Achievement was already in the user's achievements.")
+			logger.info("Achievement was already in the user's achievements.")
 		} else {
-			console.log("Achievement added to the user's achievements.")
+			logger.info("Achievement added to the user's achievements.")
 		}
 	} catch (error) {
 		logger.error("Error updating user achievements:", error)
@@ -967,7 +1034,7 @@ export async function updateUser(discordId, updates) {
 
 		const result = await usersCollection.updateOne({ id: discordId }, { $set: updates })
 
-		console.log(
+		logger.info(
 			`Updated user with ID ${discordId}. Matched Count: ${result.matchedCount}. Modified Count: ${result.modifiedCount}`
 		)
 		return result
@@ -1190,7 +1257,7 @@ export async function toggleHeavenlyRestriction(userId) {
 
 		// Check if the user has the 'unlockHeavenlyRestriction' achievement
 		if (!userAchievements.includes("unlockHeavenlyRestriction")) {
-			console.log(`User with ID: ${userId} has not unlocked Heavenly Restriction.`)
+			logger.info(`User with ID: ${userId} has not unlocked Heavenly Restriction.`)
 			return false // User has not unlocked this feature, so don't toggle
 		}
 
@@ -1202,11 +1269,11 @@ export async function toggleHeavenlyRestriction(userId) {
 		)
 
 		if (updateResult.matchedCount === 0) {
-			console.log(`No user found with ID: ${userId}`)
+			logger.info(`No user found with ID: ${userId}`)
 			return false
 		}
 
-		console.log(`Toggled Heavenly Restriction for user with ID: ${userId}`)
+		logger.info(`Toggled Heavenly Restriction for user with ID: ${userId}`)
 		return true
 	} catch (error) {
 		logger.error(`Error when toggling Heavenly Restriction for user with ID: ${userId}`, error)
@@ -1543,10 +1610,10 @@ export async function removeUserQuest(userId, questName) {
 		)
 
 		if (result.modifiedCount === 0) {
-			console.log(`No quest was removed for the user with ID: ${userId}`)
+			logger.info(`No quest was removed for the user with ID: ${userId}`)
 			return false
 		} else {
-			console.log(`Quest with name: ${questName} was removed for the user with ID: ${userId}`)
+			logger.info(`Quest with name: ${questName} was removed for the user with ID: ${userId}`)
 			return true
 		}
 	} catch (error) {
@@ -1589,7 +1656,7 @@ export async function getUserMaxHealth(userId: string): Promise<number> {
 
 		return user ? user.maxhealth || 100 : 100
 	} catch (error) {
-		console.error(`Error when retrieving max health for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving max health for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -1750,7 +1817,7 @@ export async function getActiveTrades(userId: string): Promise<TradeRequest[]> {
 			createdAt: doc.createdAt
 		}))
 	} catch (error) {
-		console.error("Error getting active trades:", error)
+		logger.error("Error getting active trades:", error)
 		throw error
 	}
 }
@@ -1868,9 +1935,9 @@ export async function updateGamblersData(
 		])
 
 		if (result.modifiedCount === 1) {
-			console.log("Gamblers data updated successfully.")
+			logger.info("Gamblers data updated successfully.")
 		} else {
-			console.warn("User with specified ID not found for gamblers data update.")
+			logger.warn("User with specified ID not found for gamblers data update.")
 		}
 	} catch (error) {
 		logger.error("Error updating gamblers data:", error)
@@ -1902,7 +1969,7 @@ export async function updateUserStatusEffects(userId: string, statusEffects: str
 
 		await usersCollection.updateOne({ id: userId }, { $set: { statusEffects: effects } })
 	} catch (error) {
-		console.error("Error updating user status effects:", error)
+		logger.error("Error updating user status effects:", error)
 		throw error
 	}
 }
@@ -2031,7 +2098,7 @@ export async function updateUserInateClanExperience(userId: string, experience: 
 			}
 		)
 	} catch (error) {
-		console.error("Error updating user inate clan experience:", error)
+		logger.error("Error updating user inate clan experience:", error)
 		throw error
 	}
 }
@@ -2059,7 +2126,7 @@ export async function getUserInateClan(userId: string): Promise<{ clan: string; 
 
 		return user ? user.inateclan : { clan: "", experience: 0, tier: 0 }
 	} catch (error) {
-		console.error(`Error when retrieving inate clan for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving inate clan for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2130,7 +2197,7 @@ export async function updateUserHonours(userId: string, honours: string[]): Prom
 
 		await usersCollection.updateOne({ id: userId }, { $set: { honours } })
 	} catch (error) {
-		console.error("Error updating user honours:", error)
+		logger.error("Error updating user honours:", error)
 		throw error
 	}
 }
@@ -2189,7 +2256,7 @@ export async function getUserItemEffects(
 
 		return user ? user.itemEffects : []
 	} catch (error) {
-		console.error(`Error when retrieving item effects for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving item effects for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2217,7 +2284,7 @@ async function updateShop(): Promise<void> {
 		const resetInterval = 86400000 // 24 hours in milliseconds
 
 		let shopData = await shopsCollection.findOne({})
-		console.log("Shop data:", shopData)
+		logger.info("Shop data:", shopData)
 
 		const now = new Date()
 
@@ -2227,7 +2294,7 @@ async function updateShop(): Promise<void> {
 		if (shouldGenerateItems) {
 			await resetAllUserPurchases()
 			const newShopItems = await generateDailyShop()
-			console.log("New shop items:", newShopItems)
+			logger.info("New shop items:", newShopItems)
 
 			if (!shopData) {
 				shopData = {
@@ -2236,7 +2303,7 @@ async function updateShop(): Promise<void> {
 					lastShopReset: now
 				}
 				await shopsCollection.insertOne(shopData)
-				console.log("Shop created with items: ", shopData)
+				logger.info("Shop created with items: ", shopData)
 			} else {
 				await shopsCollection.updateOne(
 					{ _id: shopData._id },
@@ -2248,10 +2315,10 @@ async function updateShop(): Promise<void> {
 					}
 				)
 
-				console.log("Shop reset successfully with new items!")
+				logger.info("Shop reset successfully with new items!")
 			}
 		} else {
-			console.log("Shop does not need a reset yet.")
+			logger.info("Shop does not need a reset yet.")
 		}
 	} catch (error) {
 		logger.error("Error updating shop items:", error)
@@ -2260,34 +2327,34 @@ async function updateShop(): Promise<void> {
 }
 
 async function generateDailyShop() {
-	console.log("shopItems length", shopItems.length)
+	logger.info("shopItems length", shopItems.length)
 	const dailyShopItems = []
 	const numItems = 5
 
 	if (shopItems.length === 0) {
-		console.log("No items available to add to the shop.")
+		logger.info("No items available to add to the shop.")
 		return dailyShopItems
 	}
 
 	while (dailyShopItems.length < numItems) {
 		const randomIndex = Math.floor(Math.random() * shopItems.length)
 		const randomItem = shopItems[randomIndex]
-		console.log(`Selected item ${randomIndex}:`, randomItem)
+		logger.info(`Selected item ${randomIndex}:`, randomItem)
 
 		if (!Object.prototype.hasOwnProperty.call(randomItem, "rarity")) {
-			console.log("Selected item does not have a 'rarity' property:", randomItem)
+			logger.info("Selected item does not have a 'rarity' property:", randomItem)
 			continue
 		}
 
 		if (randomItem.rarity !== "legendary" || Math.random() < 0.2) {
 			if (!dailyShopItems.includes(randomItem)) {
 				dailyShopItems.push(randomItem)
-				console.log("Item added to daily shop:", randomItem)
+				logger.info("Item added to daily shop:", randomItem)
 			}
 		}
 	}
 
-	console.log("Daily shop items generated:", dailyShopItems)
+	logger.info("Daily shop items generated:", dailyShopItems)
 	return dailyShopItems
 }
 
@@ -2299,7 +2366,7 @@ export async function getAllShopItems() {
 		const shopDocuments = await shopsCollection.find({}).toArray()
 		const allShopItems = shopDocuments.map(doc => doc.shopItems).flat()
 
-		console.log("Retrieved shop items:", allShopItems)
+		logger.info("Retrieved shop items:", allShopItems)
 		return allShopItems
 	} catch (error) {
 		logger.error("Error retrieving shop items:", error)
@@ -2347,7 +2414,7 @@ export async function addUserPurchases(userId: string, itemName: string, amount:
 		const user = await usersCollection.findOne({ id: userId })
 
 		if (!user) {
-			console.error(`User with ID ${userId} not found`)
+			logger.error(`User with ID ${userId} not found`)
 			throw new Error(`User with ID ${userId} not found`)
 		}
 
@@ -2373,7 +2440,7 @@ async function resetAllUserPurchases(): Promise<void> {
 
 		const result = await usersCollection.updateMany({}, { $set: { purchases: [] } })
 
-		console.log(`Purchases reset for all users. Modified count: ${result.modifiedCount}`)
+		logger.info(`Purchases reset for all users. Modified count: ${result.modifiedCount}`)
 	} catch (error) {
 		logger.error("Error resetting user purchases:", error)
 		throw error
@@ -2422,7 +2489,7 @@ export async function getUserMentor(userId: string): Promise<string> {
 	}
 }
 // update user mentors if it doesnt exist create it then update
-export async function updateUserMentors(userId: string, mentors: string[]): Promise<void> {
+export async function updateUserMentors(userId: string, mentors: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
@@ -2460,7 +2527,7 @@ interface Shikigami {
 
 // get user shikigami
 export async function getUserShikigami(userId: string): Promise<Shikigami[]> {
-	console.log("getUserShikigami called with userId:", userId)
+	logger.info("getUserShikigami called with userId:", userId)
 
 	try {
 		const database = client.db(mongoDatabase)
@@ -2510,6 +2577,21 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 		)
 	} catch (error) {
 		logger.error("Error updating user shikigami:", error)
+		throw error
+	}
+}
+
+// get user unlocked mentors
+export async function getUserUnlockedMentors(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.unlockedmentors : []
+	} catch (error) {
+		logger.error(`Error when retrieving unlocked mentors for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2705,7 +2787,7 @@ export async function updateUserFavoriteCommand(userId: string, commandName: str
 		const user = await usersCollection.findOne({ id: userId })
 
 		if (!user || !user.stats) {
-			console.error(`User with ID ${userId} not found`)
+			logger.error(`User with ID ${userId} not found`)
 			throw new Error(`User with ID ${userId} not found`)
 		}
 
@@ -2756,7 +2838,7 @@ export async function getUserFavouriteCommand(userId) {
 			? { command: favoriteCommand, count: maxCount }
 			: { command: "No favorite command yet", count: 0 }
 	} catch (error) {
-		console.error(`Error retrieving favorite command for user ${userId}:`, error)
+		logger.error(`Error retrieving favorite command for user ${userId}:`, error)
 		throw error
 	}
 }
@@ -2938,7 +3020,7 @@ export async function updateUserCommandsUsed(userId: string): Promise<void> {
 		const user = await usersCollection.findOne({ id: userId })
 
 		if (!user) {
-			console.error(`User with ID ${userId} not found`)
+			logger.error(`User with ID ${userId} not found`)
 			throw new Error(`User with ID ${userId} not found`)
 		}
 
@@ -2966,7 +3048,7 @@ export async function updateUserWorked(userId: string): Promise<void> {
 		const user = await usersCollection.findOne({ id: userId })
 
 		if (!user) {
-			console.error(`User with ID ${userId} not found`)
+			logger.error(`User with ID ${userId} not found`)
 			throw new Error(`User with ID ${userId} not found`)
 		}
 
@@ -3168,7 +3250,7 @@ export async function logImageUrl(imageUrl: string, userId: string): Promise<voi
 			reviewed: false
 		})
 	} catch (error) {
-		console.error("Error logging image URL:", error)
+		logger.error("Error logging image URL:", error)
 	}
 }
 
@@ -3179,7 +3261,7 @@ export async function getImageUrl(userId: string): Promise<string> {
 		const image = await logsCollection.findOne({ userId })
 		return image ? image.imageUrl : ""
 	} catch (error) {
-		console.error("Error getting image URL:", error)
+		logger.error("Error getting image URL:", error)
 		throw error
 	}
 }
@@ -3191,7 +3273,7 @@ export async function getUserIdByImageUrl(imageUrl: string): Promise<string | nu
 		const result = await logsCollection.findOne({ imageUrl })
 		return result?.userId || null
 	} catch (error) {
-		console.error("Error fetching user ID by image URL:", error)
+		logger.error("Error fetching user ID by image URL:", error)
 		return null
 	}
 }
@@ -3364,7 +3446,7 @@ export async function checkProfileChangeCooldown(
 		}
 		return { limitReached: false, nextResetTimestamp: null }
 	} catch (error) {
-		console.error("Error checking cooldown:", error)
+		logger.error("Error checking cooldown:", error)
 		throw error
 	}
 }
@@ -3424,7 +3506,7 @@ export async function updateUserWorkCooldown(userId: string, cooldownDuration: n
 			}
 		)
 	} catch (error) {
-		console.error("Error updating work cooldown:", error)
+		logger.error("Error updating work cooldown:", error)
 		throw error
 	}
 }
@@ -3442,7 +3524,7 @@ export async function getImageUrlAndUserIdByReviewerId(
 			imageUrl: result?.imageUrl || null
 		}
 	} catch (error) {
-		console.error("Error fetching user ID and image URL by reviewer ID:", error)
+		logger.error("Error fetching user ID and image URL by reviewer ID:", error)
 		return { userId: null, imageUrl: null }
 	}
 }
@@ -3459,7 +3541,7 @@ export async function getImageUrlAndUserIdByImageUrl(
 			imageUrl: result?.imageUrl || null
 		}
 	} catch (error) {
-		console.error("Error fetching user ID and image URL:", error)
+		logger.error("Error fetching user ID and image URL:", error)
 		return { userId: null, imageUrl: null }
 	}
 }
@@ -3474,7 +3556,7 @@ export async function updateReviewerIdAndStatus(
 		const logsCollection = database.collection(imageCollectionName)
 		await logsCollection.updateOne({ imageUrl }, { $set: { reviewerId, reviewed } })
 	} catch (error) {
-		console.error("Error updating reviewer ID and review status:", error)
+		logger.error("Error updating reviewer ID and review status:", error)
 	}
 }
 
@@ -3485,7 +3567,7 @@ export async function getImageUrlByReviewerId(reviewerId: string): Promise<strin
 		const result = await logsCollection.findOne({ reviewerId })
 		return result?.imageUrl || null
 	} catch (error) {
-		console.error("Error fetching image URL by reviewer ID:", error)
+		logger.error("Error fetching image URL by reviewer ID:", error)
 		return null
 	}
 }
@@ -3496,7 +3578,7 @@ export async function updateReviewStatus(imageUrl: string, reviewed: boolean): P
 		const logsCollection = database.collection(imageCollectionName)
 		await logsCollection.updateOne({ imageUrl }, { $set: { reviewed } })
 	} catch (error) {
-		console.error("Error updating review status:", error)
+		logger.error("Error updating review status:", error)
 	}
 }
 
@@ -3507,7 +3589,7 @@ export async function getImageUrlByUserId(userId: string): Promise<string | null
 		const result = await logsCollection.findOne({ userId, reviewed: false })
 		return result?.imageUrl || null
 	} catch (error) {
-		console.error("Error fetching image URL by user ID:", error)
+		logger.error("Error fetching image URL by user ID:", error)
 		return null
 	}
 }
@@ -3518,6 +3600,96 @@ export async function updateReviewerId(imageUrl: string, reviewerId: string): Pr
 		const logsCollection = database.collection(imageCollectionName)
 		await logsCollection.updateOne({ imageUrl }, { $set: { reviewerId } })
 	} catch (error) {
-		console.error("Error updating reviewer ID:", error)
+		logger.error("Error updating reviewer ID:", error)
+	}
+}
+
+// update user awakening
+export async function updateUserAwakening(userId: string, awakening: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { awakening } })
+	} catch (error) {
+		logger.error("Error updating user awakening:", error)
+		throw error
+	}
+}
+
+// get user awakening if it doesnt exist return null
+export async function getUserAwakening(userId: string): Promise<string | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+
+		return user ? user.awakening : null
+	} catch (error) {
+		logger.error(`Error when retrieving awakening for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+// update user unlocked mentors
+export async function updateUserUnlockedMentors(userId: string, unlockedMentors: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { unlockedMentors } })
+	} catch (error) {
+		logger.error("Error updating user unlocked mentors:", error)
+		throw error
+	}
+}
+
+/**
+ * Marks an awakening stage as messaged for a user.
+ * @param {string} userId - The ID of the user.
+ * @param {string} awakeningStage - The awakening stage to mark as messaged (e.g., "Stage One").
+ */
+export async function markStageAsMessaged(userId: string, awakeningStage: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const updateResult = await usersCollection.updateOne(
+			{ id: userId },
+			{ $addToSet: { stagesMessaged: awakeningStage } } // Using $addToSet to prevent duplicate entries for the same stage
+		)
+
+		if (updateResult.matchedCount === 0) {
+			logger.info(`No user found with ID: ${userId}`)
+		} else if (updateResult.modifiedCount === 0) {
+			logger.info(`User with ID: ${userId} was not updated (possibly already marked this stage).`)
+		} else {
+			logger.info(`Stage "${awakeningStage}" marked as messaged for user with ID: ${userId}.`)
+		}
+	} catch (error) {
+		logger.error(`Error marking stage as messaged for user with ID: ${userId}`, error)
+		throw error
+	}
+}
+
+/**
+ * Checks if an awakening stage has already been messaged to a user.
+ * @param {string} userId - The ID of the user.
+ * @param {string} awakeningStage - The awakening stage to check (e.g., "Stage One").
+ * @returns {Promise<boolean>} True if the stage has been messaged, otherwise false.
+ */
+export async function checkStageMessaged(userId: string, awakeningStage: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId, stagesMessaged: { $in: [awakeningStage] } })
+		return !!user // Returns true if user is found with the stage in stagesMessaged array, otherwise false.
+	} catch (error) {
+		logger.error(`Error checking if stage has been messaged for user with ID: ${userId}`, error)
+		throw error
 	}
 }

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { CommandInteraction } from "discord.js"
+import { calculateDamageWithEffects } from "./statuseffects.js"
+
 interface Attack {
 	name: string
 	probability: number
@@ -7,11 +11,11 @@ interface Attack {
 function getGradeDamageBonus(grade: string): number {
 	switch (grade) {
 		case "Special Grade":
-			return 1.5
-		case "Grade 1":
 			return 1.3
-		case "Semi-Grade 1":
+		case "Grade 1":
 			return 1.1
+		case "Semi-Grade 1":
+			return 1.0
 		case "Grade 2":
 			return 1.0
 		case "Grade 3":
@@ -561,18 +565,18 @@ export const attacks: Record<string, Attack[]> = {
 	"Sukuna (Heian Era)": [
 		{
 			name: "Kamutoke",
-			probability: 50,
+			probability: 60,
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 25 * gradeDamageBonus
+				return 90 * gradeDamageBonus
 			}
 		},
 		{
-			name: "Spiderweb",
-			probability: 30,
+			name: "Domain Expansion: Malevolent Shrine",
+			probability: 20,
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 30 * gradeDamageBonus
+				return 70 * gradeDamageBonus
 			}
 		},
 		{
@@ -580,7 +584,7 @@ export const attacks: Record<string, Attack[]> = {
 			probability: 20,
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 70 * gradeDamageBonus
+				return 140 * gradeDamageBonus
 			}
 		}
 	],
@@ -1174,6 +1178,162 @@ export const attacks: Record<string, Attack[]> = {
 				return 175 * gradeDamageBonus
 			}
 		}
+	],
+	"Satoru Gojo (Shinjuku Showdown Arc)": [
+		{
+			name: "Hollow Nuke",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Close Up: Reversal Red",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 40 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Domain Expansion: Infinite Void",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 120 * gradeDamageBonus
+			}
+		}
+	],
+	"Maki Zenin (Full Strength)": [
+		{
+			name: "2-4 Kick Combo",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 45 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Split Soul Bounding Strike",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 76 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Zenin Style: Pummel",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 49 * gradeDamageBonus
+			}
+		}
+	],
+	"Choso": [
+		{
+			name: "Supernova",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Convergence: Blood Manipulation",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 20 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Piercing Blood",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
+	],
+	"Yuji Itadori (Awoken)": [
+		{
+			name: "Two-Finger Strike",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Piercing Blood",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "BLACK FLASH",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
+	],
+	"Lightning God (Heian Era)": [
+		{
+			name: "Piercing Thunder",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Lightning God's Wrath",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Mythical Beast Amber",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
+	],
+	"Kenjaku": [
+		{
+			name: "Barrage",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Curse Spirit Manipulation: Cursed Energy Blast",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "World of Cursed Blossoms",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
 	]
 }
 
@@ -1201,13 +1361,13 @@ export const DOMAIN_INFORMATION = [
 		description:
 			"Sukuna's Malevolent Shrine is a nightmarish domain of bones and skulls, where his attacks never miss.  It's a chilling testament to his limitless power and boundless cruelty.",
 		image: "https://i.redd.it/p1zq5wjwxr0c1.jpg",
-		effects: "Curse King, (Dismantle) 20% Damage Increase, 20% Damage Reduction [ MORE SOON ]",
+		effects: "Curse King, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Malevolent Token"
 	},
 	{
 		name: "Unlimited Void",
 		description: "This domain overwhelms the target with an infinite thought, rendering them powerless...",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
+		image: "https://storage.googleapis.com/jjk_bot_personal/FWv4Sg9WIAUmp8k.jpg",
 		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Limitless Token"
 	},
@@ -1215,8 +1375,8 @@ export const DOMAIN_INFORMATION = [
 		name: "Chimera Shadow Garden",
 		description:
 			"Chimera Shadow Garden is a domain that creates a nightmarish world of shadows, where the users shikigami can attack from any angle.",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1226008400819916932/Satoru_Gojo_uses_Unlimited_Void_in_Shibuya_Anime.png?ex=6623344c&is=6610bf4c&hm=135a8d9f628b658f55a4228840d5fd554fd6ff8aff31dfc3023dbf99f2fd65d3&",
-		effects: "Limitless, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
+		image: "https://storage.googleapis.com/jjk_bot/EjfyNxvUwAAj485.jpg",
+		effects: "Shadows, 20% Damage Reduction, 20% Damage Increase [ MORE SOON ]",
 		requirement: "Shadow Token"
 	},
 	{
@@ -1267,7 +1427,7 @@ export const TRANSFORMATIONS = [
 	{
 		name: "Bloodlusted",
 		description: "I'm going to enjoy this...",
-		image: "https://cdn.discordapp.com/attachments/681985000521990179/1229927990419263529/ezgif-7-394c1f41b7.gif?ex=663176b3&is=661f01b3&hm=bb8b80783961ac45faa2e325317abcc10322e23304a10f3018d13526a3fd9760&",
+		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-394c1f41b7.gif",
 		effects: "Bloodlust, 30% Damage Increase, 11% Damage Taken Increase"
 	},
 	{
@@ -1279,15 +1439,14 @@ export const TRANSFORMATIONS = [
 	{
 		name: "Six Eyes Release",
 		description: "Come on, let's get serious.",
-		image: "https://cdn.discordapp.com/attachments/1094302755960664255/1229378135192244234/ezgif-7-e770a26839.gif?ex=662f769c&is=661d019c&hm=9d16d32deb25b0acc9709b2557945e88d98e9c97a53d2da49857b25665d225b6&",
+		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-e770a26839.gif",
 		effects: "All-Seeing, 25% Damage Reduction, 16% Damage Increase"
 	},
 	{
 		name: "Curse Queen",
 		description: "Rika.. Lend me your strength.",
 		image: "https://64.media.tumblr.com/33cacf2a119115bcdb869f76c68e16d9/df6ff4dc29f5c53a-f9/s540x810/71e5c78b6b6ed34d000aee942ff70641e18414f6.gif",
-		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction",
-		time: "3 Minutes"
+		effects: "Release of the Queen, 28% Damage Increase, 1% Damage Reduction"
 	},
 	{
 		name: "Cursed Energy Reinforcement",
@@ -1301,99 +1460,196 @@ export const TRANSFORMATIONS = [
 		image: "https://media1.tenor.com/m/1UCA18ZgFpsAAAAd/nanami-nanami-kento.gif",
 		effects: "Overtime, 20% Damage Increase, 10% Damage Reduction"
 	},
+	{
+		name: "Maximum Output",
+		description: "TURN UP THE VOLUME!",
+		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-836d9bbead.gif",
+		effects: "Electrified, 25% Damage Increase."
+	},
+	{
+		name: "Awakening",
+		description: "I'm going to enjoy this...",
+		image: "https://media1.tenor.com/m/PejM2csl_9sAAAAd/itadori-yuuji.gif",
+		effects: "Unleashed, 35% Damage Increase, 15% Extra Damage Taken"
+	},
 	// Owner
 	{
-		name: "Super Saiyajin",
-		description: "I am a warrior pure of heart, awakened by rage... I am the legendary Super Saiyan, Son Goku!",
-		image: "https://64.media.tumblr.com/ae8c852059892af7e3119daa41daf802/tumblr_pc70jtYfOl1ujwg5zo2_540.gif",
-		effects: "Sayian Power, 25% Damage Increase, 5% Damage Reduction"
+		name: "Mugetsu",
+		description:
+			"Let's end this, Aizen! I'll show you... The Final Getsuga Tensho! This technique allows me to become Getsuga itself. But using it, will cost all my powers as a Shinigami.!",
+		image: "https://media1.tenor.com/m/7GgfegR83eIAAAAC/ichigo-kurosaki-final-getsuga-tenshou.gif",
+		effects: "Final Getsuga Tensho, ?!$£!% Damage Increase, "
 	},
 	{
 		name: "Ultra Instinct",
 		description: "I am the hope of the universe. I am the answer to all living things that cry out for peace...",
 		image: "https://i.redd.it/y03e7f1ojto71.gif",
 		effects: "INSTINCT, 8000% Damage Increase, 100% Damage Reduction"
-	},
-	{
-		name: "Gear Fifth",
-		description:
-			"I can do everything I wanted to do! I think I can fight a little bit more! My heartbeat sounds funny.. This is my peak! **GEAR FIFTH!**",
-		image: "https://media1.tenor.com/m/GTUpXKnYwI0AAAAC/gear-5-joyboy.gif",
-		effects: "Joy Boy, Un-quantifiable Damage Increase.."
 	}
 ]
 
-export const heavenlyrestrictionskills = [
-	{
-		name: "Pummel",
-		description: "Die!",
-		cost: "175000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Resonant Strike",
-		description: "Considered one of the most powerful techniques in Jujutsu",
-		cost: "75000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Shrapnel Burst",
-		description: "Perish!",
-		cost: "25000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Nerve Cluster Blitz",
-		description: "Strike!",
-		cost: "175000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Unbound Fury",
-		description: "Fury of the heavens",
-		cost: "125000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 1
-			}
-		]
-	},
-	{
-		name: "Inverted Spear Of Heaven: Severed Universe",
-		description: "The skill that sliced through infinity..",
-		cost: "325000",
-		clan: "Heavenly Restricted",
-		items: [
-			{
-				name: "Heavenly Chain",
-				quantity: 6
-			}
-		]
+export const heavenlyrestrictionskills = {
+	"Zenin Toji": [
+		{
+			name: "Inverted Spear Of Heaven: Severed Universe",
+			cost: "1250000",
+			clan: "Zenin Toji",
+			items: [{ name: "Heavenly Restricted Blood", quantity: 1 }]
+		},
+		{
+			name: "Batter",
+			cost: "185000",
+			clan: "Zenin Toji",
+			items: [{ name: "Rikugan Eye", quantity: 1 }]
+		},
+		{
+			name: "Split Second Slice",
+			cost: "100000",
+			clan: "Zenin Toji",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		}
+	],
+	"Maki Zenin": [
+		{
+			name: "Close Quarters 2-4 Combo",
+			cost: "335000",
+			clan: "Maki Zenin",
+			items: [{ name: "Heavenly Restricted Blood", quantity: 1 }]
+		},
+		{
+			name: "Playful Cloud: Upright Spear",
+			cost: "225000",
+			clan: "Maki Zenin",
+			items: [{ name: "Rikugan Eye", quantity: 1 }]
+		},
+		{
+			name: "Bo Staff: Redirection",
+			cost: "125000",
+			clan: "Maki Zenin",
+			items: [{ name: "Sukuna Finger", quantity: 1 }]
+		}
+	],
+	"Maki Zenin (Realized)": [
+		{
+			name: "Split Soul: Blitz",
+			cost: "2600000",
+			clan: "Maki Zenin",
+			items: [{ name: "Awakening Remnant", quantity: 6 }],
+			stage: "Stage Four"
+		},
+		{
+			name: "0.2 Second Strike",
+			cost: "1249000",
+			clan: "Maki Zenin",
+			items: [{ name: "Awakening Remnant", quantity: 4 }],
+			stage: "Stage Four"
+		},
+		{
+			name: "Split Soul: Slash",
+			cost: "934510",
+			clan: "Maki Zenin",
+			items: [{ name: "Awakening Remnant", quantity: 2 }],
+			stage: "Stage Four"
+		}
+	],
+	"Zenin Toji (Reincarnation)": [
+		{
+			name: "Playful Cloud: Rushing Resolute",
+			cost: "10000000",
+			clan: "Zenin Toji (Reincarnation)",
+			items: [
+				{ name: "Sukuna Finger", quantity: 6 },
+				{ name: "Heavenly Restricted Blood", quantity: 1 },
+				{ name: "Awakening Remnant", quantity: 4 }
+			],
+			stage: "Stage Five"
+		},
+		{
+			name: "Bloodlusted: Skull Crush",
+			cost: "5000000",
+			clan: "Zenin Toji (Reincarnation)",
+			items: [{ name: "Awakening Remnant", quantity: 4 }],
+			stage: "Stage Five"
+		},
+		{
+			name: "Split Slap",
+			cost: "2500000",
+			clan: "Zenin Toji (Reincarnation)",
+			items: [{ name: "Awakening Remnant", quantity: 2 }],
+			stage: "Stage Five"
+		}
+	]
+}
+export async function executeBossAttack(
+	interaction: CommandInteraction,
+	randomOpponent: any,
+	chosenAttack: any,
+	playerGrade: string,
+	primaryEmbed: any,
+	playerHealth: number,
+	statusEffects: any[],
+	row: any
+) {
+	const baseDamage = chosenAttack.baseDamage(playerGrade)
+	await calculateDamageWithEffects(interaction.user.id, baseDamage, statusEffects)
+	const damageToPlayer = baseDamage
+	const newPlayerHealth = playerHealth - damageToPlayer
+	const clampedPlayerHealth = Math.max(0, newPlayerHealth)
+
+	switch (true) {
+		case chosenAttack.name === "Domain Expansion: Infinite Void" &&
+			randomOpponent.name === "Satoru Gojo (Shinjuku Showdown Arc)":
+			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+			primaryEmbed.setImage("https://media1.tenor.com/m/9ZHCYYVz5VcAAAAC/notl-gojo-vs-sukuna.gif")
+
+			// Remove the select menu
+			await interaction.editReply({
+				embeds: [primaryEmbed],
+				components: []
+			})
+
+			// Wait for 3 seconds
+			await new Promise(resolve => setTimeout(resolve, 3000))
+
+			primaryEmbed.setImage(randomOpponent.image_url)
+			await interaction.editReply({
+				embeds: [primaryEmbed],
+				components: [row]
+			})
+			break
+
+		case chosenAttack.name === "Domain Expansion: Malevolent Shrine" &&
+			randomOpponent.name === "Sukuna (Heian Era)":
+			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+			primaryEmbed.setImage("https://media1.tenor.com/m/NiiOh24vaJIAAAAC/domain-expansion-sukuna.gif")
+
+			// Remove the select menu
+			await interaction.editReply({
+				embeds: [primaryEmbed],
+				components: []
+			})
+
+			// Wait for 3 seconds
+			await new Promise(resolve => setTimeout(resolve, 3000))
+
+			await interaction.editReply({
+				embeds: [primaryEmbed],
+				components: [row]
+			})
+			break
+
+		case chosenAttack.name === "Special Attack 2" && randomOpponent.name === "Boss 2":
+			// Handle special case for Boss 2 and Special Attack 2
+			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+			// Add any additional logic or effects specific to this case
+			primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
+			break
+
+		default:
+			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
+			primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
+			break
 	}
-]
+
+	return clampedPlayerHealth
+}
