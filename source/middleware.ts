@@ -1,7 +1,7 @@
 interface User {
 	lastAlertedVersion?: string
 }
-const CURRENT_VERSION = "1.2.0"
+const CURRENT_VERSION = "1.2.5"
 //
 //
 
