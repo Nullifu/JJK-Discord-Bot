@@ -4064,7 +4064,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
 		.setDescription(
-			"Had to remove black flash LOGIC, due to some issues, will be back soon. Thanks for your patience. THIS DOES NOT MEAN THE SKILL IS COMPLETELY GONE."
+			"UPDATE 7.0, Part one is now out! Full update log in the discord server, Have fun!"
 		)
 		.setFooter({ text: "hi - from dev" })
 

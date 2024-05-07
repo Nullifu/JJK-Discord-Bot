@@ -1039,7 +1039,7 @@ export const questsArray = [
 		itemQuantity: 12,
 		tasks: [
 			{ description: "Defeat Foes", progress: 0, totalProgress: 25 },
-			{ description: "Defeat Ryomen Sukuna", progress: 0, totalProgress: 1 }
+			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
 		special: true
 	},
