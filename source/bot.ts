@@ -450,6 +450,7 @@ const commands = [
 					{ name: "Curse Repellent", value: "Curse Repellent" },
 					{ name: "Starter Bundle", value: "Starter Bundle" },
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
+					{ name: "Special-Grade Cursed Object", value: "Special-Grade Cursed Object" },
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" },
 					{ name: "Unknown Substance", value: "Unknown Substance" }
@@ -890,7 +891,7 @@ client.on("interactionCreate", async interaction => {
 //const poster = AutoPoster(process.env.TOPGG, client)
 
 //poster.on("posted", stats => {
-//console.log(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
 //})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////

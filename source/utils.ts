@@ -1,6 +1,4 @@
 import { randomInt } from "crypto"
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
-import { addItemToUserInventory, removeItemFromUserInventory } from "./mongodb.js"
 
 // Define mentor details with messages, images, and lines
 const mentorDetails: { [key: string]: { message: string; imageUrl: string; lines: string[] } } = {
@@ -38,80 +36,34 @@ export function getMentorDetails(
 	return { message: message, imageUrl: details.imageUrl, line: line }
 }
 
-export function getAwakeningDialogue(mentor: string): string {
-	const dialogues: { [key: string]: string } = {
-		"Satoru Gojo":
-			"You've finally reached it right? I can sense it within you.. That power, that potential... I never thought i'd see the day where you'd reach this point..",
-		"Ryomen Sukuna":
-			"You brat.. How did you manage to awaken this power..? You're not half bad.. Maybe you're worth my time after all.."
+export function getAwakeningDialogue(mentor: string, awakening: string): string {
+	const dialogues: { [key: string]: { [key: string]: string } } = {
+		"Satoru Gojo": {
+			"Stage One":
+				"You've taken the first step, but this is just the beginning. Keep pushing forward and never lose sight of your goals, Here's a quest, and some items to help..",
+			"Stage Two":
+				"I can see the determination in your eyes. You're starting to understand what it means to wield this power.",
+			"Stage Three":
+				"You're making progress, but don't get complacent. The road ahead is still long and challenging, Here's a quest.",
+			"Stage Four": "I'm impressed by your growth. You're starting to tap into your true potential.",
+			"Stage Five":
+				"You've come a long way, but remember, with great power comes great responsibility. Use it wisely."
+		},
+		"Ryomen Sukuna": {
+			"Stage One":
+				"So, you've finally awakened a fraction of your power. Don't let it go to your head, brat, Here's a quest, and some items to help..",
+			"Stage Two": "You're starting to show some promise, but you're still far from being a worthy vessel.",
+			"Stage Three":
+				"Not bad, kid. But don't think this means you're anywhere close to my level, Here's a quest.",
+			"Stage Four":
+				"I'll admit, you've got some talent. But talent alone won't save you from the horrors that await.",
+			"Stage Five":
+				"You've grown stronger, but remember, in this world, it's eat or be eaten. Never let your guard down."
+		}
 	}
 
 	return (
-		dialogues[mentor] ||
-		"You have unlocked a new depth of power, one that requires discipline and courage to master. Together, we will hone this new strength into something extraordinary."
+		dialogues[mentor]?.[awakening] ||
+		`You have reached ${awakening}. Continue to hone your skills and push the boundaries of your power.`
 	)
-}
-
-export function createAwakeningShardInitialEmbed(interaction, mentor) {
-	const embed = new EmbedBuilder()
-		.setColor(0x0099ff)
-		.setTitle("Awakening Shard Encounter")
-		.setImage("https://media1.tenor.com/m/cfC-_AdHfKIAAAAC/gojo-satoru.gif")
-		.setDescription("You sense a powerful energy emanating from your Awakening Shard...")
-		.addFields([
-			{
-				name: `**${mentor} says:**`,
-				value: `Be wary, ${interaction.user.username}. Something is not right...`,
-				inline: true
-			}
-		])
-
-	return embed
-}
-
-export async function createAwakeningShardEmbed(interaction, mentor) {
-	let embed
-
-	if (mentor === "Satoru Gojo") {
-		await removeItemFromUserInventory(interaction.user.id, "Awakening Shard", 1)
-		await addItemToUserInventory(interaction.user.id, "Split Shard", 1)
-
-		embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle("Sukuna Attacks!")
-			.setDescription("Sukuna has sensed your Awakening Shard and is attacking you, He's shattered the shard!")
-			.setImage("https://media1.tenor.com/m/hGAOy9OYEBAAAAAC/jjk-jujutsu-kaisen.gif")
-			.addFields([
-				{
-					name: "**Satoru Gojo says:**",
-					value: "Quickly, Run! I'll hold him off!",
-					inline: true
-				}
-			])
-	} else if (mentor === "Sukuna") {
-		await removeItemFromUserInventory(interaction.user.id, "Awakening Shard", 1)
-		await addItemToUserInventory(interaction.user.id, "Split Shard", 1)
-
-		embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle("Gojo Attacks!")
-			.setDescription("Gojo has sensed your Awakening Shard and is attacking you, He's shattered the shard!")
-			.setImage("https://media1.tenor.com/m/7wtqfZcsbHUAAAAd/gojou-gojo.gif")
-			.addFields([
-				{
-					name: "**Sukuna says:**",
-					value: "Quickly, Run! I'll hold him off!",
-					inline: true
-				}
-			])
-	}
-
-	// Create buttons
-	const fightButton = new ButtonBuilder().setCustomId("fight").setLabel("Fight").setStyle(ButtonStyle.Primary)
-
-	const runButton = new ButtonBuilder().setCustomId("run").setLabel("Run").setStyle(ButtonStyle.Secondary)
-
-	const actionRow = new ActionRowBuilder().addComponents(fightButton, runButton)
-
-	return { embeds: [embed], components: [actionRow] }
 }
