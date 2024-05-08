@@ -2700,7 +2700,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-
 			} else if (selectedValue === "Mythical Beast Amber") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2856,6 +2855,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				{
 					name: "Boss Health",
 					value: `:heart: ${randomOpponent.current_health.toString()}`,
+					inline: true
+				},
+				{
+					name: "Damage Dealt",
+					value: `:crossed_swords: ${reducedDamage.toString()}`,
 					inline: true
 				},
 				{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
