@@ -619,13 +619,10 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 				query = {
 					...query,
 					$or: [
-						//{ awakeningStage: currentStage },
 						{ awakeningStage: nextStage }
 						/*
 						{
-							awakeningStage: {
 								$in: allowedAwakeningStages.filter(
-									stage => stage !== currentStage && stage !== nextStage
 								)
 							}
 						}
