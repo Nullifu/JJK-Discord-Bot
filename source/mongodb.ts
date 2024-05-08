@@ -584,7 +584,6 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		const domainsCollection = database.collection(bossCollectionName)
 
 		const allowedBossGrades = gradeToBossGrade[userGrade] || []
-
 		const userAwakening = await getUserAwakening(userId)
 
 		let query: { [key: string]: unknown } = {
@@ -595,39 +594,28 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		if (userAwakening) {
 			const awakeningStages = ["Stage Zero", "Stage One", "Stage Two", "Stage Three", "Stage Four", "Stage Five"]
 			const currentStageIndex = awakeningStages.indexOf(userAwakening)
-			const allowedAwakeningStages = awakeningStages.slice(currentStageIndex, currentStageIndex + 1)
 
-			query = {
-				...query,
-				awakeningStage: { $in: allowedAwakeningStages }
-			}
-
-			if (isBlessed) {
-				const currentStage = userAwakening
-				const nextStage = getNextAwakeningStage(currentStage)
-
-				logger.debug("Current stage:", currentStage)
-				logger.debug("Next stage:", nextStage)
-				logger.debug("Allowed stages:", allowedAwakeningStages)
-				/*
-				logger.debug(
-					"Allowed stages filtered:",
-					allowedAwakeningStages.filter(stage => stage !== currentStage && stage !== nextStage).join(", ")
-				)
-				*/
-
+			if (currentStageIndex === awakeningStages.length - 1) {
+				// If the user is at Stage Five, allow all stages from Stage Zero to Stage Five
 				query = {
 					...query,
-					$or: [
-						{ awakeningStage: nextStage }
-						/*
-						{
-								$in: allowedAwakeningStages.filter(
-								)
-							}
-						}
-						*/
-					]
+					awakeningStage: { $in: awakeningStages }
+				}
+			} else {
+				const allowedAwakeningStages = awakeningStages.slice(currentStageIndex, currentStageIndex + 1)
+				query = {
+					...query,
+					awakeningStage: { $in: allowedAwakeningStages }
+				}
+
+				if (isBlessed) {
+					const currentStage = userAwakening
+					const nextStage = getNextAwakeningStage(currentStage)
+
+					query = {
+						...query,
+						$or: [{ awakeningStage: nextStage }]
+					}
 				}
 			}
 		} else {
@@ -650,6 +638,7 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 
 		const a = await domainsCollection.find(query).toArray()
 		logger.debug("Bosses found:", a)
+
 		const bosses = a.map(boss => ({
 			id: boss._id.toString(),
 			name: boss.name,

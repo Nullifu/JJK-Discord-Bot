@@ -108,6 +108,13 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	shadow_token: {
+		requiredItems: [
+			{ name: "Shikigami Soul", quantity: 1 },
+			{ name: "(Shattered) Domain Remnants", quantity: 2 }
+		],
+		craftedItemName: "Shadow Token"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
@@ -115,6 +122,22 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Mahoragas Wheel",
 		emoji: "<:wheel2:1231282696563458118>"
+	},
+	void: {
+		requiredItems: [
+			{ name: "Cursed Energy Reinforcement", quantity: 1 },
+			{ name: "Overtime", quantity: 1 },
+			{ name: "Satoru Gojo's Respect", quantity: 1 },
+			{ name: "Sukuna's Honour", quantity: 1 }
+		],
+		craftedItemName: "Unknown Substance"
+	},
+	awakening: {
+		requiredItems: [
+			{ name: "Awakening Remnant", quantity: 1 },
+			{ name: "Heian Era Scraps", quantity: 1 }
+		],
+		craftedItemName: "Heian Era Awakening Remnant"
 	},
 	health_vial: {
 		requiredItems: [

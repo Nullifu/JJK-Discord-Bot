@@ -329,7 +329,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 client.setMaxListeners(200)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -534,7 +534,8 @@ const commands = [
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
 					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
-					{ name: "#1 Fighting Box", value: "#1 Fighting Box" }
+					{ name: "#1 Fighting Box", value: "#1 Fighting Box" },
+					{ name: "Unknown Substance", value: "Unknown Substance" }
 				)
 		)
 		.addStringOption(option =>

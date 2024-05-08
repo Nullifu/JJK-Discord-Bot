@@ -1647,7 +1647,6 @@ export async function executeBossAttack(
 
 		default:
 			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
-			primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
 			break
 	}
 
