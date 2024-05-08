@@ -479,7 +479,8 @@ const commands = [
 					{ name: "Fighting", value: "fighting" },
 					{ name: "Shikigami", value: "shikigami" },
 					{ name: "Quests", value: "quests" },
-					{ name: "Items", value: "items" }
+					{ name: "Items", value: "items" },
+					{ name: "Awakening", value: "awakening" }
 				)
 		),
 

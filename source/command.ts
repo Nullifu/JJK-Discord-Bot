@@ -1686,7 +1686,7 @@ export async function handleGuideCommand(interaction) {
 				.setTitle("Awakening Guide")
 				.setDescription("Guide to awakening's")
 				.addFields({
-					name: "Fighting",
+					name: "Awakening",
 					value: "To awaken you must have, A MENTOR. and the required items, begin with crafting the Unknown sunstance use it then you begin the awakening process. you start out at stage one and the final is stage five, through this process some bosses will NOT be accesible til you complete this process."
 				})
 
