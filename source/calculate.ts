@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "discord.js"
 import { BossDrop, bossDrops } from "./bossdrops.js"
+import { logger } from "./bot.js"
 import { itemEffects } from "./items jobs.js"
 import {
 	checkUserHasHeavenlyRestriction,
@@ -14,7 +15,6 @@ import {
 	updateUserCommandsUsed
 } from "./mongodb.js"
 import { getRandomQuote } from "./shikigami.js"
-import { logger } from "./bot.js"
 
 export function calculateDamage(
 	playerGrade: string,
@@ -36,7 +36,7 @@ export function calculateDamage(
 	}
 
 	const randomVariation = totalDamage * randomVariationPercentage
-	const randomFactor = (Math.random() * 2 - 1) * randomVariation // Between -randomVariation and +randomVariation
+	const randomFactor = (Math.random() * 2 - 1) * randomVariation
 	totalDamage += randomFactor
 
 	return Math.max(1, Math.round(totalDamage))

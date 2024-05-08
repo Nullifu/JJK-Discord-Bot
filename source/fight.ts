@@ -51,10 +51,12 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Satoru Gojo") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
+		await addUserQuestProgress(interaction.user.id, "Mentor: The Strongest", 1)
 	}
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
 		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Mentor: Curse King", 1)
 	}
 	if (opponent.name === "Itadori") {
 		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)

@@ -2600,6 +2600,218 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+				// HEAVENLY RESTRICTION SKILLS
+			} else if (selectedValue === "Close Quarters 2-4 Combo") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 14,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/jujutsu-kaisen-maki-zenin.gif",
+					description: "You're not getting away that easily..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Playful Cloud: Upright Spear") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 11,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/anime.gif",
+					description: "Playful Cloud: Upright Spear!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Bo Staff: Redirection") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://media1.tenor.com/m/Bjc7LYqdUGcAAAAC/maki-maki-zenin.gif",
+					description: "Bo Staff: Redirection..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+				// maki realization
+			} else if (selectedValue === "Split Soul: Blitz") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 23,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Maki_stabs_Naoya_from_behind.png",
+					description: "Didn't even notice me..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "0.2 Second Strike") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 21,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-4-d1e7fb00df.gif",
+					description: "Behind you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Face Smash") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 15,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Maki_Zenin_vs._The_Kukuru_Unit.png",
+					description: "your quite ugly..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+
+				// TOJI TECHNIQUES
+			} else if (selectedValue === "Inverted Spear Of Heaven: Severed Universe") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 17,
+					imageUrl: "https://media1.tenor.com/m/707D3IG5x2wAAAAC/isoh-inverted-spear.gif",
+					description: "ISOH: Severed Universe..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Batter") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 11,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/jjk-jujutsu-kaisen.gif",
+					description: "hehe slap slap slap",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+
+			} else if (selectedValue === "Mythical Beast Amber") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 18,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Mythical_Beast_Amber(1).png",
+					description: "I'm not going to let you get away with this..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Lightning Discharge") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Kashimo_sends_electricity_at_Hakari.png",
+					description: "I'm going to fry you to a crisp..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Divine Flames") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 14,
+					imageUrl:
+						"https://storage.googleapis.com/jjk_bot_personal/sukuna-holding-out-his-arm-in-front-of-him-engulfed-with-flames-as-he-uses-his-fire-technique-in-jujutsu-kaisen%20%5BMConverter.eu%5D.png",
+					description: `Pathetic.. ${randomOpponent.name}.. I'll burn you to a crisp..`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Pure Dismantle") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/GDPkQiBWkAALc51.jpg",
+					description: "Purify..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Fire Extinguisher") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl:
+						"https://storage.googleapis.com/jjk_bot_personal/who-winning-this-clash-of-techniques-v0-r97dr3o8a5kb1.png",
+					description: "You throw a fire extinguisher at the opponent...? ",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Split Second Slice") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/toji-toji-fushiguro.gif",
+					description: "You can't dodge this one..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+				///
+			} else if (selectedValue === "Playful Cloud: Rushing Resolute") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/toji-fushiguro-shibuya-arc-60fps.gif",
+					description: "Who do you think you are?",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Bloodlusted: Skull Crush") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 22,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-4-14fc7970f5.gif",
+					description: "I'm going to crush your skull..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Split Slap") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 16,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/megumi-fushiguro-fushiguro-megumi.gif",
+					description: "Stay down!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
@@ -4063,9 +4275,7 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Important Alert 🚨")
-		.setDescription(
-			"UPDATE 7.0, Part one is now out! Full update log in the discord server, Have fun!"
-		)
+		.setDescription("UPDATE 7.0, Part one is now out! Full update log in the discord server, Have fun!")
 		.setFooter({ text: "hi - from dev" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })

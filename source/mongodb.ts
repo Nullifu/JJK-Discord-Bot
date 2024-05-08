@@ -147,7 +147,7 @@ export async function addUser(
 			stats: [],
 			unlockedmentors: [],
 			mentors: null,
-			awakening: null,
+			awakening: "Stage Zero",
 			shikigami: [],
 			gamblersData: {
 				limit: 5000000,
@@ -243,28 +243,19 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 	const usersCollection = database.collection(usersCollectionName)
 
 	try {
-		const usersToUpdate = await usersCollection
-			.find({
-				$or: [{ cooldowns: { $exists: false } }]
-			})
-			.toArray()
+		// Query to find all documents with the incorrect awakening value
+		const incorrectDocuments = await usersCollection.find({ awakening: "Stgae Zero" }).toArray()
 
-		if (usersToUpdate.length > 0) {
-			await usersCollection.updateMany(
-				{
-					$or: [{ cooldowns: { $exists: false } }]
-				},
-				{
-					$set: {
-						cooldowns: []
-					}
-				}
-			)
+		if (incorrectDocuments.length > 0) {
+			// Update the incorrect awakening values to the correct one
+			await usersCollection.updateMany({ awakening: "Stgae Zero" }, { $set: { awakening: "Stage Zero" } })
 
-			logger.info("Added missing fields to existing user documents")
+			logger.info(`Updated ${incorrectDocuments.length} documents to fix awakening values.`)
+		} else {
+			logger.info("No documents need updating.")
 		}
 	} catch (error) {
-		logger.error("Error initializing fields:", error)
+		logger.error("Error correcting awakening field:", error)
 	}
 }
 
