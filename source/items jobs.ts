@@ -1017,7 +1017,7 @@ export const questsArray = [
 		description: "Mentor: Curse King",
 		coins: 0,
 		experience: 0,
-		item: { "Curse King Medal": 1 },
+		items: { "Curse King Medal": 1 },
 		itemQuantity: 1,
 		task: "Defeat Sukuna",
 		totalProgress: 1
@@ -1027,7 +1027,7 @@ export const questsArray = [
 		description: "Mentor: The Strongest",
 		coins: 0,
 		experience: 0,
-		item: { "Strongest Medal": 1 },
+		items: { "Strongest Medal": 1 },
 		itemQuantity: 1,
 		task: "Defeat Satoru Gojo",
 		totalProgress: 1
