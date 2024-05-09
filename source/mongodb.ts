@@ -595,27 +595,26 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 			const awakeningStages = ["Stage Zero", "Stage One", "Stage Two", "Stage Three", "Stage Four", "Stage Five"]
 			const currentStageIndex = awakeningStages.indexOf(userAwakening)
 
-			if (currentStageIndex === awakeningStages.length - 1) {
-				// If the user is at Stage Five, allow all stages from Stage Zero to Stage Five
-				query = {
-					...query,
-					awakeningStage: { $in: awakeningStages }
-				}
-			} else {
-				const allowedAwakeningStages = awakeningStages.slice(currentStageIndex, currentStageIndex + 1)
-				query = {
-					...query,
-					awakeningStage: { $in: allowedAwakeningStages }
-				}
+			if (currentStageIndex !== -1) {
+				const allowedAwakeningStages = awakeningStages.slice(0, currentStageIndex + 1)
 
 				if (isBlessed) {
-					const currentStage = userAwakening
-					const nextStage = getNextAwakeningStage(currentStage)
-
+					// Remove "Stage Zero" from allowedAwakeningStages if the user is blessed
+					const filteredAwakeningStages = allowedAwakeningStages.filter(stage => stage !== "Stage Zero")
 					query = {
 						...query,
-						$or: [{ awakeningStage: nextStage }]
+						awakeningStage: { $in: filteredAwakeningStages }
 					}
+				} else {
+					query = {
+						...query,
+						awakeningStage: { $in: allowedAwakeningStages }
+					}
+				}
+			} else {
+				query = {
+					...query,
+					$or: [{ awakeningStage: "Stage Zero" }, { awakeningStage: { $exists: true } }]
 				}
 			}
 		} else {
@@ -630,11 +629,6 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		} else if (!isNonCursed && isNonCursed) {
 			query = { ...query, curse: false }
 		}
-
-		logger.debug("Boss query:", query)
-		logger.debug("User grade:", userGrade)
-		logger.debug("User awakening:", userAwakening)
-		logger.debug("User effects:", userEffects)
 
 		const a = await domainsCollection.find(query).toArray()
 		logger.debug("Bosses found:", a)

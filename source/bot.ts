@@ -536,7 +536,8 @@ const commands = [
 					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" },
-					{ name: "Unknown Substance", value: "Unknown Substance" }
+					{ name: "Unknown Substance", value: "Unknown Substance" },
+					{ name: "Blessful Charm", value: "Blessful Charm" }
 				)
 		)
 		.addStringOption(option =>

@@ -115,6 +115,13 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Shadow Token"
 	},
+	blesscharm: {
+		requiredItems: [
+			{ name: "Heian Era Scraps", quantity: 1 },
+			{ name: "Sukuna Finger", quantity: 2 }
+		],
+		craftedItemName: "Blessful Charm"
+	},
 	wheel_fixed: {
 		requiredItems: [
 			{ name: "(Broken) Divine General Wheel", quantity: 6 },
@@ -1970,6 +1977,44 @@ export const items1: Item1[] = [
 				)
 
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Blessful Charm",
+		description: "Blessful Charm",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const userId = interaction.user.id
+
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+
+			const itemEffect = {
+				itemName: "Blessful Charm",
+				effectName: "Blessed",
+				effectTime: 25,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+
+			try {
+				await updateUserItemEffects(userId, itemEffectsArray[0])
+
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Cursed Object")
+					.setDescription(
+						"You put the item on and you and feel a warm sensation.. You are now blessed for the next 25 minutes. Awakened bosses are more likely to appear!"
+					)
+				await interaction.editReply({ embeds: [embedFinal] })
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
 		}
 	},
 	{
