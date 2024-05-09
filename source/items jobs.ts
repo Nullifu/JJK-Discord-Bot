@@ -1061,7 +1061,7 @@ export const questsArray = [
 		items: { "Split Shard": 12, "Heian Era Scraps": 12, "Awakening Remnant": 1 },
 		itemQuantity: 12,
 		tasks: [
-			{ description: "Defeat Foes", progress: 0, totalProgress: 25 },
+			{ description: "Defeat Foes", progress: 0, totalProgress: 6 },
 			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
 		special: true
@@ -1953,8 +1953,7 @@ export const items1: Item1[] = [
 					userAwakening === "Stage Six" ||
 					userAwakening === "Stage Seven" ||
 					userAwakening === "Stage Eight" ||
-					userAwakening === "Stage Nine" ||
-					userAwakening === "Stage Ten")
+					userAwakening === "Stage Nine")
 			) {
 				await interaction.reply("You have already used this item and reached Stage One or higher.")
 				return

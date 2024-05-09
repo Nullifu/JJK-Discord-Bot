@@ -4018,16 +4018,23 @@ export async function claimQuestsCommand(interaction) {
 				await interaction.followUp({ embeds: [specialEmbeds[i]] })
 			}
 		} else {
+			const formattedRewards = questRewards.map(reward => {
+				if (typeof reward === "object") {
+					const rewardEntries = Object.entries(reward)
+					return rewardEntries.map(([key, value]) => `${key}: ${value}`).join(", ")
+				}
+				return reward
+			})
+
 			const genericEmbed = new EmbedBuilder()
 				.setColor(0x0099ff)
 				.setTitle("Quest Rewards Claimed")
-				.setDescription(questRewards.join("\n\n"))
+				.setDescription(formattedRewards.join("\n\n"))
 
 			await interaction.reply({ embeds: [genericEmbed] })
 		}
 	} catch (error) {
 		logger.error("Error claiming quests:", error)
-		// Ensuring only a single reply is sent in case of an error
 		if (!interaction.replied && !interaction.deferred) {
 			await interaction.reply({
 				content: "An error occurred while claiming quests.",
@@ -4146,6 +4153,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 	const inventoryItems = await getUserInventory(userId)
 	const item = items1.find(i => i.itemName === itemName) // Search in items1
+
 	const hasItem = inventoryItems.some(i => i.name === itemName && i.quantity > 0)
 
 	if (!hasItem) {
@@ -4153,6 +4161,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			.setColor("#FF0000")
 			.setTitle("Search yields no results...")
 			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
+
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
 	}
@@ -4162,14 +4171,17 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			.setColor("#FFFF00")
 			.setTitle("No Effect")
 			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
+
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
 	}
 
 	try {
-		removeItemFromUserInventory(userId, itemName, 1)
 		if (item) {
-			await item.effect(interaction)
+			const result = await item.effect(interaction)
+			if (result === undefined) {
+				removeItemFromUserInventory(userId, itemName, 1)
+			}
 		}
 	} catch (error) {
 		logger.error("Error executing item effect:", error)
