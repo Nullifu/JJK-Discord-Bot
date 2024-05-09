@@ -2655,7 +2655,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 23,
+					damageMultiplier: 29,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Maki_stabs_Naoya_from_behind.png",
 					description: "Didn't even notice me..",
 					fieldValue: selectedValue,
@@ -2717,7 +2717,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 18,
+					damageMultiplier: 24,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Mythical_Beast_Amber(1).png",
 					description: "I'm not going to let you get away with this..",
 					fieldValue: selectedValue,
@@ -2729,7 +2729,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 12,
+					damageMultiplier: 16,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Kashimo_sends_electricity_at_Hakari.png",
 					description: "I'm going to fry you to a crisp..",
 					fieldValue: selectedValue,
@@ -2792,7 +2792,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 28,
+					damageMultiplier: 34,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/toji-fushiguro-shibuya-arc-60fps.gif",
 					description: "Who do you think you are?",
 					fieldValue: selectedValue,
@@ -2804,7 +2804,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 22,
+					damageMultiplier: 26,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-4-14fc7970f5.gif",
 					description: "I'm going to crush your skull..",
 					fieldValue: selectedValue,
@@ -2816,8 +2816,20 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 16,
+					damageMultiplier: 20,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/megumi-fushiguro-fushiguro-megumi.gif",
+					description: "Stay down!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Supernova") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 8,
+					imageUrl: "https://media1.tenor.com/m/CAwOZLfy354AAAAC/jujutsu-kaisen-mang%C3%A1-jujutsu-mang%C3%A1.gif",
 					description: "Stay down!",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
