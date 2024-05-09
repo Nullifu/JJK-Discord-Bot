@@ -1943,7 +1943,19 @@ export const items1: Item1[] = [
 
 			// Check if the user has already reached Stage One or higher
 			const userAwakening = await getUserAwakening(userId)
-			if (userAwakening && (userAwakening === "Stage One" || userAwakening.includes("Stage"))) {
+			if (
+				userAwakening &&
+				(userAwakening === "Stage One" ||
+					userAwakening === "Stage Two" ||
+					userAwakening === "Stage Three" ||
+					userAwakening === "Stage Four" ||
+					userAwakening === "Stage Five" ||
+					userAwakening === "Stage Six" ||
+					userAwakening === "Stage Seven" ||
+					userAwakening === "Stage Eight" ||
+					userAwakening === "Stage Nine" ||
+					userAwakening === "Stage Ten")
+			) {
 				await interaction.reply("You have already used this item and reached Stage One or higher.")
 				return
 			}
