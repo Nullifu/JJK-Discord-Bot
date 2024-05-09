@@ -2829,7 +2829,8 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 8,
-					imageUrl: "https://media1.tenor.com/m/CAwOZLfy354AAAAC/jujutsu-kaisen-mang%C3%A1-jujutsu-mang%C3%A1.gif",
+					imageUrl:
+						"https://media1.tenor.com/m/CAwOZLfy354AAAAC/jujutsu-kaisen-mang%C3%A1-jujutsu-mang%C3%A1.gif",
 					description: "Stay down!",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
@@ -4675,15 +4676,15 @@ export async function handleUnequipQuestCommand(interaction) {
 
 export async function handleEquipTransformationCommand(interaction: ChatInputCommandInteraction) {
 	try {
-		const unlockedtransformations = await getUserUnlockedTransformations(interaction.user.id)
+		const unlockedTransformations = await getUserUnlockedTransformations(interaction.user.id)
 		await updateUserCommandsUsed(interaction.user.id)
-		const currentTransformation = await getUserTransformation(interaction.user.id) // Assuming this still returns a single string
-		const availableTransformations = unlockedtransformations.filter(transformationName => {
+
+		const currentTransformation = await getUserTransformation(interaction.user.id)
+		const availableTransformations = unlockedTransformations.filter(transformationName => {
 			return transformationName && transformationName.trim() !== currentTransformation
 		})
 
 		const selectMenu = createTransformationSelectMenu(availableTransformations)
-
 		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
 		await interaction.reply({
@@ -4697,7 +4698,6 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 		})
 
 		const selectedTransformationName = (selectMenuInteraction as StringSelectMenuInteraction).values[0]
-
 		await updateUserTransformation(interaction.user.id, selectedTransformationName)
 
 		await selectMenuInteraction.update({
@@ -4707,7 +4707,7 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 	} catch (error) {
 		logger.error("Error handling equip transformation command:", error)
 		await interaction.reply({
-			content: "You don't own any more transformations to equip.",
+			content: "An error occurred while equipping the transformation.",
 			ephemeral: true
 		})
 	}

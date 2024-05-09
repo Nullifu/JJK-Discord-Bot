@@ -2466,14 +2466,14 @@ export async function getUserMentor(userId: string): Promise<string> {
 	}
 }
 // update user mentors if it doesnt exist create it then update
-export async function updateUserMentors(userId: string, mentors: string): Promise<void> {
+export async function updateUserMentor(userId: string, mentor: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { mentors } })
+		await usersCollection.updateOne({ id: userId }, { $set: { mentors: mentor } }, { upsert: true })
 	} catch (error) {
-		logger.error("Error updating user mentors:", error)
+		logger.error("Error updating user mentor:", error)
 		throw error
 	}
 }
