@@ -120,7 +120,8 @@ export const craftingRecipes = {
 			{ name: "Heian Era Scraps", quantity: 1 },
 			{ name: "Sukuna Finger", quantity: 2 }
 		],
-		craftedItemName: "Blessful Charm"
+		craftedItemName: "Blessful Charm",
+		emoji: "<:file1:1238151120774365184>"
 	},
 	wheel_fixed: {
 		requiredItems: [
