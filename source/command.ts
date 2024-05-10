@@ -5461,6 +5461,18 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					primaryEmbed
 				})
 				await applyVirtualMass(collectedInteraction.user.id)
+			} else if (selectedValue === "Nah I'd Win") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 38,
+					imageUrl: "https://media1.tenor.com/m/GjlhhOm0vf8AAAAC/gojo-satoru-gojo.gif",
+					description: `${randomOpponent.name} says: Would you lose? ${interaction.user.username} says: Nah I'd Win.`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Disaster Curses: Full Flux") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -5501,8 +5513,8 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 12,
-					imageUrl: "https://media1.tenor.com/m/u2XoJQYRlcwAAAAC/gojo-gojo-satoru.gif",
+					damageMultiplier: 18,
+					imageUrl: "https://media1.tenor.com/m/uxzlDwND2RkAAAAd/roxo-hollow-purple.gif",
 					description:
 						"Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple.",
 					fieldValue: selectedValue,

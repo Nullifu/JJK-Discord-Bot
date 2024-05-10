@@ -276,7 +276,7 @@ client.on("guildCreate", guild => {
 				{ name: "Stuck?", value: "Use /guide if your ever stuck!" },
 				{
 					name: "Don't miss out on our giveaways and special events!",
-					value: "Hope to see you there! <3"
+					value: "Hope to see you there!"
 				},
 				{
 					name: "Found a bug? Report it!",
