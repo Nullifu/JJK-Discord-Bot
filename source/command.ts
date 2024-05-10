@@ -165,12 +165,12 @@ import {
 	updateUserHonours,
 	updateUserInateClan,
 	updateUserJob,
+	updateUserMentor,
 	updateUserProfileHeader,
 	updateUserProfileImage,
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
-	updateUserUnlockedMentors,
 	updateUserUnlockedTransformations,
 	updateUserWorked,
 	userExists,
@@ -3995,7 +3995,7 @@ export async function claimQuestsCommand(interaction) {
 			specialEmbeds.push(claimedNanami)
 		}
 		if (claimedMentorSatoru) {
-			await updateUserUnlockedMentors(userId, ["Satoru Gojo"])
+			await updateUserMentor(userId, "Satoru Gojo")
 			const satorumentor = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("The Strongest")
@@ -4009,7 +4009,7 @@ export async function claimQuestsCommand(interaction) {
 			specialEmbeds.push(satorumentor)
 		}
 		if (claimedMentorSukuna) {
-			await updateUserUnlockedMentors(userId, ["Curse King"])
+			await updateUserMentor(userId, "Curse King")
 			const curseking = new EmbedBuilder()
 				.setColor(0xff0000)
 				.setTitle("The Fearful King")

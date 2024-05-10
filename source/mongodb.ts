@@ -3601,19 +3601,6 @@ export async function getUserAwakening(userId: string): Promise<string | null> {
 	}
 }
 
-// update user unlocked mentors
-export async function updateUserUnlockedMentors(userId: string, unlockedMentors: string[]): Promise<void> {
-	try {
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		await usersCollection.updateOne({ id: userId }, { $set: { unlockedMentors } })
-	} catch (error) {
-		logger.error("Error updating user unlocked mentors:", error)
-		throw error
-	}
-}
-
 /**
  * Marks an awakening stage as messaged for a user.
  * @param {string} userId - The ID of the user.
