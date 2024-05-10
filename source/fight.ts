@@ -77,7 +77,7 @@ export async function handleBossDeath(
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
 	}
 	if (opponent.name === "Yuji Itadori (Awoken)") {
-		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Yuji Itadori (Awoken)")
 	}
 	if (opponent.name === "Satoru Gojo (Shinjuku Showdown Arc)") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
