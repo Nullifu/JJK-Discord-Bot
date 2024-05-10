@@ -7,7 +7,7 @@ const mentorDetails: { [key: string]: { message: string; imageUrl: string; lines
 		imageUrl: "https://media1.tenor.com/m/DoXhSg0brxsAAAAC/gojo-satoru-satoru.gif",
 		lines: ["Don't worry, I'm the strongest.", "What you lack is imagination.", "Shall we get a little rough?"]
 	},
-	"Ryomen Sukuna": {
+	"Curse King": {
 		message: "Ryomen Sukuna, the King of Curses, watches over your training.",
 		imageUrl: "https://media1.tenor.com/m/GxDg4OD6TkwAAAAC/sukuna-ryomen.gif",
 		lines: ["I am the honored one, the King of Curses.", "Don't you dare underestimate me!", "Foolish."]
