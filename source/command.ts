@@ -2751,6 +2751,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Nah I'd Win") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 38,
+					imageUrl: "https://media1.tenor.com/m/GjlhhOm0vf8AAAAC/gojo-satoru-gojo.gif",
+					description: `${randomOpponent.name} says: Would you lose? ${interaction.user.username} says: Nah I'd Win.`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Pure Dismantle") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
