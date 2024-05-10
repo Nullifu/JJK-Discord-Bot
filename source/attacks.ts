@@ -28,6 +28,85 @@ function getGradeDamageBonus(grade: string): number {
 
 export const attacks: Record<string, Attack[]> = {
 	// Sukana's attacks
+	"Fly Heads": [
+		{
+			name: "Cursed Blast",
+			probability: 60,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 5 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Strike",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Pultz",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		}
+	],
+	"Cursed Spirit": [
+		{
+			name: "Cursed Blast",
+			probability: 60,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 5 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Strike",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Pultz",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		}
+	],
+	"Roppongi Curse": [
+		{
+			name: "Cursed Blast",
+			probability: 60,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 5 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Strike",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Cursed Pultz",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 10 * gradeDamageBonus
+			}
+		}
+	],
+	// Sukana's attacks
 	"Sukuna": [
 		{
 			name: "Cleave",
@@ -778,33 +857,6 @@ export const attacks: Record<string, Attack[]> = {
 		}
 	],
 
-	"Cursed Spirit": [
-		{
-			name: "Cursed Spirit Blast",
-			probability: 50,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 20 * gradeDamageBonus
-			}
-		},
-		{
-			name: "Spiritual Strike",
-			probability: 30,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 20 * gradeDamageBonus
-			}
-		},
-		{
-			name: "Spiritual Pultz",
-			probability: 20,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 24 * gradeDamageBonus
-			}
-		}
-	],
-
 	"Inumaki": [
 		{
 			name: "Cursed Speech: Die",
@@ -886,32 +938,6 @@ export const attacks: Record<string, Attack[]> = {
 		}
 	],
 
-	"Roppongi Curse": [
-		{
-			name: "Curse Blast",
-			probability: 50,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 20 * gradeDamageBonus
-			}
-		},
-		{
-			name: "Curse Strike",
-			probability: 30,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 20 * gradeDamageBonus
-			}
-		},
-		{
-			name: "Curse Pultz",
-			probability: 20,
-			baseDamage: (playerGrade: string) => {
-				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 40 * gradeDamageBonus
-			}
-		}
-	],
 	"Yasohachi Bridge Curse": [
 		{
 			name: "Curse Blast",

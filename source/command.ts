@@ -4496,17 +4496,25 @@ export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	const inputTechniquesString = interaction.options.getString("techniques")
 	const inputTechniqueNames = inputTechniquesString.split(",").map(name => name.trim())
+	const isHeavenlyRestrictionSpecified = interaction.options.getBoolean("is_heavenly_restriction") || false
 
 	await updateUserCommandsUsed(interaction.user.id)
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
+		const userHeavenlyTechniques = await getUserHeavenlyTechniques(userId)
 		const activeTechniques = await getUserActiveTechniques(userId)
+
 		const userTechniquesLowercaseMap = new Map(userTechniques.map(name => [name.toLowerCase(), name]))
+		const userHeavenlyTechniquesLowercaseMap = new Map(
+			userHeavenlyTechniques.map(name => [name.toLowerCase(), name])
+		)
 		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
 
 		const invalidTechniques = inputTechniqueNames.filter(
-			name => !userTechniquesLowercaseMap.has(name.toLowerCase())
+			name =>
+				!userTechniquesLowercaseMap.has(name.toLowerCase()) &&
+				!userHeavenlyTechniquesLowercaseMap.has(name.toLowerCase())
 		)
 
 		if (invalidTechniques.length > 0) {
@@ -4516,17 +4524,33 @@ export async function handleEquipTechniqueCommand(interaction) {
 			})
 		}
 
-		const techniquesToActivate = inputTechniqueNames
-			.filter(name => !activeTechniquesLowercaseMap.has(name.toLowerCase()))
-			.map(name => userTechniquesLowercaseMap.get(name.toLowerCase()))
+		if (isHeavenlyRestrictionSpecified) {
+			const heavenlyRestrictionTechniques = inputTechniqueNames
+				.filter(name => userHeavenlyTechniquesLowercaseMap.has(name.toLowerCase()))
+				.map(name => userHeavenlyTechniquesLowercaseMap.get(name.toLowerCase()))
 
-		if (techniquesToActivate.length > 0) {
-			const updatedActiveTechniques = [...activeTechniques, ...techniquesToActivate]
-			await updateUserActiveTechniques(userId, updatedActiveTechniques)
-			const techniquesToActivateDisplay = techniquesToActivate.join(", ")
-			return await interaction.reply(`Techniques equipped: ${techniquesToActivateDisplay}`)
+			if (heavenlyRestrictionTechniques.length > 0) {
+				await updateUserActiveTechniques(userId, heavenlyRestrictionTechniques)
+				const techniquesToActivateDisplay = heavenlyRestrictionTechniques.join(", ")
+				return await interaction.reply(
+					`Heavenly Restriction Techniques equipped: ${techniquesToActivateDisplay}`
+				)
+			} else {
+				return await interaction.reply("None of the specified techniques are Heavenly Restriction techniques.")
+			}
 		} else {
-			return await interaction.reply("The techniques you tried to equip are already active.")
+			const nonHeavenlyRestrictionTechniques = inputTechniqueNames
+				.filter(name => userTechniquesLowercaseMap.has(name.toLowerCase()))
+				.map(name => userTechniquesLowercaseMap.get(name.toLowerCase()))
+
+			if (nonHeavenlyRestrictionTechniques.length > 0) {
+				const updatedActiveTechniques = [...activeTechniques, ...nonHeavenlyRestrictionTechniques]
+				await updateUserActiveTechniques(userId, updatedActiveTechniques)
+				const techniquesToActivateDisplay = nonHeavenlyRestrictionTechniques.join(", ")
+				return await interaction.reply(`Techniques equipped: ${techniquesToActivateDisplay}`)
+			} else {
+				return await interaction.reply("The techniques you tried to equip are already active or not owned.")
+			}
 		}
 	} catch (error) {
 		logger.error("Error equipping techniques:", error)
@@ -4536,6 +4560,7 @@ export async function handleEquipTechniqueCommand(interaction) {
 		})
 	}
 }
+
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	await updateUserCommandsUsed(interaction.user.id)
