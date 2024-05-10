@@ -11,7 +11,7 @@ dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
@@ -631,7 +631,6 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 		}
 
 		const a = await domainsCollection.find(query).toArray()
-		logger.debug("Bosses found:", a)
 
 		const bosses = a.map(boss => ({
 			id: boss._id.toString(),
@@ -1864,10 +1863,9 @@ export async function updateUserActiveHeavenlyTechniques(
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Ensure the new active heavenly techniques do not exceed 10
-		const activeHeavenlyTechniques = newActiveHeavenlyTechniques.slice(0, 10)
+		const activeheavenlytechniques = newActiveHeavenlyTechniques.slice(0, 20)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { activeHeavenlyTechniques } })
+		await usersCollection.updateOne({ id: userId }, { $set: { activeheavenlytechniques } })
 	} catch (error) {
 		logger.error("Error updating user active heavenly techniques:", error)
 		throw error

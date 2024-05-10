@@ -150,6 +150,7 @@ import {
 	updateGamblersData,
 	updatePlayerGrade,
 	updateUserAchievements,
+	updateUserActiveHeavenlyTechniques,
 	updateUserActiveTechniques,
 	updateUserCommandsUsed,
 	updateUserCooldowns,
@@ -4496,20 +4497,20 @@ export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	const inputTechniquesString = interaction.options.getString("techniques")
 	const inputTechniqueNames = inputTechniquesString.split(",").map(name => name.trim())
-	const isHeavenlyRestrictionSpecified = interaction.options.getBoolean("is_heavenly_restriction") || false
 
 	await updateUserCommandsUsed(interaction.user.id)
 
 	try {
+		const userHasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const userTechniques = await getUserTechniques(userId)
 		const userHeavenlyTechniques = await getUserHeavenlyTechniques(userId)
-		const activeTechniques = await getUserActiveTechniques(userId)
+		const activeNormalTechniques = await getUserActiveTechniques(userId)
+		const activeHeavenlyTechniques = await getUserActiveHeavenlyTechniques(userId)
 
 		const userTechniquesLowercaseMap = new Map(userTechniques.map(name => [name.toLowerCase(), name]))
 		const userHeavenlyTechniquesLowercaseMap = new Map(
 			userHeavenlyTechniques.map(name => [name.toLowerCase(), name])
 		)
-		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
 
 		const invalidTechniques = inputTechniqueNames.filter(
 			name =>
@@ -4524,34 +4525,51 @@ export async function handleEquipTechniqueCommand(interaction) {
 			})
 		}
 
-		if (isHeavenlyRestrictionSpecified) {
-			const heavenlyRestrictionTechniques = inputTechniqueNames
-				.filter(name => userHeavenlyTechniquesLowercaseMap.has(name.toLowerCase()))
-				.map(name => userHeavenlyTechniquesLowercaseMap.get(name.toLowerCase()))
+		const techniquesToActivate = inputTechniqueNames
+			.filter(
+				name =>
+					userTechniquesLowercaseMap.has(name.toLowerCase()) ||
+					userHeavenlyTechniquesLowercaseMap.has(name.toLowerCase())
+			)
+			.map(
+				name =>
+					userTechniquesLowercaseMap.get(name.toLowerCase()) ||
+					userHeavenlyTechniquesLowercaseMap.get(name.toLowerCase())
+			)
 
-			if (heavenlyRestrictionTechniques.length > 0) {
-				await updateUserActiveTechniques(userId, heavenlyRestrictionTechniques)
-				const techniquesToActivateDisplay = heavenlyRestrictionTechniques.join(", ")
-				return await interaction.reply(
-					`Heavenly Restriction Techniques equipped: ${techniquesToActivateDisplay}`
-				)
-			} else {
-				return await interaction.reply("None of the specified techniques are Heavenly Restriction techniques.")
-			}
-		} else {
-			const nonHeavenlyRestrictionTechniques = inputTechniqueNames
-				.filter(name => userTechniquesLowercaseMap.has(name.toLowerCase()))
-				.map(name => userTechniquesLowercaseMap.get(name.toLowerCase()))
+		const normalTechniquesToActivate = techniquesToActivate.filter(
+			technique => !isHeavenlyRestrictionTechnique(technique)
+		)
+		const heavenlyTechniquesToActivate = techniquesToActivate.filter(technique =>
+			isHeavenlyRestrictionTechnique(technique)
+		)
 
-			if (nonHeavenlyRestrictionTechniques.length > 0) {
-				const updatedActiveTechniques = [...activeTechniques, ...nonHeavenlyRestrictionTechniques]
-				await updateUserActiveTechniques(userId, updatedActiveTechniques)
-				const techniquesToActivateDisplay = nonHeavenlyRestrictionTechniques.join(", ")
-				return await interaction.reply(`Techniques equipped: ${techniquesToActivateDisplay}`)
-			} else {
-				return await interaction.reply("The techniques you tried to equip are already active or not owned.")
-			}
+		if (!userHasHeavenlyRestriction && heavenlyTechniquesToActivate.length > 0) {
+			return await interaction.reply(
+				"You don't have Heavenly Restriction. You can't equip Heavenly Restriction techniques."
+			)
 		}
+
+		const updatedActiveNormalTechniques = [...activeNormalTechniques, ...normalTechniquesToActivate]
+		const updatedActiveHeavenlyTechniques = userHasHeavenlyRestriction
+			? [...activeHeavenlyTechniques, ...heavenlyTechniquesToActivate]
+			: activeHeavenlyTechniques
+
+		await updateUserActiveTechniques(userId, updatedActiveNormalTechniques)
+		await updateUserActiveHeavenlyTechniques(userId, updatedActiveHeavenlyTechniques)
+
+		const activatedNormalTechniquesDisplay = normalTechniquesToActivate.join(", ")
+		const activatedHeavenlyTechniquesDisplay = heavenlyTechniquesToActivate.join(", ")
+
+		let response = ""
+		if (activatedNormalTechniquesDisplay) {
+			response += `Normal Techniques equipped: ${activatedNormalTechniquesDisplay}\n`
+		}
+		if (activatedHeavenlyTechniquesDisplay) {
+			response += `Heavenly Restriction Techniques equipped: ${activatedHeavenlyTechniquesDisplay}`
+		}
+
+		return await interaction.reply(response.trim())
 	} catch (error) {
 		logger.error("Error equipping techniques:", error)
 		return await interaction.reply({
@@ -4561,11 +4579,21 @@ export async function handleEquipTechniqueCommand(interaction) {
 	}
 }
 
+function isHeavenlyRestrictionTechnique(technique: string): boolean {
+	return Object.values(heavenlyrestrictionskills).some(clanSkills =>
+		clanSkills.some(skill => skill.name === technique)
+	)
+}
+
+//
+//
+///
+///
+
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	await updateUserCommandsUsed(interaction.user.id)
 
-	// Get comma-separated list (assuming there's one 'techniques' option)
 	const techniqueNamesInput = interaction.options.getString("techniques")
 
 	if (!techniqueNamesInput) {
@@ -4615,25 +4643,37 @@ export async function handleViewTechniquesCommand(interaction) {
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
+		const userHeavenlyTechniques = await getUserHeavenlyTechniques(userId)
 		await updateUserCommandsUsed(interaction.user.id)
 
-		if (userTechniques.length === 0) {
+		if (userTechniques.length === 0 && userHeavenlyTechniques.length === 0) {
 			return await interaction.reply({ content: "You do not own any techniques.", ephemeral: true })
 		}
 
 		const embed = new EmbedBuilder()
 			.setTitle("Your Owned Techniques")
-			.setDescription("These are the techniques you own. Use `/technique equip` to equip them.")
+			.setDescription(
+				"These are the techniques you own. Use `/technique equip` to equip them, Owned techniques are shown in /jujutsustatus"
+			)
 			.setColor("#7289DA")
 			.setTimestamp()
 
 		const chunkSize = 10
 		const chunkedTechniques = chunkArray(userTechniques, chunkSize)
+		const chunkedHeavenlyTechniques = chunkArray(userHeavenlyTechniques, chunkSize)
 
 		chunkedTechniques.forEach((chunk, index) => {
 			const techniques = chunk.map((technique, i) => `${index * chunkSize + i + 1}. ${technique}`).join("\n")
 			embed.addFields({
-				name: `Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
+				name: `Normal Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
+				value: techniques
+			})
+		})
+
+		chunkedHeavenlyTechniques.forEach((chunk, index) => {
+			const techniques = chunk.map((technique, i) => `${index * chunkSize + i + 1}. ${technique}`).join("\n")
+			embed.addFields({
+				name: `Heavenly Restriction Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
 				value: techniques
 			})
 		})
