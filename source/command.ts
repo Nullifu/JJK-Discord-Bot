@@ -4681,6 +4681,7 @@ export async function handleViewTechniquesCommand(interaction) {
 		})
 
 		await interaction.reply({ embeds: [embed] })
+		await postCommandMiddleware(interaction)
 	} catch (error) {
 		logger.error("Error fetching user techniques:", error)
 		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
