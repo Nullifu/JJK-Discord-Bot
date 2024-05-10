@@ -4179,7 +4179,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 	const inventoryItems = await getUserInventory(userId)
 	const item = items1.find(i => i.itemName === itemName) // Search in items1
-
 	const hasItem = inventoryItems.some(i => i.name === itemName && i.quantity > 0)
 
 	if (!hasItem) {
@@ -4187,9 +4186,20 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			.setColor("#FF0000")
 			.setTitle("Search yields no results...")
 			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
-
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
+	}
+
+	if (itemName === "Unknown Substance") {
+		const mentor = await getUserMentor(userId)
+		if (!mentor) {
+			const embed = new EmbedBuilder()
+				.setColor("#FFFF00")
+				.setTitle("No Mentor")
+				.setDescription("You need a mentor to use the Unknown Substance.")
+			await interaction.reply({ embeds: [embed], ephemeral: true })
+			return
+		}
 	}
 
 	if (!item) {
@@ -4197,7 +4207,6 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 			.setColor("#FFFF00")
 			.setTitle("No Effect")
 			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
-
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
 	}
