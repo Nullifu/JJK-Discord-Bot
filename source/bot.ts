@@ -275,6 +275,10 @@ client.on("guildCreate", guild => {
 				{ name: "Need Help?", value: "Proceed with `/help` to explore all the features." },
 				{ name: "Stuck?", value: "Use /guide if your ever stuck!" },
 				{
+					name: "Don't miss out on our giveaways and special events!",
+					value: "Hope to see you there! <3"
+				},
+				{
 					name: "Found a bug? Report it!",
 					value: "If you find a bug report it in our discord support server! <3"
 				}
