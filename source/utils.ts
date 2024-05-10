@@ -11,6 +11,11 @@ const mentorDetails: { [key: string]: { message: string; imageUrl: string; lines
 		message: "Ryomen Sukuna, the King of Curses, watches over your training.",
 		imageUrl: "https://media1.tenor.com/m/GxDg4OD6TkwAAAAC/sukuna-ryomen.gif",
 		lines: ["I am the honored one, the King of Curses.", "Don't you dare underestimate me!", "Foolish."]
+	},
+	"Ryomen Sukuna": {
+		message: "Ryomen Sukuna, the King of Curses, watches over your training." || "",
+		imageUrl: "https://media1.tenor.com/images/67d2c6e6807b751da1b26fa11b17e8bc/tenor.gif?itemid=27159347" || "",
+		lines: ["I am the honored one, the King of Curses.", "Don't you dare underestimate me!", "Foolish."] || []
 	}
 }
 
@@ -49,6 +54,17 @@ export function getAwakeningDialogue(mentor: string, awakening: string): string 
 				"You've come a long way, but remember, with great power comes great responsibility. Use it wisely."
 		},
 		"Ryomen Sukuna": {
+			"Stage One":
+				"So, you've finally awakened a fraction of your power. Don't let it go to your head, brat, Here's a quest, and some items to help..",
+			"Stage Two": "You're starting to show some promise, but you're still far from being a worthy vessel.",
+			"Stage Three":
+				"Not bad, kid. But don't think this means you're anywhere close to my level, Here's a quest.",
+			"Stage Four":
+				"I'll admit, you've got some talent. But talent alone won't save you from the horrors that await.",
+			"Stage Five":
+				"You've grown stronger, but remember, in this world, it's eat or be eaten. Never let your guard down."
+		},
+		"Curse King": {
 			"Stage One":
 				"So, you've finally awakened a fraction of your power. Don't let it go to your head, brat, Here's a quest, and some items to help..",
 			"Stage Two": "You're starting to show some promise, but you're still far from being a worthy vessel.",
