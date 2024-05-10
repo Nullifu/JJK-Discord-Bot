@@ -362,7 +362,6 @@ const commands = [
 	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
-	new SlashCommandBuilder().setName("voteclaim").setDescription("Claim Vote Rewards!"),
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
