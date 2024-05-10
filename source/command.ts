@@ -4317,9 +4317,11 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	await updateUserCommandsUsed(interaction.user.id)
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
-		.setTitle("🚨 Important Alert 🚨")
-		.setDescription("UPDATE 7.0, Part one is now out! Full update log in the discord server, Have fun!")
-		.setFooter({ text: "hi - from dev" })
+		.setTitle("🚨 Alert!")
+		.setDescription(
+			"Sorry for all the bugs recently, been under the weather but i'm back now! Please remember to report any bugs you find in the support server!"
+		)
+		.setFooter({ text: "2:42AM as i write this, do people even read these?" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
 }
