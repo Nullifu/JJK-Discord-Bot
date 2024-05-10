@@ -9,8 +9,7 @@ const mentorDetails: { [key: string]: { message: string; imageUrl: string; lines
 	},
 	"Ryomen Sukuna": {
 		message: "Ryomen Sukuna, the King of Curses, watches over your training.",
-		imageUrl:
-			"https://64.media.tumblr.com/2874a1ac0755d4b605e8cba3549e7eaa/51ccf8614f6c9391-eb/s640x960/b324b52c1b86d722366672aacb73983d8c6627ad.gif",
+		imageUrl: "https://media1.tenor.com/m/GxDg4OD6TkwAAAAC/sukuna-ryomen.gif",
 		lines: ["I am the honored one, the King of Curses.", "Don't you dare underestimate me!", "Foolish."]
 	}
 }
