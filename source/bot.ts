@@ -974,7 +974,7 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import AutoPoster from "topgg-autoposter"
+import { AutoPoster } from "topgg-autoposter"
 
 const poster = AutoPoster(process.env.TOPGG, client)
 
