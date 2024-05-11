@@ -148,7 +148,7 @@ export const craftingRecipes = {
 	},
 	health_vial: {
 		requiredItems: [
-			{ name: "Empty Bottle", quantity: 6 },
+			{ name: "Empty Bottle", quantity: 1 },
 			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 }
 		],
 		craftedItemName: "Cursed Energy Vial"
