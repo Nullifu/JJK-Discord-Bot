@@ -1587,6 +1587,7 @@ export const items1: Item1[] = [
 					"• Inate Clan: Limitless\n" +
 					"• Max Health +30\n" +
 					"• Technique: Imaginary Technique: Purple\n"
+				;("• New Quest!: Satoru Gojo's Mission +1\n")
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")
