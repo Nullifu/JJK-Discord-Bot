@@ -1590,10 +1590,7 @@ export const items1: Item1[] = [
 			let embedFinal
 			if (isLimitless) {
 				const gains =
-					"You have gained:\n" +
-					"• Inate Clan: Limitless\n" +
-					"• Max Health +30\n" +
-					"• Technique: Imaginary Technique: Purple\n"
+					"You have gained:\n" + "• Inate Clan: Limitless\n" + "• Technique: Imaginary Technique: Purple\n"
 				;("• New Quest!: Satoru Gojo's Mission +1\n")
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
