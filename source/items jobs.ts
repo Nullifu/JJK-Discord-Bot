@@ -1189,8 +1189,13 @@ export const questsArray = [
 		experience: 320,
 		items: { "Kashimo's Token": 1 },
 		itemQuantity: 1,
-		task: "Be blessed with the limitless technique...",
-		totalProgress: 1
+		tasks: [
+			{ description: "Defeat Foes", progress: 0, totalProgress: 16 },
+			{ description: "Defeat Gojo", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Sukuna", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Hakari Kinji", progress: 0, totalProgress: 1 }
+		],
+		totalProgress: 10
 	}
 ]
 

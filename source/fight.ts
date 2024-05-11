@@ -48,15 +48,18 @@ export async function handleBossDeath(
 
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari")
 	}
 	if (opponent.name === "Satoru Gojo") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
-		await addUserQuestProgress(interaction.user.id, "Mentor: The Strongest", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Gojo")
 	}
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
 		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Mentor: The Strongest", 1)
 		await addUserQuestProgress(interaction.user.id, "Mentor: Curse King", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Sukuna")
 	}
 	if (opponent.name === "Itadori") {
 		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
@@ -66,6 +69,7 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Hakari (Jackpot)") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari")
 	}
 	if (opponent.name === "Dagon") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Dagon")
@@ -92,6 +96,7 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
+	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
 	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
