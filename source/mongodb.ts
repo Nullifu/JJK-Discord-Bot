@@ -2301,7 +2301,7 @@ async function generateDailyShop() {
 	const numItems = 5
 
 	if (shopItems.length === 0) {
-		logger.info("No items available to add to the shop.")
+		logger.info("No items available to add to the shop")
 		return dailyShopItems
 	}
 
