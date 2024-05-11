@@ -24,6 +24,7 @@
 	"private": true,
 	"license": "UNLICENSED",
 	"dependencies": {
+		"@canvas-fonts/arial": "^1.0.4",
 		"@discordjs/builders": "^1.6.4",
 		"@discordjs/rest": "^2.2.0",
 		"@google-cloud/storage": "^7.10.1",
@@ -33,6 +34,7 @@
 		"@types/log4js": "^2.3.5",
 		"aws-sdk": "^2.1604.0",
 		"better-sqlite3": "^9.6.0",
+		"canvas": "^2.11.2",
 		"discord.js": "^14.13.0",
 		"dotenv": "^16.3.1",
 		"express": "^4.19.2",

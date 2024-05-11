@@ -22,7 +22,6 @@ import {
 	updateGamblersData,
 	updatePlayerClanTier,
 	updateUserAchievements,
-	updateUserActiveTechniques,
 	updateUserAwakening,
 	updateUserClan,
 	updateUserExperience,
@@ -979,6 +978,14 @@ export const benefactors = [
 		weight: 2
 	},
 	{
+		name: "Bottle Boy",
+		items: ["Empty Bottle"],
+		words: "i loveeeeeee bottles",
+		itemQuantityMin: 1,
+		itemQuantityMax: 6,
+		weight: 2
+	},
+	{
 		name: "Hakari Kinji",
 		coinsMin: 2500,
 		coinsMax: 3500,
@@ -1854,7 +1861,7 @@ export const items1: Item1[] = [
 			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 1)
 			await addItemToUserInventory(interaction.user.id, "Tailsman", 5)
 			await updateBalance(interaction.user.id, 20000)
-			await updateUserActiveTechniques(interaction.user.id, ["Fist of the Cursed"])
+			await addUserTechnique(interaction.user.id, "Fist of the Cursed")
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")

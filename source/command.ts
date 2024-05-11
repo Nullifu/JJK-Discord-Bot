@@ -4,6 +4,7 @@
 /* eslint-disable prettier/prettier */
 let contextKey: string
 import { MessageActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
+import { registerFont } from "canvas"
 import {
 	ActionRowBuilder,
 	Attachment,
@@ -203,6 +204,8 @@ const domainActivationState = new Map()
 const transformationState = new Map()
 const bossHealthMap = new Map() // Create a Map to store boss health per user
 
+registerFont("image/CCWildWordsRoman.ttf", { family: "CCWildRomanWords" })
+
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
 export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
@@ -224,7 +227,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 		if (result && "insertedId" in result) {
 			await addItemToUserInventory(discordId, "Starter Bundle", 1)
-			const imageURL = "https://wikiofnerds.com/wp-content/uploads/2023/10/jujutsu-kaisen-.jpg"
+			const imageURL = "https://storage.googleapis.com/jjk_bot_personal/Shibuya_(Anime).png"
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
@@ -252,7 +255,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 		})
 	}
 }
-
 export async function handleBalanceCommand(interaction: ChatInputCommandInteraction) {
 	const targetUser = interaction.options.getUser("user") || interaction.user
 
