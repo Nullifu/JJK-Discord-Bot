@@ -2249,6 +2249,7 @@ export const items1: Item1[] = [
 // handle daily shop resets every 24 hours with a different cycle
 export const shopItems = [
 	{ name: "Tailsman", rarity: "Grade 4", price: 3200 },
+	{ name: "Empty Bottle", rarity: "Grade 4", price: 50000 },
 	{ name: "(Broken) Electrical Staff", rarity: "Grade 4", price: 10000 },
 	{ name: "(Broken) Split Soul Katana", rarity: "Grade 4", price: 12000 },
 	{ name: "(Broken) Divine General Wheel", rarity: "Grade 4", price: 15000 },

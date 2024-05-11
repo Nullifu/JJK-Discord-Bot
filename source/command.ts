@@ -4,7 +4,6 @@
 /* eslint-disable prettier/prettier */
 let contextKey: string
 import { MessageActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
-import { registerFont } from "canvas"
 import {
 	ActionRowBuilder,
 	Attachment,
@@ -203,8 +202,6 @@ import { getAwakeningDialogue, getMentorDetails } from "./utils.js"
 const domainActivationState = new Map()
 const transformationState = new Map()
 const bossHealthMap = new Map() // Create a Map to store boss health per user
-
-registerFont("image/CCWildWordsRoman.ttf", { family: "CCWildRomanWords" })
 
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
