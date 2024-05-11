@@ -630,7 +630,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						const recipe = craftingRecipes[key]
 						if (!recipe) {
 							logger.error("Recipe details not found for key:", key)
-							return null // Continue to the next item if the recipe is missing
+							return null
 						}
 						const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
 
@@ -641,7 +641,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							emoji: emojiId ? { id: emojiId } : undefined
 						}
 					})
-					.filter(option => option !== null) // Filter out any null options created by missing recipes
+					.filter(option => option !== null)
 			)
 		//
 
@@ -698,25 +698,27 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				buttonCollector.on("collect", async buttonInteraction => {
 					await buttonInteraction.deferReply()
+
 					if (buttonInteraction.customId === "confirmCraft") {
-						// Fetch user inventory to check if they have the required items
 						const userInventory = await getUserInventory(interaction.user.id)
 						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
 
-						// Check if user has all required items in sufficient quantities
-						const hasAllItems = selectedItemRecipe.requiredItems.every(item => {
-							return inventoryMap.get(item.name) >= item.quantity
+						const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+							return inventoryMap.get(item.name) < item.quantity
 						})
 
-						if (!hasAllItems) {
+						if (missingItems.length > 0) {
 							const errorEmbed = new EmbedBuilder()
 								.setColor("Red")
 								.setTitle("Insufficient Items")
 								.setDescription("You do not have all the necessary items to craft this item.")
 								.addFields({
-									name: "Required Items",
-									value: selectedItemRecipe.requiredItems
-										.map(item => `${item.name} (${item.quantity})`)
+									name: "Missing Items",
+									value: missingItems
+										.map(
+											item =>
+												`${item.name} (${item.quantity - (inventoryMap.get(item.name) || 0)})`
+										)
 										.join("\n")
 								})
 
@@ -726,6 +728,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							})
 							return
 						}
+
 						try {
 							logger.info("Starting item removal for ITEM!")
 
