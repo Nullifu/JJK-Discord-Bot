@@ -1181,6 +1181,16 @@ export const questsArray = [
 		itemQuantity: 2,
 		task: "Be blessed with the limitless technique...",
 		totalProgress: 1
+	},
+	{
+		name: "Kashimo's Task",
+		description: "Kashimo has tasked you with a mission. Assist him in his quest to kill curses and earn his ways!",
+		coins: 20000,
+		experience: 320,
+		items: { "Kashimo's Token": 1 },
+		itemQuantity: 1,
+		task: "Be blessed with the limitless technique...",
+		totalProgress: 1
 	}
 ]
 

@@ -201,11 +201,11 @@ import { getAwakeningDialogue, getMentorDetails } from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
-const bossHealthMap = new Map() // Create a Map to store boss health per user
+const bossHealthMap = new Map()
 
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
-export const searchCooldownBypassIDs = [""] // IDs that can bypass cooldown
+export const searchCooldownBypassIDs = [""]
 //
 
 export async function handleRegisterCommand(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -229,7 +229,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
 				.setDescription(
-					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /info on a certain subject.\nYou've also got a free Starter Bundle in your inventory!`
+					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /guide on a certain subject.\nYou've also got a free Starter Bundle in your inventory!`
 				)
 				.setImage(imageURL)
 				.setTimestamp()
@@ -3877,6 +3877,7 @@ export async function claimQuestsCommand(interaction) {
 		let claimedMentorSatoru = false
 		let claimedMentorSukuna = false
 		let claimedstage3 = false
+		let claimedkashimo = false
 
 		for (const completedQuest of completedQuests) {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
@@ -3906,6 +3907,8 @@ export async function claimQuestsCommand(interaction) {
 						claimedMentorSatoru = true
 					} else if (itemName === "Awakening Release") {
 						claimedstage3 = true
+					} else if (itemName === "Kashimo's Token") {
+						claimedkashimo = true
 					}
 				}
 			}
@@ -4034,6 +4037,20 @@ export async function claimQuestsCommand(interaction) {
 				.addFields({
 					name: "Power Unleashed",
 					value: "Your awakening has begun.. you now have access to the **Awakening** Transformation!"
+				})
+
+			specialEmbeds.push(curseking)
+		}
+		if (claimedkashimo) {
+			await updateUserUnlockedTransformations(userId, ["Maximum Output"])
+			const curseking = new EmbedBuilder()
+				.setColor(0xff0000)
+				.setTitle("bzzztbzzz-bzzzt")
+				.setDescription("")
+				.setImage("https://media1.tenor.com/m/2tA56I2eTK8AAAAC/jujutsu-kaisen-shinjuku-arc-hajime-kashimo.gif")
+				.addFields({
+					name: "New Power",
+					value: "Kashimo has taught you how to use the **Maximum Output** Transformation!"
 				})
 
 			specialEmbeds.push(curseking)

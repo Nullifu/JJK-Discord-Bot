@@ -1490,7 +1490,7 @@ export const TRANSFORMATIONS = [
 		name: "Maximum Output",
 		description: "TURN UP THE VOLUME!",
 		image: "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-836d9bbead.gif",
-		effects: "Electrified, 25% Damage Increase."
+		effects: "Electrified, 33% Damage Increase."
 	},
 	{
 		name: "Awakening",
