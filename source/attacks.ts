@@ -1120,7 +1120,7 @@ export const attacks: Record<string, Attack[]> = {
 			probability: 20,
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
-				return 120 * gradeDamageBonus
+				return 30 * gradeDamageBonus
 			}
 		}
 	],
