@@ -1764,7 +1764,7 @@ export async function handleLeaderBoardCommand(interaction) {
 			userExperiences.slice(0, 10).forEach((user, index) => {
 				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
 				const text = `${rank} <@${user.id}> - **${user.experience} XP**`
-				leaderboardEmbed.addFields({ name: "\\u200B", value: text, inline: false })
+				leaderboardEmbed.addFields({ name: "\u200B\n", value: text, inline: false })
 			})
 		} else if (choice === "wealth") {
 			const userBalances = await getAllUsersBalance()
@@ -1775,7 +1775,7 @@ export async function handleLeaderBoardCommand(interaction) {
 			userBalances.slice(0, 10).forEach((user, index) => {
 				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
 				const text = `${rank} <@${user.id}> - **$${user.balance}**`
-				leaderboardEmbed.addFields({ name: "\\u200B", value: text, inline: false })
+				leaderboardEmbed.addFields({ name: "\u200B\n", value: text, inline: false })
 			})
 		} else if (choice === "fight") {
 			const monthlyFightsWonLeaderboard = await getMonthlyFightsWonLeaderboard()
