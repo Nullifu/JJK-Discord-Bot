@@ -5038,20 +5038,24 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		const userShikigami: { name: string }[] = await getUserShikigami(interaction.user.id)
 
 		// Check if the user has the required shikigami to summon Mahoraga
-		const requiredShikigami = ["Divine Dogs", "Nue", "Toad", "Max Elephant"]
 
+		const requiredShikigami = ["Divine Dogs", "Nue", "Toad", "Max Elephant"]
 		const hasRequiredShikigami = requiredShikigami.every(shikigamiName => {
-			return userShikigami.some(shikigami => shikigami.name === shikigamiName)
+			return userShikigami && userShikigami.some(shikigami => shikigami.name === shikigamiName)
 		})
 
 		if (!hasRequiredShikigami) {
+			const userShikigamiValue = userShikigami
+				? userShikigami.map(shikigami => shikigami.name).join(", ")
+				: "None"
+
 			const errorEmbed = new EmbedBuilder()
 				.setColor("Red")
 				.setTitle("Insufficient Shikigami")
 				.setDescription("You do not have all the necessary Shikigami to summon **MAHORAGA**")
 				.addFields(
 					{ name: "Required Shikigami", value: requiredShikigami.join(", ") },
-					{ name: "Your Shikigami", value: userShikigami.map(shikigami => shikigami.name).join(", ") }
+					{ name: "Your Shikigami", value: userShikigamiValue }
 				)
 
 			await interaction.followUp({
