@@ -1089,8 +1089,8 @@ export const questsArray = [
 		items: { "Awakening Release": 1 },
 		itemQuantity: 1,
 		tasks: [
-			{ description: "Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
-			{ description: "Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
+			{ description: "Defeat Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
+			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
 		special: true
 	},
