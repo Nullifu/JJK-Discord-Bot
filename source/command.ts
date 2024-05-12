@@ -4221,6 +4221,18 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		}
 	}
 
+	if (itemName === "Cursed Energy Vial") {
+		const userHealth = await getUserMaxHealth(userId)
+		if (userHealth === 300) {
+			const embed = new EmbedBuilder()
+				.setColor("#FFFF00")
+				.setTitle("Maximum Health")
+				.setDescription("You cannot use the Cursed Energy Vial when your health is already at its maximum.")
+			await interaction.reply({ embeds: [embed], ephemeral: true })
+			return
+		}
+	}
+
 	if (itemName === "Blessful Charm") {
 		const awakening = await getUserAwakening(userId)
 		if (!awakening || awakening === "Stage Zero") {
