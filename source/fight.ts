@@ -48,7 +48,7 @@ export async function handleBossDeath(
 
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
-		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari")
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari Kinji")
 	}
 	if (opponent.name === "Satoru Gojo") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
@@ -69,7 +69,7 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Hakari (Jackpot)") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
-		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari")
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari Kinji")
 	}
 	if (opponent.name === "Dagon") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Dagon")
