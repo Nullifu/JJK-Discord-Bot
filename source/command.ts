@@ -1248,24 +1248,20 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 6.5", // Replace with your actual version number
-			date: "27-04-24", // Adjust the date as needed
+			version: "Update 7.0 PART ONE", // Replace with your actual version number
+			date: "07-05-24", // Adjust the date as needed
 			changes: [
 				{
-					name: "**Exciting Changes!**",
-					value: "New profile customization + more!"
+					name: "**User Awakenings!**",
+					value: "New awakening systems to launch yourself through the jujutsu world.. Start out by getting a mentor, from the quests.\n- Craft the new item called Unknown Substance.. use it if your strong enough.."
 				},
 				{
-					name: "Profile Customization",
-					value: "New ways to customize your profile, This system is very WIP. Please keep that in mind if you want to get a custom profile use /updateprofileimage."
+					name: "BALANCED ALL SKILLS + + HEAVENLY RESTRICTION SEMI-REWORK.",
+					value: "+ 5 New Bosses!\n+ 9 New Techniques!\nHeavenly restriction may now be the most POWERFUL it's ever been.."
 				},
 				{
-					name: "Shikigami Shop Update!",
-					value: "Shikigami shop has been updated with new items!"
-				},
-				{
-					name: "Reworks",
-					value: "Completely reworked how the work command is handled, Some jobs now have minigames!"
+					name: "MENTORS!",
+					value: "Current mentors are Satoru Gojo, Ryomen Sukuna. Each with there respective quests"
 				},
 				{
 					name: "Found a bug? Report it!",
@@ -1274,6 +1270,10 @@ export async function handleUpdateCommand(interaction) {
 				{
 					name: "**Thank you everybody who uses the bot!**",
 					value: "I appreciate all the support and feedback i've received so far. Thank you!"
+				},
+				{
+					name: "**forgot to update this again..**",
+					value: "Stay up to date with the bot by joining the community server! > /support <"
 				}
 			]
 		}
@@ -4197,7 +4197,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 	const itemName = interaction.options.getString("item")
 
 	const inventoryItems = await getUserInventory(userId)
-	const item = items1.find(i => i.itemName === itemName) // Search in items1
+	const item = items1.find(i => i.itemName === itemName)
 	const hasItem = inventoryItems.some(i => i.name === itemName && i.quantity > 0)
 
 	if (!hasItem) {
@@ -4216,6 +4216,18 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 				.setColor("#FFFF00")
 				.setTitle("No Mentor")
 				.setDescription("You need a mentor to use the Unknown Substance.")
+			await interaction.reply({ embeds: [embed], ephemeral: true })
+			return
+		}
+	}
+
+	if (itemName === "Blessful Charm") {
+		const awakening = await getUserAwakening(userId)
+		if (!awakening || awakening === "Stage Zero") {
+			const embed = new EmbedBuilder()
+				.setColor("#FFFF00")
+				.setTitle("Insufficient Awakening")
+				.setDescription("You need to be at Awakening Stage 1 or above to use the Blessful Charm.")
 			await interaction.reply({ embeds: [embed], ephemeral: true })
 			return
 		}
@@ -6803,7 +6815,7 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 			.addFields([
 				{ name: `**${mentor} says:**`, value: `${line}`, inline: true },
 				{ name: "Mentor", value: mentor, inline: true },
-				{ name: "Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+				{ name: "Your Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
 			])
 
 		if (hasAwakening && !(await checkStageMessaged(userId, `${awakening}`))) {
