@@ -3807,20 +3807,38 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 				.setDescription(selectedQuest.description)
 				.setColor("#0099ff")
 
-				.addFields(
-					{ name: "Coins", value: selectedQuest.coins.toString(), inline: true },
-					{ name: "EXP", value: selectedQuest.experience.toString(), inline: true },
-					{ name: "Task", value: selectedQuest.task, inline: false } // Wider field
-				)
+			if (selectedQuest.coins !== undefined && selectedQuest.coins !== null) {
+				questEmbed.addFields({ name: "Coins", value: selectedQuest.coins.toString(), inline: true })
+			}
 
-				.addFields({ name: "Rewards", value: getRewardString(selectedQuest), inline: false })
+			if (selectedQuest.experience !== undefined && selectedQuest.experience !== null) {
+				questEmbed.addFields({ name: "EXP", value: selectedQuest.experience.toString(), inline: true })
+			}
+
+			if (selectedQuest.task !== undefined && selectedQuest.task !== null) {
+				questEmbed.addFields({ name: "Task", value: selectedQuest.task, inline: false })
+			}
+
+			const rewardString = getRewardString(selectedQuest)
+			if (rewardString !== undefined && rewardString !== null) {
+				questEmbed.addFields({ name: "Rewards", value: rewardString, inline: false })
+			}
 
 			if (selectedQuest.tasks) {
 				selectedQuest.tasks.forEach((task, index) => {
-					questEmbed.addFields({
-						name: `Task ${index + 1}`,
-						value: `${task.description} (${task.progress}/${task.totalProgress})`
-					})
+					if (
+						task.description !== undefined &&
+						task.description !== null &&
+						task.progress !== undefined &&
+						task.progress !== null &&
+						task.totalProgress !== undefined &&
+						task.totalProgress !== null
+					) {
+						questEmbed.addFields({
+							name: `Task ${index + 1}`,
+							value: `${task.description} (${task.progress}/${task.totalProgress})`
+						})
+					}
 				})
 			}
 
