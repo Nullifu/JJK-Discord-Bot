@@ -573,9 +573,9 @@ const gradeToBossGrade = {
 export async function getBosses(userId: string): Promise<BossData[]> {
 	try {
 		const userEffects = await getUserItemEffects(userId)
-		const isCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "cursed")
-		const isNonCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "curse repellent")
-		const isBlessed = userEffects.some(effect => effect.effectName.toLowerCase() === "blessed")
+		const isCursed = userEffects.some(effect => effect?.effectName?.toLowerCase() === "cursed")
+		const isNonCursed = userEffects.some(effect => effect?.effectName?.toLowerCase() === "curse repellent")
+		const isBlessed = userEffects.some(effect => effect?.effectName?.toLowerCase() === "blessed")
 
 		const userGrade = await getUserGrade(userId)
 		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1

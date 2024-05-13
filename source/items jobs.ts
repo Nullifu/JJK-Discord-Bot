@@ -1737,10 +1737,11 @@ export const items1: Item1[] = [
 			await interaction.deferReply()
 
 			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 60 * 60000) // Add 60 minutes (1 hour)
+			const endTime = new Date(startTime.getTime() + 60 * 60000)
 
 			const itemEffect = {
 				itemName: "Hakari Kinji's Token",
+				effectName: "Gambler Fever",
 				effectTime: 25,
 				startTime: startTime.toISOString(),
 				endTime: endTime.toISOString()

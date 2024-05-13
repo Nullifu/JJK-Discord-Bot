@@ -1897,6 +1897,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		})
 		return
 	}
+
 	//
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
 	//
@@ -6824,12 +6825,15 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 			.setColor(0x0099ff)
 			.setTitle("Mentor Details")
 			.setDescription(`${message}`)
-			.setImage(imageUrl)
 			.addFields([
 				{ name: `**${mentor} says:**`, value: `${line}`, inline: true },
 				{ name: "Mentor", value: mentor, inline: true },
 				{ name: "Your Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
 			])
+
+		if (imageUrl) {
+			embed.setImage(imageUrl)
+		}
 
 		if (hasAwakening && !(await checkStageMessaged(userId, `${awakening}`))) {
 			const awakeningDialogue = getAwakeningDialogue(mentor, awakening)
