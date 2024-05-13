@@ -20,7 +20,9 @@ import { config as dotenv } from "dotenv"
 
 import cron from "node-cron"
 import {
+	abandonQuestCommand,
 	claimQuestsCommand,
+	createCommunityQuestCommand,
 	generateShopEmbed,
 	generateStatsEmbed,
 	handleAcceptTrade,
@@ -29,7 +31,6 @@ import {
 	handleAlertCommand,
 	handleBalanceCommand,
 	handleBegCommand,
-	handleClaimVoteRewards,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -60,7 +61,6 @@ import {
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
-	handleUnequipQuestCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUpdateProfileImageCommand,
@@ -232,7 +232,7 @@ setInterval(async () => {
 	const activity = activities[index]
 	client.user.setPresence({
 		activities: [{ name: activity.name, type: activity.type }],
-		status: "online"
+		status: "invisible"
 	})
 	index++
 }, 60000)
@@ -333,7 +333,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(200)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -378,6 +378,7 @@ const commands = [
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
+	new SlashCommandBuilder().setName("createquest").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder()
@@ -662,6 +663,31 @@ const commands = [
 				.setName("techniques")
 				.setDescription("Comma-separated list of techniques to add/update")
 				.setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("createcommunityquest")
+		.setDescription("Create a new community quest")
+		.addStringOption(option =>
+			option.setName("questname").setDescription("The name of the quest").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("questdescription").setDescription("The description of the quest").setRequired(true)
+		)
+		.addStringOption(option => option.setName("task").setDescription("The task of the quest").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("taskamount").setDescription("The amount required to complete the task").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("rewarditem").setDescription("The reward item for completing the quest").setRequired(true)
+		)
+		.addIntegerOption(option =>
+			option.setName("rewardamount").setDescription("The amount of the reward item").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("startdate").setDescription("The start date of the quest (YYYY-MM-DD)").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("enddate").setDescription("The end date of the quest (YYYY-MM-DD)").setRequired(true)
 		)
 ].map(command => command.toJSON())
 
@@ -850,7 +876,7 @@ client.on("interactionCreate", async interaction => {
 				await claimQuestsCommand(interaction)
 				break
 			case "abandon":
-				await handleUnequipQuestCommand(interaction)
+				await abandonQuestCommand(interaction)
 				break
 			default:
 		}
@@ -915,9 +941,6 @@ client.on("interactionCreate", async interaction => {
 			case "work":
 				await handleWorkCommand(chatInputInteraction)
 				break
-			case "voteclaim":
-				await handleClaimVoteRewards(chatInputInteraction)
-				break
 
 			case "selectitle":
 				await handleTitleSelectCommand(chatInputInteraction)
@@ -939,6 +962,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "toggleheavenlyrestriction":
 				await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
+				break
+			case "createcommunityquest":
+				await createCommunityQuestCommand(chatInputInteraction)
 				break
 			case "gamble":
 				await handleGambleCommand(chatInputInteraction)

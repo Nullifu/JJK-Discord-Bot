@@ -58,7 +58,13 @@ import {
 	handlePlayerRevival,
 	handleShikigamiTame
 } from "./fight.js"
-import { BossData, buildGamblersProfile, formatDomainExpansion, gradeMappings } from "./interface.js"
+import {
+	BossData,
+	IdleDeathsGambleState,
+	buildGamblersProfile,
+	formatDomainExpansion,
+	gradeMappings
+} from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -93,6 +99,7 @@ import {
 	checkUserHasHeavenlyRestriction,
 	checkWorkCooldown,
 	cleanShikigami,
+	createCommunityQuest,
 	createTradeRequest,
 	feedShikigami,
 	getActiveTrades,
@@ -101,6 +108,7 @@ import {
 	getAllUsersBalance,
 	getBalance,
 	getBosses,
+	getCurrentCommunityQuest,
 	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
@@ -197,7 +205,7 @@ import {
 	calculateDamageWithEffects,
 	fetchAndFormatStatusEffects
 } from "./statuseffects.js"
-import { getAwakeningDialogue, getMentorDetails } from "./utils.js"
+import { createFeverMeterBar, getAwakeningDialogue, getMentorDetails } from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
@@ -1840,6 +1848,7 @@ async function delay(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 export const activeCollectors = new Map()
+const idleDeathsGambleStates = new Map<string, IdleDeathsGambleState>()
 
 const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Broken"]
 
@@ -2039,93 +2048,120 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					return
 				}
 				domainActivationState.set(contextKey, true)
-				// embed here
-				const domainEmbed = new EmbedBuilder()
-					.setColor("Blue")
-					.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
-					.setDescription(`Domain Expansion... ${domainInfo}`)
-					.addFields({
-						name: `${interaction.user.username}`,
-						value: "USES THERE DOMAIN EXPANSION!",
-						inline: false
+
+				if (domainInfo === "Idle Deaths Gamble") {
+					const feverMeter = 0
+					const maxFeverMeter = 100
+
+					const feverMeterBar = createFeverMeterBar(feverMeter, maxFeverMeter)
+
+					const domainEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle(`Domain Expansion... ${domainInfo}`)
+						.setImage(domainObject.open_image_URL)
+						.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
+						.addFields({
+							name: "Fever Meter",
+							value: feverMeterBar,
+							inline: false
+						})
+
+					await collectedInteraction.editReply({ embeds: [domainEmbed], components: [row] })
+
+					const userId = interaction.user.id
+					idleDeathsGambleStates.set(userId, {
+						feverMeter: feverMeter,
+						isJackpotMode: false
 					})
-				//add image
-				if (domainObject.open_image_URL) {
-					domainEmbed.setImage(domainObject.open_image_URL)
-				}
-				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
+				} else {
+					// embed here
+					const domainEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
+						.setDescription(`Domain Expansion... ${domainInfo}`)
+						.addFields({
+							name: `${interaction.user.username}`,
+							value: "USES THERE DOMAIN EXPANSION!",
+							inline: false
+						})
+					//add image
+					if (domainObject.open_image_URL) {
+						domainEmbed.setImage(domainObject.open_image_URL)
+					}
+					await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
 
-				await new Promise(resolve => setTimeout(resolve, 2000))
+					await new Promise(resolve => setTimeout(resolve, 2000))
 
-				const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+					const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
 
-				if (domainObjec1t && domainObjec1t.statusEffect) {
-					await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
-				}
-
-				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
-
-				const updatedEmbed = new EmbedBuilder()
-					.setColor("Blue")
-					.setTitle("The battle continues!")
-					.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
-					.addFields(
-						{
-							name: "Boss Health",
-							value: `:heart: ${randomOpponent.current_health.toString()}`,
-							inline: true
-						},
-						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
-						{
-							name: "Boss Health Status",
-							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
-						},
-						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
-						{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
-					)
-
-				if (domainObjec1t.image_URL) {
-					updatedEmbed.setImage(domainObjec1t.image_URL)
-				}
-				await collectedInteraction.editReply({ embeds: [updatedEmbed], components: [row] })
-
-				//
-				const playerGradeData = await getUserGrade(interaction.user.id)
-				const playerGradeString = playerGradeData
-				const userId = interaction.user.id
-
-				const baseDamage = await calculateDamage(playerGradeString, userId, true)
-				const extraDomainDamage = 30
-				const totalDamage = baseDamage + extraDomainDamage
-				// update boss hp
-
-				let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-				currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
-				bossHealthMap.set(interaction.user.id, currentBossHealth)
-
-				// is boss dead?
-				if (randomOpponent.current_health <= 0) {
-					if (randomOpponent.name === "Satoru Gojo") {
-						await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Sukuna") {
-						await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Itadori") {
-						await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Yuta Okkotsu") {
-						await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Hakari Kinji") {
-						await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Zenin Toji") {
-						await exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					if (domainObjec1t && domainObjec1t.statusEffect) {
+						await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
 					}
 
-					domainActivationState.set(contextKey, false)
-					activeCollectors.delete(interaction.user.id)
+					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 
-					// reset health
-					bossHealthMap.delete(interaction.user.id)
+					const updatedEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle("The battle continues!")
+						.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
+						.addFields(
+							{
+								name: "Boss Health",
+								value: `:heart: ${randomOpponent.current_health.toString()}`,
+								inline: true
+							},
+							{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+							{
+								name: "Boss Health Status",
+								value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+							},
+							{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
+						)
 
-					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					if (domainObjec1t.image_URL) {
+						updatedEmbed.setImage(domainObjec1t.image_URL)
+					}
+					await collectedInteraction.editReply({ embeds: [updatedEmbed], components: [row] })
+
+					//
+					const playerGradeData = await getUserGrade(interaction.user.id)
+					const playerGradeString = playerGradeData
+					const userId = interaction.user.id
+
+					const baseDamage = await calculateDamage(playerGradeString, userId, true)
+					const extraDomainDamage = 30
+					const totalDamage = baseDamage + extraDomainDamage
+					// update boss hp
+
+					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+					bossHealthMap.set(interaction.user.id, currentBossHealth)
+
+					// is boss dead?
+					if (randomOpponent.current_health <= 0) {
+						if (randomOpponent.name === "Satoru Gojo") {
+							await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Sukuna") {
+							await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Itadori") {
+							await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Yuta Okkotsu") {
+							await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Hakari Kinji") {
+							await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Zenin Toji") {
+							await exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						}
+
+						domainActivationState.set(contextKey, false)
+						activeCollectors.delete(interaction.user.id)
+
+						// reset health
+						bossHealthMap.delete(interaction.user.id)
+
+						await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					}
 				}
 			} catch (error) {
 				logger.error("Error during fight command:", error)
@@ -2857,6 +2893,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
 
 			let damageReduction = 1
+
 			if (randomOpponent.awakeningStage === "Stage One") {
 				damageReduction = 0.9
 			} else if (randomOpponent.awakeningStage === "Stage Two") {
@@ -2870,7 +2907,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			}
 
 			const reducedDamage = damage * damageReduction
-
 			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - reducedDamage))
 			randomOpponent.current_health = Math.max(0, currentBossHealth - reducedDamage)
 
@@ -2892,7 +2928,46 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 			primaryEmbed.setDescription(fightResult)
 
-			primaryEmbed.setFields(
+			// Increase the fever meter and check if it reaches 100%
+			const userId = collectedInteraction.user.id
+			const userState = idleDeathsGambleStates.get(userId)
+			if (userState) {
+				// Increase the fever meter by a certain amount
+				userState.feverMeter += 50
+
+				// Check if the fever meter reaches 100%
+				if (userState.feverMeter >= 100) {
+					userState.feverMeter = 100
+					userState.isJackpotMode = true
+
+					const jackpotImageUrl =
+						"https://cdn.discordapp.com/attachments/681985000521990179/1239658835459707032/image.png?ex=6643b9c2&is=66426842&hm=56c1613c73ac8b7e2158e36ed40ddd0b3ed523a4291fc0366c68223158e8ba51&"
+					primaryEmbed.setImage(jackpotImageUrl)
+
+					// Add a field to indicate Jackpot Mode activation
+					primaryEmbed.addFields({
+						name: "MUSIC.. START!",
+						value: "JACKPOT MODE ACTIVATED!"
+					})
+
+					await new Promise(resolve => setTimeout(resolve, 2000))
+
+					const jackpotModeImageUrl2 = "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+					primaryEmbed.setImage(jackpotModeImageUrl2)
+				}
+
+				const updatedFeverMeterBar = createFeverMeterBar(userState.feverMeter, 100)
+				const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
+				if (feverMeterFieldIndex !== -1) {
+					primaryEmbed.spliceFields(feverMeterFieldIndex, 1, {
+						name: "Fever Meter",
+						value: updatedFeverMeterBar,
+						inline: false
+					})
+				}
+			}
+
+			primaryEmbed.addFields(
 				{
 					name: "Boss Health",
 					value: `:heart: ${randomOpponent.current_health.toString()}`,
@@ -3594,7 +3669,7 @@ function getRandomBenefactor() {
 }
 
 const begcooldown = new Map<string, number>()
-const begcooldownamount = 30 * 1000 // 5 seconds in milliseconds
+const begcooldownamount = 30 * 1000
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
@@ -3811,7 +3886,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 				.addFields(
 					{ name: "Coins", value: selectedQuest.coins.toString(), inline: true },
 					{ name: "EXP", value: selectedQuest.experience.toString(), inline: true },
-					{ name: "Task", value: selectedQuest.task, inline: false } // Wider field
+					{ name: "Task", value: selectedQuest.task, inline: false }
 				)
 
 				.addFields({ name: "Rewards", value: getRewardString(selectedQuest), inline: false })
@@ -4089,59 +4164,137 @@ export async function claimQuestsCommand(interaction) {
 	}
 }
 
-// view all active quests using getuserquest
-export async function viewQuestsCommand(interaction) {
+export async function viewQuestsCommand(interaction: CommandInteraction) {
 	await updateUserCommandsUsed(interaction.user.id)
+
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
+	const currentCommunityQuest = await getCurrentCommunityQuest()
+
+	const embed = new EmbedBuilder().setColor(0x0099ff).setTitle("Active Quests")
+
+	const questMenu = new StringSelectMenuBuilder().setCustomId("quest_menu").setPlaceholder("Select a quest category")
+
+	questMenu.addOptions([
+		{
+			label: "🎯 Personal Quests",
+			description: "View your active personal quests",
+			value: "personal_quests"
+		},
+		{
+			label: "🌍 Community Quests",
+			description: "View the current community quest",
+			value: "community_quests"
+		},
+		{
+			label: "📅 Weekly Quests (Coming Soon)",
+			description: "Weekly quests will be available in the future",
+			value: "weekly_quests"
+		}
+	])
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(questMenu)
+
+	const defaultEmbed = embed
 
 	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
-		await interaction.reply("You have no active quests.")
-		return
-	}
+		defaultEmbed.setDescription("You have no active personal quests at the moment.")
+	} else {
+		const questWithMostProgress = userQuests.quests.reduce((prev, current) => {
+			const prevDetails = questsArray.find(q => q.name === prev.id)
+			const currentDetails = questsArray.find(q => q.name === current.id)
+			if (!prevDetails || !currentDetails) return prev
 
-	const embed = new EmbedBuilder()
-		.setColor(0x0099ff)
-		.setTitle("Active Quests")
-		.setDescription("Here are your currently active quests:")
+			const prevProgress = current.progress / currentDetails.totalProgress
+			const currentProgress = current.progress / currentDetails.totalProgress
 
-	userQuests.quests.forEach(quest => {
-		const questDetails = questsArray.find(q => q.name === quest.id)
-		if (questDetails && Array.isArray(questDetails.tasks)) {
-			const userTasks = Array.isArray(quest.tasks) ? quest.tasks : []
+			return currentProgress > prevProgress ? current : prev
+		}, userQuests.quests[0])
 
-			const taskList = questDetails.tasks
-				.map((task, index) => {
-					const userTask = userTasks.find(t => t.description === task.description)
-					const taskProgress = userTask ? userTask.progress : 0
-					const isComplete = taskProgress >= task.totalProgress
-					const taskDescription = isComplete ? `~~${task.description}~~` : task.description
-					const progressText = isComplete
-						? `~~${taskProgress}/${task.totalProgress}~~ ✅`
-						: `${taskProgress}/${task.totalProgress}`
-					return `**Task ${index + 1}**: ${taskDescription} - Progress: ${progressText}`
-				})
-				.join("\n")
-
-			embed.addFields({ name: questDetails.name, value: taskList, inline: false })
-		} else if (questDetails) {
-			const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
-			const isComplete = userTask >= questDetails.totalProgress
-			const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
-			const progressText = isComplete
-				? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
-				: `${userTask}/${questDetails.totalProgress}`
-			embed.addFields({
-				name: questDetails.name,
-				value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
+		const questDetails = questsArray.find(q => q.name === questWithMostProgress.id)
+		if (questDetails) {
+			defaultEmbed.setDescription(`Here is your quest with the most progress: **${questDetails.name}**`)
+			defaultEmbed.addFields({
+				name: "🎯 Task",
+				value: questDetails.task,
+				inline: false
+			})
+			defaultEmbed.addFields({
+				name: "🕰️ Progress",
+				value: `${questWithMostProgress.progress}/${questDetails.totalProgress}`,
 				inline: false
 			})
 		}
-	})
+	}
 
-	await interaction.reply({ embeds: [embed] })
+	await interaction.reply({ embeds: [defaultEmbed], components: [row] })
+
+	const filter = (i: Interaction) =>
+		i.isStringSelectMenu() && i.customId === "quest_menu" && i.user.id === interaction.user.id
+
+	const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector?.on("collect", async i => {
+		if (!i.isStringSelectMenu()) return
+
+		const selectedValue = i.values[0]
+
+		if (selectedValue === "personal_quests") {
+			const personalQuestsEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Personal Quests")
+
+			if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+				personalQuestsEmbed.setDescription("You have no active personal quests.")
+			} else {
+				personalQuestsEmbed.setDescription("Select a personal quest from the dropdown menu.")
+				userQuests.quests.forEach(quest => {
+					const questDetails = questsArray.find(q => q.name === quest.id)
+					if (questDetails) {
+						personalQuestsEmbed.addFields({
+							name: `🎯 ${questDetails.name}`,
+							value: `**Task:** ${questDetails.task}\n**Progress:** ${quest.progress}/${questDetails.totalProgress}`,
+							inline: false
+						})
+					}
+				})
+			}
+
+			await i.update({ embeds: [personalQuestsEmbed] })
+		} else if (selectedValue === "community_quests") {
+			// Display community quest
+			const communityQuestEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Community Quest")
+
+			if (currentCommunityQuest) {
+				communityQuestEmbed.setDescription(
+					`Here is the current community quest: **${currentCommunityQuest.questName}**`
+				)
+				communityQuestEmbed.addFields({
+					name: "🌍 Task",
+					value: currentCommunityQuest.task,
+					inline: false
+				})
+				communityQuestEmbed.addFields({
+					name: "🕰️ Progress",
+					value: `${currentCommunityQuest.currentProgress}/${currentCommunityQuest.taskAmount}`,
+					inline: false
+				})
+				communityQuestEmbed.addFields({
+					name: "⏰ Ends",
+					value: `<t:${new Date(currentCommunityQuest.endDate).getTime() / 1000}:R>`,
+					inline: false
+				})
+			} else {
+				communityQuestEmbed.setDescription("There are no active community quests at the moment.")
+			}
+
+			await i.update({ embeds: [communityQuestEmbed] })
+		} else if (selectedValue === "weekly_quests") {
+			const weeklyQuestsEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Weekly Quests")
+			weeklyQuestsEmbed.setDescription("Weekly quests will be available in the future.")
+
+			await i.update({ embeds: [weeklyQuestsEmbed] })
+		}
+	})
 }
-// abandon quest with dropdown menu using getuserquest
 export async function abandonQuestCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
@@ -4211,11 +4364,12 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 	if (itemName === "Unknown Substance") {
 		const mentor = await getUserMentor(userId)
-		if (!mentor) {
+		const grade = await getUserGrade(userId)
+		if (!mentor || grade === "Grade 4" || grade === "Grade 3" || grade === "Grade 2" || grade === "Grade 1") {
 			const embed = new EmbedBuilder()
 				.setColor("#FFFF00")
 				.setTitle("No Mentor")
-				.setDescription("You need a mentor to use the Unknown Substance.")
+				.setDescription("You need a mentor to use the Unknown Substance & Special Grade Rank.")
 			await interaction.reply({ embeds: [embed], ephemeral: true })
 			return
 		}
@@ -4276,7 +4430,10 @@ export async function handleTradeCommand(interaction) {
 	const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
 
 	if (!initiatorItem) {
-		await interaction.reply({ content: "You do not have enough of the specified item to trade.", ephemeral: true })
+		await interaction.reply({
+			content: "You do not have enough of the specified item to trade.",
+			ephemeral: true
+		})
 		return
 	}
 
@@ -4290,45 +4447,55 @@ export async function handleTradeCommand(interaction) {
 		return
 	}
 
-	await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
-
-	const tradeEmbed = new EmbedBuilder()
-		.setColor("Aqua")
-		.setTitle("🔄 Trade Request")
-		.setDescription(
-			`You have received a trade request from ${interaction.user.username}. Please review the details below:`
-		)
-		.addFields(
-			{
-				name: "Trade Details",
-				value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
-				inline: false
-			},
-			// Instructions
-			{
-				name: "Next Steps",
-				value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
-				inline: false
-			},
-			{
-				name: "⚠️ **IMPORTANT WARNING**",
-				value:
-					"Please read carefully before proceeding with the trade:\n\n" +
-					"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
-					"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
-					"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
-				inline: false
-			}
-		)
-		.setFooter({ text: "Trade requests are time-sensitive and subject to item availability." })
-
 	try {
-		await targetUser.send({ embeds: [tradeEmbed] })
-		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
+		await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
+
+		const tradeEmbed = new EmbedBuilder()
+			.setColor("Aqua")
+			.setTitle("🔄 Trade Request")
+			.setDescription(
+				`You have received a trade request from ${interaction.user.username}. Please review the details below:`
+			)
+			.addFields(
+				{
+					name: "Trade Details",
+					value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
+					inline: false
+				},
+				{
+					name: "Next Steps",
+					value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
+					inline: false
+				},
+				{
+					name: "⚠️ **IMPORTANT WARNING**",
+					value:
+						"Please read carefully before proceeding with the trade:\n\n" +
+						"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
+						"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
+						"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
+					inline: false
+				}
+			)
+			.setFooter({
+				text: "Trade requests are time-sensitive and subject to item availability."
+			})
+
+		try {
+			await targetUser.send({ embeds: [tradeEmbed] })
+			await interaction.reply({ content: "Trade request sent!", ephemeral: true })
+		} catch (error) {
+			logger.warn("Failed to send a trade request DM. Sending in the channel instead.", error)
+			await interaction.reply({
+				content: `Trade request for <@${targetUser.id}>:\n${
+					tradeEmbed.data.description
+				}\n\n${tradeEmbed.data.fields.map(field => `**${field.name}**\n${field.value}`).join("\n\n")}`
+			})
+		}
 	} catch (error) {
-		logger.error("Failed to send a trade request DM:", error)
+		logger.error("Error occurred while processing the trade command:", error)
 		await interaction.reply({
-			content: "Failed to send a trade request. The user might have DMs disabled.",
+			content: "An error occurred while processing your trade request. Please try again later.",
 			ephemeral: true
 		})
 	}
@@ -4351,7 +4518,6 @@ export async function handleViewEffectsCommand(interaction) {
 	userEffects.forEach(effect => {
 		const effectDetails = itemEffects.find(e => e.name === effect.itemName)
 		if (effectDetails) {
-			// Calculate remaining time
 			const endTime = new Date(effect.endTime)
 			const now = new Date()
 			const remainingTime = endTime.getTime() - now.getTime()
@@ -4452,7 +4618,6 @@ export async function processTradeSelection(interaction) {
 	}
 }
 
-// view trade command, it has a selectmenu with two options. active trades and previous trades active trades shows all current pending and outgoing trades and previous trades shows all completed trades
 export async function handlePreviousTradesCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
@@ -4616,6 +4781,32 @@ export async function handleEquipTechniqueCommand(interaction) {
 			)
 		}
 
+		const duplicateNormalTechniques = normalTechniquesToActivate.filter(technique =>
+			activeNormalTechniques.includes(technique)
+		)
+
+		if (duplicateNormalTechniques.length > 0) {
+			return await interaction.reply({
+				content: `You have already equipped the following normal techniques: ${duplicateNormalTechniques.join(
+					", "
+				)}`,
+				ephemeral: true
+			})
+		}
+
+		const duplicateHeavenlyTechniques = heavenlyTechniquesToActivate.filter(technique =>
+			activeHeavenlyTechniques.includes(technique)
+		)
+
+		if (duplicateHeavenlyTechniques.length > 0) {
+			return await interaction.reply({
+				content: `You have already equipped the following heavenly restriction techniques: ${duplicateHeavenlyTechniques.join(
+					", "
+				)}`,
+				ephemeral: true
+			})
+		}
+
 		const updatedActiveNormalTechniques = [...activeNormalTechniques, ...normalTechniquesToActivate]
 		const updatedActiveHeavenlyTechniques = userHasHeavenlyRestriction
 			? [...activeHeavenlyTechniques, ...heavenlyTechniquesToActivate]
@@ -4628,9 +4819,11 @@ export async function handleEquipTechniqueCommand(interaction) {
 		const activatedHeavenlyTechniquesDisplay = heavenlyTechniquesToActivate.join(", ")
 
 		let response = ""
+
 		if (activatedNormalTechniquesDisplay) {
 			response += `Normal Techniques equipped: ${activatedNormalTechniquesDisplay}\n`
 		}
+
 		if (activatedHeavenlyTechniquesDisplay) {
 			response += `Heavenly Restriction Techniques equipped: ${activatedHeavenlyTechniquesDisplay}`
 		}
@@ -4765,7 +4958,7 @@ export async function handleUnequipQuestCommand(interaction) {
 	const userQuests = await getUserQuests(userId)
 
 	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
-		await interaction.reply("You have no active quests to unequip.")
+		await interaction.reply("You have no active quests to abandon.")
 		return
 	}
 
@@ -4776,13 +4969,13 @@ export async function handleUnequipQuestCommand(interaction) {
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("unequip_quest")
-		.setPlaceholder("Select a Quest to Unequip")
+		.setPlaceholder("Select a Quest to Abandon")
 		.addOptions(options)
 
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
 	await interaction.reply({
-		content: "Select a quest to unequip.",
+		content: "Select a quest to abandon.",
 		components: [row],
 		ephemeral: true
 	})
@@ -4794,7 +4987,7 @@ export async function handleUnequipQuestCommand(interaction) {
 		if (i.isStringSelectMenu()) {
 			const questId = i.values[0]
 			await removeUserQuest(userId, questId)
-			await i.update({ content: `You have unequipped the quest: ${questId}`, components: [] })
+			await i.update({ content: `You have abandoned the quest: ${questId}`, components: [] })
 		}
 	})
 
@@ -4862,59 +5055,6 @@ function createTransformationSelectMenu(transformations) {
 	})
 
 	return selectMenu
-}
-
-const userVoteTimestamps = {}
-
-export async function handleClaimVoteRewards(interaction) {
-	await updateUserCommandsUsed(interaction.user.id)
-	const Topgg = import("@top-gg/sdk")
-	const userId = interaction.user.id
-	const top = new (await Topgg).Api(process.env.TOPGG)
-
-	await interaction.deferReply()
-
-	const hasVoted = await top.hasVoted(userId)
-
-	if (!hasVoted) {
-		const voteEmbed = new EmbedBuilder()
-			.setTitle("Vote for Rewards!")
-			.setDescription("It seems you haven't voted yet. Support the bot and earn rewards by voting here:")
-		const voteButton = new ButtonBuilder()
-			.setLabel("Vote Now")
-			.setStyle(ButtonStyle.Link)
-			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
-		const row = new ActionRowBuilder().addComponents(voteButton)
-		await interaction.editReply({ embeds: [voteEmbed], components: [row] })
-		return
-	}
-
-	const lastVoteTime = userVoteTimestamps[userId]
-	const currentTime = Date.now()
-
-	if (lastVoteTime && currentTime - lastVoteTime < 12 * 60 * 60 * 1000) {
-		const timeLeft = (12 * 60 * 60 * 1000 - (currentTime - lastVoteTime)) / 3600000
-		const cooldownEmbed = new EmbedBuilder()
-			.setTitle("Vote Cooldown")
-			.setDescription(
-				`You have already claimed your vote rewards. Please wait ${timeLeft.toFixed(
-					1
-				)} hours before voting again.`
-			)
-		await interaction.editReply({ embeds: [cooldownEmbed] })
-		return
-	}
-
-	userVoteTimestamps[userId] = currentTime
-
-	const voteReward = 100000
-	await updateBalance(userId, voteReward)
-	await addItemToUserInventory(userId, "Cursed Vote Chest", 1)
-
-	const claimedEmbed = new EmbedBuilder()
-		.setTitle("Rewards Claimed!")
-		.setDescription(`You have claimed your vote rewards of ${voteReward} coins! + 1 Cursed Vote Chest`)
-	await interaction.followUp({ embeds: [claimedEmbed] })
 }
 
 export async function handleShopCommand(interaction) {
@@ -6890,5 +7030,40 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 	} catch (error) {
 		logger.error("Error handling mentor NPC command:", error)
 		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
+	}
+}
+
+interface CommunityQuest {
+	questName: string
+	questDescription: string
+	task: string
+	taskAmount: number
+	currentProgress: number
+	rewardItem: string
+	rewardAmount: number
+	startDate: Date
+	endDate: Date
+}
+
+export async function createCommunityQuestCommand(interaction: CommandInteraction): Promise<void> {
+	logger.debug("Creating community quest...")
+	const questData: CommunityQuest = {
+		questName: interaction.options.get("questname")?.value as string,
+		questDescription: interaction.options.get("questdescription")?.value as string,
+		task: interaction.options.get("task")?.value as string,
+		taskAmount: interaction.options.get("taskamount")?.value as number,
+		currentProgress: 0,
+		rewardItem: interaction.options.get("rewarditem")?.value as string,
+		rewardAmount: interaction.options.get("rewardamount")?.value as number,
+		startDate: new Date(interaction.options.get("startdate")?.value as string),
+		endDate: new Date(interaction.options.get("enddate")?.value as string)
+	}
+
+	try {
+		await createCommunityQuest(questData)
+		await interaction.reply("Community quest created successfully!")
+	} catch (error) {
+		console.error("Failed to create community quest:", error)
+		await interaction.reply("Failed to create community quest. Please try again later.")
 	}
 }

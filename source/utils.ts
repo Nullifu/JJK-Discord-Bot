@@ -82,3 +82,16 @@ export function getAwakeningDialogue(mentor: string, awakening: string): string 
 		`You have reached ${awakening}. Continue to hone your skills and push the boundaries of your power.`
 	)
 }
+
+export function createFeverMeterBar(feverMeter: number, maxFeverMeter: number): string {
+	const filledBlocks = "🟩"
+	const emptyBlocks = "⬜"
+
+	const filledPercentage = Math.floor((feverMeter / maxFeverMeter) * 100)
+	const filledBlocksCount = Math.floor(filledPercentage / 10)
+	const emptyBlocksCount = 10 - filledBlocksCount
+
+	const feverMeterBar = filledBlocks.repeat(filledBlocksCount) + emptyBlocks.repeat(emptyBlocksCount)
+
+	return `[${feverMeterBar}] ${filledPercentage}%`
+}

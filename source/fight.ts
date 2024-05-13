@@ -94,7 +94,6 @@ export async function handleBossDeath(
 	}
 
 	activeCollectors.delete(interaction.user.id)
-	await updateUserHealth(interaction.user.id, 100)
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
@@ -289,14 +288,14 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 export async function exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
 	if (random < 0.5) {
-		randomOpponent.name = "Sukuna (Heian Era)"
+		randomOpponent.name = "Sukuna (Heian Era Enraged)"
 		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
 		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
 
-		primaryEmbed.setDescription("Sukuna has unleashed his full power as Sukuna (Heian Era)!")
-		primaryEmbed.setImage("https://staticg.sportskeeda.com/editor/2024/01/dd442-17050432242946-1920.jpg")
+		primaryEmbed.setDescription("Cocky brat, This fight's far from over.. **SUKUNA HAS BECAME ENRAGED!**")
+		primaryEmbed.setImage("https://media1.tenor.com/m/FSuRhPgRMMoAAAAd/sukuna-hein-era.gif")
 		primaryEmbed.setFields(
 			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 			{ name: "Player Health", value: playerHealth.toString() }
@@ -505,7 +504,7 @@ export async function export120(interaction, randomOpponent, primaryEmbed, row, 
 		primaryEmbed.setImage("https://media1.tenor.com/m/Y1BZYqq9NVoAAAAd/todo-black-flash-jujutsu-kaisen.gif")
 		primaryEmbed.setFields({ name: "Boss Health", value: "???" }, { name: "Player Health", value: "???" })
 		//
-		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+		await interaction.editReply({ embeds: [primaryEmbed], components: [] })
 
 		await new Promise(resolve => setTimeout(resolve, 4000))
 

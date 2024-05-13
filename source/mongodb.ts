@@ -11,11 +11,12 @@ dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 const imageCollectionName = "imageLogs"
+const communityQuestsCollectionName = "communityQuests"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
@@ -3601,11 +3602,6 @@ export async function getUserAwakening(userId: string): Promise<string | null> {
 	}
 }
 
-/**
- * Marks an awakening stage as messaged for a user.
- * @param {string} userId - The ID of the user.
- * @param {string} awakeningStage - The awakening stage to mark as messaged (e.g., "Stage One").
- */
 export async function markStageAsMessaged(userId: string, awakeningStage: string): Promise<void> {
 	try {
 		await client.connect()
@@ -3614,7 +3610,7 @@ export async function markStageAsMessaged(userId: string, awakeningStage: string
 
 		const updateResult = await usersCollection.updateOne(
 			{ id: userId },
-			{ $addToSet: { stagesMessaged: awakeningStage } } // Using $addToSet to prevent duplicate entries for the same stage
+			{ $addToSet: { stagesMessaged: awakeningStage } }
 		)
 
 		if (updateResult.matchedCount === 0) {
@@ -3630,12 +3626,18 @@ export async function markStageAsMessaged(userId: string, awakeningStage: string
 	}
 }
 
-/**
- * Checks if an awakening stage has already been messaged to a user.
- * @param {string} userId - The ID of the user.
- * @param {string} awakeningStage - The awakening stage to check (e.g., "Stage One").
- * @returns {Promise<boolean>} True if the stage has been messaged, otherwise false.
- */
+interface CommunityQuest {
+	questName: string
+	questDescription: string
+	task: string
+	taskAmount: number
+	currentProgress: number
+	rewardItem: string
+	rewardAmount: number
+	startDate: Date
+	endDate: Date
+}
+
 export async function checkStageMessaged(userId: string, awakeningStage: string): Promise<boolean> {
 	try {
 		await client.connect()
@@ -3643,9 +3645,40 @@ export async function checkStageMessaged(userId: string, awakeningStage: string)
 		const usersCollection = database.collection(usersCollectionName)
 
 		const user = await usersCollection.findOne({ id: userId, stagesMessaged: { $in: [awakeningStage] } })
-		return !!user // Returns true if user is found with the stage in stagesMessaged array, otherwise false.
+		return !!user
 	} catch (error) {
 		logger.error(`Error checking if stage has been messaged for user with ID: ${userId}`, error)
 		throw error
 	}
+}
+
+export async function createCommunityQuest(questData: CommunityQuest): Promise<void> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const communityQuestsCollection = database.collection(communityQuestsCollectionName)
+	await communityQuestsCollection.insertOne(questData)
+}
+
+export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
+		const currentDate = new Date()
+		const quest = await communityQuestsCollection.findOne({
+			startDate: { $lte: currentDate },
+			endDate: { $gte: currentDate }
+		})
+		return quest
+	} catch (error) {
+		console.error("Error retrieving current community quest:", error)
+		return null
+	}
+}
+
+export async function updateCommunityQuestProgress(questId: string, progress: number): Promise<void> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
+	await communityQuestsCollection.updateOne({ questId }, { $inc: { currentProgress: progress } })
 }

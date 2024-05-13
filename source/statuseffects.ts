@@ -1,4 +1,4 @@
-import { getUserPermEffects, getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
+import { getUserStatusEffects, updateUserStatusEffects } from "./mongodb.js"
 
 const statusEffectsDescriptions = {
 	"Gamblers Limit": {
@@ -146,15 +146,6 @@ export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {
 
 export async function applyStatusEffect(userId, effectName) {
 	const currentEffects = await getUserStatusEffects(userId)
-
-	if (!currentEffects.includes(effectName)) {
-		const updatedEffects = [...currentEffects, effectName]
-		await updateUserStatusEffects(userId, updatedEffects)
-	}
-}
-
-export async function applyPermanentStatusEffect(userId, effectName) {
-	const currentEffects = await getUserPermEffects(userId)
 
 	if (!currentEffects.includes(effectName)) {
 		const updatedEffects = [...currentEffects, effectName]
