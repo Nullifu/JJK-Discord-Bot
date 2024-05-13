@@ -1857,8 +1857,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const allBosses = await getBosses(interaction.user.id)
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
-	logger.debug("All bosses:", allBosses)
-
 	if (allBosses.length === 0) {
 		logger.error("No bosses found in the database.")
 		await interaction.editReply({ content: "No bosses found for your grade." })
