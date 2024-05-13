@@ -1648,8 +1648,8 @@ export async function createTradeRequest(
 			targetUserId,
 			item,
 			quantity,
-			status: "pending", // Initial status of the trade request
-			createdAt: new Date() // Store the creation time
+			status: "pending",
+			createdAt: new Date()
 		}
 
 		await tradeRequestsCollection.insertOne(tradeRequest)

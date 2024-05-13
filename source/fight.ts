@@ -89,7 +89,7 @@ export async function handleBossDeath(
 			interaction.user.id,
 			"Stage Three Unleashed",
 			1,
-			"Satoru Gojo (Shinjuku Showdown Arc)"
+			"Satoru Gojo (Shinjuku Showdown Arc)" || "Defeat Satoru Gojo (Shinjuku Showdown Arc)"
 		)
 	}
 
