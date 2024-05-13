@@ -4211,11 +4211,12 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 	if (itemName === "Unknown Substance") {
 		const mentor = await getUserMentor(userId)
-		if (!mentor) {
+		const grade = await getUserGrade(userId)
+		if (!mentor || grade === "Grade 4" || grade === "Grade 3" || grade === "Grade 2" || grade === "Grade 1") {
 			const embed = new EmbedBuilder()
 				.setColor("#FFFF00")
 				.setTitle("No Mentor")
-				.setDescription("You need a mentor to use the Unknown Substance.")
+				.setDescription("You need a mentor to use the Unknown Substance & Special Grade Rank.")
 			await interaction.reply({ embeds: [embed], ephemeral: true })
 			return
 		}

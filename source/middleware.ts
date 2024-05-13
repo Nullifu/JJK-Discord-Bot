@@ -11,7 +11,7 @@ import { logger } from "./bot.js"
 import { getUser, updateLastAlertedVersion } from "./mongodb.js"
 
 export async function checkRegistrationMiddleware(interaction: ChatInputCommandInteraction): Promise<boolean> {
-	logger.debug("Middleware started")
+	logger.debug("Middleware started", interaction.commandName)
 
 	try {
 		const discordId = interaction.user.id
