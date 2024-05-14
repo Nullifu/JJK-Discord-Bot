@@ -11,12 +11,12 @@ dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "devuser"
+const usersCollectionName = "users"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 const imageCollectionName = "imageLogs"
-const communityQuestsCollectionName = "communityQuestsDev"
+const communityQuestsCollectionName = "communityQuests"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
