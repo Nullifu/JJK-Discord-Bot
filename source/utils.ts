@@ -1,5 +1,16 @@
 import { randomInt } from "crypto"
-import { CommunityQuest } from "./command"
+
+interface CommunityQuest {
+	questName: string
+	questDescription: string
+	task: string
+	taskAmount: number
+	currentProgress: number
+	rewardItem: string
+	rewardAmount: number
+	startDate: Date
+	endDate: Date
+}
 
 // Define mentor details with messages, images, and lines
 export const mentorDetails: {

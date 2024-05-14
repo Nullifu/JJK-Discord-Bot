@@ -21,7 +21,6 @@ import cron from "node-cron"
 import {
 	abandonQuestCommand,
 	claimQuestsCommand,
-	createCommunityQuestCommand,
 	eventCommandHandler,
 	generateShopEmbed,
 	generateStatsEmbed,
@@ -995,9 +994,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "toggleheavenlyrestriction":
 				await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
-				break
-			case "createcommunityquest":
-				await createCommunityQuestCommand(chatInputInteraction)
 				break
 			case "gamble":
 				await handleGambleCommand(chatInputInteraction)

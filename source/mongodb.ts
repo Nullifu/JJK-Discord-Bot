@@ -16,7 +16,7 @@ const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 const imageCollectionName = "imageLogs"
-const communityQuestsCollectionName = "communityQuests"
+const communityQuestsCollectionName = "communityQuestsDev"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
@@ -574,17 +574,9 @@ const gradeToBossGrade = {
 export async function getBosses(userId: string): Promise<BossData[]> {
 	try {
 		const userEffects = await getUserItemEffects(userId)
-		const filteredEffects = userEffects.filter(effect => effect.itemName !== "Hakari Kinji's Token")
-
-		const isCursed = filteredEffects.some(
-			effect => effect.effectName && effect.effectName.toLowerCase() === "cursed"
-		)
-		const isNonCursed = filteredEffects.some(
-			effect => effect.effectName && effect.effectName.toLowerCase() === "curse repellent"
-		)
-		const isBlessed = filteredEffects.some(
-			effect => effect.effectName && effect.effectName.toLowerCase() === "blessed"
-		)
+		const isCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "cursed")
+		const isNonCursed = userEffects.some(effect => effect.effectName.toLowerCase() === "curse repellent")
+		const isBlessed = userEffects.some(effect => effect.effectName.toLowerCase() === "blessed")
 
 		const userGrade = await getUserGrade(userId)
 		const healthMultiplier = healthMultipliersByGrade[userGrade.toLowerCase()] || 1
@@ -3657,4 +3649,46 @@ export async function checkStageMessaged(userId: string, awakeningStage: string)
 		logger.error(`Error checking if stage has been messaged for user with ID: ${userId}`, error)
 		throw error
 	}
+}
+
+export async function createCommunityQuest(questData: CommunityQuest): Promise<void> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const communityQuestsCollection = database.collection(communityQuestsCollectionName)
+	await communityQuestsCollection.insertOne(questData)
+}
+
+// get current community quest name
+export async function getCurrentCommunityQuestName(): Promise<string | null> {
+	try {
+		const quest = await getCurrentCommunityQuest()
+		return quest ? quest.questName : null
+	} catch (error) {
+		logger.error("Error retrieving current community quest name:", error)
+		return null
+	}
+}
+
+export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
+		const currentDate = new Date()
+		const quest = await communityQuestsCollection.findOne({
+			startDate: { $lte: currentDate },
+			endDate: { $gte: currentDate }
+		})
+		return quest
+	} catch (error) {
+		console.error("Error retrieving current community quest:", error)
+		return null
+	}
+}
+
+export async function updateCommunityQuestProgress(questName: string, progress: number): Promise<void> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
+	await communityQuestsCollection.updateOne({ questName }, { $inc: { currentProgress: progress } })
 }
