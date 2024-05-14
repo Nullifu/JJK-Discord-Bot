@@ -2928,10 +2928,34 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 28,
+					damageMultiplier: 32,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1232829104378871839/1239800650187931708/ezgif-2-1a5fda8aad.png?ex=66443dd5&is=6642ec55&hm=11b8e9103190532406894213ca6bce3d91f34a5b6815059a59f9661d0f46178e&",
 					description: "Gambling is my life..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jackpot: Full House Kick") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-03d1d5eb78.png",
+					description: "Gambling i love it..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jackpot: Shutter Doors") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-6b5c52f9c2.png",
+					description: "Gambling really is my life..",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
