@@ -36,13 +36,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Bet Slip", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "rare" }
 	],
-	"Sukuna (Heian Era)": [
-		{ name: "Sukuna Finger", rarity: "common" },
-		{ name: "Go//Jo", rarity: "rare" },
-		{ name: "Cleaning Kit", rarity: "rare" },
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Malevolent Shrine (Upgrade)", rarity: "rare" }
-	],
+
 	"Zenin Toji": [
 		{ name: "(Broken) Split Soul Katana", rarity: "common" },
 		{ name: "Heavenly Chain", rarity: "rare" },
@@ -271,11 +265,19 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Heian Era Scraps", rarity: "ultra rare" },
 		{ name: "Awakening Remnant", rarity: "ultra rare" }
 	],
+	"Sukuna (Heian Era)": [
+		{ name: "Sukuna Finger", rarity: "common" },
+		{ name: "Go//Jo", rarity: "rare" },
+		{ name: "Cleaning Kit", rarity: "rare" },
+		{ name: "Fraud Poster", rarity: "rare" },
+		{ name: "Malevolent Shrine (Upgrade)", rarity: "rare" }
+	],
 	"Kenjaku": [
 		{ name: "Mahitos Soul", rarity: "rare" },
 		{ name: "Split Shard", rarity: "ultra rare" },
 		{ name: "Heian Era Scraps", rarity: "ultra rare" }
 	],
+	"Sukuna (Heian Era Enraged)": [{ name: "Heian Era Soul", rarity: "common" }],
 	"Mahoraga": [{ name: "Mahoraga's Soul", rarity: "rare" }],
 	"Divine Dogs": [{ name: "Divine Dogs Shikigami's Soul", rarity: "rare" }],
 	"Nue": [{ name: "Bird Shikigami's Soul", rarity: "rare" }],

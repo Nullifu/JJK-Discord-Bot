@@ -16,7 +16,7 @@ const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 const imageCollectionName = "imageLogs"
-const communityQuestsCollectionName = "communityQuests"
+const communityQuestsCollectionName = "communityQuestsDev"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
@@ -3658,6 +3658,17 @@ export async function createCommunityQuest(questData: CommunityQuest): Promise<v
 	await communityQuestsCollection.insertOne(questData)
 }
 
+// get current community quest name
+export async function getCurrentCommunityQuestName(): Promise<string | null> {
+	try {
+		const quest = await getCurrentCommunityQuest()
+		return quest ? quest.questName : null
+	} catch (error) {
+		logger.error("Error retrieving current community quest name:", error)
+		return null
+	}
+}
+
 export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null> {
 	try {
 		await client.connect()
@@ -3675,9 +3686,9 @@ export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null>
 	}
 }
 
-export async function updateCommunityQuestProgress(questId: string, progress: number): Promise<void> {
+export async function updateCommunityQuestProgress(questName: string, progress: number): Promise<void> {
 	await client.connect()
 	const database = client.db(mongoDatabase)
 	const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
-	await communityQuestsCollection.updateOne({ questId }, { $inc: { currentProgress: progress } })
+	await communityQuestsCollection.updateOne({ questName }, { $inc: { currentProgress: progress } })
 }

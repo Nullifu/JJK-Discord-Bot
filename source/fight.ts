@@ -14,6 +14,7 @@ import {
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
+	updateCommunityQuestProgress,
 	updateMonthlyFightsWon,
 	updatePlayerGrade,
 	updateUserExperience,
@@ -109,6 +110,7 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
+	await updateCommunityQuestProgress("Satoru Gojo's Sealing", 1)
 	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
@@ -157,6 +159,18 @@ export async function handleShikigamiTame(
 	if (opponent.name === "Divine-General Mahoraga") {
 		tamedShikigami = {
 			name: "Divine-General Mahoraga",
+			experience: 0,
+			tier: 5,
+			health: 500,
+			tamedAt: new Date(),
+			hygiene: 100,
+			hunger: 100,
+			friendship: 0
+		}
+	}
+	if (opponent.name === "Divine Dogs Totality") {
+		tamedShikigami = {
+			name: "Divine Dogs Totality",
 			experience: 0,
 			tier: 5,
 			health: 500,
@@ -294,14 +308,14 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 
 export async function exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.5) {
+	if (random < 0.9) {
 		randomOpponent.name = "Sukuna (Heian Era Enraged)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
-		primaryEmbed.setDescription("Cocky brat, This fight's far from over.. **SUKUNA HAS BECAME ENRAGED!**")
+		primaryEmbed.setDescription("Cocky brat, This fight's far from over.. **SUKUNA BECOMES ENRAGED..**")
 		primaryEmbed.setImage("https://media1.tenor.com/m/FSuRhPgRMMoAAAAd/sukuna-hein-era.gif")
 		primaryEmbed.setFields(
 			{ name: "Boss Health", value: randomOpponent.current_health.toString() },

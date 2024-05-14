@@ -8,7 +8,6 @@ import {
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
-	ModalBuilder,
 	Partials,
 	PermissionFlagsBits,
 	REST,
@@ -23,6 +22,7 @@ import {
 	abandonQuestCommand,
 	claimQuestsCommand,
 	createCommunityQuestCommand,
+	eventCommandHandler,
 	generateShopEmbed,
 	generateStatsEmbed,
 	handleAcceptTrade,
@@ -81,15 +81,10 @@ import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
 	getShopLastReset,
-	getUserIdByImageUrl,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
 	logImageUrl,
-	updateBalance,
-	updateReviewStatus,
-	updateReviewerId,
-	updateUserProfileHeader,
-	updateUserProfileImage
+	updateBalance
 } from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 
@@ -107,7 +102,6 @@ export const client = new Client({
 })
 
 import log4js from "log4js"
-import { createModerationModal } from "./aws.js"
 import { getRandomQuote } from "./shikigami.js"
 
 // Configure log4js
@@ -381,6 +375,7 @@ const commands = [
 	new SlashCommandBuilder().setName("createquest").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
+	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -946,6 +941,9 @@ client.on("interactionCreate", async interaction => {
 			case "inventory":
 				await handleInventoryCommand(chatInputInteraction)
 				break
+			case "event":
+				await eventCommandHandler(chatInputInteraction)
+				break
 			case "viewshikigami":
 				await handleViewShikigami(chatInputInteraction)
 				break
@@ -1035,13 +1033,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import { AutoPoster } from "topgg-autoposter"
+//import { AutoPoster } from "topgg-autoposter"
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-const poster = AutoPoster(process.env.TOPGG, client)
-
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 
@@ -1084,83 +1081,5 @@ export async function sendForManualReview(imageUrl: string, interaction, subcomm
 		throw error
 	}
 }
-
-client.on("interactionCreate", async interaction => {
-	if (interaction.isButton()) {
-		const buttonInteraction = interaction
-		const [action, originalMessageId] = buttonInteraction.customId.split("_")
-
-		if (action === "confirm") {
-			let modal = new ModalBuilder()
-				.setCustomId(`confirmModal_${action}_${originalMessageId}`)
-				.setTitle("Confirmation")
-
-			if (interaction.customId.includes("accept")) {
-				modal = createModerationModal(
-					`confirmModal_accept_${originalMessageId}`,
-					"Confirm Acceptance",
-					"Reason for Acceptance:"
-				)
-			} else if (interaction.customId.includes("deny")) {
-				modal = createModerationModal(
-					`confirmModal_deny_${originalMessageId}`,
-					"Confirm Denial",
-					"Reason for Denial:"
-				)
-			}
-
-			if (modal) {
-				await interaction.showModal(modal)
-			}
-		}
-	} else if (interaction.isModalSubmit()) {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const [_, action, __] = interaction.customId.split("_")
-		const reason = interaction.fields.getTextInputValue("reason_input")
-		const isAccepted = action === "accept"
-
-		await interaction.reply({
-			ephemeral: true,
-			content: "The review has been processed.",
-			components: []
-		})
-
-		try {
-			const imageUrl = interaction.message.embeds[0].image.url
-			const userId = await getUserIdByImageUrl(imageUrl)
-
-			if (userId) {
-				const user = await client.users.fetch(userId)
-				if (user) {
-					const isHeader = interaction.message.content.includes("header")
-					const content = isAccepted
-						? `🎉 Awesome! Your new ${
-								isHeader ? "header" : "avatar"
-						  } has been approved and is now live on your profile!`
-						: `Image denied as inappropriate. Reason: ${reason}`
-
-					await user.send(content)
-
-					if (isAccepted) {
-						if (isHeader) {
-							await updateUserProfileHeader(userId, imageUrl)
-							logger.info(`Updated profile header for user ${userId}`)
-						} else {
-							await updateUserProfileImage(userId, imageUrl)
-							logger.info(`Updated profile avatar for user ${userId}`)
-						}
-					}
-
-					await updateReviewStatus(imageUrl, true)
-					await updateReviewerId(imageUrl, interaction.user.id)
-				}
-			} else {
-				logger.warn(`No user ID found for image URL: ${imageUrl}`)
-			}
-		} catch (error) {
-			logger.error("Failed to process manual review:", error)
-		}
-	}
-})
 
 client.login(process.env["DISCORD_BOT_TOKEN"])
