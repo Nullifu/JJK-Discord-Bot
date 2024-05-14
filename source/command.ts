@@ -56,7 +56,8 @@ import {
 	handleBossDeath,
 	handleJoyBoyDeath,
 	handlePlayerRevival,
-	handleShikigamiTame
+	handleShikigamiTame,
+	updateFeverMeter
 } from "./fight.js"
 import {
 	BossData,
@@ -1866,11 +1867,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const allBosses = await getBosses(interaction.user.id)
 	const unlockedBosses = await getUserUnlockedBosses(interaction.user.id)
 
-	logger.debug("All bosses:", allBosses)
-
 	if (allBosses.length === 0) {
 		logger.error("No bosses found in the database.")
-		await interaction.editReply({ content: "No bosses found for your grade." })
+		await interaction.editReply({ content: "No bosses found for your grade, Try increasing your grade!" })
 		return
 	}
 
@@ -2632,7 +2631,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 1,
+					damageMultiplier: 3,
 					imageUrl: "https://media1.tenor.com/m/SQQ4VD6igHIAAAAC/yuji-itadori-yuji.gif",
 					description: "I'm gonna hit you with everything I've got!",
 					fieldValue: selectedValue,
@@ -2928,45 +2927,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 			primaryEmbed.setDescription(fightResult)
 
-			// Increase the fever meter and check if it reaches 100%
 			const userId = collectedInteraction.user.id
 			const userState = idleDeathsGambleStates.get(userId)
+
 			if (userState) {
-				// Increase the fever meter by a certain amount
-				userState.feverMeter += 50
-
-				// Check if the fever meter reaches 100%
-				if (userState.feverMeter >= 100) {
-					userState.feverMeter = 100
-					userState.isJackpotMode = true
-
-					const jackpotImageUrl =
-						"https://cdn.discordapp.com/attachments/681985000521990179/1239658835459707032/image.png?ex=6643b9c2&is=66426842&hm=56c1613c73ac8b7e2158e36ed40ddd0b3ed523a4291fc0366c68223158e8ba51&"
-					primaryEmbed.setImage(jackpotImageUrl)
-
-					// Add a field to indicate Jackpot Mode activation
-					primaryEmbed.addFields({
-						name: "MUSIC.. START!",
-						value: "JACKPOT MODE ACTIVATED!"
-					})
-
-					await new Promise(resolve => setTimeout(resolve, 2000))
-
-					const jackpotModeImageUrl2 = "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
-					primaryEmbed.setImage(jackpotModeImageUrl2)
-				}
-
-				const updatedFeverMeterBar = createFeverMeterBar(userState.feverMeter, 100)
-				const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
-				if (feverMeterFieldIndex !== -1) {
-					primaryEmbed.spliceFields(feverMeterFieldIndex, 1, {
-						name: "Fever Meter",
-						value: updatedFeverMeterBar,
-						inline: false
-					})
-				}
+				await updateFeverMeter(collectedInteraction, userState, primaryEmbed)
 			}
-
 			primaryEmbed.addFields(
 				{
 					name: "Boss Health",
@@ -3104,7 +3070,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						const bossAttackMessage = `${randomOpponent.name} dealt ${chosenAttack.baseDamage(
 							playerGrade
 						)} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
-						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage })
 						primaryEmbed.addFields([
 							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
 						])
@@ -4246,12 +4212,37 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 				personalQuestsEmbed.setDescription("You have no active personal quests.")
 			} else {
 				personalQuestsEmbed.setDescription("Select a personal quest from the dropdown menu.")
+
 				userQuests.quests.forEach(quest => {
 					const questDetails = questsArray.find(q => q.name === quest.id)
-					if (questDetails) {
+
+					if (questDetails && Array.isArray(questDetails.tasks)) {
+						const userTasks = Array.isArray(quest.tasks) ? quest.tasks : []
+						const taskList = questDetails.tasks
+							.map((task, index) => {
+								const userTask = userTasks.find(t => t.description === task.description)
+								const taskProgress = userTask ? userTask.progress : 0
+								const isComplete = taskProgress >= task.totalProgress
+								const taskDescription = isComplete ? `~~${task.description}~~` : task.description
+								const progressText = isComplete
+									? `~~${taskProgress}/${task.totalProgress}~~ ✅`
+									: `${taskProgress}/${task.totalProgress}`
+								return `**Task ${index + 1}**: ${taskDescription} - Progress: ${progressText}`
+							})
+							.join("\n")
+
+						personalQuestsEmbed.addFields({ name: questDetails.name, value: taskList, inline: false })
+					} else if (questDetails) {
+						const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
+						const isComplete = userTask >= questDetails.totalProgress
+						const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
+						const progressText = isComplete
+							? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
+							: `${userTask}/${questDetails.totalProgress}`
+
 						personalQuestsEmbed.addFields({
-							name: `🎯 ${questDetails.name}`,
-							value: `**Task:** ${questDetails.task}\n**Progress:** ${quest.progress}/${questDetails.totalProgress}`,
+							name: questDetails.name,
+							value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
 							inline: false
 						})
 					}
@@ -4564,60 +4555,59 @@ export async function handleAcceptTrade(interaction) {
 		const tradeRequests = await viewTradeRequests(userId)
 
 		if (tradeRequests.length === 0) {
-			await interaction.followUp({ content: "You have no pending trade requests.", ephemeral: true })
+			await interaction.editReply({ content: "You have no pending trade requests.", ephemeral: true })
 			return
 		}
 
 		const options = tradeRequests.map(request => {
 			return {
 				label: request.item,
-				description: `From: ${request.initiatorId} (Qty: ${request.quantity})`, // Replace ID with usernames if possible
+				description: `From: ${request.initiatorId} (Qty: ${request.quantity})`,
 				value: request._id.toString()
 			}
 		})
 
 		const selectMenu = new SelectMenuBuilder()
-			.setCustomId("accept_trade_select_") // Modified line
+			.setCustomId(`accept_trade_select_${interaction.id}`)
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
 		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
 
-		return interaction.followUp({
+		await interaction.editReply({
 			content: "Choose a trade request to accept:",
 			components: [actionRow],
 			ephemeral: true
 		})
 	} catch (error) {
 		logger.error("Error in handleAcceptTrade:", error)
-		return interaction.followUp({
+		await interaction.editReply({
 			content: "An error occurred while trying to process trade requests.",
 			ephemeral: true
 		})
 	}
 }
+
 export async function processTradeSelection(interaction) {
 	const selectedTradeId = interaction.values[0]
+	logger.debug("Selected trade ID:", selectedTradeId)
+	logger.debug("Start processing trade acceptance...")
 
 	try {
 		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
 		logger.info("Trade request accepted successfully!")
-		await interaction.followUp({
-			content: "Trade request accepted successfully!",
-			components: []
-		})
-		return
+
+		if (!interaction.replied) {
+			await interaction.editReply({
+				content: "Trade request accepted successfully!",
+				ephemeral: true,
+				components: []
+			})
+		}
 	} catch (error) {
-		logger.error("Error handling trade acceptance:", error)
-		logger.info("An error occurred while trying to accept the trade request.")
-		await interaction.followUp({
-			content: "Confirmed.",
-			components: []
-		})
-		return
+		logger.error("Error handling trade acceptance:")
 	}
 }
-
 export async function handlePreviousTradesCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id

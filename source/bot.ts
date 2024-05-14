@@ -688,6 +688,26 @@ const commands = [
 		)
 		.addStringOption(option =>
 			option.setName("enddate").setDescription("The end date of the quest (YYYY-MM-DD)").setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Trading Command.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
+		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		)
 ].map(command => command.toJSON())
 
@@ -787,19 +807,34 @@ client.on("interactionCreate", async interaction => {
 		await handleUpdateCommand(chatInputInteraction)
 		return
 	}
+	//
 	client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
 			if (interaction.customId.startsWith("accept_trade_select_")) {
-				logger.info("Handling trade selection...")
-				await interaction
-					.deferReply({ ephemeral: false })
-					.catch(error => logger.error("Error deferring reply:", error))
-				await processTradeSelection(interaction).catch(error =>
+				try {
+					// Ensure interaction is deferred as soon as possible
+					if (!interaction.deferred && !interaction.replied) {
+						await interaction.deferReply()
+					}
+
+					logger.info("Handling trade selection...")
+					await processTradeSelection(interaction)
+				} catch (error) {
 					logger.error("Error during trade selection processing:", error)
-				)
+
+					// Only update with an error if we haven't already replied or deferred successfully
+					if (interaction.deferred && !interaction.replied) {
+						await interaction.editReply({
+							content: "An error occurred while trying to accept the trade request.",
+							components: []
+						})
+					}
+				}
 			}
 		}
 	})
+
+	//
 
 	const shouldProceed = await checkRegistrationMiddleware(interaction)
 	if (!shouldProceed) return

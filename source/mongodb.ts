@@ -141,7 +141,7 @@ export async function addUser(
 			permEffects: [],
 			statusEffects: [],
 			betCount: 0,
-			Honours: [],
+			honours: [],
 			purchases: [],
 			itemEffects: [],
 			cooldowns: [],
@@ -1557,7 +1557,6 @@ export async function getUserQuests(userId) {
 		const usersCollection = database.collection(usersCollectionName)
 
 		const user = await usersCollection.findOne({ id: userId })
-		logger.info("User document retrieved:", user)
 
 		if (!user) return { quests: [] }
 
@@ -1727,7 +1726,7 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 		const tradeRequest = await tradeRequestsCollection.findOne({
 			_id: new ObjectId(tradeRequestId),
 			status: "pending",
-			targetUserId: userId // Ensure the acceptor is the target user
+			targetUserId: userId
 		})
 
 		if (!tradeRequest) {

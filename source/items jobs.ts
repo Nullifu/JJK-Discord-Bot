@@ -141,15 +141,15 @@ export const craftingRecipes = {
 	},
 	awakening: {
 		requiredItems: [
-			{ name: "Awakening Remnant", quantity: 1 },
-			{ name: "Heian Era Scraps", quantity: 1 }
+			{ name: "Awakening Remnant", quantity: 6 },
+			{ name: "Heian Era Scraps", quantity: 4 }
 		],
 		craftedItemName: "Heian Era Awakening Remnant"
 	},
 	health_vial: {
 		requiredItems: [
-			{ name: "Empty Bottle", quantity: 1 },
-			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 }
+			{ name: "Empty Bottle", quantity: 2 },
+			{ name: "Malevolent Shrine (Blood Vial)", quantity: 3 }
 		],
 		craftedItemName: "Cursed Energy Vial"
 	},
