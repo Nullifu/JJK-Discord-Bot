@@ -11,7 +11,7 @@ dotenv()
 
 const bossCollectionName = "bosses"
 const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
+const usersCollectionName = "devuser"
 const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"

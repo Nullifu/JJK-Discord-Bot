@@ -4081,13 +4081,15 @@ export async function claimQuestsCommand(interaction) {
 				await interaction.followUp({ embeds: [specialEmbeds[i]] })
 			}
 		} else {
-			const formattedRewards = questRewards.map(reward => {
-				if (typeof reward === "object") {
-					const rewardEntries = Object.entries(reward)
-					return rewardEntries.map(([key, value]) => `${key}: ${value}`).join(", ")
-				}
-				return reward
-			})
+			const formattedRewards = questRewards
+				.map(reward => {
+					if (typeof reward === "object") {
+						const rewardEntries = Object.entries(reward)
+						return rewardEntries.map(([key, value]) => `${key}: ${value}`).join(", ")
+					}
+					return reward
+				})
+				.filter(reward => reward !== "" && reward !== null)
 
 			const genericEmbed = new EmbedBuilder()
 				.setColor(0x0099ff)
