@@ -4211,7 +4211,7 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 
 						personalQuestsEmbed.addFields({ name: questDetails.name, value: taskList, inline: false })
 					} else if (questDetails) {
-						const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
+						const userTask = quest.progress || 0
 						const isComplete = userTask >= questDetails.totalProgress
 						const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
 						const progressText = isComplete
