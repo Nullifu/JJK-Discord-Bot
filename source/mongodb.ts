@@ -16,6 +16,7 @@ const questsCollectioName = "quests"
 const tradeCollectionName = "trades"
 const shopCollectionName = "shop"
 const imageCollectionName = "imageLogs"
+const communityQuestsCollectionName = "communityQuests"
 
 const mongoDatabase = process.env["MONGO_DATABASE"]
 const mongoUri = process.env.MONGO_URI
@@ -140,7 +141,7 @@ export async function addUser(
 			permEffects: [],
 			statusEffects: [],
 			betCount: 0,
-			Honours: [],
+			honours: [],
 			purchases: [],
 			itemEffects: [],
 			cooldowns: [],
@@ -3655,5 +3656,34 @@ export async function checkStageMessaged(userId: string, awakeningStage: string)
 	} catch (error) {
 		logger.error(`Error checking if stage has been messaged for user with ID: ${userId}`, error)
 		throw error
+	}
+}
+
+interface CommunityQuest {
+	questName: string
+	questDescription: string
+	task: string
+	taskAmount: number
+	currentProgress: number
+	rewardItem: string
+	rewardAmount: number
+	startDate: Date
+	endDate: Date
+}
+
+export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
+		const currentDate = new Date()
+		const quest = await communityQuestsCollection.findOne({
+			startDate: { $lte: currentDate },
+			endDate: { $gte: currentDate }
+		})
+		return quest
+	} catch (error) {
+		console.error("Error retrieving current community quest:", error)
+		return null
 	}
 }

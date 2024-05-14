@@ -101,6 +101,7 @@ import {
 	getAllUsersBalance,
 	getBalance,
 	getBosses,
+	getCurrentCommunityQuest,
 	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
@@ -4107,57 +4108,163 @@ export async function claimQuestsCommand(interaction) {
 }
 
 // view all active quests using getuserquest
-export async function viewQuestsCommand(interaction) {
+export async function viewQuestsCommand(interaction: CommandInteraction) {
 	await updateUserCommandsUsed(interaction.user.id)
+
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
+	const currentCommunityQuest = await getCurrentCommunityQuest()
+
+	const embed = new EmbedBuilder().setColor(0x0099ff).setTitle("Active Quests")
+
+	const questMenu = new StringSelectMenuBuilder().setCustomId("quest_menu").setPlaceholder("Select a quest category")
+
+	questMenu.addOptions([
+		{
+			label: "🎯 Personal Quests",
+			description: "View your active personal quests",
+			value: "personal_quests"
+		},
+		{
+			label: "🌍 Community Quests",
+			description: "View the current community quest",
+			value: "community_quests"
+		},
+		{
+			label: "📅 Weekly Quests (Coming Soon)",
+			description: "Weekly quests will be available in the future",
+			value: "weekly_quests"
+		}
+	])
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(questMenu)
+
+	const defaultEmbed = embed
 
 	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
-		await interaction.reply("You have no active quests.")
-		return
-	}
+		defaultEmbed.setDescription("You have no active personal quests at the moment.")
+	} else {
+		const questWithMostProgress = userQuests.quests.reduce((prev, current) => {
+			const prevDetails = questsArray.find(q => q.name === prev.id)
+			const currentDetails = questsArray.find(q => q.name === current.id)
+			if (!prevDetails || !currentDetails) return prev
 
-	const embed = new EmbedBuilder()
-		.setColor(0x0099ff)
-		.setTitle("Active Quests")
-		.setDescription("Here are your currently active quests:")
+			const prevProgress = current.progress / currentDetails.totalProgress
+			const currentProgress = current.progress / currentDetails.totalProgress
 
-	userQuests.quests.forEach(quest => {
-		const questDetails = questsArray.find(q => q.name === quest.id)
-		if (questDetails && Array.isArray(questDetails.tasks)) {
-			const userTasks = Array.isArray(quest.tasks) ? quest.tasks : []
+			return currentProgress > prevProgress ? current : prev
+		}, userQuests.quests[0])
 
-			const taskList = questDetails.tasks
-				.map((task, index) => {
-					const userTask = userTasks.find(t => t.description === task.description)
-					const taskProgress = userTask ? userTask.progress : 0
-					const isComplete = taskProgress >= task.totalProgress
-					const taskDescription = isComplete ? `~~${task.description}~~` : task.description
-					const progressText = isComplete
-						? `~~${taskProgress}/${task.totalProgress}~~ ✅`
-						: `${taskProgress}/${task.totalProgress}`
-					return `**Task ${index + 1}**: ${taskDescription} - Progress: ${progressText}`
-				})
-				.join("\n")
-
-			embed.addFields({ name: questDetails.name, value: taskList, inline: false })
-		} else if (questDetails) {
-			const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
-			const isComplete = userTask >= questDetails.totalProgress
-			const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
-			const progressText = isComplete
-				? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
-				: `${userTask}/${questDetails.totalProgress}`
-			embed.addFields({
-				name: questDetails.name,
-				value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
+		const questDetails = questsArray.find(q => q.name === questWithMostProgress.id)
+		if (questDetails) {
+			defaultEmbed.setDescription(`Here is your quest with the most progress: **${questDetails.name}**`)
+			defaultEmbed.addFields({
+				name: "🎯 Task",
+				value: questDetails.task,
+				inline: false
+			})
+			defaultEmbed.addFields({
+				name: "🕰️ Progress",
+				value: `${questWithMostProgress.progress}/${questDetails.totalProgress}`,
 				inline: false
 			})
 		}
-	})
+	}
 
-	await interaction.reply({ embeds: [embed] })
+	await interaction.reply({ embeds: [defaultEmbed], components: [row] })
+
+	const filter = (i: Interaction) =>
+		i.isStringSelectMenu() && i.customId === "quest_menu" && i.user.id === interaction.user.id
+
+	const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector?.on("collect", async i => {
+		if (!i.isStringSelectMenu()) return
+
+		const selectedValue = i.values[0]
+
+		if (selectedValue === "personal_quests") {
+			const personalQuestsEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Personal Quests")
+
+			if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+				personalQuestsEmbed.setDescription("You have no active personal quests.")
+			} else {
+				personalQuestsEmbed.setDescription("Select a personal quest from the dropdown menu.")
+
+				userQuests.quests.forEach(quest => {
+					const questDetails = questsArray.find(q => q.name === quest.id)
+
+					if (questDetails && Array.isArray(questDetails.tasks)) {
+						const userTasks = Array.isArray(quest.tasks) ? quest.tasks : []
+						const taskList = questDetails.tasks
+							.map((task, index) => {
+								const userTask = userTasks.find(t => t.description === task.description)
+								const taskProgress = userTask ? userTask.progress : 0
+								const isComplete = taskProgress >= task.totalProgress
+								const taskDescription = isComplete ? `~~${task.description}~~` : task.description
+								const progressText = isComplete
+									? `~~${taskProgress}/${task.totalProgress}~~ ✅`
+									: `${taskProgress}/${task.totalProgress}`
+								return `**Task ${index + 1}**: ${taskDescription} - Progress: ${progressText}`
+							})
+							.join("\n")
+
+						personalQuestsEmbed.addFields({ name: questDetails.name, value: taskList, inline: false })
+					} else if (questDetails) {
+						const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
+						const isComplete = userTask >= questDetails.totalProgress
+						const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
+						const progressText = isComplete
+							? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
+							: `${userTask}/${questDetails.totalProgress}`
+
+						personalQuestsEmbed.addFields({
+							name: questDetails.name,
+							value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
+							inline: false
+						})
+					}
+				})
+			}
+
+			await i.update({ embeds: [personalQuestsEmbed] })
+		} else if (selectedValue === "community_quests") {
+			// Display community quest
+			const communityQuestEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Community Quest")
+
+			if (currentCommunityQuest) {
+				communityQuestEmbed.setDescription(
+					`Here is the current community quest: **${currentCommunityQuest.questName}**`
+				)
+				communityQuestEmbed.addFields({
+					name: "🌍 Task",
+					value: currentCommunityQuest.task,
+					inline: false
+				})
+				communityQuestEmbed.addFields({
+					name: "🕰️ Progress",
+					value: `${currentCommunityQuest.currentProgress}/${currentCommunityQuest.taskAmount}`,
+					inline: false
+				})
+				communityQuestEmbed.addFields({
+					name: "⏰ Ends",
+					value: `<t:${new Date(currentCommunityQuest.endDate).getTime() / 1000}:R>`,
+					inline: false
+				})
+			} else {
+				communityQuestEmbed.setDescription("There are no active community quests at the moment.")
+			}
+
+			await i.update({ embeds: [communityQuestEmbed] })
+		} else if (selectedValue === "weekly_quests") {
+			const weeklyQuestsEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Weekly Quests")
+			weeklyQuestsEmbed.setDescription("Weekly quests will be available in the future.")
+
+			await i.update({ embeds: [weeklyQuestsEmbed] })
+		}
+	})
 }
+
 // abandon quest with dropdown menu using getuserquest
 export async function abandonQuestCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
