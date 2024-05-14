@@ -1664,13 +1664,6 @@ export async function executeBossAttack(
 			})
 			break
 
-		case chosenAttack.name === "Special Attack 2" && randomOpponent.name === "Boss 2":
-			// Handle special case for Boss 2 and Special Attack 2
-			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
-			// Add any additional logic or effects specific to this case
-			primaryEmbed.addFields({ name: "Damage", value: `${damageToPlayer}` })
-			break
-
 		default:
 			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
 			break

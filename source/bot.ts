@@ -8,7 +8,6 @@ import {
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
-	ModalBuilder,
 	Partials,
 	PermissionFlagsBits,
 	REST,
@@ -20,7 +19,10 @@ import { config as dotenv } from "dotenv"
 
 import cron from "node-cron"
 import {
+	abandonQuestCommand,
 	claimQuestsCommand,
+	createCommunityQuestCommand,
+	eventCommandHandler,
 	generateShopEmbed,
 	generateStatsEmbed,
 	handleAcceptTrade,
@@ -29,7 +31,6 @@ import {
 	handleAlertCommand,
 	handleBalanceCommand,
 	handleBegCommand,
-	handleClaimVoteRewards,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -60,7 +61,6 @@ import {
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
-	handleUnequipQuestCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUpdateProfileImageCommand,
@@ -81,15 +81,10 @@ import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
 	getShopLastReset,
-	getUserIdByImageUrl,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
 	logImageUrl,
-	updateBalance,
-	updateReviewStatus,
-	updateReviewerId,
-	updateUserProfileHeader,
-	updateUserProfileImage
+	updateBalance
 } from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 
@@ -107,7 +102,6 @@ export const client = new Client({
 })
 
 import log4js from "log4js"
-import { createModerationModal } from "./aws.js"
 import { getRandomQuote } from "./shikigami.js"
 
 // Configure log4js
@@ -232,7 +226,7 @@ setInterval(async () => {
 	const activity = activities[index]
 	client.user.setPresence({
 		activities: [{ name: activity.name, type: activity.type }],
-		status: "online"
+		status: "invisible"
 	})
 	index++
 }, 60000)
@@ -333,7 +327,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 client.setMaxListeners(200)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -378,8 +372,10 @@ const commands = [
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
+	new SlashCommandBuilder().setName("createquest").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
+	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -662,6 +658,51 @@ const commands = [
 				.setName("techniques")
 				.setDescription("Comma-separated list of techniques to add/update")
 				.setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("createcommunityquest")
+		.setDescription("Create a new community quest")
+		.addStringOption(option =>
+			option.setName("questname").setDescription("The name of the quest").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("questdescription").setDescription("The description of the quest").setRequired(true)
+		)
+		.addStringOption(option => option.setName("task").setDescription("The task of the quest").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("taskamount").setDescription("The amount required to complete the task").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("rewarditem").setDescription("The reward item for completing the quest").setRequired(true)
+		)
+		.addIntegerOption(option =>
+			option.setName("rewardamount").setDescription("The amount of the reward item").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("startdate").setDescription("The start date of the quest (YYYY-MM-DD)").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("enddate").setDescription("The end date of the quest (YYYY-MM-DD)").setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Trading Command.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
+		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		)
 ].map(command => command.toJSON())
 
@@ -761,19 +802,34 @@ client.on("interactionCreate", async interaction => {
 		await handleUpdateCommand(chatInputInteraction)
 		return
 	}
+	//
 	client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
 			if (interaction.customId.startsWith("accept_trade_select_")) {
-				logger.info("Handling trade selection...")
-				await interaction
-					.deferReply({ ephemeral: false })
-					.catch(error => logger.error("Error deferring reply:", error))
-				await processTradeSelection(interaction).catch(error =>
+				try {
+					// Ensure interaction is deferred as soon as possible
+					if (!interaction.deferred && !interaction.replied) {
+						await interaction.deferReply()
+					}
+
+					logger.info("Handling trade selection...")
+					await processTradeSelection(interaction)
+				} catch (error) {
 					logger.error("Error during trade selection processing:", error)
-				)
+
+					// Only update with an error if we haven't already replied or deferred successfully
+					if (interaction.deferred && !interaction.replied) {
+						await interaction.editReply({
+							content: "An error occurred while trying to accept the trade request.",
+							components: []
+						})
+					}
+				}
 			}
 		}
 	})
+
+	//
 
 	const shouldProceed = await checkRegistrationMiddleware(interaction)
 	if (!shouldProceed) return
@@ -850,7 +906,7 @@ client.on("interactionCreate", async interaction => {
 				await claimQuestsCommand(interaction)
 				break
 			case "abandon":
-				await handleUnequipQuestCommand(interaction)
+				await abandonQuestCommand(interaction)
 				break
 			default:
 		}
@@ -885,6 +941,9 @@ client.on("interactionCreate", async interaction => {
 			case "inventory":
 				await handleInventoryCommand(chatInputInteraction)
 				break
+			case "event":
+				await eventCommandHandler(chatInputInteraction)
+				break
 			case "viewshikigami":
 				await handleViewShikigami(chatInputInteraction)
 				break
@@ -915,9 +974,6 @@ client.on("interactionCreate", async interaction => {
 			case "work":
 				await handleWorkCommand(chatInputInteraction)
 				break
-			case "voteclaim":
-				await handleClaimVoteRewards(chatInputInteraction)
-				break
 
 			case "selectitle":
 				await handleTitleSelectCommand(chatInputInteraction)
@@ -939,6 +995,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "toggleheavenlyrestriction":
 				await handleToggleHeavenlyRestrictionCommand(chatInputInteraction)
+				break
+			case "createcommunityquest":
+				await createCommunityQuestCommand(chatInputInteraction)
 				break
 			case "gamble":
 				await handleGambleCommand(chatInputInteraction)
@@ -974,13 +1033,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import { AutoPoster } from "topgg-autoposter"
+//import { AutoPoster } from "topgg-autoposter"
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-const poster = AutoPoster(process.env.TOPGG, client)
-
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 
@@ -1023,83 +1081,5 @@ export async function sendForManualReview(imageUrl: string, interaction, subcomm
 		throw error
 	}
 }
-
-client.on("interactionCreate", async interaction => {
-	if (interaction.isButton()) {
-		const buttonInteraction = interaction
-		const [action, originalMessageId] = buttonInteraction.customId.split("_")
-
-		if (action === "confirm") {
-			let modal = new ModalBuilder()
-				.setCustomId(`confirmModal_${action}_${originalMessageId}`)
-				.setTitle("Confirmation")
-
-			if (interaction.customId.includes("accept")) {
-				modal = createModerationModal(
-					`confirmModal_accept_${originalMessageId}`,
-					"Confirm Acceptance",
-					"Reason for Acceptance:"
-				)
-			} else if (interaction.customId.includes("deny")) {
-				modal = createModerationModal(
-					`confirmModal_deny_${originalMessageId}`,
-					"Confirm Denial",
-					"Reason for Denial:"
-				)
-			}
-
-			if (modal) {
-				await interaction.showModal(modal)
-			}
-		}
-	} else if (interaction.isModalSubmit()) {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const [_, action, __] = interaction.customId.split("_")
-		const reason = interaction.fields.getTextInputValue("reason_input")
-		const isAccepted = action === "accept"
-
-		await interaction.reply({
-			ephemeral: true,
-			content: "The review has been processed.",
-			components: []
-		})
-
-		try {
-			const imageUrl = interaction.message.embeds[0].image.url
-			const userId = await getUserIdByImageUrl(imageUrl)
-
-			if (userId) {
-				const user = await client.users.fetch(userId)
-				if (user) {
-					const isHeader = interaction.message.content.includes("header")
-					const content = isAccepted
-						? `🎉 Awesome! Your new ${
-								isHeader ? "header" : "avatar"
-						  } has been approved and is now live on your profile!`
-						: `Image denied as inappropriate. Reason: ${reason}`
-
-					await user.send(content)
-
-					if (isAccepted) {
-						if (isHeader) {
-							await updateUserProfileHeader(userId, imageUrl)
-							logger.info(`Updated profile header for user ${userId}`)
-						} else {
-							await updateUserProfileImage(userId, imageUrl)
-							logger.info(`Updated profile avatar for user ${userId}`)
-						}
-					}
-
-					await updateReviewStatus(imageUrl, true)
-					await updateReviewerId(imageUrl, interaction.user.id)
-				}
-			} else {
-				logger.warn(`No user ID found for image URL: ${imageUrl}`)
-			}
-		} catch (error) {
-			logger.error("Failed to process manual review:", error)
-		}
-	}
-})
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

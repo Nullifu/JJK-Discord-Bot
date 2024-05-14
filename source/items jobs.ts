@@ -141,15 +141,15 @@ export const craftingRecipes = {
 	},
 	awakening: {
 		requiredItems: [
-			{ name: "Awakening Remnant", quantity: 1 },
-			{ name: "Heian Era Scraps", quantity: 1 }
+			{ name: "Awakening Remnant", quantity: 6 },
+			{ name: "Heian Era Scraps", quantity: 4 }
 		],
 		craftedItemName: "Heian Era Awakening Remnant"
 	},
 	health_vial: {
 		requiredItems: [
-			{ name: "Empty Bottle", quantity: 1 },
-			{ name: "Malevolent Shrine (Blood Vial)", quantity: 1 }
+			{ name: "Empty Bottle", quantity: 2 },
+			{ name: "Malevolent Shrine (Blood Vial)", quantity: 3 }
 		],
 		craftedItemName: "Cursed Energy Vial"
 	},
@@ -963,6 +963,35 @@ export const CLAN_SKILLS = {
 			clan: "Limitless 100%",
 			items: [{ name: "Heian Era Scraps", quantity: 1 }],
 			stage: "Stage Four"
+		}
+	],
+	"Gambler Fever (Jackpot)": [
+		{
+			name: "Jackpot: Cargo Fever Rush",
+			cost: "9280000",
+			clan: "Gambler Fever (Jackpot)",
+			items: [
+				{ name: "Hakari Kinji's Token", quantity: 20 },
+				{ name: "Heian Era Scraps", quantity: 3 }
+			],
+			stage: "Stage Five"
+		},
+		{
+			name: "Jackpot: Full House Kick",
+			cost: "6580000",
+			clan: "Gambler Fever (Jackpot)",
+			items: [
+				{ name: "Hakari Kinji's Token", quantity: 18 },
+				{ name: "Heian Era Scraps", quantity: 3 }
+			],
+			stage: "Stage Five"
+		},
+		{
+			name: "Jackpot: Shutter Doors",
+			cost: "3800000",
+			clan: "Gambler Fever (Jackpot)",
+			items: [{ name: "Hakari Kinji's Token", quantity: 16 }],
+			stage: "Stage Five"
 		}
 	]
 }
@@ -2064,6 +2093,7 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
+
 	{
 		itemName: "Special-Grade Cursed Object" || "Special Grade Cursed Object",
 		description: "Special-Grade Cursed Object",

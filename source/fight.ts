@@ -14,6 +14,7 @@ import {
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	updateBalance,
+	updateCommunityQuestProgress,
 	updateMonthlyFightsWon,
 	updatePlayerGrade,
 	updateUserExperience,
@@ -22,6 +23,7 @@ import {
 	updateUserShikigami,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
+import { createFeverMeterBar } from "./utils.js"
 
 export async function handleBossDeath(
 	interaction: ChatInputCommandInteraction<CacheType>,
@@ -101,7 +103,6 @@ export async function handleBossDeath(
 	}
 
 	activeCollectors.delete(interaction.user.id)
-	await updateUserHealth(interaction.user.id, 100)
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
@@ -110,6 +111,7 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
+	await updateCommunityQuestProgress("Satoru Gojo's Sealing", 1)
 	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
@@ -158,6 +160,18 @@ export async function handleShikigamiTame(
 	if (opponent.name === "Divine-General Mahoraga") {
 		tamedShikigami = {
 			name: "Divine-General Mahoraga",
+			experience: 0,
+			tier: 5,
+			health: 500,
+			tamedAt: new Date(),
+			hygiene: 100,
+			hunger: 100,
+			friendship: 0
+		}
+	}
+	if (opponent.name === "Divine Dogs Totality") {
+		tamedShikigami = {
+			name: "Divine Dogs Totality",
 			experience: 0,
 			tier: 5,
 			health: 500,
@@ -224,7 +238,7 @@ export async function executeSpecialTechnique({
 
 	primaryEmbed.setImage(imageUrl)
 	primaryEmbed.setDescription(description)
-	primaryEmbed.setFields({ name: "Technique", value: fieldValue })
+	primaryEmbed.setFields({ name: "Player Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 	await new Promise(resolve => setTimeout(resolve, 3000))
@@ -295,15 +309,15 @@ export async function exportTheHonoredOne(interaction, randomOpponent, primaryEm
 
 export async function exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth) {
 	const random = Math.random()
-	if (random < 0.5) {
-		randomOpponent.name = "Sukuna (Heian Era)"
-		randomOpponent.current_health = randomOpponent.max_health // Reset health to max
+	if (random < 0.9) {
+		randomOpponent.name = "Sukuna (Heian Era Enraged)"
+		randomOpponent.current_health = randomOpponent.max_health
 		const usermaxhealth = getUserMaxHealth(interaction.user.id)
 
-		await updateUserHealth(interaction.user.id, await usermaxhealth) // Reset player health to max
+		await updateUserHealth(interaction.user.id, await usermaxhealth)
 
-		primaryEmbed.setDescription("Sukuna has unleashed his full power as Sukuna (Heian Era)!")
-		primaryEmbed.setImage("https://staticg.sportskeeda.com/editor/2024/01/dd442-17050432242946-1920.jpg")
+		primaryEmbed.setDescription("Cocky brat, This fight's far from over.. **SUKUNA BECOMES ENRAGED..**")
+		primaryEmbed.setImage("https://media1.tenor.com/m/FSuRhPgRMMoAAAAd/sukuna-hein-era.gif")
 		primaryEmbed.setFields(
 			{ name: "Boss Health", value: randomOpponent.current_health.toString() },
 			{ name: "Player Health", value: playerHealth.toString() }
@@ -512,7 +526,7 @@ export async function export120(interaction, randomOpponent, primaryEmbed, row, 
 		primaryEmbed.setImage("https://media1.tenor.com/m/Y1BZYqq9NVoAAAAd/todo-black-flash-jujutsu-kaisen.gif")
 		primaryEmbed.setFields({ name: "Boss Health", value: "???" }, { name: "Player Health", value: "???" })
 		//
-		await interaction.editReply({ embeds: [primaryEmbed], components: [row] })
+		await interaction.editReply({ embeds: [primaryEmbed], components: [] })
 
 		await new Promise(resolve => setTimeout(resolve, 4000))
 
@@ -690,4 +704,59 @@ export function generateBloodlustBar(currentBloodlust) {
 	const emptyBar = "⬛".repeat(emptyLength)
 
 	return `${filledBar}${emptyBar} (${currentBloodlust}/100)`
+}
+
+export async function updateFeverMeter(collectedInteraction, userState, primaryEmbed) {
+	// Increase the fever meter by a certain amount
+	userState.feverMeter += 50
+
+	// Check if the fever meter reaches 100%
+	if (userState.feverMeter >= 100) {
+		userState.feverMeter = 100
+		userState.isJackpotMode = true
+
+		const jackpotImageUrl =
+			"https://cdn.discordapp.com/attachments/681985000521990179/1239658835459707032/image.png?ex=6643b9c2&is=66426842&hm=56c1613c73ac8b7e2158e36ed40ddd0b3ed523a4291fc0366c68223158e8ba51&"
+		primaryEmbed.setImage(jackpotImageUrl)
+
+		// Add a field to indicate Jackpot Mode activation
+		primaryEmbed.addFields({
+			name: "MUSIC.. START!",
+			value: "JACKPOT MODE ACTIVATED!"
+		})
+
+		// Update the embed with the first jackpot image
+		await collectedInteraction.editReply({ embeds: [primaryEmbed] })
+
+		// Wait for a short delay to allow the image to load
+		await new Promise(resolve => setTimeout(resolve, 2000))
+
+		const jackpotModeImageUrl2 = "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+		primaryEmbed.setImage(jackpotModeImageUrl2)
+
+		// Remove the fever meter field from the embed
+		const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
+		if (feverMeterFieldIndex !== -1) {
+			primaryEmbed.spliceFields(feverMeterFieldIndex, 1)
+		}
+
+		// Update the embed with the second jackpot image
+		await collectedInteraction.editReply({ embeds: [primaryEmbed] })
+	} else {
+		const updatedFeverMeterBar = createFeverMeterBar(userState.feverMeter, 100)
+		const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
+		if (feverMeterFieldIndex !== -1) {
+			primaryEmbed.spliceFields(feverMeterFieldIndex, 1, {
+				name: "Fever Meter",
+				value: updatedFeverMeterBar,
+				inline: false
+			})
+		} else {
+			primaryEmbed.addFields({
+				name: "Fever Meter",
+				value: updatedFeverMeterBar,
+				inline: false
+			})
+		}
+	}
 }

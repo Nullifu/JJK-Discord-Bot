@@ -319,6 +319,11 @@ export function itadoriCommentary(quest) {
 	}
 }
 
+export interface IdleDeathsGambleState {
+	feverMeter: number
+	isJackpotMode: boolean
+}
+
 export const shikigamiThumbnails = {
 	"Divine-General Mahoraga": "https://i.redd.it/e99r17yyf31c1.jpg",
 	"Mahoraga":
