@@ -3704,7 +3704,8 @@ export async function createGiveaway(
 	endDate: Date,
 	isPrizeItem: boolean,
 	itemQuantity: number,
-	prizeAmount: number
+	prizeAmount: number,
+	giveawayMessageId: string
 ): Promise<void> {
 	await client.connect()
 	const database = client.db(mongoDatabase)
@@ -3721,7 +3722,8 @@ export async function createGiveaway(
 		winnerId: "",
 		entries: [],
 		itemQuantity,
-		prizeAmount
+		prizeAmount,
+		giveawayMessageId
 	})
 
 	// Schedule a task to end the giveaway and select the winner

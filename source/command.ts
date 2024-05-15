@@ -7265,7 +7265,7 @@ export async function eventCommandHandler(interaction: CommandInteraction) {
 
 export async function handleGiveawayCommand(interaction) {
 	const userId = interaction.user.id
-	const allowedUserIds = ["292385626773258240"]
+	const allowedUserIds = ["292385626773258240", "723198209979187291"]
 
 	if (!allowedUserIds.includes(userId)) {
 		await interaction.reply({ content: "You do not have permission to create a giveaway.", ephemeral: true })
@@ -7326,14 +7326,17 @@ export async function handleGiveawayCommand(interaction) {
 	const channelId = interaction.channelId
 
 	try {
+		const endsAt = `<t:${Math.floor(endDate.getTime() / 1000)}:R>` // Convert to Discord timestamp format
+
 		const embed = new EmbedBuilder()
 			.setTitle("🎉 New Giveaway! 🎉")
 			.setDescription(`**Prize:** ${prize}`)
-			.setColor("#FFA500") // Customize the color to an orange shade
+			.setColor("#FFA500")
 			.addFields(
 				{ name: "🏆 Winners", value: winners.toString(), inline: true },
-				{ name: "⏳ Ends In", value: duration, inline: true },
-				{ name: "👤 Hosted By", value: `<@${userId}>`, inline: true }
+				{ name: "⏳ Ends In", value: endsAt, inline: true },
+				{ name: "👤 Hosted By", value: `<@${userId}>`, inline: true },
+				{ name: "🎫 Entries", value: "0", inline: true }
 			)
 			.setFooter({
 				text: "Click the button below to enter the giveaway!"
@@ -7363,7 +7366,9 @@ export async function handleGiveawayCommand(interaction) {
 			)
 			logger.debug("Giveaway ID For Button Builder", interaction.id)
 
-			await channel.send({ embeds: [embed], components: [row] })
+			const giveawayMessage = await channel.send({ embeds: [embed], components: [row] })
+			const giveawayMessageId = giveawayMessage.id // Get the actual message ID
+
 			await interaction.reply({ content: `Giveaway created! It will end in ${duration}.`, ephemeral: true })
 
 			await createGiveaway(
@@ -7375,7 +7380,8 @@ export async function handleGiveawayCommand(interaction) {
 				endDate,
 				isPrizeItem,
 				itemQuantity || 1,
-				prizeAmount || 0
+				prizeAmount || 0,
+				giveawayMessageId
 			)
 		} else {
 			await interaction.reply({ content: "Giveaway creation failed. Invalid channel.", ephemeral: true })
@@ -7412,12 +7418,51 @@ export async function handleGiveawayEntry(interaction) {
 
 		await giveawaysCollection.updateOne({ messageId: giveawayId }, { $push: { entries: interaction.user.id } })
 
+		const updatedGiveaway = await giveawaysCollection.findOne({ messageId: giveawayId })
+		const entryCount = updatedGiveaway.entries.length
+
 		const embed = new EmbedBuilder()
 			.setTitle("Giveaway Entry")
 			.setDescription(`You have successfully entered the giveaway for **${giveaway.prize}**!`)
 			.setColor("Green")
 
 		interaction.reply({ embeds: [embed], ephemeral: true })
+
+		try {
+			const giveawayMessage = await interaction.channel.messages.fetch(giveaway.giveawayMessageId)
+			logger.debug("Message ID:", giveaway.giveawayMessageId)
+
+			const giveawayEmbed = giveawayMessage.embeds[0]
+
+			const updatedEmbed = new EmbedBuilder(giveawayEmbed.data)
+
+			// Find the index of the "🎫 Entries" field
+			const entriesFieldIndex = updatedEmbed.data.fields.findIndex(field => field.name === "🎫 Entries")
+
+			if (entriesFieldIndex !== -1) {
+				// Update the value of the "🎫 Entries" field
+				updatedEmbed.spliceFields(entriesFieldIndex, 1, {
+					name: "🎫 Entries",
+					value: entryCount.toString(),
+					inline: true
+				})
+			} else {
+				// Add the "🎫 Entries" field if it doesn't exist
+				updatedEmbed.addFields({ name: "🎫 Entries", value: entryCount.toString(), inline: true })
+			}
+
+			await giveawayMessage.edit({ embeds: [updatedEmbed] })
+		} catch (error) {
+			logger.error("Failed to update giveaway embed:", error)
+			// Handle specific errors based on the error type or message
+			if (error.code === 10008) {
+				logger.warn("Giveaway message not found. It may have been deleted.")
+			} else if (error.code === 50001) {
+				logger.warn("Missing access to fetch the giveaway message. Check bot permissions.")
+			} else {
+				logger.warn("An unexpected error occurred while updating the giveaway embed.")
+			}
+		}
 	} catch (error) {
 		logger.error("Error handling giveaway entry:", error)
 		interaction.reply({

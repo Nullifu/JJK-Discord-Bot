@@ -334,6 +334,7 @@ export interface Giveaway {
 	isPrizeItem: boolean
 	winnerId: string
 	entries: string[]
+	giveawayMessageId: string
 }
 
 export const shikigamiThumbnails = {
