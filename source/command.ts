@@ -4068,7 +4068,7 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			await updatePlayerGrade(userId)
-			await removeUserQuest(userId, completedQuest.id)
+			await removeUserQuest(userId, completedQuest.id, false)
 		}
 
 		// Create the questRewards array
@@ -4408,6 +4408,7 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 // abandon quest with dropdown menu using getuserquest
 export async function abandonQuestCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
+
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
 
@@ -4416,10 +4417,20 @@ export async function abandonQuestCommand(interaction) {
 		return
 	}
 
-	const options = userQuests.quests.map(quest => ({
-		label: quest.id,
-		value: quest.id
-	}))
+	// Create a map to store the count of each quest
+	const questCounts = new Map()
+
+	const options = userQuests.quests.map(quest => {
+		// Get the count of the current quest
+		const count = questCounts.get(quest.id) || 0
+		// Increment the count for the current quest
+		questCounts.set(quest.id, count + 1)
+
+		return {
+			label: `${quest.id} (${count + 1})`,
+			value: `${quest.id}_${count + 1}`
+		}
+	})
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("abandon_quest")
@@ -4439,9 +4450,9 @@ export async function abandonQuestCommand(interaction) {
 
 	collector.on("collect", async i => {
 		if (i.isStringSelectMenu()) {
-			const questId = i.values[0]
-			await removeUserQuest(userId, questId)
-			await i.update({ content: `You have abandoned the quest: ${questId}`, components: [] })
+			const [questId, instanceId] = i.values[0].split("_")
+			await removeUserQuest(userId, questId, instanceId)
+			await i.update({ content: `You have abandoned the quest: ${questId} (${instanceId})`, components: [] })
 		}
 	})
 
@@ -5035,52 +5046,6 @@ function chunkArray(array, chunkSize) {
 		chunks.push(array.slice(i, i + chunkSize))
 	}
 	return chunks
-}
-
-export async function handleUnequipQuestCommand(interaction) {
-	const userId = interaction.user.id
-	const userQuests = await getUserQuests(userId)
-
-	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
-		await interaction.reply("You have no active quests to unequip.")
-		return
-	}
-
-	const options = userQuests.quests.map(quest => ({
-		label: quest.id,
-		value: quest.id
-	}))
-
-	const selectMenu = new StringSelectMenuBuilder()
-		.setCustomId("unequip_quest")
-		.setPlaceholder("Select a Quest to Unequip")
-		.addOptions(options)
-
-	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
-
-	await interaction.reply({
-		content: "Select a quest to unequip.",
-		components: [row],
-		ephemeral: true
-	})
-
-	const filter = i => i.customId === "unequip_quest" && i.user.id === interaction.user.id
-	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
-
-	collector.on("collect", async i => {
-		if (i.isStringSelectMenu()) {
-			const questId = i.values[0]
-			await removeUserQuest(userId, questId)
-			await i.update({ content: `You have unequipped the quest: ${questId}`, components: [] })
-		}
-	})
-
-	collector.on("end", collected => {
-		if (collected.size === 0) {
-			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
-		}
-		collector.stop()
-	})
 }
 
 export async function handleEquipTransformationCommand(interaction: ChatInputCommandInteraction) {

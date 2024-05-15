@@ -1571,21 +1571,25 @@ export async function getUserQuests(userId) {
 }
 
 // removeUserQuest function
-export async function removeUserQuest(userId, questName) {
+export async function removeUserQuest(userId, questName, instanceId) {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<User> = database.collection<User>(usersCollectionName)
 
 		const result = await usersCollection.updateOne(
-			{ id: userId },
-			{ $pull: { quests: { id: questName } } } // Make sure 'id' matches the property in the Quest interface.
+			{ "id": userId, "quests.name": questName, "quests.instanceId": instanceId },
+			{ $pull: { quests: { name: questName, instanceId: instanceId } } }
 		)
 
 		if (result.modifiedCount === 0) {
-			logger.info(`No quest was removed for the user with ID: ${userId}`)
+			logger.info(
+				`No quest with name: ${questName} and instanceId: ${instanceId} was removed for the user with ID: ${userId}`
+			)
 			return false
 		} else {
-			logger.info(`Quest with name: ${questName} was removed for the user with ID: ${userId}`)
+			logger.info(
+				`Quest with name: ${questName} and instanceId: ${instanceId} was removed for the user with ID: ${userId}`
+			)
 			return true
 		}
 	} catch (error) {
@@ -1839,16 +1843,22 @@ export async function getUserActiveHeavenlyTechniques(userId: string): Promise<s
 	}
 }
 
-// update user active techniques limit of 10 if it doesnt exist create it
 export async function updateUserActiveTechniques(userId: string, newActiveTechniques: string[]): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const activeTechniques = newActiveTechniques.slice(0, 20)
+		const user = await usersCollection.findOne({ id: userId })
+		const currentActiveTechniques = user?.activeTechniques || []
 
-		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques } })
+		const uniqueNewTechniques = newActiveTechniques.filter(
+			technique => !currentActiveTechniques.includes(technique)
+		)
+
+		const updatedActiveTechniques = [...currentActiveTechniques, ...uniqueNewTechniques].slice(0, 20)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: updatedActiveTechniques } })
 	} catch (error) {
 		logger.error("Error updating user active techniques:", error)
 		throw error

@@ -27,6 +27,20 @@ export interface UserProfile {
 	shikigami: Shikigami[]
 }
 
+export interface Quest {
+	name: string
+	description: string
+	coins: number
+	experience: number
+	items: { [key: string]: number }
+	itemQuantity: number
+	tasks?: { description: string; progress: number; totalProgress: number }[]
+	task?: string
+	totalProgress?: number
+	special?: boolean
+	instanceId: string // Add the instanceId property
+}
+
 export const gradeMappings = {
 	"special grade": 0,
 	"grade 1": 1,
@@ -69,10 +83,6 @@ export interface InventoryItem {
 	quantity: number
 }
 
-interface Quest {
-	name: string
-	id: string
-}
 export const dirtyToCleanItemMap = {
 	"(Dirty) Sukuna Finger": "Sukuna Finger",
 	"(Dirty) Rikugan Eye": "Rikugan Eye"

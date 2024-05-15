@@ -1121,7 +1121,8 @@ export const questsArray = [
 			{ description: "Defeat Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
 			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
-		special: true
+		special: true,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Training with Itadori",
@@ -1131,7 +1132,8 @@ export const questsArray = [
 		items: { "Cursed Energy Reinforcement": 1 },
 		itemQuantity: 1,
 		task: "Fight Itadori 3 times!",
-		totalProgress: 3
+		totalProgress: 3,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Disaster Curses",
@@ -1145,7 +1147,8 @@ export const questsArray = [
 			{ description: "Defeat Jogo", progress: 0, totalProgress: 1 },
 			{ description: "Defeat Hanami", progress: 0, totalProgress: 1 },
 			{ description: "Defeat Dagon", progress: 0, totalProgress: 1 }
-		]
+		],
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Nature of Curses",
@@ -1155,7 +1158,8 @@ export const questsArray = [
 		item: "Mahito's Soul",
 		itemQuantity: 2,
 		task: "Defeat Reborn Mahito",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Curse King",
@@ -1164,7 +1168,8 @@ export const questsArray = [
 		experience: 320,
 		items: { "Sukuna Finger": 3 },
 		task: "Get acknowledged by Sukuna!",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Curse King's Task",
@@ -1174,7 +1179,8 @@ export const questsArray = [
 		items: { "Sukuna's Honour": 1 },
 		task: "Round up all of the Sukuna Fingers!",
 		totalProgress: 20,
-		special: true
+		special: true,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Satoru Gojo's Mission",
@@ -1188,7 +1194,8 @@ export const questsArray = [
 			{ description: "Defeat Gojo", progress: 0, totalProgress: 1 },
 			{ description: "Defeat Sukuna", progress: 0, totalProgress: 1 }
 		],
-		special: true
+		special: true,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Find Yuta!",
@@ -1198,7 +1205,8 @@ export const questsArray = [
 		items: { "Yuta's Token": 2, "Fraud Poster": 1 },
 		itemQuantity: 2,
 		task: "Find this fraud!",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "The Honored One",
@@ -1209,7 +1217,8 @@ export const questsArray = [
 		item: "Sacred Eye",
 		itemQuantity: 2,
 		task: "Be blessed with the limitless technique...",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId" // Add the instanceId property
 	},
 	{
 		name: "Kashimo's Task",
@@ -1224,7 +1233,8 @@ export const questsArray = [
 			{ description: "Defeat Sukuna", progress: 0, totalProgress: 1 },
 			{ description: "Defeat Hakari Kinji", progress: 0, totalProgress: 1 }
 		],
-		totalProgress: 10
+		totalProgress: 10,
+		instanceId: "uniqueInstanceId"
 	}
 ]
 
