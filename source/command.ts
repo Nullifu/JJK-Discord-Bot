@@ -7083,7 +7083,7 @@ export async function handleGiveawayCommand(interaction) {
 		return
 	}
 
-	const duration = "60s" // Set the duration to 60 seconds for testing
+	const duration = interaction.options.get("duration")?.value
 	const prize = interaction.options.get("prize")?.value
 	const winners = interaction.options.get("winners")?.value
 	const isPrizeItem = interaction.options.get("is_item")?.value
