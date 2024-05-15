@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { CommandInteraction } from "discord.js"
+import { CommandInteraction, EmbedBuilder } from "discord.js"
 import { config as dotenv } from "dotenv"
 import moment from "moment-timezone"
 import { Collection, MongoClient, ObjectId } from "mongodb"
@@ -21,6 +21,8 @@ export const shopCollectionName = "shop"
 export const imageCollectionName = "imageLogs"
 export const giveawayCollectionName = "giveawayLogs"
 export const communityQuestsCollectionName = "communityQuests"
+export const raidBossesCollectionName = "raidBosses"
+export const raidInstancesCollectionName = "raidParticipants"
 
 export const mongoDatabase = process.env["MONGO_DATABASE"]
 export const mongoUri = process.env.MONGO_URI
@@ -3740,4 +3742,282 @@ export async function createGiveaway(
 	setTimeout(async () => {
 		await handleGiveawayEnd(guildId, channelId, messageId)
 	}, endDate.getTime() - Date.now())
+}
+
+export async function getCurrentRaidBoss(): Promise<RaidBoss | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
+
+		const currentDate = new Date()
+
+		const raidBoss = await raidBossesCollection.findOne({
+			startDate: { $lte: currentDate },
+			endDate: { $gte: currentDate }
+		})
+
+		return raidBoss || null
+	} catch (error) {
+		logger.error("Error retrieving current raid boss:", error)
+		return null
+	}
+}
+
+// updateRaidBoss
+export async function updateRaidBoss(
+	bossName: string,
+	grade: string,
+	awakeningStage: string,
+	globalHealth: number
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
+
+		const currentDate = new Date()
+		const endDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+
+		await raidBossesCollection.updateOne(
+			{ name: bossName },
+			{
+				$set: {
+					grade,
+					awakeningStage,
+					globalHealth,
+					startDate: currentDate,
+					endDate
+				}
+			},
+			{ upsert: true }
+		)
+	} catch (error) {
+		logger.error("Error updating raid boss:", error)
+		throw error
+	}
+}
+
+export interface RaidBoss {
+	_id: string
+	name: string
+	grade: string
+	awakeningStage: string
+	globalHealth: number
+	current_health: number
+	imageUrl: string
+	startDate: Date
+	endDate: Date
+}
+
+export interface RaidInstance {
+	raidBossId: string
+	participants: string[]
+	currentHealth: number
+	createdAt: Date
+}
+
+// isUserParticipatingInRaid
+export async function isUserParticipatingInRaid(userId: string): Promise<boolean> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
+
+		const raidInstance = await raidInstancesCollection.findOne({
+			participants: userId
+		})
+
+		return !!raidInstance
+	} catch (error) {
+		logger.error("Error checking if user is participating in raid:", error)
+		throw error
+	}
+}
+
+export async function getRaidBossDetails(bossName: string): Promise<RaidBoss | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
+
+		const raidBoss = await raidBossesCollection.findOne({ name: bossName })
+
+		return raidBoss || null
+	} catch (error) {
+		logger.error("Error retrieving raid boss details:", error)
+		return null
+	}
+}
+
+// addUserToRaidParticipants
+export async function addUserToRaidParticipants(userId: string, raidInstanceId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
+
+		await raidInstancesCollection.updateOne(
+			{ _id: new ObjectId(raidInstanceId) },
+			{ $addToSet: { participants: userId } }
+		)
+	} catch (error) {
+		logger.error("Error adding user to raid participants:", error)
+		throw error
+	}
+}
+
+// updateRaidBossHealthForParty
+export async function updateRaidBossHealthForParty(raidInstanceId: string, health: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
+
+		await raidInstancesCollection.updateOne(
+			{ _id: new ObjectId(raidInstanceId) },
+			{ $set: { currentHealth: health } }
+		)
+	} catch (error) {
+		logger.error("Error updating raid boss health for party:", error)
+		throw error
+	}
+}
+
+export async function createRaidParty(raidBossId: string, participants: string[]): Promise<RaidParty | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+		const raidBoss = await getRaidBossDetails(raidBossId)
+
+		if (!raidBoss) {
+			throw new Error("Raid boss not found")
+		}
+
+		const raidParty: RaidParty = {
+			raidBossId,
+			participants,
+			globalHealth: raidBoss.globalHealth,
+			pendingActions: [],
+			createdAt: new Date()
+		}
+
+		const result = await raidPartiesCollection.insertOne(raidParty)
+		const insertedRaidParty = await raidPartiesCollection.findOne({ _id: result.insertedId })
+
+		return insertedRaidParty
+	} catch (error) {
+		logger.error("Error creating raid party:", error)
+		return null
+	}
+}
+
+export interface RaidParty {
+	_id?: ObjectId
+	raidBossId: string
+	participants: string[]
+	globalHealth: number
+	pendingActions: PendingAction[]
+	createdAt: Date
+}
+
+export interface PendingAction {
+	userId: string
+	technique: string
+	damage: number
+}
+
+// resolve raid actions
+export async function resolveRaidActions(raidPartyId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+		const raidParty = await raidPartiesCollection.findOne({ _id: new ObjectId(raidPartyId) })
+
+		if (!raidParty) {
+			throw new Error("Raid party not found")
+		}
+
+		const resolvedActions: PendingAction[] = []
+
+		for (const action of raidParty.pendingActions) {
+			const damage = Math.floor(Math.random() * 100) + 1
+			resolvedActions.push({ ...action, damage })
+		}
+
+		await raidPartiesCollection.updateOne(
+			{ _id: new ObjectId(raidPartyId) },
+			{ $set: { pendingActions: resolvedActions } }
+		)
+	} catch (error) {
+		logger.error("Error resolving raid actions:", error)
+		throw error
+	}
+}
+
+export async function updateRaidPartyPendingActions(raidPartyId, pendingActions) {
+	const database = client.db(mongoDatabase)
+	const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+	await raidPartiesCollection.updateOne({ _id: new ObjectId(raidPartyId) }, { $set: { pendingActions } })
+}
+
+// getRaidInstanceByUser
+export async function getRaidInstanceByUser(userId: string): Promise<RaidInstance | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
+
+		const raidInstance = await raidInstancesCollection.findOne({
+			participants: userId
+		})
+
+		return raidInstance || null
+	} catch (error) {
+		logger.error("Error retrieving raid instance by user:", error)
+		return null
+	}
+}
+
+export async function handleRaidBossDefeat(
+	interaction: CommandInteraction,
+	raidParty: RaidParty,
+	raidBossDetails: RaidBoss
+) {
+	const database = client.db(mongoDatabase)
+	const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+	// Award rewards to participants
+	for (const participant of raidParty.participants) {
+		await awardRewards(participant, raidBossDetails)
+	}
+
+	// Remove the raid party document
+	await raidPartiesCollection.deleteOne({ _id: new ObjectId(raidParty._id) })
+
+	// Send a victory message to the participants
+	const victoryEmbed = new EmbedBuilder()
+		.setColor("#00ff00")
+		.setTitle("Raid Victory!")
+		.setDescription(`Congratulations! You have defeated ${raidBossDetails.name}.`)
+
+	for (const participant of raidParty.participants) {
+		const participantUser = interaction.guild?.members.cache.get(participant)?.user
+		if (participantUser) {
+			await participantUser.send({ embeds: [victoryEmbed] })
+		}
+	}
+}
+
+export async function getRaidPartyById(raidPartyId: string): Promise<RaidParty | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+		const raidParty = await raidPartiesCollection.findOne({ _id: new ObjectId(raidPartyId) })
+
+		return raidParty || null
+	} catch (error) {
+		logger.error("Error retrieving raid party by ID:", error)
+		return null
+	}
+}
+function awardRewards(participant: string, raidBossDetails: RaidBoss) {
+	throw new Error("Function not implemented.")
 }

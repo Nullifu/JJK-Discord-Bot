@@ -54,6 +54,7 @@ import {
 	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handleQuestCommand,
+	handleRaidCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
@@ -334,7 +335,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 
 client.setMaxListeners(300)
 export const digCooldowns = new Map<string, number>()
@@ -384,6 +385,7 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+	new SlashCommandBuilder().setName("raid").setDescription("Initiate or join a raid against a boss"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -932,6 +934,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "dailyshop":
 				await handleShopCommand(chatInputInteraction)
+				break
+			case "raid":
+				await handleRaidCommand(chatInputInteraction)
 				break
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)

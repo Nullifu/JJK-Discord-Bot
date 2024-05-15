@@ -1,26 +1,4 @@
 import { randomInt } from "crypto"
-import { config as dotenv } from "dotenv"
-import { MongoClient } from "mongodb"
-import { logger } from "./bot.js"
-
-dotenv()
-
-export const mongoUri = process.env.MONGO_URI
-
-export const client1 = new MongoClient(mongoUri)
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let isConnected = false
-
-client1.on("connected", () => {
-	isConnected = true
-	logger.info("Connected to MongoDB")
-})
-
-client1.on("close", () => {
-	isConnected = false
-	logger.info("Disconnected from MongoDB")
-})
 
 interface CommunityQuest {
 	questName: string

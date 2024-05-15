@@ -1122,7 +1122,7 @@ export const questsArray = [
 			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
 		special: true,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Training with Itadori",
@@ -1133,7 +1133,7 @@ export const questsArray = [
 		itemQuantity: 1,
 		task: "Fight Itadori 3 times!",
 		totalProgress: 3,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Disaster Curses",
@@ -1148,7 +1148,7 @@ export const questsArray = [
 			{ description: "Defeat Hanami", progress: 0, totalProgress: 1 },
 			{ description: "Defeat Dagon", progress: 0, totalProgress: 1 }
 		],
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Nature of Curses",
@@ -1159,7 +1159,7 @@ export const questsArray = [
 		itemQuantity: 2,
 		task: "Defeat Reborn Mahito",
 		totalProgress: 1,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Curse King",
@@ -1169,7 +1169,7 @@ export const questsArray = [
 		items: { "Sukuna Finger": 3 },
 		task: "Get acknowledged by Sukuna!",
 		totalProgress: 1,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Curse King's Task",
@@ -1180,7 +1180,7 @@ export const questsArray = [
 		task: "Round up all of the Sukuna Fingers!",
 		totalProgress: 20,
 		special: true,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Satoru Gojo's Mission",
@@ -1195,7 +1195,7 @@ export const questsArray = [
 			{ description: "Defeat Sukuna", progress: 0, totalProgress: 1 }
 		],
 		special: true,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Find Yuta!",
@@ -1206,7 +1206,7 @@ export const questsArray = [
 		itemQuantity: 2,
 		task: "Find this fraud!",
 		totalProgress: 1,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "The Honored One",
@@ -1218,7 +1218,7 @@ export const questsArray = [
 		itemQuantity: 2,
 		task: "Be blessed with the limitless technique...",
 		totalProgress: 1,
-		instanceId: "uniqueInstanceId" // Add the instanceId property
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Kashimo's Task",
