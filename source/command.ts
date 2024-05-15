@@ -16,7 +16,6 @@ import {
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
-	MessageComponentInteraction,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction,
@@ -108,7 +107,6 @@ import {
 	cleanShikigami,
 	client,
 	createGiveaway,
-	createRaidParty,
 	createTradeRequest,
 	feedShikigami,
 	getActiveTrades,
@@ -118,13 +116,10 @@ import {
 	getBalance,
 	getBosses,
 	getCurrentCommunityQuest,
-	getCurrentRaidBoss,
 	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
 	getPreviousTrades,
-	getRaidBossDetails,
-	getRaidPartyById,
 	getShikigami,
 	getShopLastReset,
 	getUserAchievements,
@@ -160,7 +155,6 @@ import {
 	getUserUnlockedTransformations,
 	getUserWorked,
 	giveawayCollectionName,
-	handleRaidBossDefeat,
 	handleTradeAcceptance,
 	healShikigami,
 	logImageUrl,
@@ -169,11 +163,9 @@ import {
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
-	resolveRaidActions,
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
-	updateRaidPartyPendingActions,
 	updateUserAchievements,
 	updateUserActiveHeavenlyTechniques,
 	updateUserActiveTechniques,
@@ -7505,179 +7497,6 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 	}
 }
 
-export async function handleRaidCommand(interaction: CommandInteraction) {
-	const currentRaidBoss = await getCurrentRaidBoss()
 
-	if (!currentRaidBoss) {
-		await interaction.reply({ content: "There is no active raid boss at the moment.", ephemeral: true })
-		return
-	}
-
-	const joinButton = new ButtonBuilder().setCustomId("join_raid").setLabel("Join Raid").setStyle(ButtonStyle.Primary)
-
-	const initialEmbed = new EmbedBuilder()
-		.setColor("#0099ff")
-		.setTitle("Raid Party")
-		.setDescription("Click the button below to join the raid party!")
-
-	const initialMessage = await interaction.reply({
-		embeds: [initialEmbed],
-		components: [new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton)],
-		fetchReply: true
-	})
-
-	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 60000 })
-
-	const participants: string[] = [interaction.user.id]
-
-	collector.on("collect", async (i: MessageComponentInteraction) => {
-		if (i.customId === "join_raid") {
-			participants.push(i.user.id)
-			const participantsString = participants.map(p => `<@${p}>`).join(", ")
-
-			const updatedEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Raid Party")
-				.setDescription(`Participants: ${participantsString}`)
-
-			await i.update({ embeds: [updatedEmbed] })
-		}
-	})
-
-	collector.on("end", async collected => {
-		if (participants.length < 2) {
-			await interaction.editReply({ content: "Not enough participants to start a raid party.", embeds: [] })
-			return
-		}
-
-		const raidParty = await createRaidParty(currentRaidBoss.name, participants)
-
-		if (!raidParty) {
-			await interaction.editReply({ content: "Failed to create raid party.", embeds: [] })
-			return
-		}
-
-		const raidBossDetails = await getRaidBossDetails(currentRaidBoss.name)
-
-		if (!raidBossDetails) {
-			await interaction.editReply({ content: "Failed to retrieve raid boss details.", embeds: [] })
-			return
-		}
-
-		const primaryEmbed = await createRaidEmbed(raidBossDetails, raidParty.participants, interaction)
-		const rows = await createTechniqueSelectMenu(raidParty.participants)
-
-		await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
-
-		const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
-			filter: i => raidParty.participants.includes(i.user.id),
-			componentType: ComponentType.StringSelect,
-			time: 30000
-		})
-
-		battleOptionSelectMenuCollector.on("collect", async i => {
-			await i.deferUpdate()
-			const selectedTechnique = i.values[0]
-			const userId = i.user.id
-
-			const damage = calculateDamage(selectedTechnique, userId)
-			raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
-
-			await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
-		})
-
-		battleOptionSelectMenuCollector.on("end", async () => {
-			await resolveRaidActions(raidParty._id.toString())
-
-			const updatedRaidParty = await getRaidPartyById(raidParty._id.toString())
-			const updatedRaidBoss = await getRaidBossDetails(updatedRaidParty.raidBossId)
-
-			if (!updatedRaidBoss) {
-				await interaction.editReply({ content: "Failed to retrieve updated raid boss details.", embeds: [] })
-				return
-			}
-
-			const updatedEmbedBuilder = await createRaidEmbed(
-				updatedRaidBoss,
-				updatedRaidParty.participants,
-				interaction
-			)
-			const updatedEmbed = updatedEmbedBuilder.toJSON()
-			const rows = await createTechniqueSelectMenu(updatedRaidParty.participants)
-
-			await interaction.editReply({ embeds: [updatedEmbed], components: rows })
-
-			if (updatedRaidBoss.current_health <= 0) {
-				await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
-			} else {
-				setTimeout(() => handleRaidCommand(interaction), 10000)
-			}
-		})
-	})
-}
-
-async function createTechniqueSelectMenu(participants: string[]): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
-	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
-
-	for (const participant of participants) {
-		const userTechniques = getUserTechniques(participant)
-		const techniqueOptions = (await userTechniques).map(techniqueName => ({
-			label: techniqueName,
-			description: "Select to use this technique",
-			value: techniqueName
-		}))
-
-		const selectMenu = new SelectMenuBuilder()
-			.setCustomId(`select-battle-option-${participant}`)
-			.setPlaceholder("Choose your technique")
-			.addOptions(techniqueOptions)
-
-		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-		rows.push(row)
-	}
-
-	return rows
-}
-
-async function createRaidEmbed(raidBoss, participants, interaction) {
-	const primaryEmbed = new EmbedBuilder()
-		.setColor("Aqua")
-		.setTitle("Cursed Battle!")
-		.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
-		.setImage(raidBoss.image_url)
-		.addFields(
-			{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
-			{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
-			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true }
-		)
-		.addFields({
-			name: "Boss Health Status",
-			value: generateHealthBar(raidBoss.current_health, raidBoss.max_health),
-			inline: false
-		})
-		.addFields(
-			{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
-			{ name: "Status Effect Enemy", value: "None", inline: true },
-			{ name: "Status Effect Player", value: "None", inline: true }
-		)
-
-	// Add participants' health to the embed
-	const participantsHealthFields = []
-	for (const participant of participants) {
-		const playerHealth = await getUserHealth(participant)
-		participantsHealthFields.push({
-			name: `${interaction.guild?.members.cache.get(participant)?.displayName || "Unknown"}`,
-			value: `:blue_heart: ${playerHealth.toString()}`,
-			inline: true
-		})
-	}
-	primaryEmbed.addFields(...participantsHealthFields)
-
-	if (raidBoss.awakeningStage === "Stage Five") {
-		primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
-	}
-
-	return primaryEmbed
-}
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

@@ -54,7 +54,6 @@ import {
 	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handleQuestCommand,
-	handleRaidCommand,
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
@@ -385,7 +384,6 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
-	new SlashCommandBuilder().setName("raid").setDescription("Initiate or join a raid against a boss"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -924,7 +922,6 @@ client.on("interactionCreate", async interaction => {
 			default:
 		}
 	} else {
-		// Handling other commands based on their commandName
 		switch (commandName) {
 			case "balance":
 				await handleBalanceCommand(chatInputInteraction)
@@ -934,9 +931,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "dailyshop":
 				await handleShopCommand(chatInputInteraction)
-				break
-			case "raid":
-				await handleRaidCommand(chatInputInteraction)
 				break
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)
