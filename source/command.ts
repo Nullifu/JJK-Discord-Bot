@@ -4420,7 +4420,10 @@ export async function handleTradeCommand(interaction) {
 	const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
 
 	if (!initiatorItem) {
-		await interaction.reply({ content: "You do not have enough of the specified item to trade.", ephemeral: true })
+		await interaction.reply({
+			content: "You do not have enough of the specified item to trade.",
+			ephemeral: true
+		})
 		return
 	}
 
@@ -4434,45 +4437,55 @@ export async function handleTradeCommand(interaction) {
 		return
 	}
 
-	await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
-
-	const tradeEmbed = new EmbedBuilder()
-		.setColor("Aqua")
-		.setTitle("🔄 Trade Request")
-		.setDescription(
-			`You have received a trade request from ${interaction.user.username}. Please review the details below:`
-		)
-		.addFields(
-			{
-				name: "Trade Details",
-				value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
-				inline: false
-			},
-			// Instructions
-			{
-				name: "Next Steps",
-				value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
-				inline: false
-			},
-			{
-				name: "⚠️ **IMPORTANT WARNING**",
-				value:
-					"Please read carefully before proceeding with the trade:\n\n" +
-					"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
-					"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
-					"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
-				inline: false
-			}
-		)
-		.setFooter({ text: "Trade requests are time-sensitive and subject to item availability." })
-
 	try {
-		await targetUser.send({ embeds: [tradeEmbed] })
-		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
+		await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
+
+		const tradeEmbed = new EmbedBuilder()
+			.setColor("Aqua")
+			.setTitle("🔄 Trade Request")
+			.setDescription(
+				`You have received a trade request from ${interaction.user.username}. Please review the details below:`
+			)
+			.addFields(
+				{
+					name: "Trade Details",
+					value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
+					inline: false
+				},
+				{
+					name: "Next Steps",
+					value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
+					inline: false
+				},
+				{
+					name: "⚠️ **IMPORTANT WARNING**",
+					value:
+						"Please read carefully before proceeding with the trade:\n\n" +
+						"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
+						"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
+						"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
+					inline: false
+				}
+			)
+			.setFooter({
+				text: "Trade requests are time-sensitive and subject to item availability."
+			})
+
+		try {
+			await targetUser.send({ embeds: [tradeEmbed] })
+			await interaction.reply({ content: "Trade request sent!", ephemeral: true })
+		} catch (error) {
+			logger.warn("Failed to send a trade request DM. Sending in the channel instead.", error)
+			await interaction.reply({
+				content: `Trade request for <@${targetUser.id}>:\n${
+					tradeEmbed.data.description
+				}\n\n${tradeEmbed.data.fields.map(field => `**${field.name}**\n${field.value}`).join("\n\n")}`
+			})
+		}
 	} catch (error) {
-		logger.error("Failed to send a trade request DM:", error)
+		logger.error("Error occurred while processing the trade command:", error)
 		await interaction.reply({
-			content: "Failed to send a trade request. The user might have DMs disabled.",
+			content: "An error occurred while processing your trade request. Please try again later.",
 			ephemeral: true
 		})
 	}
@@ -4576,23 +4589,22 @@ export async function handleAcceptTrade(interaction) {
 }
 export async function processTradeSelection(interaction) {
 	const selectedTradeId = interaction.values[0]
+	logger.debug("Selected trade ID:", selectedTradeId)
+	logger.debug("Start processing trade acceptance...")
 
 	try {
 		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
 		logger.info("Trade request accepted successfully!")
-		await interaction.followUp({
-			content: "Trade request accepted successfully!",
-			components: []
-		})
-		return
+
+		if (!interaction.replied) {
+			await interaction.editReply({
+				content: "Trade request accepted successfully!",
+				ephemeral: true,
+				components: []
+			})
+		}
 	} catch (error) {
-		logger.error("Error handling trade acceptance:", error)
-		logger.info("An error occurred while trying to accept the trade request.")
-		await interaction.followUp({
-			content: "Confirmed.",
-			components: []
-		})
-		return
+		logger.error("Error handling trade acceptance:")
 	}
 }
 
