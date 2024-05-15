@@ -324,6 +324,18 @@ export interface IdleDeathsGambleState {
 	isJackpotMode: boolean
 }
 
+export interface Giveaway {
+	guildId: string
+	channelId: string
+	messageId: string
+	prize: string
+	winners: number
+	endDate: Date
+	isPrizeItem: boolean
+	winnerId: string
+	entries: string[]
+}
+
 export const shikigamiThumbnails = {
 	"Divine-General Mahoraga": "https://i.redd.it/e99r17yyf31c1.jpg",
 	"Mahoraga":

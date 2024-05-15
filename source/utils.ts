@@ -1,4 +1,26 @@
 import { randomInt } from "crypto"
+import { config as dotenv } from "dotenv"
+import { MongoClient } from "mongodb"
+import { logger } from "./bot.js"
+
+dotenv()
+
+export const mongoUri = process.env.MONGO_URI
+
+export const client1 = new MongoClient(mongoUri)
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let isConnected = false
+
+client1.on("connected", () => {
+	isConnected = true
+	logger.info("Connected to MongoDB")
+})
+
+client1.on("close", () => {
+	isConnected = false
+	logger.info("Disconnected from MongoDB")
+})
 
 interface CommunityQuest {
 	questName: string
@@ -12,7 +34,6 @@ interface CommunityQuest {
 	endDate: Date
 }
 
-// Define mentor details with messages, images, and lines
 export const mentorDetails: {
 	[key: string]: { message: string; imageUrl: string; lines: string[]; eventLines?: string[] }
 } = {
@@ -62,7 +83,6 @@ export function getMentorDetails(
 		message += " Your potential is awakening, unleashing new powers."
 	}
 
-	// Randomly select a line for the mentor
 	const line = details.lines[randomInt(details.lines.length)]
 
 	return { message: message, imageUrl: details.imageUrl, line: line }
@@ -125,12 +145,10 @@ export function createFeverMeterBar(feverMeter: number, maxFeverMeter: number): 
 }
 
 export function getYujiItadoriImageUrl(): string {
-	// Return the image URL for Yuji Itadori
 	return "https://media1.tenor.com/m/j1qqqFxjlr4AAAAC/jujutsu-kaisen-jjk.gif"
 }
 
 export function getYujiItadoriLine(): string {
-	// Return a random dialogue line for Yuji Itadori
 	const lines = [
 		"Hey there! Satoru Gojo is currently sealed, so I'll be your mentor for now.",
 		"Let's train together and become stronger!",

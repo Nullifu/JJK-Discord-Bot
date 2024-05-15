@@ -19,7 +19,7 @@ AWS.config.update({
 	})
 })
 
-const visionClient = new ImageAnnotatorClient({
+const visionclient = new ImageAnnotatorClient({
 	keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 	projectId: process.env.GOOGLE_PROJECT_ID
 })
@@ -87,7 +87,7 @@ async function analyzeWithRekognition(imageBuffer: Buffer): Promise<AnalysisResu
 async function analyzeWithGoogleVision(imageUrl: string): Promise<AnalysisResult> {
 	logger.info("Analyzing image with Google Vision")
 
-	const [result] = await visionClient.safeSearchDetection(imageUrl)
+	const [result] = await visionclient.safeSearchDetection(imageUrl)
 
 	logger.info("Google Vision result:", result.safeSearchAnnotation)
 

@@ -1,27 +1,31 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { CommandInteraction } from "discord.js"
 import { config as dotenv } from "dotenv"
+import moment from "moment-timezone"
 import { Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
+import { logger } from "./bot.js"
+import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
 
-const bossCollectionName = "bosses"
-const shikigamCollectionName = "shiki"
-const usersCollectionName = "users"
-const questsCollectioName = "quests"
-const tradeCollectionName = "trades"
-const shopCollectionName = "shop"
-const imageCollectionName = "imageLogs"
-const communityQuestsCollectionName = "communityQuests"
+export const bossCollectionName = "bosses"
+export const shikigamCollectionName = "shiki"
+export const usersCollectionName = "users"
+export const questsCollectioName = "quests"
+export const tradeCollectionName = "trades"
+export const shopCollectionName = "shop"
+export const imageCollectionName = "imageLogs"
+export const giveawayCollectionName = "giveawayLogs"
+export const communityQuestsCollectionName = "communityQuests"
 
-const mongoDatabase = process.env["MONGO_DATABASE"]
-const mongoUri = process.env.MONGO_URI
+export const mongoDatabase = process.env["MONGO_DATABASE"]
+export const mongoUri = process.env.MONGO_URI
 
-const client = new MongoClient(mongoUri)
+export const client = new MongoClient(mongoUri)
 
 let isConnected = false
 
@@ -419,6 +423,7 @@ export async function addItemToUserInventory(userId: string, itemName: string, q
 				{ "id": userId, "inventory.name": itemName },
 				{ $inc: { "inventory.$.quantity": quantityToAdd } }
 			)
+			logger.info(`Updated quantity of ${itemName} for user with ID: ${userId}`)
 		} else {
 			await usersCollection.updateOne(
 				{ id: userId },
@@ -1409,9 +1414,6 @@ export async function updateUserGamble(userId: string, newGamble: number): Promi
 		throw error
 	}
 }
-
-import moment from "moment-timezone"
-import { logger } from "./bot.js"
 
 async function dailyReset() {
 	const database = client.db(mongoDatabase)
@@ -3691,4 +3693,39 @@ export async function updateCommunityQuestProgress(questName: string, progress: 
 	const database = client.db(mongoDatabase)
 	const communityQuestsCollection = database.collection<CommunityQuest>(communityQuestsCollectionName)
 	await communityQuestsCollection.updateOne({ questName }, { $inc: { currentProgress: progress } })
+}
+
+export async function createGiveaway(
+	guildId: string,
+	channelId: string,
+	messageId: string,
+	prize: string,
+	winners: number,
+	endDate: Date,
+	isPrizeItem: boolean,
+	itemQuantity: number,
+	prizeAmount: number
+): Promise<void> {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const giveawaysCollection = database.collection(giveawayCollectionName)
+
+	await giveawaysCollection.insertOne({
+		guildId,
+		channelId,
+		messageId,
+		prize,
+		winners,
+		endDate,
+		isPrizeItem,
+		winnerId: "",
+		entries: [],
+		itemQuantity,
+		prizeAmount
+	})
+
+	// Schedule a task to end the giveaway and select the winner
+	setTimeout(async () => {
+		await handleGiveawayEnd(guildId, channelId, messageId)
+	}, endDate.getTime() - Date.now())
 }

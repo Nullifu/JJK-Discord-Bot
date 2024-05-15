@@ -18,8 +18,12 @@ import {
 	Interaction,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
-	StringSelectMenuInteraction
+	StringSelectMenuInteraction,
+	TextBasedChannel,
+	TextChannel
 } from "discord.js"
+import { Collection } from "mongodb"
+import ms from "ms"
 import {
 	DOMAIN_INFORMATION,
 	TRANSFORMATIONS,
@@ -29,7 +33,7 @@ import {
 } from "./attacks.js"
 import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
 import { bossDrops } from "./bossdrops.js"
-import { digCooldown, digCooldowns, logger, sendForManualReview } from "./bot.js"
+import { createClient, digCooldown, digCooldowns, logger, sendForManualReview } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -58,7 +62,7 @@ import {
 	handlePlayerRevival,
 	handleShikigamiTame
 } from "./fight.js"
-import { BossData, buildGamblersProfile, formatDomainExpansion, gradeMappings } from "./interface.js"
+import { BossData, Giveaway, buildGamblersProfile, formatDomainExpansion, gradeMappings } from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -93,6 +97,8 @@ import {
 	checkUserHasHeavenlyRestriction,
 	checkWorkCooldown,
 	cleanShikigami,
+	client,
+	createGiveaway,
 	createTradeRequest,
 	feedShikigami,
 	getActiveTrades,
@@ -140,10 +146,12 @@ import {
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
 	getUserWorked,
+	giveawayCollectionName,
 	handleTradeAcceptance,
 	healShikigami,
 	logImageUrl,
 	markStageAsMessaged,
+	mongoDatabase,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
@@ -207,6 +215,8 @@ const bossHealthMap = new Map()
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
 export const searchCooldownBypassIDs = [""]
+
+const client1 = createClient()
 //
 
 export async function handleRegisterCommand(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -7062,3 +7072,239 @@ export async function eventCommandHandler(interaction: CommandInteraction) {
 		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
 	}
 }
+
+export async function handleGiveawayCommand(interaction) {
+	const userId = interaction.user.id
+	const allowedUserIds = ["292385626773258240"] // Replace with the allowed user IDs
+
+	// Check if the user has permission to create a giveaway
+	if (!allowedUserIds.includes(userId)) {
+		await interaction.reply({ content: "You do not have permission to create a giveaway.", ephemeral: true })
+		return
+	}
+
+	const duration = "60s" // Set the duration to 60 seconds for testing
+	const prize = interaction.options.get("prize")?.value
+	const winners = interaction.options.get("winners")?.value
+	const isPrizeItem = interaction.options.get("is_item")?.value
+	const itemQuantity = interaction.options.get("item_quantity")?.value
+	const prizeAmount = interaction.options.get("prize_amount")?.value
+
+	// Validate the required inputs
+	if (!prize || !winners || isPrizeItem === null) {
+		await interaction.reply({
+			content: "Please provide the prize, number of winners, and whether the prize is an item or not.",
+			ephemeral: true
+		})
+		return
+	}
+
+	// Additional input validation
+	if (isPrizeItem && (!itemQuantity || itemQuantity <= 0)) {
+		await interaction.reply({
+			content: "Please provide a valid item quantity greater than 0.",
+			ephemeral: true
+		})
+		return
+	}
+
+	if (!isPrizeItem && (!prizeAmount || prizeAmount <= 0)) {
+		await interaction.reply({
+			content: "Please provide a valid prize amount greater than 0.",
+			ephemeral: true
+		})
+		return
+	}
+
+	let durationMs
+
+	try {
+		durationMs = ms(duration)
+		if (isNaN(durationMs)) {
+			throw new Error("Invalid duration format. Please use a format like '1d', '2h', '30m', etc.")
+		}
+	} catch (error) {
+		await interaction.reply({
+			content: error.message,
+			ephemeral: true
+		})
+		return
+	}
+
+	const endDate = new Date()
+	endDate.setMilliseconds(endDate.getMilliseconds() + durationMs)
+	const guildId = interaction.guildId
+	const channelId = interaction.channelId
+
+	try {
+		const embed = new EmbedBuilder()
+			.setTitle("🎉 New Giveaway! 🎉")
+			.setDescription(`**Prize:** ${prize}`)
+			.setColor("#FFA500") // Customize the color to an orange shade
+			.addFields(
+				{ name: "🏆 Winners", value: winners.toString(), inline: true },
+				{ name: "⏳ Ends In", value: duration, inline: true },
+				{ name: "👤 Hosted By", value: `<@${userId}>`, inline: true }
+			)
+			.setFooter({
+				text: "Click the button below to enter the giveaway!"
+			})
+			.setTimestamp(endDate)
+
+		if (isPrizeItem) {
+			embed.addFields(
+				{ name: "🎁 Prize Type", value: "Item", inline: true },
+				{ name: "📦 Item Quantity", value: itemQuantity?.toString() || "1", inline: true }
+			)
+		} else {
+			embed.addFields(
+				{ name: "💰 Prize Type", value: "Other", inline: true },
+				{ name: "💵 Prize Amount", value: `$${prizeAmount?.toString() || "0"}`, inline: true }
+			)
+		}
+
+		const channel = interaction.channel
+
+		if (channel instanceof TextChannel) {
+			const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder()
+					.setCustomId(`giveaway-${interaction.id}`)
+					.setLabel("Enter Giveaway")
+					.setStyle(ButtonStyle.Primary)
+			)
+			logger.debug("Giveaway ID For Button Builder", interaction.id)
+
+			await channel.send({ embeds: [embed], components: [row] })
+			await interaction.reply({ content: `Giveaway created! It will end in ${duration}.`, ephemeral: true })
+
+			await createGiveaway(
+				guildId,
+				channelId,
+				interaction.id,
+				prize,
+				winners,
+				endDate,
+				isPrizeItem,
+				itemQuantity || 1,
+				prizeAmount || 0
+			)
+		} else {
+			await interaction.reply({ content: "Giveaway creation failed. Invalid channel.", ephemeral: true })
+		}
+	} catch (error) {
+		await interaction.reply({
+			content: `An error occurred while creating the giveaway: ${error.message}`,
+			ephemeral: true
+		})
+	}
+}
+export async function handleGiveawayEntry(interaction) {
+	if (!interaction.isButton()) return
+
+	const giveawayId = interaction.customId.split("-")[1]
+	logger.debug("Giveaway ID:", giveawayId)
+
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const giveawaysCollection: Collection<Giveaway> = database.collection(giveawayCollectionName)
+
+		const giveaway = await giveawaysCollection.findOne({ messageId: giveawayId })
+
+		if (!giveaway) {
+			return interaction.reply({ content: "This giveaway no longer exists.", ephemeral: true })
+		}
+
+		const hasEnteredGiveaway = giveaway.entries.includes(interaction.user.id)
+
+		if (hasEnteredGiveaway) {
+			return interaction.reply({ content: "You have already entered this giveaway.", ephemeral: true })
+		}
+
+		await giveawaysCollection.updateOne({ messageId: giveawayId }, { $push: { entries: interaction.user.id } })
+
+		const embed = new EmbedBuilder()
+			.setTitle("Giveaway Entry")
+			.setDescription(`You have successfully entered the giveaway for **${giveaway.prize}**!`)
+			.setColor("Green")
+
+		interaction.reply({ embeds: [embed], ephemeral: true })
+	} catch (error) {
+		logger.error("Error handling giveaway entry:", error)
+		interaction.reply({
+			content: "There was an error processing your entry. Please try again later.",
+			ephemeral: true
+		})
+	}
+}
+
+async function fetchChannel(channelId: string): Promise<TextBasedChannel | null> {
+	try {
+		const channel = await client1.channels.fetch(channelId)
+		if (channel?.isTextBased()) {
+			return channel
+		} else {
+			logger.error(`Channel with ID ${channelId} is not text-based.`)
+			return null
+		}
+	} catch (error) {
+		logger.error(`Failed to fetch channel with ID ${channelId}:`, error)
+		return null
+	}
+}
+
+export async function handleGiveawayEnd(guildId: string, channelId: string, messageId: string) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const giveawaysCollection = database.collection(giveawayCollectionName)
+
+		const giveaway = await giveawaysCollection.findOne({ guildId, channelId, messageId })
+
+		if (!giveaway) {
+			return
+		}
+
+		const entries = giveaway.entries
+
+		const channel = await fetchChannel(channelId)
+		if (!channel) return
+
+		if (entries.length === 0) {
+			await channel.send(`No one entered the giveaway for **${giveaway.prize}**. The giveaway has ended.`)
+			await giveawaysCollection.deleteOne({ _id: giveaway._id })
+			return
+		}
+
+		const winners = []
+		for (let i = 0; i < giveaway.winners; i++) {
+			const randomIndex = Math.floor(Math.random() * entries.length)
+			const winnerId = entries[randomIndex]
+			winners.push(winnerId)
+			entries.splice(randomIndex, 1)
+		}
+
+		await giveawaysCollection.updateOne({ _id: giveaway._id }, { $set: { winnerId: winners.join(", ") } })
+
+		const winnerMentions = winners.map(winnerId => `<@${winnerId}>`).join(", ")
+		await channel.send(`Congratulations to ${winnerMentions} for winning the giveaway for **${giveaway.prize}**!`)
+
+		if (giveaway.isPrizeItem) {
+			for (const winnerId of winners) {
+				if (giveaway.itemQuantity !== null && !isNaN(giveaway.itemQuantity)) {
+					await addItemToUserInventory(winnerId, giveaway.prize, giveaway.itemQuantity)
+				} else {
+					logger.error("Invalid item quantity for giveaway prize:", giveaway.itemQuantity)
+				}
+			}
+		} else {
+			for (const winnerId of winners) {
+				await updateBalance(winnerId, giveaway.prizeAmount)
+			}
+		}
+	} catch (error) {
+		logger.error("Error handling giveaway end:", error)
+	}
+}
+
+client1.login(process.env["DISCORD_BOT_TOKEN"])

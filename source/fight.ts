@@ -84,21 +84,21 @@ export async function handleBossDeath(
 	}
 	if (opponent.name === "Yuji Itadori (Awoken)") {
 		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Defeat Yuji Itadori (Awoken)")
-		await addUserQuestProgress(
-			interaction.user.id,
-			"Stage Three Unleashed",
-			1,
-			"Defeat Yuji Itadori (Awoken)" || "Yuji Itadori (Awoken)"
-		)
+		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Defeat Yuji Itadori (Awoken)")
+		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Yuji Itadori (Awoken)")
 	}
 	if (opponent.name === "Satoru Gojo (Shinjuku Showdown Arc)") {
 		await addUserQuestProgress(
 			interaction.user.id,
 			"Stage Three Unleashed",
 			1,
-			"Satoru Gojo (Shinjuku Showdown Arc)" ||
-				" Defeat Satoru Gojo (Shinjuku Showdown Arc)" ||
-				"Defeat Satoru Gojo (Shinjuku Showdown Arc)"
+			"Defeat Satoru Gojo (Shinjuku Showdown Arc)"
+		)
+		await addUserQuestProgress(
+			interaction.user.id,
+			"Stage Three Unleashed",
+			1,
+			"Satoru Gojo (Shinjuku Showdown Arc)"
 		)
 	}
 
@@ -111,6 +111,7 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
+	//
 	await updateCommunityQuestProgress("Satoru Gojo's Sealing", 1)
 	//
 	await updateUserFightsWon(interaction.user.id)

@@ -3,6 +3,7 @@ import { ActionRowBuilder, EmbedBuilder } from "@discordjs/builders"
 import {
 	ActivityType,
 	ButtonBuilder,
+	ButtonInteraction,
 	ButtonStyle,
 	ChannelType,
 	ChatInputCommandInteraction,
@@ -17,6 +18,7 @@ import {
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 
+import log4js from "log4js"
 import cron from "node-cron"
 import {
 	abandonQuestCommand,
@@ -40,6 +42,8 @@ import {
 	handleEquipTransformationCommand,
 	handleFightCommand,
 	handleGambleCommand,
+	handleGiveawayCommand,
+	handleGiveawayEntry,
 	handleGuideCommand,
 	handleInventoryCommand,
 	handleJobSelection,
@@ -86,22 +90,26 @@ import {
 	updateBalance
 } from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
+import { getRandomQuote } from "./shikigami.js"
 
 dotenv()
 
-export const client = new Client({
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildMembers,
-		GatewayIntentBits.DirectMessages
-	],
-	partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
-})
+export function createClient() {
+	const client = new Client({
+		intents: [
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.MessageContent,
+			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.DirectMessages
+		],
+		partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
+	})
 
-import log4js from "log4js"
-import { getRandomQuote } from "./shikigami.js"
+	return client
+}
+
+const client = createClient()
 
 // Configure log4js
 log4js.configure({
@@ -237,13 +245,13 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 7.0 | Part One!", type: ActivityType.Playing }, // Dynamic member count
+		{ name: "Update 7.0 | Part Two!", type: ActivityType.Playing }, // Dynamic member count
 		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
-		{ name: "Exchange Event", type: ActivityType.Competing },
-		{ name: "/register", type: ActivityType.Listening }
+		{ name: "Satoru Gojo's Sealing Event!", type: ActivityType.Competing },
+		{ name: "/register | /help", type: ActivityType.Listening }
 	]
 }
 
@@ -327,6 +335,7 @@ cron.schedule("*/30 * * * *", async () => {
 //
 //
 const clientId = "991443928790335518"
+
 client.setMaxListeners(250)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -659,31 +668,6 @@ const commands = [
 				.setRequired(true)
 		),
 	new SlashCommandBuilder()
-		.setName("createcommunityquest")
-		.setDescription("Create a new community quest")
-		.addStringOption(option =>
-			option.setName("questname").setDescription("The name of the quest").setRequired(true)
-		)
-		.addStringOption(option =>
-			option.setName("questdescription").setDescription("The description of the quest").setRequired(true)
-		)
-		.addStringOption(option => option.setName("task").setDescription("The task of the quest").setRequired(true))
-		.addIntegerOption(option =>
-			option.setName("taskamount").setDescription("The amount required to complete the task").setRequired(true)
-		)
-		.addStringOption(option =>
-			option.setName("rewarditem").setDescription("The reward item for completing the quest").setRequired(true)
-		)
-		.addIntegerOption(option =>
-			option.setName("rewardamount").setDescription("The amount of the reward item").setRequired(true)
-		)
-		.addStringOption(option =>
-			option.setName("startdate").setDescription("The start date of the quest (YYYY-MM-DD)").setRequired(true)
-		)
-		.addStringOption(option =>
-			option.setName("enddate").setDescription("The end date of the quest (YYYY-MM-DD)").setRequired(true)
-		),
-	new SlashCommandBuilder()
 		.setName("trade")
 		.setDescription("Trading Command.")
 		.addStringOption(option =>
@@ -702,6 +686,34 @@ const commands = [
 		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
+		),
+	new SlashCommandBuilder()
+		.setName("giveaway")
+		.setDescription("Create a new giveaway")
+		.addStringOption(option =>
+			option.setName("prize").setDescription("The prize for the giveaway").setRequired(true)
+		)
+		.addIntegerOption(option => option.setName("winners").setDescription("The number of winners").setRequired(true))
+		.addStringOption(option =>
+			option
+				.setName("duration")
+				.setDescription("The duration of the giveaway (e.g. 1d, 2h, 30m)")
+				.setRequired(true)
+		)
+		.addBooleanOption(option =>
+			option.setName("is_item").setDescription("Whether the prize is an item or not").setRequired(true)
+		)
+		.addIntegerOption(option =>
+			option
+				.setName("item_quantity")
+				.setDescription("The quantity of the item (if the prize is an item)")
+				.setRequired(false)
+		)
+		.addIntegerOption(option =>
+			option
+				.setName("prize_amount")
+				.setDescription("The amount of the prize (if the prize is not an item)")
+				.setRequired(false)
 		)
 ].map(command => command.toJSON())
 
@@ -989,6 +1001,9 @@ client.on("interactionCreate", async interaction => {
 			case "jujutsustatus":
 				await handleJujutsuStatsCommand(chatInputInteraction)
 				break
+			case "giveaway":
+				await handleGiveawayCommand(chatInputInteraction)
+				break
 			case "leaderboard":
 				await handleLeaderBoardCommand(chatInputInteraction)
 				break
@@ -1022,6 +1037,15 @@ client.on("interactionCreate", async interaction => {
 			case "shikigamishop":
 				await handleShikigamiShop(chatInputInteraction)
 				break
+		}
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (interaction.isButton()) {
+		// Check if the button custom ID starts with "giveaway-"
+		if (interaction.customId.startsWith("giveaway-")) {
+			await handleGiveawayEntry(interaction as ButtonInteraction)
 		}
 	}
 })
