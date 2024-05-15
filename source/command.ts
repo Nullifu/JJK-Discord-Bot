@@ -4347,7 +4347,11 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 							})
 							.join("\n")
 
-						personalQuestsEmbed.addFields({ name: questDetails.name, value: taskList, inline: false })
+						personalQuestsEmbed.addFields({
+							name: questDetails.name,
+							value: taskList.toString(),
+							inline: false
+						})
 					} else if (questDetails) {
 						const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
 						const isComplete = userTask >= questDetails.totalProgress
@@ -4358,7 +4362,7 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 
 						personalQuestsEmbed.addFields({
 							name: questDetails.name,
-							value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
+							value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`.toString(),
 							inline: false
 						})
 					}
@@ -4367,7 +4371,6 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 
 			await i.update({ embeds: [personalQuestsEmbed] })
 		} else if (selectedValue === "community_quests") {
-			// Display community quest
 			const communityQuestEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Community Quest")
 
 			if (currentCommunityQuest) {
@@ -7320,7 +7323,7 @@ export async function handleGiveawayCommand(interaction) {
 	const channelId = interaction.channelId
 
 	try {
-		const endsAt = `<t:${Math.floor(endDate.getTime() / 1000)}:R>` 
+		const endsAt = `<t:${Math.floor(endDate.getTime() / 1000)}:R>`
 
 		const embed = new EmbedBuilder()
 			.setTitle("🎉 New Giveaway! 🎉")
@@ -7361,7 +7364,7 @@ export async function handleGiveawayCommand(interaction) {
 			logger.debug("Giveaway ID For Button Builder", interaction.id)
 
 			const giveawayMessage = await channel.send({ embeds: [embed], components: [row] })
-			const giveawayMessageId = giveawayMessage.id 
+			const giveawayMessageId = giveawayMessage.id
 			await interaction.reply({ content: `Giveaway created! It will end in ${duration}.`, ephemeral: true })
 
 			await createGiveaway(
