@@ -7444,7 +7444,6 @@ export async function handleGiveawayEntry(interaction) {
 			await giveawayMessage.edit({ embeds: [updatedEmbed] })
 		} catch (error) {
 			logger.error("Failed to update giveaway embed:", error)
-			// Handle specific errors based on the error type or message
 			if (error.code === 10008) {
 				logger.warn("Giveaway message not found. It may have been deleted.")
 			} else if (error.code === 50001) {
