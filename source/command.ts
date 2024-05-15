@@ -7077,7 +7077,7 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				imageUrl = getYujiItadoriImageUrl()
 				line = getYujiItadoriLine()
 			}
-		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna") {
+		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna" ) {
 			message = mentorDetails["Ryomen Sukuna"].message
 			imageUrl = mentorDetails["Ryomen Sukuna"].imageUrl
 			line =

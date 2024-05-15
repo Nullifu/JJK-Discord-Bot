@@ -217,7 +217,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		// await ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(client.db(mongoDatabase))
+		// resetAllUsersQuests(client.db(mongoDatabase))
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
@@ -264,6 +264,19 @@ async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database)
 		}
 	} catch (error) {
 		logger.error("Error correcting awakening field:", error)
+	}
+}
+
+async function resetAllUsersQuests(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		// Update all users' quests to an empty array
+		const updateResult = await usersCollection.updateMany({}, { $set: { quests: [] } })
+
+		logger.info(`Updated ${updateResult.modifiedCount} user(s) to reset quests.`)
+	} catch (error) {
+		logger.error("Error resetting users' quests:", error)
 	}
 }
 

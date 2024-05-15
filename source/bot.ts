@@ -932,6 +932,7 @@ client.on("interactionCreate", async interaction => {
 			case "dailyshop":
 				await handleShopCommand(chatInputInteraction)
 				break
+
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)
 				break

@@ -1190,6 +1190,20 @@ export const questsArray = [
 		instanceId: "uniqueInstanceId"
 	},
 	{
+		name: "Stage Three Unleashed",
+		description: "???",
+		coins: 0,
+		experience: 0,
+		items: { "Awakening Release": 1 },
+		itemQuantity: 1,
+		tasks: [
+			{ description: "Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
+			{ description: "Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
+		],
+		special: true,
+		instanceId: "uniqueInstanceId"
+	},
+	{
 		name: "The Honored One",
 		description:
 			"The sacred six eyes, a technique limitless in power, awaits. Embark on this divine quest to be anointed with the Sacred Eye, marking you as the chosen wielder of the ancient and revered technique.",
