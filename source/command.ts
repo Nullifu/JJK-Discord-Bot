@@ -60,9 +60,17 @@ import {
 	handleBossDeath,
 	handleJoyBoyDeath,
 	handlePlayerRevival,
-	handleShikigamiTame
+	handleShikigamiTame,
+	updateFeverMeter
 } from "./fight.js"
-import { BossData, Giveaway, buildGamblersProfile, formatDomainExpansion, gradeMappings } from "./interface.js"
+import {
+	BossData,
+	Giveaway,
+	IdleDeathsGambleState,
+	buildGamblersProfile,
+	formatDomainExpansion,
+	gradeMappings
+} from "./interface.js"
 import {
 	CLAN_SKILLS,
 	DOMAIN_EXPANSIONS,
@@ -180,6 +188,7 @@ import {
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
+	updateUserUnlockedTitles,
 	updateUserUnlockedTransformations,
 	updateUserWorked,
 	userExists,
@@ -206,7 +215,15 @@ import {
 	calculateDamageWithEffects,
 	fetchAndFormatStatusEffects
 } from "./statuseffects.js"
-import { getAwakeningDialogue, getMentorDetails } from "./utils.js"
+import {
+	createFeverMeterBar,
+	getAwakeningDialogue,
+	getMentorDetails,
+	getYujiItadoriEventLine,
+	getYujiItadoriImageUrl,
+	getYujiItadoriLine,
+	mentorDetails
+} from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
@@ -215,6 +232,9 @@ const bossHealthMap = new Map()
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
 export const searchCooldownBypassIDs = [""]
+const activeDomainExpansions = new Map()
+
+const idleDeathsGambleStates = new Map<string, IdleDeathsGambleState>()
 
 const client1 = createClient()
 //
@@ -1870,7 +1890,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	if (allBosses.length === 0) {
 		logger.error("No bosses found in the database.")
-		await interaction.editReply({ content: "No bosses found for your grade." })
+		await interaction.editReply({ content: "No bosses found for your grade, Try increasing your grade!" })
 		return
 	}
 
@@ -1906,7 +1926,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 		})
 		return
 	}
-
 	//
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
 	//
@@ -2049,93 +2068,123 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					return
 				}
 				domainActivationState.set(contextKey, true)
-				// embed here
-				const domainEmbed = new EmbedBuilder()
-					.setColor("Blue")
-					.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
-					.setDescription(`Domain Expansion... ${domainInfo}`)
-					.addFields({
-						name: `${interaction.user.username}`,
-						value: "USES THERE DOMAIN EXPANSION!",
-						inline: false
+
+				if (domainInfo === "Idle Deaths Gamble") {
+					const feverMeter = 0
+					const maxFeverMeter = 100
+
+					const feverMeterBar = createFeverMeterBar(feverMeter, maxFeverMeter)
+
+					const domainEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle(`Domain Expansion... ${domainInfo}`)
+						.setImage(domainObject.open_image_URL)
+						.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
+						.addFields({
+							name: "Fever Meter",
+							value: feverMeterBar,
+							inline: false
+						})
+
+					await collectedInteraction.editReply({ embeds: [domainEmbed], components: [row] })
+
+					const userId = interaction.user.id
+					idleDeathsGambleStates.set(userId, {
+						feverMeter: feverMeter,
+						isJackpotMode: false
 					})
-				//add image
-				if (domainObject.open_image_URL) {
-					domainEmbed.setImage(domainObject.open_image_URL)
-				}
-				await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
+				} else {
+					// embed here
+					const domainEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle(`${randomOpponent.name}  I'll show you real jujutsu..`)
+						.setDescription(`Domain Expansion... ${domainInfo}`)
+						.addFields({
+							name: `${interaction.user.username}`,
+							value: "USES THERE DOMAIN EXPANSION!",
+							inline: false
+						})
 
-				await new Promise(resolve => setTimeout(resolve, 2000))
+					//add image
+					if (domainObject.open_image_URL) {
+						domainEmbed.setImage(domainObject.open_image_URL)
+					}
+					activeDomainExpansions.set(interaction.user.id, domainObject.name)
 
-				const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+					await collectedInteraction.editReply({ embeds: [domainEmbed], components: [] })
 
-				if (domainObjec1t && domainObjec1t.statusEffect) {
-					await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
-				}
+					await new Promise(resolve => setTimeout(resolve, 2000))
 
-				const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
+					const domainObjec1t = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
 
-				const updatedEmbed = new EmbedBuilder()
-					.setColor("Blue")
-					.setTitle("The battle continues!")
-					.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
-					.addFields(
-						{
-							name: "Boss Health",
-							value: `:heart: ${randomOpponent.current_health.toString()}`,
-							inline: true
-						},
-						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
-						{
-							name: "Boss Health Status",
-							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
-						},
-						{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
-						{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
-					)
-
-				if (domainObjec1t.image_URL) {
-					updatedEmbed.setImage(domainObjec1t.image_URL)
-				}
-				await collectedInteraction.editReply({ embeds: [updatedEmbed], components: [row] })
-
-				//
-				const playerGradeData = await getUserGrade(interaction.user.id)
-				const playerGradeString = playerGradeData
-				const userId = interaction.user.id
-
-				const baseDamage = await calculateDamage(playerGradeString, userId, true)
-				const extraDomainDamage = 30
-				const totalDamage = baseDamage + extraDomainDamage
-				// update boss hp
-
-				let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
-				currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
-				bossHealthMap.set(interaction.user.id, currentBossHealth)
-
-				// is boss dead?
-				if (randomOpponent.current_health <= 0) {
-					if (randomOpponent.name === "Satoru Gojo") {
-						await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Sukuna") {
-						await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Itadori") {
-						await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Yuta Okkotsu") {
-						await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Hakari Kinji") {
-						await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-					} else if (randomOpponent.name === "Zenin Toji") {
-						await exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+					if (domainObjec1t && domainObjec1t.statusEffect) {
+						await applyStatusEffect(collectedInteraction.user.id, domainObjec1t.statusEffect)
 					}
 
-					domainActivationState.set(contextKey, false)
-					activeCollectors.delete(interaction.user.id)
+					const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
 
-					// reset health
-					bossHealthMap.delete(interaction.user.id)
+					const updatedEmbed = new EmbedBuilder()
+						.setColor("Blue")
+						.setTitle("The battle continues!")
+						.setDescription(`${interaction.user.username} has opened their domain ${domainInfo}!`)
+						.addFields(
+							{
+								name: "Boss Health",
+								value: `:heart: ${randomOpponent.current_health.toString()}`,
+								inline: true
+							},
+							{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
+							{
+								name: "Boss Health Status",
+								value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
+							},
+							{ name: "Enemy Technique", value: "*Enemy technique goes here*", inline: false },
+							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
+						)
 
-					await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					if (domainObjec1t.image_URL) {
+						updatedEmbed.setImage(domainObjec1t.image_URL)
+					}
+					await collectedInteraction.editReply({ embeds: [updatedEmbed], components: [row] })
+
+					//
+					const playerGradeData = await getUserGrade(interaction.user.id)
+					const playerGradeString = playerGradeData
+					const userId = interaction.user.id
+
+					const baseDamage = await calculateDamage(playerGradeString, userId, true)
+					const extraDomainDamage = 30
+					const totalDamage = baseDamage + extraDomainDamage
+					// update boss hp
+
+					let currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
+					currentBossHealth = Math.max(0, currentBossHealth - totalDamage)
+					bossHealthMap.set(interaction.user.id, currentBossHealth)
+
+					// is boss dead?
+					if (randomOpponent.current_health <= 0) {
+						if (randomOpponent.name === "Satoru Gojo") {
+							await exportTheHonoredOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Sukuna") {
+							await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Itadori") {
+							await exportTheFraud(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Yuta Okkotsu") {
+							await exportRika(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Hakari Kinji") {
+							await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						} else if (randomOpponent.name === "Zenin Toji") {
+							await exportReincarnation(interaction, randomOpponent, primaryEmbed, row, playerHealth)
+						}
+
+						domainActivationState.set(contextKey, false)
+						activeCollectors.delete(interaction.user.id)
+
+						// reset health
+						bossHealthMap.delete(interaction.user.id)
+
+						await handleBossDeath(interaction, primaryEmbed, row, randomOpponent)
+					}
 				}
 			} catch (error) {
 				logger.error("Error during fight command:", error)
@@ -2307,7 +2356,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 16,
+					damageMultiplier: 90,
 					imageUrl: "https://media1.tenor.com/m/Y5S-OJqsydUAAAAd/test.gif",
 					description: "I...AM....ATOMIC",
 					fieldValue: selectedValue,
@@ -2441,7 +2490,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 6,
+					damageMultiplier: 12,
 					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
 					description: "Hollow: NUKE! ",
 					fieldValue: selectedValue,
@@ -2471,7 +2520,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 20,
 					imageUrl:
 						"https://storage.googleapis.com/jjk_bot_personal/yuji-lands-black-flash-on-sukuna-jujutsu-kaisen-jjk-256%20%5BMConverter.eu%5D.png",
-					description: "unc im sorry",
+					description: "KOKU..SEN!",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2483,7 +2532,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					techniqueName: selectedValue,
 					damageMultiplier: 16,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/Yuji_using_Piercing_Blood.png",
-					description: "forgive me unc",
+					description: "Wow you're really strong.. I'm gonna have to go all out.",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2606,7 +2655,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 1,
+					damageMultiplier: 3,
 					imageUrl: "https://media1.tenor.com/m/SQQ4VD6igHIAAAAC/yuji-itadori-yuji.gif",
 					description: "I'm gonna hit you with everything I've got!",
 					fieldValue: selectedValue,
@@ -2751,13 +2800,25 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					primaryEmbed
 				})
 			} else if (selectedValue === "Divine Flames") {
+				const activeDomain = activeDomainExpansions.get(collectedInteraction.user.id)
+
+				let damageMultiplier = 14
+				let imageUrl =
+					"https://storage.googleapis.com/jjk_bot_personal/sukuna-holding-out-his-arm-in-front-of-him-engulfed-with-flames-as-he-uses-his-fire-technique-in-jujutsu-kaisen%20%5BMConverter.eu%5D.png"
+				let description = `Pathetic.. ${randomOpponent.name}.. I'll burn you to a crisp..`
+
+				if (activeDomain === "Malevolent Shrine") {
+					damageMultiplier = 26
+					imageUrl = "https://loinew.com/images/zu2JTHJwCd2UrIHoZWgQ1715344184.jpg"
+					description = `Pathetic.. ${randomOpponent.name}.. I'll burn you to a crisp..`
+				}
+
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 14,
-					imageUrl:
-						"https://storage.googleapis.com/jjk_bot_personal/sukuna-holding-out-his-arm-in-front-of-him-engulfed-with-flames-as-he-uses-his-fire-technique-in-jujutsu-kaisen%20%5BMConverter.eu%5D.png",
-					description: `Pathetic.. ${randomOpponent.name}.. I'll burn you to a crisp..`,
+					damageMultiplier,
+					imageUrl,
+					description,
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2776,12 +2837,24 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					primaryEmbed
 				})
 			} else if (selectedValue === "Pure Dismantle") {
+				const activeDomain = activeDomainExpansions.get(collectedInteraction.user.id)
+
+				let damageMultiplier = 14
+				let imageUrl = "https://media1.tenor.com/m/4cSNEQWHARAAAAAC/cleave-dismantle.gif"
+				let description = "shing shing.."
+
+				if (activeDomain === "Malevolent Shrine") {
+					damageMultiplier = 30
+					imageUrl = "https://loinew.com/images/zu2JTHJwCd2UrIHoZWgQ1715344184.jpg"
+					description = "Look Out, Twin Meteors, RECOIL... SCALE OF THE DRAGON!"
+				}
+
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 12,
-					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/GDPkQiBWkAALc51.jpg",
-					description: "Purify..",
+					damageMultiplier,
+					imageUrl,
+					description,
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2862,13 +2935,51 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Jackpot: Cargo Fever Rush") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 32,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/1232829104378871839/1239800650187931708/ezgif-2-1a5fda8aad.png?ex=66443dd5&is=6642ec55&hm=11b8e9103190532406894213ca6bce3d91f34a5b6815059a59f9661d0f46178e&",
+					description: "Gambling is my life..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jackpot: Full House Kick") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-03d1d5eb78.png",
+					description: "Gambling i love it..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jackpot: Shutter Doors") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-6b5c52f9c2.png",
+					description: "Gambling really is my life..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
 
 			let damageReduction = 1
+
 			if (randomOpponent.awakeningStage === "Stage One") {
-				damageReduction = 0.9
+				damageReduction = 1.0
 			} else if (randomOpponent.awakeningStage === "Stage Two") {
 				damageReduction = 0.8
 			} else if (randomOpponent.awakeningStage === "Stage Three") {
@@ -2876,10 +2987,16 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			} else if (randomOpponent.awakeningStage === "Stage Four") {
 				damageReduction = 0.6
 			} else if (randomOpponent.awakeningStage === "Stage Five") {
-				damageReduction = 0.5
+				damageReduction = 0.3
 			}
 
-			const reducedDamage = damage * damageReduction
+			const userState = idleDeathsGambleStates.get(collectedInteraction.user.id)
+			let jackpotMultiplier = 1
+			if (userState && userState.isJackpotMode) {
+				jackpotMultiplier = 1.5 // Increase the damage by 50% in Jackpot Mode
+			}
+
+			const reducedDamage = damage * damageReduction * jackpotMultiplier
 
 			bossHealthMap.set(collectedInteraction.user.id, Math.max(0, currentBossHealth - reducedDamage))
 			randomOpponent.current_health = Math.max(0, currentBossHealth - reducedDamage)
@@ -2902,7 +3019,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			const fightResult = await handleFightLogic(interaction, randomOpponent, playerGradeString, damage)
 			primaryEmbed.setDescription(fightResult)
 
-			primaryEmbed.setFields(
+			if (userState) {
+				await updateFeverMeter(collectedInteraction, userState, primaryEmbed)
+			}
+			primaryEmbed.addFields(
 				{
 					name: "Boss Health",
 					value: `:heart: ${randomOpponent.current_health.toString()}`,
@@ -2949,8 +3069,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					transformed = await exportGambler(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Megumi Fushiguro") {
 					transformed = await exportCrashOut(interaction, randomOpponent, primaryEmbed, row, playerHealth)
-				} else if (randomOpponent.name === "Sukuna Full Power") {
-					transformed = await exportTheCursedOne(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Mahito" || randomOpponent.name === "Mahito (Transfigured)") {
 					transformed = await export120(interaction, randomOpponent, primaryEmbed, row, playerHealth)
 				} else if (randomOpponent.name === "Mahito (120%)") {
@@ -3039,7 +3157,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						const bossAttackMessage = `${randomOpponent.name} dealt ${chosenAttack.baseDamage(
 							playerGrade
 						)} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
-						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage }) // Add enemy's technique
+						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage })
 						primaryEmbed.addFields([
 							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
 						])
@@ -6973,20 +7091,76 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		const awakening = await getUserAwakening(userId)
 		const hasAwakening = awakening !== null
 
-		const { message, imageUrl, line } = getMentorDetails(mentor, hasAwakening)
+		// Check if the global event is active based on the current community quest
+		const currentQuest = await getCurrentCommunityQuest()
+		const isGlobalEventActive = currentQuest && currentQuest.questName === "Satoru Gojo's Sealing"
+		await updateUserUnlockedTitles(userId, ["Satoru Gojo's Sealing Participation"])
+
+		let message, imageUrl, line
+
+		if (isGlobalEventActive && mentor === "Satoru Gojo") {
+			// Check if the user has already seen the event message
+			if (!(await checkStageMessaged(userId, "eventMessageSealing"))) {
+				// Show the event message for the first time
+				message = "You go to speak to your mentor... But he's gone?"
+				imageUrl = getYujiItadoriImageUrl()
+				line = getYujiItadoriEventLine(currentQuest)
+
+				await markStageAsMessaged(userId, "eventMessageSealing")
+			} else {
+				// If the user has already seen the event message, show Yuji Itadori as the mentor
+				message = "Yuji Itadori is your mentor during this global event."
+				imageUrl = getYujiItadoriImageUrl()
+				line = getYujiItadoriLine()
+			}
+		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna") {
+			// If the global event is active and the mentor is Ryomen Sukuna, show his event lines
+			message = mentorDetails["Ryomen Sukuna"].message
+			imageUrl = mentorDetails["Ryomen Sukuna"].imageUrl
+			line =
+				mentorDetails["Ryomen Sukuna"].eventLines[
+					Math.floor(Math.random() * mentorDetails["Ryomen Sukuna"].eventLines.length)
+				]
+		} else {
+			// If the global event is not active or the mentor is not Satoru Gojo or Ryomen Sukuna, proceed as usual
+			;({ message, imageUrl, line } = getMentorDetails(mentor, hasAwakening))
+		}
 
 		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("Mentor Details")
 			.setDescription(`${message}`)
+			.setImage(imageUrl)
 			.addFields([
-				{ name: `**${mentor} says:**`, value: `${line}`, inline: true },
-				{ name: "Mentor", value: mentor, inline: true },
+				{
+					name: `**${
+						isGlobalEventActive &&
+						mentor === "Satoru Gojo" &&
+						!(await checkStageMessaged(userId, "eventMessageSealing"))
+							? "Yuji Itadori"
+							: isGlobalEventActive && mentor === "Satoru Gojo"
+							? "Yuji Itadori"
+							: mentor
+					} says:**`,
+					value: `${line}`,
+					inline: true
+				},
+				{
+					name: "Mentor",
+					value: isGlobalEventActive && mentor === "Satoru Gojo" ? "Yuji Itadori" : mentor,
+					inline: true
+				},
 				{ name: "Your Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
 			])
 
-		if (imageUrl) {
-			embed.setImage(imageUrl)
+		if (isGlobalEventActive) {
+			const currentQuest = await getCurrentCommunityQuest()
+			if (currentQuest) {
+				const timestampSeconds = Math.floor(currentQuest.endDate.getTime() / 1000)
+				embed.addFields([
+					{ name: "Satoru Gojo's Unsealing", value: `<t:${timestampSeconds}:f>`, inline: false }
+				])
+			}
 		}
 
 		if (hasAwakening && !(await checkStageMessaged(userId, `${awakening}`))) {
@@ -6995,9 +7169,9 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 			await addUserQuest(userId, "Awakening")
 			await addItemToUserInventory(userId, "Heian Era Scraps", 8)
 			await markStageAsMessaged(userId, `${awakening}`)
+
 			if (awakening === "Stage Three") {
 				const questName = "Stage Three Unleashed"
-
 				try {
 					await addUserQuest(userId, questName)
 					embed.addFields({
@@ -7013,13 +7187,10 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				}
 			}
 		} else if (!hasAwakening || (hasAwakening && !(await checkStageMessaged(userId, awakening)))) {
-			//
 			const { quests } = await getUserQuests(userId)
-
 			if (quests && quests.length > 0) {
 				const maxDisplayedQuests = 3
 				const displayedQuests = quests.slice(0, maxDisplayedQuests)
-
 				const questsText = displayedQuests
 					.map(quest => {
 						let taskText
@@ -7033,7 +7204,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 						return `**${quest.id}:**\n${taskText}`
 					})
 					.join("\n\n")
-
 				embed.addFields([{ name: "Your Quests", value: questsText }])
 
 				if (quests.length > maxDisplayedQuests) {
