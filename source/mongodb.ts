@@ -5,6 +5,7 @@ import moment from "moment-timezone"
 import { Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
+import uuid from "uuid"
 import { logger } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
@@ -1465,7 +1466,8 @@ export async function updateUserVoteRewardStatus(userId: string): Promise<void> 
 	}
 }
 
-// addUserQuest
+const uniqueId = uuid.v4()
+
 export async function addUserQuest(userId: string, questName: string): Promise<void> {
 	try {
 		await client.connect()
@@ -1475,10 +1477,14 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 		const questToAdd = questsArray.find(quest => quest.name === questName)
 
 		if (questToAdd) {
+			const instanceId = uniqueId
+
 			let questData
+
 			if (questToAdd.tasks) {
 				questData = {
 					id: questName,
+					instanceId: instanceId,
 					tasks: questToAdd.tasks.map(task => ({
 						description: task.description,
 						progress: 0,
@@ -1488,6 +1494,7 @@ export async function addUserQuest(userId: string, questName: string): Promise<v
 			} else {
 				questData = {
 					id: questName,
+					instanceId: instanceId,
 					progress: 0,
 					task: questToAdd.task,
 					totalProgress: questToAdd.totalProgress
@@ -1552,7 +1559,6 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 	}
 }
 
-// getUserQuests
 export async function getUserQuests(userId) {
 	try {
 		logger.info("Attempting to retrieve quests for userId:", userId)
@@ -1572,26 +1578,21 @@ export async function getUserQuests(userId) {
 	}
 }
 
-// removeUserQuest function
-export async function removeUserQuest(userId, questName, instanceId) {
+export async function removeUserQuest(userId: string, instanceId: string): Promise<boolean> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<User> = database.collection<User>(usersCollectionName)
 
 		const result = await usersCollection.updateOne(
-			{ "id": userId, "quests.name": questName, "quests.instanceId": instanceId },
-			{ $pull: { quests: { name: questName, instanceId: instanceId } } }
+			{ "id": userId, "quests.instanceId": instanceId },
+			{ $pull: { quests: { instanceId: instanceId } } }
 		)
 
 		if (result.modifiedCount === 0) {
-			logger.info(
-				`No quest with name: ${questName} and instanceId: ${instanceId} was removed for the user with ID: ${userId}`
-			)
+			logger.info(`No quest with instanceId: ${instanceId} was removed for the user with ID: ${userId}`)
 			return false
 		} else {
-			logger.info(
-				`Quest with name: ${questName} and instanceId: ${instanceId} was removed for the user with ID: ${userId}`
-			)
+			logger.info(`Quest with instanceId: ${instanceId} was removed for the user with ID: ${userId}`)
 			return true
 		}
 	} catch (error) {
@@ -1600,7 +1601,6 @@ export async function removeUserQuest(userId, questName, instanceId) {
 	}
 }
 
-// update user max health max out at 275
 export async function updateUserMaxHealth(userId: string, healthIncrement: number): Promise<void> {
 	try {
 		await client.connect()

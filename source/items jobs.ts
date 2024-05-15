@@ -1064,7 +1064,8 @@ export const questsArray = [
 		items: { "Curse King Medal": 1 },
 		itemQuantity: 1,
 		task: "Defeat Sukuna",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Mentor: The Strongest",
@@ -1074,7 +1075,8 @@ export const questsArray = [
 		items: { "Strongest Medal": 1 },
 		itemQuantity: 1,
 		task: "Defeat Satoru Gojo",
-		totalProgress: 1
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Gamblers Fever",
@@ -1084,7 +1086,8 @@ export const questsArray = [
 		item: "Hakari Kinji's Token",
 		itemQuantity: 1,
 		task: "Defeat Hakari Kinji 5 times!",
-		totalProgress: 5
+		totalProgress: 5,
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Nanami's Task",
@@ -1095,7 +1098,8 @@ export const questsArray = [
 		items: { Overtime: 1 },
 		itemQuantity: 1,
 		task: "Exorcise 20 Foes!",
-		totalProgress: 20
+		totalProgress: 20,
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Awakening",
@@ -1108,33 +1112,10 @@ export const questsArray = [
 			{ description: "Defeat Foes", progress: 0, totalProgress: 6 },
 			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
 		],
-		special: true
-	},
-	{
-		name: "Stage Three Unleashed",
-		description: "???",
-		coins: 0,
-		experience: 0,
-		items: { "Awakening Release": 1 },
-		itemQuantity: 1,
-		tasks: [
-			{ description: "Defeat Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 3 },
-			{ description: "Defeat Yuji Itadori (Awoken)", progress: 0, totalProgress: 1 }
-		],
 		special: true,
 		instanceId: "uniqueInstanceId"
 	},
-	{
-		name: "Training with Itadori",
-		description: "Train With Itadori!",
-		coins: 45000,
-		experience: 470,
-		items: { "Cursed Energy Reinforcement": 1 },
-		itemQuantity: 1,
-		task: "Fight Itadori 3 times!",
-		totalProgress: 3,
-		instanceId: "uniqueInstanceId"
-	},
+
 	{
 		name: "Disaster Curses",
 		description:
