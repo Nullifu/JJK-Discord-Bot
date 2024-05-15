@@ -3124,6 +3124,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					return ["Stage Three", "Stage Four", "Stage Five"].includes(userAwakeningStage)
 				} else if (clan === "The Strongest") {
 					return ["Stage Four", "Stage Five"].includes(userAwakeningStage)
+				} else if (clan === "Gambler Fever (Jackpot)") {
+					return ["Stage Five"].includes(userAwakeningStage)
 				}
 				return true
 			})
@@ -3214,6 +3216,12 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			} else if (i.values[0] === "the_strongest") {
 				skillsToDisplay = CLAN_SKILLS["The Strongest"].filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = "The Strongest Techniques"
+				customIdPrefix = "buy_technique_"
+			} else if (i.values[0] === "gambler_fever_(jackpot)") {
+				skillsToDisplay = CLAN_SKILLS["Gambler Fever (Jackpot)"].filter(
+					skill => !userTechniques.includes(skill.name)
+				)
+				embedTitle = "Gambler Fever (Jackpot) Techniques"
 				customIdPrefix = "buy_technique_"
 			} else {
 				const selectedClan = clans.find(clan => clan.toLowerCase().replace(/\s+/g, "_") === i.values[0])
