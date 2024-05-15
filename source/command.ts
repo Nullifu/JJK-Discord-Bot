@@ -7091,7 +7091,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		const awakening = await getUserAwakening(userId)
 		const hasAwakening = awakening !== null
 
-		// Check if the global event is active based on the current community quest
 		const currentQuest = await getCurrentCommunityQuest()
 		const isGlobalEventActive = currentQuest && currentQuest.questName === "Satoru Gojo's Sealing"
 		await updateUserUnlockedTitles(userId, ["Satoru Gojo's Sealing Participation"])
@@ -7099,22 +7098,18 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		let message, imageUrl, line
 
 		if (isGlobalEventActive && mentor === "Satoru Gojo") {
-			// Check if the user has already seen the event message
 			if (!(await checkStageMessaged(userId, "eventMessageSealing"))) {
-				// Show the event message for the first time
 				message = "You go to speak to your mentor... But he's gone?"
 				imageUrl = getYujiItadoriImageUrl()
 				line = getYujiItadoriEventLine(currentQuest)
 
 				await markStageAsMessaged(userId, "eventMessageSealing")
 			} else {
-				// If the user has already seen the event message, show Yuji Itadori as the mentor
 				message = "Yuji Itadori is your mentor during this global event."
 				imageUrl = getYujiItadoriImageUrl()
 				line = getYujiItadoriLine()
 			}
 		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna") {
-			// If the global event is active and the mentor is Ryomen Sukuna, show his event lines
 			message = mentorDetails["Ryomen Sukuna"].message
 			imageUrl = mentorDetails["Ryomen Sukuna"].imageUrl
 			line =
@@ -7122,7 +7117,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 					Math.floor(Math.random() * mentorDetails["Ryomen Sukuna"].eventLines.length)
 				]
 		} else {
-			// If the global event is not active or the mentor is not Satoru Gojo or Ryomen Sukuna, proceed as usual
 			;({ message, imageUrl, line } = getMentorDetails(mentor, hasAwakening))
 		}
 
@@ -7326,7 +7320,7 @@ export async function handleGiveawayCommand(interaction) {
 	const channelId = interaction.channelId
 
 	try {
-		const endsAt = `<t:${Math.floor(endDate.getTime() / 1000)}:R>` // Convert to Discord timestamp format
+		const endsAt = `<t:${Math.floor(endDate.getTime() / 1000)}:R>` 
 
 		const embed = new EmbedBuilder()
 			.setTitle("🎉 New Giveaway! 🎉")
@@ -7367,8 +7361,7 @@ export async function handleGiveawayCommand(interaction) {
 			logger.debug("Giveaway ID For Button Builder", interaction.id)
 
 			const giveawayMessage = await channel.send({ embeds: [embed], components: [row] })
-			const giveawayMessageId = giveawayMessage.id // Get the actual message ID
-
+			const giveawayMessageId = giveawayMessage.id 
 			await interaction.reply({ content: `Giveaway created! It will end in ${duration}.`, ephemeral: true })
 
 			await createGiveaway(
@@ -7436,18 +7429,15 @@ export async function handleGiveawayEntry(interaction) {
 
 			const updatedEmbed = new EmbedBuilder(giveawayEmbed.data)
 
-			// Find the index of the "🎫 Entries" field
 			const entriesFieldIndex = updatedEmbed.data.fields.findIndex(field => field.name === "🎫 Entries")
 
 			if (entriesFieldIndex !== -1) {
-				// Update the value of the "🎫 Entries" field
 				updatedEmbed.spliceFields(entriesFieldIndex, 1, {
 					name: "🎫 Entries",
 					value: entryCount.toString(),
 					inline: true
 				})
 			} else {
-				// Add the "🎫 Entries" field if it doesn't exist
 				updatedEmbed.addFields({ name: "🎫 Entries", value: entryCount.toString(), inline: true })
 			}
 
