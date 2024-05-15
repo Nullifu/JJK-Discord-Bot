@@ -7075,9 +7075,8 @@ export async function eventCommandHandler(interaction: CommandInteraction) {
 
 export async function handleGiveawayCommand(interaction) {
 	const userId = interaction.user.id
-	const allowedUserIds = ["292385626773258240"] // Replace with the allowed user IDs
+	const allowedUserIds = ["292385626773258240"]
 
-	// Check if the user has permission to create a giveaway
 	if (!allowedUserIds.includes(userId)) {
 		await interaction.reply({ content: "You do not have permission to create a giveaway.", ephemeral: true })
 		return
