@@ -245,13 +245,13 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 7.0 | Part Two!", type: ActivityType.Playing }, // Dynamic member count
-		{ name: `${totalMembers} members`, type: ActivityType.Listening }, // Dynamic member count
-		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening }, // Dynamic server count
+		{ name: "Update 7.0 | Part Two!", type: ActivityType.Playing },
+		{ name: `${totalMembers} members`, type: ActivityType.Listening },
+		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
 		{ name: "Satoru Gojo's Sealing Event!", type: ActivityType.Competing },
-		{ name: "/register | /help", type: ActivityType.Listening }
+		{ name: "/register |  /help", type: ActivityType.Listening }
 	]
 }
 
