@@ -233,7 +233,7 @@ setInterval(async () => {
 	const activity = activities[index]
 	client.user.setPresence({
 		activities: [{ name: activity.name, type: activity.type }],
-		status: "online"
+		status: "idle"
 	})
 	index++
 }, 60000)
