@@ -4109,22 +4109,19 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			await updatePlayerGrade(userId)
-			await removeUserQuest(userId, completedQuest.id)
+			await removeUserQuest(userId, completedQuest.instanceId)
 		}
 
-		// Create the questRewards array
 		const questRewards = completedQuests.map(completedQuest => {
 			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
 			if (!questDetails) return `**${completedQuest.id}**`
 
-			const { coins, experience, item, itemQuantity } = questDetails
+			const { coins, experience, items } = questDetails
 			const rewards = [
 				`Coins: ${coins}`,
 				`Experience: ${experience}`,
-				item ? `Item: ${item} x ${itemQuantity}` : null
-			]
-				.filter(Boolean)
-				.join("\n")
+				...Object.entries(items || {}).map(([item, quantity]) => `${item}: ${quantity}`)
+			].join("\n")
 
 			return `**${completedQuest.id}**\n${rewards}`
 		})
@@ -4194,6 +4191,7 @@ export async function claimQuestsCommand(interaction) {
 
 			specialEmbeds.push(claimedNanami)
 		}
+
 		if (claimedMentorSatoru) {
 			await updateUserMentor(userId, "Satoru Gojo")
 			const satorumentor = new EmbedBuilder()
@@ -4208,6 +4206,7 @@ export async function claimQuestsCommand(interaction) {
 
 			specialEmbeds.push(satorumentor)
 		}
+
 		if (claimedMentorSukuna) {
 			await updateUserMentor(userId, "Curse King")
 			const curseking = new EmbedBuilder()
@@ -4222,6 +4221,7 @@ export async function claimQuestsCommand(interaction) {
 
 			specialEmbeds.push(curseking)
 		}
+
 		if (claimedstage3) {
 			await updateUserUnlockedTransformations(userId, ["Awakening"])
 			const curseking = new EmbedBuilder()
@@ -4236,6 +4236,7 @@ export async function claimQuestsCommand(interaction) {
 
 			specialEmbeds.push(curseking)
 		}
+
 		if (claimedkashimo) {
 			await updateUserUnlockedTransformations(userId, ["Maximum Output"])
 			const curseking = new EmbedBuilder()
@@ -4258,20 +4259,10 @@ export async function claimQuestsCommand(interaction) {
 				await interaction.followUp({ embeds: [specialEmbeds[i]] })
 			}
 		} else {
-			const formattedRewards = questRewards
-				.map(reward => {
-					if (typeof reward === "object") {
-						const rewardEntries = Object.entries(reward)
-						return rewardEntries.map(([key, value]) => `${key}: ${value}`).join(", ")
-					}
-					return reward
-				})
-				.filter(reward => reward !== "" && reward !== null)
-
 			const genericEmbed = new EmbedBuilder()
 				.setColor(0x0099ff)
 				.setTitle("Quest Rewards Claimed")
-				.setDescription(formattedRewards.join("\n\n"))
+				.setDescription(questRewards.join("\n\n"))
 
 			await interaction.reply({ embeds: [genericEmbed] })
 		}
