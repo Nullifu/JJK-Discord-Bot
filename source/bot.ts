@@ -385,6 +385,7 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+	new SlashCommandBuilder().setName("raid").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")

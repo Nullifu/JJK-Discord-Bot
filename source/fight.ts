@@ -83,7 +83,7 @@ export async function handleBossDeath(
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
 	}
 	if (opponent.name === "Yuji Itadori (Awoken)") {
-		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Defeat Yuji Itadori (Awoken)")
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Yuji Itadori (Awoken)")
 		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Defeat Yuji Itadori (Awoken)")
 		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Yuji Itadori (Awoken)")
 	}
@@ -776,7 +776,6 @@ export async function executeSpecialRaidBossTechnique({
 	const techniquesUsed = userTechniquesFight.get(userId) || []
 
 	if (techniquesUsed.includes(techniqueName)) {
-		// Technique has already been used, handle accordingly (e.g., display an error message)
 		return 0
 	}
 

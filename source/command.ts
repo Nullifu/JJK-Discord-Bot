@@ -226,6 +226,8 @@ import {
 } from "./statuseffects.js"
 import {
 	createFeverMeterBar,
+	createRaidEmbed,
+	createTechniqueSelectMenu,
 	getAwakeningDialogue,
 	getMentorDetails,
 	getYujiItadoriEventLine,
@@ -682,7 +684,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					})
 					.filter(option => option !== null)
 			)
-		//
 
 		const row1 = new ActionRowBuilder<SelectMenuBuilder>().addComponents(craftableItemsMenu)
 
@@ -697,6 +698,14 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 				const selectedItemKey = interaction.values[0]
 				const selectedItemRecipe = craftingRecipes[selectedItemKey]
 
+				const userInventory = await getUserInventory(interaction.user.id)
+				const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
+
+				const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+					const inventoryQuantity = inventoryMap.get(item.name) || 0
+					return inventoryQuantity < item.quantity
+				})
+
 				const craftEmbed = new EmbedBuilder()
 					.setColor(0x00ff00)
 					.setTitle(`${selectedItemRecipe.craftedItemName}`)
@@ -707,6 +716,27 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							.join("\n"),
 						inline: false
 					})
+
+				if (missingItems.length > 0) {
+					craftEmbed
+						.setColor("Red")
+						.setDescription("You do not have all the necessary items to craft this item.")
+						.addFields({
+							name: "Missing Items",
+							value: missingItems
+								.map(
+									item =>
+										`${item.name} (${item.quantity - (inventoryMap.get(item.name) || 0)} missing)`
+								)
+								.join("\n")
+						})
+
+					await interaction.editReply({
+						embeds: [craftEmbed],
+						components: [row1]
+					})
+					return
+				}
 
 				const confirmButton = new ButtonBuilder()
 					.setCustomId("confirmCraft")
@@ -739,11 +769,13 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					await buttonInteraction.deferReply()
 
 					if (buttonInteraction.customId === "confirmCraft") {
+						// Verify inventory again before crafting
 						const userInventory = await getUserInventory(interaction.user.id)
 						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
 
 						const missingItems = selectedItemRecipe.requiredItems.filter(item => {
-							return inventoryMap.get(item.name) < item.quantity
+							const inventoryQuantity = inventoryMap.get(item.name) || 0
+							return inventoryQuantity < item.quantity
 						})
 
 						if (missingItems.length > 0) {
@@ -800,7 +832,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					}
 
 					buttonCollector.stop()
-					menuCollector.stop
+					menuCollector.stop()
 				})
 			}
 		})
@@ -7656,70 +7688,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				}, 10000)
 			}
 		})
-
-		async function createTechniqueSelectMenu(
-			participants: string[],
-			countdown: number
-		): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
-			const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
-
-			for (let i = 0; i < participants.length; i++) {
-				const participant = participants[i]
-				const userTechniques = getUserTechniques(participant)
-				const techniqueOptions = (await userTechniques).map(techniqueName => ({
-					label: techniqueName,
-					description: "Select to use this technique",
-					value: techniqueName
-				}))
-
-				const selectMenu = new SelectMenuBuilder()
-					.setCustomId(`select-battle-option-${participant}-${i}`)
-					.setPlaceholder(`Choose your technique (${countdown}s)`)
-					.addOptions(techniqueOptions)
-
-				const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-				rows.push(row)
-			}
-
-			return rows
-		}
-
-		async function createRaidEmbed(raidBoss, participants, interaction) {
-			const primaryEmbed = new EmbedBuilder()
-				.setColor("Aqua")
-				.setTitle("Cursed Battle!")
-				.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
-				.setImage(raidBoss.image_url)
-				.addFields(
-					{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
-					{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
-					{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true }
-				)
-				.addFields({
-					name: "Boss Health Status",
-					value: generateHealthBar(raidBoss.current_health, raidBoss.globalHealth),
-					inline: false
-				})
-				.addFields()
-
-			// Add participants' health to the embed
-			const participantsHealthFields = []
-			for (const participant of participants) {
-				const playerHealth = await getUserHealth(participant)
-				participantsHealthFields.push({
-					name: `${interaction.guild?.members.cache.get(participant)?.displayName || "Unknown"}`,
-					value: `:blue_heart: ${playerHealth.toString()}`,
-					inline: true
-				})
-			}
-			primaryEmbed.addFields(...participantsHealthFields)
-
-			if (raidBoss.awakeningStage === "Stage Five") {
-				primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
-			}
-
-			return primaryEmbed
-		}
 	})
 }
+
 client1.login(process.env["DISCORD_BOT_TOKEN"])

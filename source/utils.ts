@@ -1,4 +1,8 @@
+import { StringSelectMenuBuilder } from "@discordjs/builders"
 import { randomInt } from "crypto"
+import { ActionRowBuilder, EmbedBuilder, SelectMenuBuilder } from "discord.js"
+import { generateHealthBar } from "./fight.js"
+import { getUserHealth, getUserTechniques } from "./mongodb.js"
 
 interface CommunityQuest {
 	questName: string
@@ -142,4 +146,68 @@ export function getYujiItadoriEventLine(quest: CommunityQuest | null): string {
 	} else {
 		return "Satoru Gojo has been sealed, but we don't have any information on how to unseal him yet. Stay tuned for updates!"
 	}
+}
+
+export async function createTechniqueSelectMenu(
+	participants: string[],
+	countdown: number
+): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
+	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
+
+	for (let i = 0; i < participants.length; i++) {
+		const participant = participants[i]
+		const userTechniques = getUserTechniques(participant)
+		const techniqueOptions = (await userTechniques).map(techniqueName => ({
+			label: techniqueName,
+			description: "Select to use this technique",
+			value: techniqueName
+		}))
+
+		const selectMenu = new StringSelectMenuBuilder()
+			.setCustomId(`select-battle-option-${participant}-${i}`)
+			.setPlaceholder(`Choose your technique (${countdown}s)`)
+			.addOptions(techniqueOptions)
+
+		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+		rows.push(row)
+	}
+
+	return rows
+}
+
+export async function createRaidEmbed(raidBoss, participants, interaction) {
+	const primaryEmbed = new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Cursed Battle!")
+		.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
+		.setImage(raidBoss.image_url)
+		.addFields(
+			{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
+			{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
+			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true }
+		)
+		.addFields({
+			name: "Boss Health Status",
+			value: generateHealthBar(raidBoss.current_health, raidBoss.globalHealth),
+			inline: false
+		})
+		.addFields()
+
+	// Add participants' health to the embed
+	const participantsHealthFields = []
+	for (const participant of participants) {
+		const playerHealth = await getUserHealth(participant)
+		participantsHealthFields.push({
+			name: `${interaction.guild?.members.cache.get(participant)?.displayName || "Unknown"}`,
+			value: `:blue_heart: ${playerHealth.toString()}`,
+			inline: true
+		})
+	}
+	primaryEmbed.addFields(...participantsHealthFields)
+
+	if (raidBoss.awakeningStage === "Stage Five") {
+		primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
+	}
+
+	return primaryEmbed
 }
