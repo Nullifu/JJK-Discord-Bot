@@ -385,6 +385,7 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+
 	new SlashCommandBuilder()
 		.setName("tame")
 		.setDescription("Tame your shikigami!")
@@ -667,26 +668,6 @@ const commands = [
 				.setName("techniques")
 				.setDescription("Comma-separated list of techniques to add/update")
 				.setRequired(true)
-		),
-	new SlashCommandBuilder()
-		.setName("trade")
-		.setDescription("Trading Command.")
-		.addStringOption(option =>
-			option
-				.setName("action")
-				.setDescription("The action to perform")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Initiate", value: "initiate" },
-					{ name: "Accept", value: "accept" },
-					{ name: "View", value: "view" },
-					{ name: "Previous", value: "previous" }
-				)
-		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		),
 	new SlashCommandBuilder()
 		.setName("giveaway")
