@@ -266,7 +266,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Awakening Remnant", rarity: "ultra rare" }
 	],
 	"Sukuna (Heian Era)": [
-		{ name: "Sukuna Finger", rarity: "common" },
+		{ name: "Satoru Gojo's Remains", rarity: "common" },
 		{ name: "Go//Jo", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Fraud Poster", rarity: "rare" },

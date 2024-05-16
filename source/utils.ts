@@ -154,17 +154,16 @@ export async function createTechniqueSelectMenu(
 ): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
 	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
 
-	for (let i = 0; i < participants.length; i++) {
-		const participant = participants[i]
-		const userTechniques = getUserTechniques(participant)
-		const techniqueOptions = (await userTechniques).map(techniqueName => ({
+	for (const participant of participants) {
+		const userTechniques = await getUserTechniques(participant)
+		const techniqueOptions = userTechniques.map(techniqueName => ({
 			label: techniqueName,
 			description: "Select to use this technique",
 			value: techniqueName
 		}))
 
 		const selectMenu = new StringSelectMenuBuilder()
-			.setCustomId(`select-battle-option-${participant}-${i}`)
+			.setCustomId(`select-battle-option-${participant}`)
 			.setPlaceholder(`Choose your technique (${countdown}s)`)
 			.addOptions(techniqueOptions)
 

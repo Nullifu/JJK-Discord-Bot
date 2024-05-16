@@ -2069,7 +2069,7 @@ export async function updateUserTransformation(userId: string, transformation: s
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { transformation } })
+		await usersCollection.updateOne({ userId: userId }, { $set: { transformation } })
 	} catch (error) {
 		logger.error("Error updating user transformation:", error)
 		throw error

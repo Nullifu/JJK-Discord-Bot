@@ -696,6 +696,26 @@ const commands = [
 				.setName("prize_amount")
 				.setDescription("The amount of the prize (if the prize is not an item)")
 				.setRequired(false)
+		),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Trading Command.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
+		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		)
 ].map(command => command.toJSON())
 
@@ -800,7 +820,6 @@ client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
 			if (interaction.customId.startsWith("accept_trade_select_")) {
 				try {
-					// Ensure interaction is deferred as soon as possible
 					if (!interaction.deferred && !interaction.replied) {
 						await interaction.deferReply()
 					}
@@ -809,14 +828,6 @@ client.on("interactionCreate", async interaction => {
 					await processTradeSelection(interaction)
 				} catch (error) {
 					logger.error("Error during trade selection processing:", error)
-
-					// Only update with an error if we haven't already replied or deferred successfully
-					if (interaction.deferred && !interaction.replied) {
-						await interaction.editReply({
-							content: "An error occurred while trying to accept the trade request.",
-							components: []
-						})
-					}
 				}
 			}
 		}

@@ -1498,6 +1498,12 @@ export const TRANSFORMATIONS = [
 		image: "https://media1.tenor.com/m/PejM2csl_9sAAAAd/itadori-yuuji.gif",
 		effects: "Unleashed, 35% Damage Increase, 15% Extra Damage Taken"
 	},
+	{
+		name: "Heian Era Awakening",
+		description: "What a beautiful day to be reborn..",
+		image: "https://media1.tenor.com/m/yqzGzo2YiT0AAAAC/jjk-jjk-s2.gif",
+		effects: "Sanity Lost, 35% Damage Increase, 20% Damage Reduction"
+	},
 	// Owner
 	{
 		name: "Mugetsu",
@@ -1505,12 +1511,6 @@ export const TRANSFORMATIONS = [
 			"Let's end this, Aizen! I'll show you... The Final Getsuga Tensho! This technique allows me to become Getsuga itself. But using it, will cost all my powers as a Shinigami.!",
 		image: "https://media1.tenor.com/m/7GgfegR83eIAAAAC/ichigo-kurosaki-final-getsuga-tenshou.gif",
 		effects: "Final Getsuga Tensho, ?!$£!% Damage Increase, "
-	},
-	{
-		name: "Ultra Instinct",
-		description: "I am the hope of the universe. I am the answer to all living things that cry out for peace...",
-		image: "https://i.redd.it/y03e7f1ojto71.gif",
-		effects: "INSTINCT, 8000% Damage Increase, 100% Damage Reduction"
 	}
 ]
 

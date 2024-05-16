@@ -3376,6 +3376,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				skillsToDisplay = CLAN_SKILLS["The Strongest"].filter(skill => !userTechniques.includes(skill.name))
 				embedTitle = "The Strongest Techniques"
 				customIdPrefix = "buy_technique_"
+
+				//
 			} else if (i.values[0] === "gambler_fever_(jackpot)") {
 				skillsToDisplay = CLAN_SKILLS["Gambler Fever (Jackpot)"].filter(
 					skill => !userTechniques.includes(skill.name)
@@ -3507,7 +3509,6 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		userCollectors.delete(userId)
 	})
 }
-// Helper function for formatting uptime
 function formatUptime(uptime: number): string {
 	const totalSeconds = uptime / 1000
 	const days = Math.floor(totalSeconds / 86400)
@@ -3532,7 +3533,7 @@ export function generateStatsEmbed(client: Client, nextResetTimestamp: number): 
 			{ name: "Next Shop Reset", value: `<t:${nextResetTimestamp}:F>`, inline: true }
 		)
 		.setTimestamp()
-		.setFooter({ text: "Last Updated" }) // This sets the footer text
+		.setFooter({ text: "Last Updated" })
 
 	return statsEmbed
 }
@@ -3546,7 +3547,7 @@ export async function generateShopEmbed(): Promise<EmbedBuilder> {
 	const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
 	const embed = new EmbedBuilder()
-		.setColor("#FFD700") // Gold color
+		.setColor("#FFD700")
 		.setTitle("✨ Shop Items ✨")
 		.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
 
@@ -3572,11 +3573,11 @@ function spinSlots(): string[] {
 }
 
 function formatNumberWithCommas(number) {
-	return number.toLocaleString("en-US") // Formats with commas for US locale
+	return number.toLocaleString("en-US")
 }
 
 function checkWin(spinResults: string[]): boolean {
-	return new Set(spinResults).size === 1 // Win if all symbols match
+	return new Set(spinResults).size === 1
 }
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
@@ -3587,16 +3588,15 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	const itemEffects = await getUserItemEffects(userId)
 	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
 
-	const gamblersData = await getGamblersData(userId) // Assuming this function exists and returns an object containing the maxBetLimit
-	const maxBetLimit = 25000000 // Default max bet limit
+	const gamblersData = await getGamblersData(userId)
+	const maxBetLimit = 25000000
 
 	const { betCount } = await getUserGambleInfo(userId)
 
 	// Processing the gambling command
-	const gameType = interaction.options.getString("game") // Assuming "game" is the option name
+	const gameType = interaction.options.getString("game")
 	const betAmount = interaction.options.getInteger("amount", true)
 
-	// Implementing a simple bet count tracking mechanism (Consider storing and updating this in the database instead)
 	const userBetCounts = {}
 
 	if (!userBetCounts[userId]) {
@@ -3604,19 +3604,16 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 	userBetCounts[userId]++
 
-	// Check for the daily gamble limit
 	if (betCount >= 20) {
 		await interaction.reply("You've reached your daily gamble limit of 20. Please try again tomorrow.")
 		return
 	}
 
-	// Check if the user has enough coins
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
 		return
 	}
 
-	// Check against the user's maximum bet limit
 	if (betAmount > maxBetLimit) {
 		await interaction.reply({
 			content: `Your maximum bet limit is ${formatNumberWithCommas(maxBetLimit)} coins, Try increasing it!`,
@@ -3631,14 +3628,14 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	if (gameType === "slot") {
 		//
 		const betAmount = interaction.options.getInteger("amount", true)
-		const userId = interaction.user.id // Identifier for the user's balance
+		const userId = interaction.user.id
 		const currentBalance = await getBalance(userId)
 
 		if (betAmount > currentBalance) {
 			await interaction.reply("You don't have enough coins to make this bet.")
 			return
 		}
-		userBetCounts[userId]++ // Increment the count
+		userBetCounts[userId]++
 		await updateUserGambleInfo(userId)
 		//
 		const spinResults = spinSlots()
@@ -3647,15 +3644,15 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		let jackpotGIF = ""
 
 		if (didWin) {
-			const isJackpot = spinResults.every(symbol => symbol === "🍓") // Adjusted to the correct symbol
+			const isJackpot = spinResults.every(symbol => symbol === "🍓")
 			if (isJackpot) {
-				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif" // Set the URL for jackpot
-				await updateBalance(userId, betAmount * 5) // Bigger reward for jackpot
+				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif"
+				await updateBalance(userId, betAmount * 5)
 				resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${formatNumberWithCommas(
 					betAmount * 2
 				)} coins!`
 			} else {
-				await updateBalance(userId, betAmount * 2) // Reward for normal win
+				await updateBalance(userId, betAmount * 2)
 				resultMessage = `🎉 Congratulations, you won ${formatNumberWithCommas(betAmount * 2)} coins!`
 			}
 		} else {
@@ -3677,9 +3674,9 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	} else if (gameType === "coinflip") {
 		const coinSides = ["Heads", "Tails"]
 		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
-		const didWin = Math.random() < 0.5 // 50%
-		const technique = Math.random() < 0.1 // 10%
-		const supatechnique = Math.random() < 0.01 // 10%
+		const didWin = Math.random() < 0.5
+		const technique = Math.random() < 0.1
+		const supatechnique = Math.random() < 0.01
 
 		//
 		userBetCounts[userId]++
@@ -3688,7 +3685,6 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		let resultMessage = ""
 		if (didWin) {
 			const winnings = betAmount * 2
-			// Apply the gambler bonus (if applicable)
 
 			await updateBalance(userId, winnings)
 			await updateGamblersData(userId, betAmount, winnings, 0, 0) // Update gambling stats
@@ -4739,10 +4735,6 @@ export async function handleAcceptTrade(interaction) {
 		})
 	} catch (error) {
 		logger.error("Error in handleAcceptTrade:", error)
-		return interaction.followUp({
-			content: "An error occurred while trying to process trade requests.",
-			ephemeral: true
-		})
 	}
 }
 export async function processTradeSelection(interaction) {
@@ -4972,8 +4964,6 @@ function isHeavenlyRestrictionTechnique(technique: string): boolean {
 
 export async function handleUnequipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
-	await updateUserCommandsUsed(interaction.user.id)
-
 	const techniqueNamesInput = interaction.options.getString("techniques")
 
 	if (!techniqueNamesInput) {
@@ -4983,33 +4973,71 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 
-	// Process the list
 	const techniqueNames = techniqueNamesInput.split(",").map(name => name.trim())
 
+	await updateUserCommandsUsed(interaction.user.id)
+
 	try {
-		let activeTechniques = await getUserActiveTechniques(userId)
-		activeTechniques = Array.isArray(activeTechniques)
-			? activeTechniques.filter(name => name != null).map(name => name.trim())
+		const userHasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
+		let activeNormalTechniques = await getUserActiveTechniques(userId)
+		let activeHeavenlyTechniques = await getUserActiveHeavenlyTechniques(userId)
+
+		activeNormalTechniques = Array.isArray(activeNormalTechniques)
+			? activeNormalTechniques.filter(name => name != null).map(name => name.trim())
+			: []
+		activeHeavenlyTechniques = Array.isArray(activeHeavenlyTechniques)
+			? activeHeavenlyTechniques.filter(name => name != null).map(name => name.trim())
 			: []
 
-		const unequippedTechniques = []
-		const activeTechniquesLowercaseMap = new Map(activeTechniques.map(name => [name.toLowerCase(), name]))
+		const activeNormalTechniquesLowercaseMap = new Map(
+			activeNormalTechniques.map(name => [name.toLowerCase(), name])
+		)
+		const activeHeavenlyTechniquesLowercaseMap = new Map(
+			activeHeavenlyTechniques.map(name => [name.toLowerCase(), name])
+		)
+
+		const unequippedNormalTechniques = []
+		const unequippedHeavenlyTechniques = []
 
 		for (const techniqueName of techniqueNames) {
 			const techniqueNameLowercase = techniqueName.toLowerCase()
-			if (!activeTechniquesLowercaseMap.has(techniqueNameLowercase)) {
+
+			if (activeNormalTechniquesLowercaseMap.has(techniqueNameLowercase)) {
+				activeNormalTechniques = activeNormalTechniques.filter(
+					technique => technique.toLowerCase() !== techniqueNameLowercase
+				)
+				unequippedNormalTechniques.push(activeNormalTechniquesLowercaseMap.get(techniqueNameLowercase))
+			} else if (activeHeavenlyTechniquesLowercaseMap.has(techniqueNameLowercase)) {
+				if (!userHasHeavenlyRestriction) {
+					return await interaction.reply({
+						content: "You don't have Heavenly Restriction On! You can't unequip Heavenly Restriction techniques.",
+						ephemeral: true
+					})
+				}
+				activeHeavenlyTechniques = activeHeavenlyTechniques.filter(
+					technique => technique.toLowerCase() !== techniqueNameLowercase
+				)
+				unequippedHeavenlyTechniques.push(activeHeavenlyTechniquesLowercaseMap.get(techniqueNameLowercase))
+			} else {
 				return await interaction.reply({
 					content: `The technique "${techniqueName}" is not currently equipped.`,
 					ephemeral: true
 				})
 			}
-
-			activeTechniques = activeTechniques.filter(technique => technique.toLowerCase() !== techniqueNameLowercase)
-			unequippedTechniques.push(activeTechniquesLowercaseMap.get(techniqueNameLowercase))
 		}
 
-		await updateUserActiveTechniques(userId, activeTechniques)
-		await interaction.reply(`Technique(s) '${unequippedTechniques.join(", ")}' unequipped!`)
+		await updateUserActiveTechniques(userId, activeNormalTechniques)
+		await updateUserActiveHeavenlyTechniques(userId, activeHeavenlyTechniques)
+
+		let response = ""
+		if (unequippedNormalTechniques.length > 0) {
+			response += `Normal Technique(s) '${unequippedNormalTechniques.join(", ")}' unequipped!\n`
+		}
+		if (unequippedHeavenlyTechniques.length > 0) {
+			response += `Heavenly Restriction Technique(s) '${unequippedHeavenlyTechniques.join(", ")}' unequipped!`
+		}
+
+		await interaction.reply(response.trim())
 	} catch (error) {
 		logger.error("Error unequipping technique:", error)
 		return await interaction.reply({
@@ -5080,9 +5108,18 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 		await updateUserCommandsUsed(interaction.user.id)
 
 		const currentTransformation = await getUserTransformation(interaction.user.id)
+
 		const availableTransformations = unlockedTransformations.filter(transformationName => {
 			return transformationName && transformationName.trim() !== currentTransformation
 		})
+
+		if (availableTransformations.length === 0) {
+			await interaction.reply({
+				content: "You have no transformations to equip.",
+				ephemeral: true
+			})
+			return
+		}
 
 		const selectMenu = createTransformationSelectMenu(availableTransformations)
 		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
@@ -5121,8 +5158,8 @@ function createTransformationSelectMenu(transformations) {
 	transformations.forEach(transformationName => {
 		if (typeof transformationName === "string" && transformationName.trim() !== "") {
 			selectMenu.addOptions({
-				label: transformationName.substring(0, 100),
-				value: transformationName.substring(0, 100)
+				label: transformationName,
+				value: transformationName
 			})
 		} else {
 			logger.info("Invalid transformation name:", transformationName)
@@ -7282,7 +7319,6 @@ export async function handleGiveawayCommand(interaction) {
 		return
 	}
 
-
 	if (isPrizeItem && (!itemQuantity || itemQuantity <= 0)) {
 		await interaction.reply({
 			content: "Please provide a valid item quantity greater than 0.",
@@ -7548,7 +7584,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 	const initialEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
-		.setTitle("Raid Party")
+		.setTitle(`Raid Party - ${currentRaidBoss.name}`)
 		.setDescription("Click the button below to join the raid party!")
 		.addFields({
 			name: "Party Closes In",
@@ -7574,8 +7610,13 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				const updatedEmbed = new EmbedBuilder()
 					.setColor("#0099ff")
-					.setTitle("Raid Party")
+					.setTitle(`Raid Party - ${currentRaidBoss.name}`)
 					.setDescription(`Participants: ${participantsString}`)
+					.addFields({
+						name: "Party Closes In",
+						value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`,
+						inline: true
+					})
 
 				await i.update({ embeds: [updatedEmbed] })
 			} else {
