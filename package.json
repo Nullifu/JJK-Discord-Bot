@@ -43,7 +43,8 @@
 		"node-cron": "^3.0.3",
 		"node-schedule": "^2.1.1",
 		"openai": "^4.39.0",
-		"topgg-autoposter": "^2.0.2"
+		"topgg-autoposter": "^2.0.2",
+		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.9",

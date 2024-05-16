@@ -5,7 +5,7 @@ import moment from "moment-timezone"
 import { Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
-import uuid from "uuid"
+import { v4 as uuidv4 } from "uuid"
 import { logger } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
@@ -1475,7 +1475,7 @@ export async function updateUserVoteRewardStatus(userId: string): Promise<void> 
 	}
 }
 
-const uniqueId = uuid.v4()
+const uniqueId = uuidv4()
 
 export async function addUserQuest(userId: string, questName: string): Promise<void> {
 	try {
