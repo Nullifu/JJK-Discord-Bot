@@ -16,6 +16,7 @@ import {
 	ComponentType,
 	EmbedBuilder,
 	Interaction,
+	MessageComponentInteraction,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction,
@@ -46,6 +47,7 @@ import {
 	handleShikigamiEmbed
 } from "./calculate.js"
 import {
+	executeSpecialRaidBossTechnique,
 	executeSpecialTechnique,
 	export120,
 	exportCrashOut,
@@ -107,6 +109,7 @@ import {
 	cleanShikigami,
 	client,
 	createGiveaway,
+	createRaidParty,
 	createTradeRequest,
 	feedShikigami,
 	getActiveTrades,
@@ -116,10 +119,13 @@ import {
 	getBalance,
 	getBosses,
 	getCurrentCommunityQuest,
+	getCurrentRaidBoss,
 	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
 	getPreviousTrades,
+	getRaidBossDetails,
+	getRaidPartyById,
 	getShikigami,
 	getShopLastReset,
 	getUserAchievements,
@@ -155,6 +161,7 @@ import {
 	getUserUnlockedTransformations,
 	getUserWorked,
 	giveawayCollectionName,
+	handleRaidBossDefeat,
 	handleTradeAcceptance,
 	healShikigami,
 	logImageUrl,
@@ -166,6 +173,8 @@ import {
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
+	updateRaidBossHealth,
+	updateRaidPartyPendingActions,
 	updateUserAchievements,
 	updateUserActiveHeavenlyTechniques,
 	updateUserActiveTechniques,
@@ -4249,7 +4258,7 @@ export async function claimQuestsCommand(interaction) {
 export async function viewQuestsCommand(interaction: CommandInteraction) {
 	await updateUserCommandsUsed(interaction.user.id)
 
-	await interaction.deferReply({ ephemeral: true })
+	await interaction.deferReply({ ephemeral: false })
 
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
@@ -4296,18 +4305,9 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 		}, userQuests.quests[0])
 
 		const questDetails = questsArray.find(q => q.name === questWithMostProgress.id)
+
 		if (questDetails) {
 			defaultEmbed.setDescription(`Here is your quest with the most progress: **${questDetails.name}**`)
-			defaultEmbed.addFields({
-				name: "🎯 Task",
-				value: questDetails.task,
-				inline: false
-			})
-			defaultEmbed.addFields({
-				name: "🕰️ Progress",
-				value: `${questWithMostProgress.progress}/${questDetails.totalProgress}`,
-				inline: false
-			})
 		}
 	}
 
@@ -4348,28 +4348,31 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 								})
 								.join("\n")
 
-							personalQuestsEmbed.addFields({
-								name: questDetails.name,
-								value: taskList.toString(),
-								inline: false
-							})
+							personalQuestsEmbed.addFields([
+								{
+									name: questDetails.name,
+									value: taskList,
+									inline: false
+								}
+							])
 						} else if (questDetails) {
-							const userTask = quest.progress || 0 // Assuming quest.progress exists and is a number
+							const userTask = quest.progress || 0
 							const isComplete = userTask >= questDetails.totalProgress
 							const taskDescription = isComplete ? `~~${questDetails.task}~~` : questDetails.task
 							const progressText = isComplete
 								? `~~${userTask}/${questDetails.totalProgress}~~ ✅`
 								: `${userTask}/${questDetails.totalProgress}`
 
-							personalQuestsEmbed.addFields({
-								name: questDetails.name,
-								value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`.toString(),
-								inline: false
-							})
+							personalQuestsEmbed.addFields([
+								{
+									name: questDetails.name,
+									value: `**Task**: ${taskDescription}\n**Progress**: ${progressText}`,
+									inline: false
+								}
+							])
 						}
 					})
 				}
-
 				await collected.update({ embeds: [personalQuestsEmbed] })
 			} else if (selectedValue === "community_quests") {
 				const communityQuestEmbed = new EmbedBuilder().setColor(0x0099ff).setTitle("Community Quest")
@@ -7077,7 +7080,7 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				imageUrl = getYujiItadoriImageUrl()
 				line = getYujiItadoriLine()
 			}
-		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna" ) {
+		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna") {
 			message = mentorDetails["Ryomen Sukuna"].message
 			imageUrl = mentorDetails["Ryomen Sukuna"].imageUrl
 			line =
@@ -7497,4 +7500,226 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 	}
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const userTechniquesFight2 = new Map<string, any>()
+const countdown = 60
+
+export async function handleRaidCommand(interaction: CommandInteraction) {
+	const currentRaidBoss = await getCurrentRaidBoss()
+
+	if (!currentRaidBoss) {
+		await interaction.reply({ content: "There is no active raid boss at the moment.", ephemeral: true })
+		return
+	}
+
+	const joinButton = new ButtonBuilder().setCustomId("join_raid").setLabel("Join Raid").setStyle(ButtonStyle.Primary)
+
+	const partyCloseTime = Date.now() + 60000 // Set the party close time to 1 minute from now
+
+	const initialEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle("Raid Party")
+		.setDescription("Click the button below to join the raid party!")
+		.addFields({
+			name: "Party Closes In",
+			value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`,
+			inline: true
+		})
+
+	const initialMessage = await interaction.reply({
+		embeds: [initialEmbed],
+		components: [new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton)],
+		fetchReply: true
+	})
+
+	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 60000 })
+
+	const participants: string[] = []
+
+	collector.on("collect", async (i: MessageComponentInteraction) => {
+		if (i.customId === "join_raid") {
+			if (!participants.includes(i.user.id)) {
+				participants.push(i.user.id)
+				const participantsString = participants.map(p => `<@${p}>`).join(", ")
+
+				const updatedEmbed = new EmbedBuilder()
+					.setColor("#0099ff")
+					.setTitle("Raid Party")
+					.setDescription(`Participants: ${participantsString}`)
+
+				await i.update({ embeds: [updatedEmbed] })
+			} else {
+				await i.reply({ content: "You have already joined the raid party.", ephemeral: true })
+			}
+		}
+	})
+
+	collector.on("end", async collected => {
+		if (participants.length < 1) {
+			await interaction.editReply({
+				content: "Not enough participants to start a raid party.",
+				embeds: [],
+				components: []
+			})
+			return
+		}
+
+		const raidParty = await createRaidParty(currentRaidBoss.name, participants)
+
+		if (!raidParty) {
+			await interaction.editReply({ content: "Failed to create raid party.", embeds: [] })
+			return
+		}
+
+		const raidBossDetails = await getRaidBossDetails(currentRaidBoss.name)
+
+		if (!raidBossDetails) {
+			await interaction.editReply({ content: "Failed to retrieve raid boss details.", embeds: [] })
+			return
+		}
+
+		const primaryEmbed = await createRaidEmbed(raidBossDetails, raidParty.participants, interaction)
+		const rows = await createTechniqueSelectMenu(raidParty.participants, countdown)
+
+		await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
+
+		const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
+			filter: i => raidParty.participants.includes(i.user.id),
+			componentType: ComponentType.StringSelect,
+			time: 30000
+		})
+
+		battleOptionSelectMenuCollector.on("collect", async i => {
+			await i.deferUpdate()
+			const selectedTechnique = i.values[0]
+			const userId = i.user.id
+
+			if (selectedTechnique === "Lapse: Blue") {
+				const damage = await executeSpecialRaidBossTechnique({
+					collectedInteraction: i,
+					techniqueName: selectedTechnique,
+					damageMultiplier: 3,
+					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
+					description:
+						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+					fieldValue: selectedTechnique,
+					userTechniques: userTechniquesFight2,
+					userId: userId,
+					primaryEmbed
+				})
+				raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+			} else {
+				const damage = calculateDamage(selectedTechnique, userId)
+				raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+			}
+
+			await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+		})
+
+		battleOptionSelectMenuCollector.on("end", async () => {
+			const updatedRaidParty = await getRaidPartyById(raidParty._id.toString())
+			const updatedRaidBoss = await getRaidBossDetails(updatedRaidParty.raidBossId)
+
+			if (!updatedRaidBoss) {
+				await interaction.editReply({ content: "Failed to retrieve updated raid boss details.", embeds: [] })
+				return
+			}
+
+			// Calculate total damage from pending actions
+			const totalDamage = updatedRaidParty.pendingActions.reduce((sum, action) => sum + action.damage, 0)
+
+			// Update raid boss's health
+			updatedRaidBoss.current_health -= totalDamage
+			await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
+
+			// Clear pending actions
+			await updateRaidPartyPendingActions(raidParty._id.toString(), [])
+
+			const updatedEmbedBuilder = await createRaidEmbed(
+				updatedRaidBoss,
+				updatedRaidParty.participants,
+				interaction
+			)
+			const updatedEmbed = updatedEmbedBuilder.toJSON()
+			const rows = await createTechniqueSelectMenu(updatedRaidParty.participants, countdown)
+
+			await interaction.editReply({ embeds: [updatedEmbed], components: rows })
+
+			if (updatedRaidBoss.current_health <= 0) {
+				await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
+			} else {
+				setTimeout(() => {
+					interaction.editReply({
+						embeds: [updatedEmbed],
+						components: rows
+					})
+				}, 10000)
+			}
+		})
+
+		async function createTechniqueSelectMenu(
+			participants: string[],
+			countdown: number
+		): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
+			const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
+
+			for (let i = 0; i < participants.length; i++) {
+				const participant = participants[i]
+				const userTechniques = getUserTechniques(participant)
+				const techniqueOptions = (await userTechniques).map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName
+				}))
+
+				const selectMenu = new SelectMenuBuilder()
+					.setCustomId(`select-battle-option-${participant}-${i}`)
+					.setPlaceholder(`Choose your technique (${countdown}s)`)
+					.addOptions(techniqueOptions)
+
+				const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+				rows.push(row)
+			}
+
+			return rows
+		}
+
+		async function createRaidEmbed(raidBoss, participants, interaction) {
+			const primaryEmbed = new EmbedBuilder()
+				.setColor("Aqua")
+				.setTitle("Cursed Battle!")
+				.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
+				.setImage(raidBoss.image_url)
+				.addFields(
+					{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
+					{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
+					{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true }
+				)
+				.addFields({
+					name: "Boss Health Status",
+					value: generateHealthBar(raidBoss.current_health, raidBoss.globalHealth),
+					inline: false
+				})
+				.addFields()
+
+			// Add participants' health to the embed
+			const participantsHealthFields = []
+			for (const participant of participants) {
+				const playerHealth = await getUserHealth(participant)
+				participantsHealthFields.push({
+					name: `${interaction.guild?.members.cache.get(participant)?.displayName || "Unknown"}`,
+					value: `:blue_heart: ${playerHealth.toString()}`,
+					inline: true
+				})
+			}
+			primaryEmbed.addFields(...participantsHealthFields)
+
+			if (raidBoss.awakeningStage === "Stage Five") {
+				primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
+			}
+
+			return primaryEmbed
+		}
+	})
+}
 client1.login(process.env["DISCORD_BOT_TOKEN"])

@@ -761,3 +761,39 @@ export async function updateFeverMeter(collectedInteraction, userState, primaryE
 		}
 	}
 }
+
+export async function executeSpecialRaidBossTechnique({
+	collectedInteraction,
+	techniqueName,
+	damageMultiplier,
+	imageUrl,
+	description,
+	fieldValue,
+	userTechniques: userTechniquesFight,
+	userId,
+	primaryEmbed
+}) {
+	const techniquesUsed = userTechniquesFight.get(userId) || []
+
+	if (techniquesUsed.includes(techniqueName)) {
+		// Technique has already been used, handle accordingly (e.g., display an error message)
+		return 0
+	}
+
+	techniquesUsed.push(techniqueName)
+	userTechniquesFight.set(userId, techniquesUsed)
+
+	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
+	const playerGradeString = playerGradeData
+
+	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
+
+	primaryEmbed.setImage(imageUrl)
+	primaryEmbed.setDescription(description)
+	primaryEmbed.setFields({ name: "Player Technique", value: fieldValue })
+
+	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
+	await new Promise(resolve => setTimeout(resolve, 3000))
+
+	return damage
+}
