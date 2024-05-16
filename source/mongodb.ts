@@ -15,7 +15,7 @@ dotenv()
 
 export const bossCollectionName = "bosses"
 export const shikigamCollectionName = "shiki"
-export const usersCollectionName = "devuser"
+export const usersCollectionName = "users"
 export const questsCollectioName = "quests"
 export const tradeCollectionName = "trades"
 export const shopCollectionName = "shop"
