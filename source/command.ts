@@ -7110,6 +7110,13 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				mentorDetails["Ryomen Sukuna"].eventLines[
 					Math.floor(Math.random() * mentorDetails["Ryomen Sukuna"].eventLines.length)
 				]
+		} else if (isGlobalEventActive && mentor === "Curse King") {
+			message = mentorDetails["Curse King"].message
+			imageUrl = mentorDetails["Curse King"].imageUrl
+			line =
+				mentorDetails["Curse King"].eventLines[
+					Math.floor(Math.random() * mentorDetails["Curse King"].eventLines.length)
+				]
 		} else {
 			;({ message, imageUrl, line } = getMentorDetails(mentor, hasAwakening))
 		}
