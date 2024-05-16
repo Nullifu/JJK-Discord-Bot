@@ -7282,7 +7282,7 @@ export async function handleGiveawayCommand(interaction) {
 		return
 	}
 
-	// Additional input validation
+
 	if (isPrizeItem && (!itemQuantity || itemQuantity <= 0)) {
 		await interaction.reply({
 			content: "Please provide a valid item quantity greater than 0.",
