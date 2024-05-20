@@ -1888,21 +1888,22 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const user = await usersCollection.findOne({ id: userId })
-		const currentActiveTechniques = user?.activeTechniques || []
+		// Limit the active techniques to a maximum of 20
+		const updatedActiveTechniques = newActiveTechniques.slice(0, 20)
 
-		const uniqueNewTechniques = newActiveTechniques.filter(
-			technique => !currentActiveTechniques.includes(technique)
-		)
-
-		const updatedActiveTechniques = [...currentActiveTechniques, ...uniqueNewTechniques].slice(0, 20)
+		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(updatedActiveTechniques)}`)
 
 		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: updatedActiveTechniques } })
+
+		logger.debug(`Successfully updated active techniques for user ${userId}.`)
 	} catch (error) {
 		logger.error("Error updating user active techniques:", error)
 		throw error
+	} finally {
+		await client.close()
 	}
 }
+
 //
 // update user active heavenly techniques if it doesnt exist create it
 export async function updateUserActiveHeavenlyTechniques(

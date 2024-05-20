@@ -32,6 +32,7 @@ import {
 	handleAlertCommand,
 	handleBalanceCommand,
 	handleBegCommand,
+	handleBugReport,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -692,7 +693,12 @@ const commands = [
 				.setName("prize_amount")
 				.setDescription("The amount of the prize (if the prize is not an item)")
 				.setRequired(false)
-		)
+		),
+	new SlashCommandBuilder()
+		.setName("bug")
+		.setDescription("Report a bug")
+		.addStringOption(option => option.setName("description").setDescription("Describe the bug").setRequired(true))
+		.addAttachmentOption(option => option.setName("image").setDescription("Upload an image related to the bug"))
 ].map(command => command.toJSON())
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
@@ -1009,6 +1015,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "shikigamishop":
 				await handleShikigamiShop(chatInputInteraction)
+				break
+			case "bug":
+				await handleBugReport(chatInputInteraction)
 				break
 		}
 	}

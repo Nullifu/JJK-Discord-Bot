@@ -594,7 +594,6 @@ export async function handleJobSelection(interaction: CommandInteraction) {
 		ephemeral: false
 	})
 
-	// Set up the collector within handleJobSelection
 	const filter = i => i.customId === "select-job" && i.user.id === interaction.user.id
 
 	const collector = interaction.channel.createMessageComponentCollector({
@@ -646,7 +645,7 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	const currentTime = Date.now()
 	const oneDayMs = 24 * 60 * 60 * 1000
 	const baseReward = 100000
-	const streakBonus = 2500
+	const streakBonus = 25000
 
 	// Fetch the user's last daily claim time and streak from the database
 	const { lastDaily, streak: lastStreak } = await getUserDailyData(userId)
@@ -803,14 +802,13 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				const buttonCollector = interaction.channel.createMessageComponentCollector({
 					filter: buttonFilter,
-					time: 20000 // Collector will last for 20 seconds
+					time: 20000
 				})
 
 				buttonCollector.on("collect", async buttonInteraction => {
 					await buttonInteraction.deferReply()
 
 					if (buttonInteraction.customId === "confirmCraft") {
-						// Verify inventory again before crafting
 						const userInventory = await getUserInventory(interaction.user.id)
 						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
 
@@ -1164,7 +1162,7 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 		await inter.deferUpdate()
 
 		if (inter.customId === "continue_search") {
-			const coinsFoundThisSearch = Math.floor(Math.random() * 20000) + 1 // Coins found in this specific search
+			const coinsFoundThisSearch = Math.floor(Math.random() * 20000) + 1
 
 			userSearching.set(inter.user.id, {
 				...userSearching.get(inter.user.id),
@@ -1187,7 +1185,7 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 					components: [] // Remove buttons
 				})
 
-				userSearching.delete(interaction.user.id) // Remove the user from the search map
+				userSearching.delete(interaction.user.id)
 				return
 			}
 
@@ -1212,7 +1210,7 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 
 				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
 			} else {
-				const coinsFound = userSearching.get(inter.user.id)?.coinsFound ?? 0 // Handle if userSearching.get(...) is null
+				const coinsFound = userSearching.get(inter.user.id)?.coinsFound ?? 0
 				const itemFound = getRandomItem()
 
 				// Embed description handling
@@ -5046,9 +5044,9 @@ export async function handleUnequipTechniqueCommand(interaction) {
 		})
 	}
 
-	const techniqueNames = techniqueNamesInput.split(",").map(name => name.trim())
+	const techniqueNames = techniqueNamesInput.split(",").map(name => name.trim().toLowerCase())
 
-	await updateUserCommandsUsed(interaction.user.id)
+	await updateUserCommandsUsed(userId)
 
 	try {
 		const userHasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
@@ -7888,6 +7886,29 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 			}
 		})
 	})
+}
+
+export async function handleBugReport(interaction: ChatInputCommandInteraction) {
+	const description = interaction.options.getString("description", true)
+	const imageAttachment = interaction.options.getAttachment("image")
+
+	const embed = new EmbedBuilder()
+		.setTitle("Bug Report")
+		.setDescription(description)
+		.setTimestamp()
+		.setFooter({ text: `Reported by ${interaction.user.tag}` })
+
+	if (imageAttachment) {
+		embed.setImage(imageAttachment.url)
+	}
+
+	// Send the bug report to a specific channel or user
+	const bugReportChannel = interaction.client.channels.cache.get("1242086815910068345")
+	if (bugReportChannel && bugReportChannel.isTextBased()) {
+		await bugReportChannel.send({ embeds: [embed] })
+	}
+
+	await interaction.reply({ content: "Thank you for reporting the bug! We will look into it.", ephemeral: true })
 }
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])
