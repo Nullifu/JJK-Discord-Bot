@@ -263,6 +263,8 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 			const { startDate, endDate, reason } = blacklistedUser
 			const currentDate = new Date()
 
+			logger.warn("Blacklisted user tried to register:", blacklistedUser)
+
 			if (currentDate >= startDate && currentDate <= endDate) {
 				await interaction.reply({
 					content: `You have been blacklisted from registering for the following reason: ${reason}, if you believe this is a mistake please contact the support team.`,
