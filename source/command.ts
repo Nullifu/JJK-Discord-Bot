@@ -268,7 +268,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 					.setColor(0xff0000)
 					.setTitle("Blacklist Notice")
 					.setDescription(`You have been blacklisted from registering for the following reason: ${reason}`)
-					.setImage("https://media1.tenor.com/m/LCkoYVmQ5BAAAAAC/real-jjk.gif")
+					.setImage("https://storage.googleapis.com/jjk_bot_personal/GJFN5lkXYAAKUP-.jpg")
 					.addFields(
 						{ name: "Start Date", value: startDate.toDateString(), inline: true },
 						{ name: "End Date", value: endDate.toDateString(), inline: true },
