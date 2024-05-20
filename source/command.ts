@@ -4723,9 +4723,9 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		.setColor("#FF0000")
 		.setTitle("🚨 Alert!")
 		.setDescription(
-			"Sorry for all the bugs recently, been under the weather but i'm back now! Please remember to report any bugs you find in the support server!"
+			"Users with suspected fraudlent money have been WIPED! If you've lost money that was obtained through legitimate means, please contact the developers."
 		)
-		.setFooter({ text: "2:42AM as i write this, do people even read these?" })
+		.setFooter({ text: "You know who you are" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
 }

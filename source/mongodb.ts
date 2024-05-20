@@ -25,6 +25,7 @@ export const giveawayCollectionName = "giveawayLogs"
 export const communityQuestsCollectionName = "communityQuests"
 export const raidBossesCollectionName = "raidBosses"
 export const raidInstancesCollectionName = "raidParticipants"
+export const ownercommandCollectionName = "ownerLogs"
 
 export const mongoDatabase = process.env["MONGO_DATABASE"]
 export const mongoUri = process.env.MONGO_URI
