@@ -445,11 +445,6 @@ const commands = [
 				)
 		),
 	new SlashCommandBuilder()
-		.setName("sell")
-		.setDescription("Sell an item from your inventory.")
-		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
-		.addIntegerOption(option => option.setName("quantity").setDescription("How many to sell").setRequired(false)),
-	new SlashCommandBuilder()
 		.setName("donate")
 		.setDescription("Donate to the poor!")
 		.addUserOption(option => option.setName("user").setDescription("The user to donate to").setRequired(true))
