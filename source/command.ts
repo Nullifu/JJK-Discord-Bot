@@ -117,6 +117,7 @@ import {
 	getAllUserExperience,
 	getAllUsersBalance,
 	getBalance,
+	getBlacklistedUsers,
 	getBosses,
 	getCurrentCommunityQuest,
 	getCurrentRaidBoss,
@@ -256,6 +257,21 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 	try {
 		const discordId = interaction.user.id
 
+		const blacklistedUser = (await getBlacklistedUsers()).find(user => user.userId === discordId)
+
+		if (blacklistedUser) {
+			const { startDate, endDate, reason } = blacklistedUser
+			const currentDate = new Date()
+
+			if (currentDate >= startDate && currentDate <= endDate) {
+				await interaction.reply({
+					content: `You have been blacklisted from registering for the following reason: ${reason}, if you believe this is a mistake please contact the support team.`,
+					ephemeral: true
+				})
+				return
+			}
+		}
+
 		if (await userExists(discordId)) {
 			await interaction.reply({
 				content: "It looks like you're already registered!",
@@ -269,6 +285,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 		if (result && "insertedId" in result) {
 			await addItemToUserInventory(discordId, "Starter Bundle", 1)
 			const imageURL = "https://storage.googleapis.com/jjk_bot_personal/Shibuya_(Anime).png"
+
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
@@ -3850,15 +3867,22 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 export async function handleSellCommand(interaction) {
 	const itemToSell = interaction.options.getString("item").toLowerCase()
 	const quantity = interaction.options.getInteger("quantity") || 1
-
 	const userInventory = await getUserInventory(interaction.user.id)
 	const inventoryItem = userInventory.find(i => i.name.toLowerCase() === itemToSell)
+
 	if (!inventoryItem) {
 		return interaction.reply({ content: "You don't have that item in your inventory.", ephemeral: true })
 	}
 
-	const itemDetails = items.find(i => i.name.toLowerCase() === itemToSell)
+	// Check if the user has sufficient quantity of the item
+	if (inventoryItem.quantity < quantity) {
+		return interaction.reply({
+			content: `You don't have enough ${inventoryItem.name} to sell. You only have ${inventoryItem.quantity}.`,
+			ephemeral: true
+		})
+	}
 
+	const itemDetails = items.find(i => i.name.toLowerCase() === itemToSell)
 	const price = itemDetails ? itemDetails.price : 5000
 	const earnings = price * quantity
 
@@ -3884,7 +3908,6 @@ export async function handleSellCommand(interaction) {
 			await removeItemFromUserInventory(interaction.user.id, inventoryItem.name, quantity)
 			await updateBalance(interaction.user.id, earnings)
 			const balance = await getBalance(interaction.user.id)
-
 			await i.update({
 				content: `You've sold ${quantity} x ${
 					inventoryItem.name
@@ -3896,8 +3919,7 @@ export async function handleSellCommand(interaction) {
 			await i.update({ content: "Sale cancelled.", embeds: [], components: [] })
 		}
 	})
-	//
-	collector.stop
+
 	collector.on("end", (collected, reason) => {
 		if (reason === "time") {
 			interaction.editReply({ content: "Confirmation time expired. Sale cancelled.", components: [] })

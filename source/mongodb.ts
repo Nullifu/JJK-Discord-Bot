@@ -16,7 +16,7 @@ dotenv()
 
 export const bossCollectionName = "bosses"
 export const shikigamCollectionName = "shiki"
-export const usersCollectionName = "users"
+export const usersCollectionName = "devuser"
 export const questsCollectioName = "quests"
 export const tradeCollectionName = "trades"
 export const shopCollectionName = "shop"
@@ -26,6 +26,7 @@ export const communityQuestsCollectionName = "communityQuests"
 export const raidBossesCollectionName = "raidBosses"
 export const raidInstancesCollectionName = "raidParticipants"
 export const ownercommandCollectionName = "ownerLogs"
+export const blacklistedCollectionName = "blacklistedUsers"
 
 export const mongoDatabase = process.env["MONGO_DATABASE"]
 export const mongoUri = process.env.MONGO_URI
@@ -4070,4 +4071,47 @@ export async function getRaidPartyById(raidPartyId: string): Promise<RaidParty |
 }
 function awardRewards(participant: string, raidBossDetails: RaidBoss) {
 	throw new Error("Function not implemented.")
+}
+
+export async function getBlacklistedUsers(): Promise<
+	{ userId: string; startDate: Date; endDate: Date; reason: string }[]
+	// eslint-disable-next-line indent
+> {
+	try {
+		const database = client.db(mongoDatabase)
+		const blacklistedUsersCollection = database.collection("blacklistedUsers")
+		const blacklistedUsers = await blacklistedUsersCollection.find().toArray()
+
+		// Map the retrieved documents to the expected format
+		return blacklistedUsers.map(user => ({
+			userId: user.userId,
+			startDate: user.startDate,
+			endDate: user.endDate,
+			reason: user.reason
+		}))
+	} catch (error) {
+		logger.error("Error retrieving blacklisted users:", error)
+		return []
+	}
+}
+
+// update blacklisted user
+export async function updateBlacklistedUser(
+	userId: string,
+	startDate: Date,
+	endDate: Date,
+	reason: string
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const blacklistedUsersCollection = database.collection("blacklistedUsers")
+		await blacklistedUsersCollection.updateOne(
+			{ userId },
+			{ $set: { startDate, endDate, reason } },
+			{ upsert: true }
+		)
+	} catch (error) {
+		logger.error("Error updating blacklisted user:", error)
+		throw error
+	}
 }
