@@ -1079,6 +1079,17 @@ export const questsArray = [
 		instanceId: "uniqueInstanceId"
 	},
 	{
+		name: "Training with Itadori",
+		description: "Train With Itadori!",
+		coins: 45000,
+		experience: 470,
+		items: { "Cursed Energy Reinforcement": 1 },
+		itemQuantity: 1,
+		task: "Fight Itadori 3 times!",
+		totalProgress: 3,
+		instanceId: "uniqueInstanceId"
+	},
+	{
 		name: "Gamblers Fever",
 		description: "Defeat Hakari Kinji 5 times and earn his token.",
 		coins: 45000,
