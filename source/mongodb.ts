@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { CommandInteraction, EmbedBuilder } from "discord.js"
 import { config as dotenv } from "dotenv"
 import moment from "moment-timezone"
-import { Collection, MongoClient, ObjectId } from "mongodb"
+import { ClientSession, Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
 import { v4 as uuidv4 } from "uuid"
@@ -41,6 +42,13 @@ client.on("close", () => {
 	isConnected = false
 	logger.info("Disconnected from MongoDB")
 })
+
+export async function startNewSession() {
+	if (!isConnected) {
+		await client.connect()
+	}
+	return client.startSession()
+}
 
 // LINK START! ---------------------------------------------------------------
 
@@ -313,13 +321,13 @@ export async function getBalance(id: string): Promise<number> {
 	}
 }
 
-export async function updateBalance(id: string, amount: number): Promise<void> {
+export async function updateBalance(id: string, amount: number, options?: any): Promise<void> {
 	try {
-		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const user = await usersCollection.findOne({ id: id })
+		const user = await usersCollection.findOne({ id: id }, { ...options })
+
 		if (!user) {
 			logger.info(`No user found with ID: ${id}`)
 			throw new Error(`No user found with ID: ${id}`)
@@ -328,8 +336,11 @@ export async function updateBalance(id: string, amount: number): Promise<void> {
 		const newBalance = user.balance + amount
 
 		if (newBalance >= 0) {
-			const updateResult = await usersCollection.updateOne({ id: id }, { $set: { balance: newBalance } })
-
+			const updateResult = await usersCollection.updateOne(
+				{ id: id },
+				{ $set: { balance: newBalance } },
+				{ ...options }
+			)
 			logger.log(`Updated balance for user with ID: ${id}`)
 		} else {
 			logger.log("Balance update prevented: would have resulted in negative balance")
@@ -422,24 +433,30 @@ export async function getUserInventory(userId: string): Promise<{ name: string; 
 	}
 }
 
-export async function addItemToUserInventory(userId: string, itemName: string, quantityToAdd: number): Promise<void> {
+export async function addItemToUserInventory(
+	userId: string,
+	itemName: string,
+	quantityToAdd: number,
+	options?: any
+): Promise<void> {
 	try {
-		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection<User>(usersCollectionName)
 
-		const existingItem = await usersCollection.findOne({ "id": userId, "inventory.name": itemName })
+		const existingItem = await usersCollection.findOne({ "id": userId, "inventory.name": itemName }, { ...options })
 
 		if (existingItem) {
 			await usersCollection.updateOne(
 				{ "id": userId, "inventory.name": itemName },
-				{ $inc: { "inventory.$.quantity": quantityToAdd } }
+				{ $inc: { "inventory.$.quantity": quantityToAdd } },
+				{ ...options }
 			)
 			logger.info(`Updated quantity of ${itemName} for user with ID: ${userId}`)
 		} else {
 			await usersCollection.updateOne(
 				{ id: userId },
-				{ $push: { inventory: { name: itemName, quantity: quantityToAdd } } }
+				{ $push: { inventory: { name: itemName, quantity: quantityToAdd } } },
+				{ ...options }
 			)
 		}
 	} catch (error) {
@@ -1363,9 +1380,15 @@ export async function getAllUsersBalance() {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const users = await usersCollection.find({}, { projection: { _id: 0, id: 1, balance: 1 } }).toArray()
+		await usersCollection.createIndex({ balance: -1 }, { name: "balance_index" })
 
-		return users.map(user => ({
+		const topUsers = await usersCollection
+			.find({}, { projection: { _id: 0, id: 1, balance: 1 } })
+			.sort({ balance: -1 }) // Sort in descending order of balance
+			.limit(10)
+			.toArray()
+
+		return topUsers.map(user => ({
 			id: user.id,
 			balance: user.balance
 		}))
@@ -1587,14 +1610,17 @@ export async function getUserQuests(userId) {
 	}
 }
 
-export async function removeUserQuest(userId: string, instanceId: string): Promise<boolean> {
+export async function removeUserQuest(userId: string, instanceId: string, session?: ClientSession): Promise<boolean> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<User> = database.collection<User>(usersCollectionName)
 
+		const options = session ? { session } : {}
+
 		const result = await usersCollection.updateOne(
 			{ "id": userId, "quests.instanceId": instanceId },
-			{ $pull: { quests: { instanceId: instanceId } } }
+			{ $pull: { quests: { instanceId: instanceId } } },
+			options
 		)
 
 		if (result.modifiedCount === 0) {
@@ -2123,16 +2149,20 @@ export async function getUserInateClan(userId: string): Promise<{ clan: string; 
 	}
 }
 
-// update user unlocked transformations
 export async function updateUserUnlockedTransformations(
 	userId: string,
-	unlockedtransformations: string[]
+	unlockedtransformations: string[],
+	options?: any
 ): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { unlockedtransformations } })
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $set: { unlockedtransformations } },
+			{ ...options } // Spread the options object
+		)
 	} catch (error) {
 		logger.error("Error updating user unlocked transformations:", error)
 		throw error
@@ -2181,13 +2211,12 @@ export async function getUserPermEffects(userId: string): Promise<string[]> {
 	}
 }
 
-// update users honours array
-export async function updateUserHonours(userId: string, honours: string[]): Promise<void> {
+export async function updateUserHonours(userId: string, honours: string[], options?: any): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { honours } })
+		await usersCollection.updateOne({ id: userId }, { $set: { honours } }, { ...options })
 	} catch (error) {
 		logger.error("Error updating user honours:", error)
 		throw error
@@ -2480,13 +2509,13 @@ export async function getUserMentor(userId: string): Promise<string> {
 		throw error
 	}
 }
-// update user mentors if it doesnt exist create it then update
-export async function updateUserMentor(userId: string, mentor: string): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function updateUserMentor(userId: string, mentor: string, options?: any): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: { mentors: mentor } }, { upsert: true })
+		await usersCollection.updateOne({ id: userId }, { $set: { mentors: mentor } }, { upsert: true, ...options })
 	} catch (error) {
 		logger.error("Error updating user mentor:", error)
 		throw error

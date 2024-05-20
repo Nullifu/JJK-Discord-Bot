@@ -23,7 +23,7 @@ import {
 	TextBasedChannel,
 	TextChannel
 } from "discord.js"
-import { Collection } from "mongodb"
+import { ClientSession, Collection } from "mongodb"
 import ms from "ms"
 import {
 	DOMAIN_INFORMATION,
@@ -120,7 +120,6 @@ import {
 	getBosses,
 	getCurrentCommunityQuest,
 	getCurrentRaidBoss,
-	getGamblersData,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
 	getPreviousTrades,
@@ -170,6 +169,7 @@ import {
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
 	removeUserQuest,
+	startNewSession,
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
@@ -203,6 +203,7 @@ import {
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
+import { executeDualTechnique } from "./raids.js"
 import {
 	activeShikigami,
 	createShikigamiEmbed,
@@ -233,6 +234,7 @@ import {
 	getYujiItadoriEventLine,
 	getYujiItadoriImageUrl,
 	getYujiItadoriLine,
+	handleRaidEnd,
 	mentorDetails
 } from "./utils.js"
 
@@ -1839,13 +1841,14 @@ export async function handleLeaderBoardCommand(interaction) {
 			})
 		} else if (choice === "wealth") {
 			const userBalances = await getAllUsersBalance()
-			userBalances.sort((a, b) => b.balance - a.balance)
+
 			leaderboardEmbed
 				.setTitle("💰 Wealth Leaderboard 💰")
 				.setDescription("Here are the top users with the most wealth:")
-			userBalances.slice(0, 10).forEach((user, index) => {
+
+			userBalances.forEach((user, index) => {
 				const rank = rankEmojis[index] ? rankEmojis[index] : index + 1
-				const text = `${rank} <@${user.id}> - **$${user.balance}**`
+				const text = `${rank} <@${user.id}> - **$${user.balance.toLocaleString()}**`
 				leaderboardEmbed.addFields({ name: "\u200B\n", value: text, inline: false })
 			})
 		} else if (choice === "fight") {
@@ -1903,8 +1906,13 @@ export async function handleVoteCommand(interaction) {
 		.setStyle(ButtonStyle.Link)
 		.setURL("https://botlist.me/bots/991443928790335518/vote")
 		.setEmoji("👍")
+	const botlistmereview = new ButtonBuilder()
+		.setLabel("Drop a Review on Botlist.me!")
+		.setStyle(ButtonStyle.Link)
+		.setURL("https://botlist.me/bots/991443928790335518/review")
+		.setEmoji("📢")
 
-	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme, TOPGGReview)
+	const row = new ActionRowBuilder().addComponents(voteButtonTopGG, discordbotlistme, TOPGGReview, botlistmereview)
 
 	await interaction.reply({ embeds: [voteEmbed], components: [row], ephemeral: true })
 }
@@ -3580,34 +3588,41 @@ function checkWin(spinResults: string[]): boolean {
 	return new Set(spinResults).size === 1
 }
 
+const userBetCounts = {}
+const userLastBetTimes = {}
+const cooldownPeriod = 60 * 1000 // 1 minute cooldown
+const maxBetLimit = 25000000
+const dailyBetLimit = 20
+
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
-
-	const currentBalance = await getBalance(userId)
-
-	const itemEffects = await getUserItemEffects(userId)
-	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
-
-	const gamblersData = await getGamblersData(userId)
-	const maxBetLimit = 25000000
-
-	const { betCount } = await getUserGambleInfo(userId)
-
-	// Processing the gambling command
-	const gameType = interaction.options.getString("game")
-	const betAmount = interaction.options.getInteger("amount", true)
-
-	const userBetCounts = {}
+	const now = Date.now()
 
 	if (!userBetCounts[userId]) {
 		userBetCounts[userId] = 0
 	}
-	userBetCounts[userId]++
+	if (!userLastBetTimes[userId]) {
+		userLastBetTimes[userId] = 0
+	}
 
-	if (betCount >= 20) {
+	const currentBalance = await getBalance(userId)
+	const itemEffects = await getUserItemEffects(userId)
+	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
+
+	const { betCount } = await getUserGambleInfo(userId)
+
+	if (now - userLastBetTimes[userId] < cooldownPeriod) {
+		await interaction.reply("You're betting too quickly. Please wait a moment before trying again.")
+		return
+	}
+
+	if (betCount >= dailyBetLimit) {
 		await interaction.reply("You've reached your daily gamble limit of 20. Please try again tomorrow.")
 		return
 	}
+
+	const gameType = interaction.options.getString("game")
+	const betAmount = interaction.options.getInteger("amount", true)
 
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
@@ -3622,22 +3637,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		return
 	}
 
-	//
-	//
-
 	if (gameType === "slot") {
-		//
-		const betAmount = interaction.options.getInteger("amount", true)
-		const userId = interaction.user.id
-		const currentBalance = await getBalance(userId)
-
-		if (betAmount > currentBalance) {
-			await interaction.reply("You don't have enough coins to make this bet.")
-			return
-		}
-		userBetCounts[userId]++
-		await updateUserGambleInfo(userId)
-		//
 		const spinResults = spinSlots()
 		const didWin = checkWin(spinResults)
 		let resultMessage = ""
@@ -3657,7 +3657,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			}
 		} else {
 			await updateBalance(userId, -betAmount)
-			resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount * 2)} coins.`
+			resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
@@ -3678,17 +3678,13 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		const technique = Math.random() < 0.1
 		const supatechnique = Math.random() < 0.01
 
-		//
-		userBetCounts[userId]++
-		await updateUserGambleInfo(userId)
-		//
 		let resultMessage = ""
 		if (didWin) {
 			const winnings = betAmount * 2
 
 			await updateBalance(userId, winnings)
 			await updateGamblersData(userId, betAmount, winnings, 0, 0) // Update gambling stats
-			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won $${formatNumberWithCommas(
+			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${formatNumberWithCommas(
 				winnings
 			)} coins!`
 		} else {
@@ -3697,7 +3693,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			await updateGamblersData(userId, betAmount, 0, losses, 0) // Update gambling stats
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
-			}! You lost $${formatNumberWithCommas(losses)} coins.`
+			}! You lost ${formatNumberWithCommas(losses)} coins.`
 		}
 
 		const resultEmbed = new EmbedBuilder()
@@ -3709,7 +3705,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		await interaction.reply({ embeds: [resultEmbed] })
 
 		const userTechniques = await getUserTechniques(userId)
-		//
+
 		if (technique && !userTechniques.includes("Private Pure Love Train: Jackpot")) {
 			await addUserTechnique(userId, "Private Pure Love Train: Jackpot")
 			const techniqueEmbed = new EmbedBuilder()
@@ -3735,6 +3731,11 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
 		}
 	}
+
+	// Update bet counts and last bet time
+	userBetCounts[userId]++
+	userLastBetTimes[userId] = now
+	await updateUserGambleInfo(userId)
 }
 
 function getRandomBenefactor() {
@@ -4033,240 +4034,268 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 }
 
 export async function claimQuestsCommand(interaction) {
+	await interaction.deferReply()
+
+	let session: ClientSession | null = null
+
 	try {
-		await updateUserCommandsUsed(interaction.user.id)
-		const userId = interaction.user.id // Get the user's ID from the interaction
-		const userQuests = await getUserQuests(userId) // Fetch user quests
-		if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
-			await interaction.reply("You have no active quests to claim.")
-			return
-		}
+		session = await startNewSession()
+		logger.debug("Session started successfully")
 
-		const completedQuests = userQuests.quests.filter(userQuest => {
-			const questDetails = questsArray.find(quest => quest.name === userQuest.id)
-			if (!questDetails) return false
+		try {
+			await updateUserCommandsUsed(interaction.user.id)
 
-			if (Array.isArray(questDetails.tasks) && questDetails.tasks.length > 0) {
-				return questDetails.tasks.every(task => {
-					const userTask = userQuest.tasks.find(t => t.description === task.description)
-					return userTask && userTask.progress >= task.totalProgress
-				})
-			} else {
-				return userQuest.progress >= questDetails.totalProgress
+			const userId = interaction.user.id
+			const userQuests = await getUserQuests(userId)
+
+			if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
+				await interaction.editReply("You have no active quests to claim.")
+				await session?.endSession()
+				return
 			}
-		})
 
-		if (completedQuests.length === 0) {
-			await interaction.reply("You have no completed quests to claim.")
-			return
-		}
+			const completedQuests = userQuests.quests.filter(userQuest => {
+				const questDetails = questsArray.find(quest => quest.name === userQuest.id)
+				if (!questDetails) return false
 
-		let claimedSukunasHonour = false
-		let claimedReinforcement = false
-		let claimedSatoru = false
-		let claimedNanami = false
-		let claimedMentorSatoru = false
-		let claimedMentorSukuna = false
-		let claimedstage3 = false
-		let claimedkashimo = false
+				if (Array.isArray(questDetails.tasks) && questDetails.tasks.length > 0) {
+					return questDetails.tasks.every(task => {
+						const userTask = userQuest.tasks.find(t => t.description === task.description)
+						return userTask && userTask.progress >= task.totalProgress
+					})
+				} else {
+					return userQuest.progress >= questDetails.totalProgress
+				}
+			})
 
-		for (const completedQuest of completedQuests) {
-			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
-			if (!questDetails) continue
+			if (completedQuests.length === 0) {
+				await interaction.editReply("You have no completed quests to claim.")
+				await session?.endSession()
+				return
+			}
 
-			const { coins, experience, items } = questDetails
+			let claimedSukunasHonour = false
+			let claimedReinforcement = false
+			let claimedSatoru = false
+			let claimedNanami = false
+			let claimedMentorSatoru = false
+			let claimedMentorSukuna = false
+			let claimedstage3 = false
+			let claimedkashimo = false
 
-			await updateBalance(userId, coins)
-			await updateUserExperience(userId, experience)
+			for (const completedQuest of completedQuests) {
+				const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+				if (!questDetails) continue
 
-			if (items) {
-				for (const itemName of Object.keys(items)) {
-					const quantity = items[itemName]
-					await addItemToUserInventory(userId, itemName, quantity)
+				const { coins, experience, items } = questDetails
 
-					if (itemName === "Sukuna's Honour") {
-						claimedSukunasHonour = true
-					} else if (itemName === "Cursed Energy Reinforcement") {
-						claimedReinforcement = true
-					} else if (itemName === "Satoru Gojo's Respect") {
-						claimedSatoru = true
-					} else if (itemName === "Overtime") {
-						claimedNanami = true
-					} else if (itemName === "Curse King Medal") {
-						claimedMentorSukuna = true
-					} else if (itemName === "Strongest Medal") {
-						claimedMentorSatoru = true
-					} else if (itemName === "Awakening Release") {
-						claimedstage3 = true
-					} else if (itemName === "Kashimo's Token") {
-						claimedkashimo = true
+				await updateBalance(userId, coins)
+				await updateUserExperience(userId, experience)
+
+				if (items) {
+					for (const itemName of Object.keys(items)) {
+						const quantity = items[itemName]
+						await addItemToUserInventory(userId, itemName, quantity)
+
+						if (itemName === "Sukuna's Honour") {
+							claimedSukunasHonour = true
+						} else if (itemName === "Cursed Energy Reinforcement") {
+							claimedReinforcement = true
+						} else if (itemName === "Satoru Gojo's Respect") {
+							claimedSatoru = true
+						} else if (itemName === "Overtime") {
+							claimedNanami = true
+						} else if (itemName === "Curse King Medal") {
+							claimedMentorSukuna = true
+						} else if (itemName === "Strongest Medal") {
+							claimedMentorSatoru = true
+						} else if (itemName === "Awakening Release") {
+							claimedstage3 = true
+						} else if (itemName === "Kashimo's Token") {
+							claimedkashimo = true
+						}
 					}
 				}
+
+				await updatePlayerGrade(userId)
 			}
 
-			await updatePlayerGrade(userId)
-			await removeUserQuest(userId, completedQuest.instanceId)
-		}
-
-		const questRewards = completedQuests.map(completedQuest => {
-			const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
-			if (!questDetails) return `**${completedQuest.id}**`
-
-			const { coins, experience, items } = questDetails
-			const rewards = [
-				`Coins: ${coins}`,
-				`Experience: ${experience}`,
-				...Object.entries(items || {}).map(([item, quantity]) => `${item}: ${quantity}`)
-			].join("\n")
-
-			return `**${completedQuest.id}**\n${rewards}`
-		})
-
-		const specialEmbeds = []
-
-		if (claimedSukunasHonour) {
-			await updateUserHonours(userId, ["Sukuna's Honour"])
-			const sukunasHonourEmbed = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("Sukuna's Honour Claimed!")
-				.setDescription(
-					"You have been acknowledged by the King of Curses himself. This is a rare achievement that marks you as one of the elite sorcerers."
-				)
-				.setImage("https://cdn.discordapp.com/attachments/.../82F48214-7925-47D3-BCD8-12D744A71F98.gif")
-				.addFields({ name: "New Awakening", value: "You now bear the curse of Sukuna. Use it wisely." })
-
-			specialEmbeds.push(sukunasHonourEmbed)
-		}
-
-		if (claimedReinforcement) {
-			await updateUserUnlockedTransformations(userId, ["Cursed Energy Reinforcement"])
-			const reinforcementEmbed = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("Power Released!")
-				.setDescription(
-					"One hell of a training session! You have unlocked the ability to reinforce your cursed energy."
-				)
-				.setImage("https://i.pinimg.com/originals/5f/3c/b9/5f3cb9d839aa38fef811289443488890.gif")
-				.addFields({
-					name: "New Power",
-					value: "You can now use the **Cursed Energy Reinforcement** Transformation!"
-				})
-
-			specialEmbeds.push(reinforcementEmbed)
-		}
-
-		if (claimedSatoru) {
-			await updateUserHonours(userId, ["Satoru Gojo's Respect"])
-			await addItemToUserInventory(userId, "Upgraded Limitless Token", 3)
-			const claimedSatoru = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("Six Eyes Unleashed!")
-				.setDescription(
-					"Well, well, look at you. Seems like someone finally figured out how those Six Eyes really work, huh?"
-				)
-				.setImage("https://media1.tenor.com/m/DoXhSg0brxsAAAAC/gojo-satoru-satoru.gif")
-				.addFields({
-					name: "New Power",
-					value: "**Awakened** Limitless techniques unleashed! You now have access to the **Awakened Limitless** power!"
-				})
-
-			specialEmbeds.push(claimedSatoru)
-		}
-
-		if (claimedNanami) {
-			await updateUserUnlockedTransformations(userId, ["Overtime"])
-			const claimedNanami = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("Overtime")
-				.setDescription("Grit, determination, and a whole lot of overtime pay, Goodjob kid.")
-				.setImage("https://media1.tenor.com/m/8A5xvJMFYMwAAAAC/nanami-kento-nanami.gif")
-				.addFields({
-					name: "New Power",
-					value: "**Awakened** Overtime Transformation Unlocked! You now have access to the **Overtime** power!"
-				})
-
-			specialEmbeds.push(claimedNanami)
-		}
-
-		if (claimedMentorSatoru) {
-			await updateUserMentor(userId, "Satoru Gojo")
-			const satorumentor = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("The Strongest")
-				.setDescription("Your pretty strong.. i'll mentor you.")
-				.setImage("https://media1.tenor.com/m/_NCxT6vyWvwAAAAC/gojo-satoru-look-side-eye.gif")
-				.addFields({
-					name: "Mentor",
-					value: "Satoru Gojo has taken you under his wing..."
-				})
-
-			specialEmbeds.push(satorumentor)
-		}
-
-		if (claimedMentorSukuna) {
-			await updateUserMentor(userId, "Curse King")
-			const curseking = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("The Fearful King")
-				.setDescription("Hmph, Fine.. I'll mentor you.. but don't get too cocky kid")
-				.setImage("https://media1.tenor.com/m/tp8gToTKFksAAAAC/ryomen-sukuna-sukuna.gif")
-				.addFields({
-					name: "Mentor",
-					value: "The King Of Curses has taken you under his wing..."
-				})
-
-			specialEmbeds.push(curseking)
-		}
-
-		if (claimedstage3) {
-			await updateUserUnlockedTransformations(userId, ["Awakening"])
-			const curseking = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("The Fearful King")
-				.setDescription("")
-				.setImage("https://storage.googleapis.com/jjk_bot_personal/687474~1.GIF")
-				.addFields({
-					name: "Power Unleashed",
-					value: "Your awakening has begun.. you now have access to the **Awakening** Transformation!"
-				})
-
-			specialEmbeds.push(curseking)
-		}
-
-		if (claimedkashimo) {
-			await updateUserUnlockedTransformations(userId, ["Maximum Output"])
-			const curseking = new EmbedBuilder()
-				.setColor(0xff0000)
-				.setTitle("bzzztbzzz-bzzzt")
-				.setDescription("")
-				.setImage("https://media1.tenor.com/m/2tA56I2eTK8AAAAC/jujutsu-kaisen-shinjuku-arc-hajime-kashimo.gif")
-				.addFields({
-					name: "New Power",
-					value: "Kashimo has taught you how to use the **Maximum Output** Transformation!"
-				})
-
-			specialEmbeds.push(curseking)
-		}
-
-		// Reply with special embeds or a generic completion message
-		if (specialEmbeds.length > 0) {
-			await interaction.reply({ embeds: [specialEmbeds[0]] }) // Send the first embed
-			for (let i = 1; i < specialEmbeds.length; i++) {
-				await interaction.followUp({ embeds: [specialEmbeds[i]] })
+			// Remove the completed quests after all rewards have been granted
+			for (const completedQuest of completedQuests) {
+				await removeUserQuest(userId, completedQuest.instanceId)
 			}
-		} else {
-			const genericEmbed = new EmbedBuilder()
-				.setColor(0x0099ff)
-				.setTitle("Quest Rewards Claimed")
-				.setDescription(questRewards.join("\n\n"))
 
-			await interaction.reply({ embeds: [genericEmbed] })
+			const questRewards = completedQuests.map(completedQuest => {
+				const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
+				if (!questDetails) return `**${completedQuest.id}**`
+
+				const { coins, experience, items } = questDetails
+				const rewards = [
+					`Coins: ${coins}`,
+					`Experience: ${experience}`,
+					...Object.entries(items || {}).map(([item, quantity]) => `${item}: ${quantity}`)
+				].join("\n")
+
+				return `**${completedQuest.id}**\n${rewards}`
+			})
+
+			const specialEmbeds = []
+
+			if (claimedSukunasHonour) {
+				await updateUserHonours(userId, ["Sukuna's Honour"])
+				const sukunasHonourEmbed = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Sukuna's Honour Claimed!")
+					.setDescription(
+						"You have been acknowledged by the King of Curses himself. This is a rare achievement that marks you as one of the elite sorcerers."
+					)
+					.setImage("https://cdn.discordapp.com/attachments/.../82F48214-7925-47D3-BCD8-12D744A71F98.gif")
+					.addFields({ name: "New Awakening", value: "You now bear the curse of Sukuna. Use it wisely." })
+
+				specialEmbeds.push(sukunasHonourEmbed)
+			}
+
+			if (claimedReinforcement) {
+				await updateUserUnlockedTransformations(userId, ["Cursed Energy Reinforcement"])
+				const reinforcementEmbed = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Power Released!")
+					.setDescription(
+						"One hell of a training session! You have unlocked the ability to reinforce your cursed energy."
+					)
+					.setImage("https://i.pinimg.com/originals/5f/3c/b9/5f3cb9d839aa38fef811289443488890.gif")
+					.addFields({
+						name: "New Power",
+						value: "You can now use the **Cursed Energy Reinforcement** Transformation!"
+					})
+
+				specialEmbeds.push(reinforcementEmbed)
+			}
+
+			if (claimedSatoru) {
+				await updateUserHonours(userId, ["Satoru Gojo's Respect"])
+				await addItemToUserInventory(userId, "Upgraded Limitless Token", 3)
+				const claimedSatoru = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Six Eyes Unleashed!")
+					.setDescription(
+						"Well, well, look at you. Seems like someone finally figured out how those Six Eyes really work, huh?"
+					)
+					.setImage("https://media1.tenor.com/m/DoXhSg0brxsAAAAC/gojo-satoru-satoru.gif")
+					.addFields({
+						name: "New Power",
+						value: "**Awakened** Limitless techniques unleashed! You now have access to the **Awakened Limitless** power!"
+					})
+
+				specialEmbeds.push(claimedSatoru)
+			}
+
+			if (claimedNanami) {
+				await updateUserUnlockedTransformations(userId, ["Overtime"])
+				const claimedNanami = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Overtime")
+					.setDescription("Grit, determination, and a whole lot of overtime pay, Goodjob kid.")
+					.setImage("https://media1.tenor.com/m/8A5xvJMFYMwAAAAC/nanami-kento-nanami.gif")
+					.addFields({
+						name: "New Power",
+						value: "**Awakened** Overtime Transformation Unlocked! You now have access to the **Overtime** power!"
+					})
+
+				specialEmbeds.push(claimedNanami)
+			}
+
+			if (claimedMentorSatoru) {
+				await updateUserMentor(userId, "Satoru Gojo")
+				const satorumentor = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("The Strongest")
+					.setDescription("Your pretty strong.. i'll mentor you.")
+					.setImage("https://media1.tenor.com/m/_NCxT6vyWvwAAAAC/gojo-satoru-look-side-eye.gif")
+					.addFields({
+						name: "Mentor",
+						value: "Satoru Gojo has taken you under his wing..."
+					})
+
+				specialEmbeds.push(satorumentor)
+			}
+
+			if (claimedMentorSukuna) {
+				await updateUserMentor(userId, "Curse King")
+				const curseking = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("The Fearful King")
+					.setDescription("Hmph, Fine.. I'll mentor you.. but don't get too cocky kid")
+					.setImage("https://media1.tenor.com/m/tp8gToTKFksAAAAC/ryomen-sukuna-sukuna.gif")
+					.addFields({
+						name: "Mentor",
+						value: "The King Of Curses has taken you under his wing..."
+					})
+
+				specialEmbeds.push(curseking)
+			}
+
+			if (claimedstage3) {
+				await updateUserUnlockedTransformations(userId, ["Awakening"])
+				const curseking = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("The Fearful King")
+					.setDescription("")
+					.setImage("https://storage.googleapis.com/jjk_bot_personal/687474~1.GIF")
+					.addFields({
+						name: "Power Unleashed",
+						value: "Your awakening has begun.. you now have access to the **Awakening** Transformation!"
+					})
+
+				specialEmbeds.push(curseking)
+			}
+
+			if (claimedkashimo) {
+				await updateUserUnlockedTransformations(userId, ["Maximum Output"])
+				const curseking = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("bzzztbzzz-bzzzt")
+					.setDescription("")
+					.setImage(
+						"https://media1.tenor.com/m/2tA56I2eTK8AAAAC/jujutsu-kaisen-shinjuku-arc-hajime-kashimo.gif"
+					)
+					.addFields({
+						name: "New Power",
+						value: "Kashimo has taught you how to use the **Maximum Output** Transformation!"
+					})
+
+				specialEmbeds.push(curseking)
+			}
+
+			if (specialEmbeds.length > 0) {
+				await interaction.editReply({ embeds: [specialEmbeds[0]] })
+				for (let i = 1; i < specialEmbeds.length; i++) {
+					await interaction.followUp({ embeds: [specialEmbeds[i]] })
+				}
+			} else {
+				const genericEmbed = new EmbedBuilder()
+					.setColor(0x0099ff)
+					.setTitle("Quest Rewards Claimed")
+					.setDescription(questRewards.join("\n\n"))
+
+				await interaction.editReply({ embeds: [genericEmbed] })
+			}
+		} catch (error) {
+			logger.error("Error claiming quests:", error)
+			if (!interaction.replied && !interaction.deferred) {
+				await interaction.editReply({
+					content: "An error occurred while claiming quests. Please try again later.",
+					ephemeral: true
+				})
+			}
+		} finally {
+			await session?.endSession() // End the session
 		}
 	} catch (error) {
-		logger.error("Error claiming quests:", error)
+		logger.error("Error starting session:", error)
 		if (!interaction.replied && !interaction.deferred) {
-			await interaction.reply({
-				content: "An error occurred while claiming quests.",
+			await interaction.editReply({
+				content: "An error occurred while processing your request. Please try again later.",
 				ephemeral: true
 			})
 		}
@@ -5010,7 +5039,8 @@ export async function handleUnequipTechniqueCommand(interaction) {
 			} else if (activeHeavenlyTechniquesLowercaseMap.has(techniqueNameLowercase)) {
 				if (!userHasHeavenlyRestriction) {
 					return await interaction.reply({
-						content: "You don't have Heavenly Restriction On! You can't unequip Heavenly Restriction techniques.",
+						content:
+							"You don't have Heavenly Restriction On! You can't unequip Heavenly Restriction techniques.",
 						ephemeral: true
 					})
 				}
@@ -7568,7 +7598,9 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const userTechniquesFight2 = new Map<string, any>()
-const countdown = 60
+const RAID_DURATION = 180000
+const TECHNIQUE_DELAY = 60000 // 60 seconds
+const TECHNIQUE_SELECTION_DURATION = 30000 // 30 seconds
 
 export async function handleRaidCommand(interaction: CommandInteraction) {
 	const currentRaidBoss = await getCurrentRaidBoss()
@@ -7580,7 +7612,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 	const joinButton = new ButtonBuilder().setCustomId("join_raid").setLabel("Join Raid").setStyle(ButtonStyle.Primary)
 
-	const partyCloseTime = Date.now() + 60000 // Set the party close time to 1 minute from now
+	const partyCloseTime = Date.now() + 20000
 
 	const initialEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
@@ -7598,7 +7630,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 		fetchReply: true
 	})
 
-	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 60000 })
+	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 20000 })
 
 	const participants: string[] = []
 
@@ -7650,81 +7682,165 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 		}
 
 		const primaryEmbed = await createRaidEmbed(raidBossDetails, raidParty.participants, interaction)
-		const rows = await createTechniqueSelectMenu(raidParty.participants, countdown)
+		const rows = await createTechniqueSelectMenu(raidParty.participants, RAID_DURATION / 1000)
 
 		await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
 
 		const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
-			filter: i => raidParty.participants.includes(i.user.id),
+			filter: i => {
+				const participantId = i.customId.split("-")[3]
+				return raidParty.participants.includes(participantId) && i.user.id === participantId
+			},
 			componentType: ComponentType.StringSelect,
-			time: 30000
+			time: RAID_DURATION
 		})
+
+		const lastUsedTechniques: string[] = []
 
 		battleOptionSelectMenuCollector.on("collect", async i => {
-			await i.deferUpdate()
+			console.log("Collected interaction:", i.customId)
 			const selectedTechnique = i.values[0]
 			const userId = i.user.id
+			const user = await client1.users.fetch(userId)
 
-			if (selectedTechnique === "Lapse: Blue") {
-				const damage = await executeSpecialRaidBossTechnique({
-					collectedInteraction: i,
+			const updatedComponents = i.message.components.filter(
+				row => !row.components.some(component => component.customId === `select-battle-option-${userId}`)
+			)
+
+			lastUsedTechniques.push(`${user.username}: ${selectedTechnique}`)
+
+			const updatedRaidBoss = await getRaidBossDetails(raidParty.raidBossId)
+			const updatedEmbedBuilder = await createRaidEmbed(
+				updatedRaidBoss,
+				raidParty.participants,
+				interaction,
+				lastUsedTechniques.join("\n")
+			)
+			const techniqueSelectionEndTimestamp = Math.floor((Date.now() + TECHNIQUE_SELECTION_DURATION) / 1000)
+			updatedEmbedBuilder.addFields({
+				name: "Technique Selection Ends",
+				value: `<t:${techniqueSelectionEndTimestamp}:R>`,
+				inline: true
+			})
+			const updatedEmbed = updatedEmbedBuilder.toJSON()
+
+			// Update the interaction message
+			await i.update({ embeds: [updatedEmbed], components: updatedComponents })
+
+			const usersWithSameTechnique = raidParty.pendingActions.filter(
+				action => action.technique === selectedTechnique
+			)
+			if (usersWithSameTechnique.length === 2) {
+				const [user1, user2] = usersWithSameTechnique
+				const damage = await executeDualTechnique({
+					interaction: i,
 					techniqueName: selectedTechnique,
-					damageMultiplier: 3,
-					imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
-					description:
-						"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/c02Tfea6ZxIAAAAC/gojo-200-hollow-purple.gif",
+					description: `${user1.userId} and ${user2.userId} used ${selectedTechnique} together!`,
 					fieldValue: selectedTechnique,
-					userTechniques: userTechniquesFight2,
-					userId: userId,
-					primaryEmbed
+					userId1: user1.userId,
+					userId2: user2.userId,
+					primaryEmbed: updatedEmbed
 				})
-				raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
-			} else {
-				const damage = calculateDamage(selectedTechnique, userId)
-				raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
-			}
 
-			await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+				updatedRaidBoss.current_health -= damage
+				await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
+				raidParty.pendingActions = raidParty.pendingActions.filter(
+					action => action.technique !== selectedTechnique
+				)
+				await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+			} else {
+				if (selectedTechnique === "Lapse: Blue") {
+					const damage = await executeSpecialRaidBossTechnique({
+						collectedInteraction: i,
+						techniqueName: selectedTechnique,
+						damageMultiplier: 3,
+						imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
+						description:
+							"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+						fieldValue: selectedTechnique,
+						userTechniques: userTechniquesFight2,
+						userId: userId,
+						primaryEmbed: updatedEmbed
+					})
+					raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+				} else {
+					const damage = calculateDamage(selectedTechnique, userId)
+					raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+				}
+
+				await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+			}
 		})
 
-		battleOptionSelectMenuCollector.on("end", async () => {
+		battleOptionSelectMenuCollector.on("end", async collected => {
+			console.log("Collector ended with", collected.size, "interactions")
+
 			const updatedRaidParty = await getRaidPartyById(raidParty._id.toString())
 			const updatedRaidBoss = await getRaidBossDetails(updatedRaidParty.raidBossId)
 
 			if (!updatedRaidBoss) {
-				await interaction.editReply({ content: "Failed to retrieve updated raid boss details.", embeds: [] })
+				await interaction.editReply({
+					content: "Failed to retrieve updated raid boss details.",
+					embeds: []
+				})
 				return
 			}
 
-			// Calculate total damage from pending actions
+			console.log("Executing pending actions")
+			for (const action of updatedRaidParty.pendingActions) {
+				console.log("Processing action:", action)
+				if (action.technique === "World Cutting Slash") {
+					const damage = await executeSpecialRaidBossTechnique({
+						collectedInteraction: interaction,
+						techniqueName: action.technique,
+						damageMultiplier: 3,
+						imageUrl: "https://media1.tenor.com/m/O8RVjFsdWI8AAAAC/sukuna-ryomen.gif",
+						description: "**Ryomen Sukuna** used **World Cutting Slash**!",
+						fieldValue: action.technique,
+						userTechniques: userTechniquesFight2,
+						userId: action.userId,
+						primaryEmbed: null
+					})
+					action.damage = damage
+				} else {
+					const damage = calculateDamage(action.technique, action.userId)
+					action.damage = damage
+				}
+			}
+
 			const totalDamage = updatedRaidParty.pendingActions.reduce((sum, action) => sum + action.damage, 0)
 
-			// Update raid boss's health
 			updatedRaidBoss.current_health -= totalDamage
 			await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 
-			// Clear pending actions
 			await updateRaidPartyPendingActions(raidParty._id.toString(), [])
 
 			const updatedEmbedBuilder = await createRaidEmbed(
 				updatedRaidBoss,
 				updatedRaidParty.participants,
-				interaction
+				interaction,
+				lastUsedTechniques.join("\n")
 			)
 			const updatedEmbed = updatedEmbedBuilder.toJSON()
-			const rows = await createTechniqueSelectMenu(updatedRaidParty.participants, countdown)
 
-			await interaction.editReply({ embeds: [updatedEmbed], components: rows })
+			const raidEndTimestamp = Math.floor((Date.now() + RAID_DURATION) / 1000)
+			updatedEmbed.fields.push({
+				name: "Raid Ends",
+				value: `<t:${raidEndTimestamp}:R>`,
+				inline: true
+			})
+
+			const rows = await createTechniqueSelectMenu(updatedRaidParty.participants, RAID_DURATION / 1000)
+			await interaction.editReply({ embeds: [updatedEmbed], components: [...rows] })
 
 			if (updatedRaidBoss.current_health <= 0) {
 				await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
 			} else {
-				setTimeout(() => {
-					interaction.editReply({
-						embeds: [updatedEmbed],
-						components: rows
-					})
-				}, 10000)
+				setTimeout(async () => {
+					await handleRaidEnd(interaction, updatedRaidParty, updatedRaidBoss)
+				}, RAID_DURATION)
 			}
 		})
 	})

@@ -1,8 +1,11 @@
 import { StringSelectMenuBuilder } from "@discordjs/builders"
 import { randomInt } from "crypto"
-import { ActionRowBuilder, EmbedBuilder, SelectMenuBuilder } from "discord.js"
+import { ActionRowBuilder, CommandInteraction, EmbedBuilder, SelectMenuBuilder } from "discord.js"
+import { BossDrop } from "./bossdrops.js"
+import { createClient } from "./bot.js"
+import { getBossDrop } from "./calculate.js"
 import { generateHealthBar } from "./fight.js"
-import { getUserHealth, getUserTechniques } from "./mongodb.js"
+import { RaidBoss, RaidParty, getUserHealth, getUserTechniques } from "./mongodb.js"
 
 interface CommunityQuest {
 	questName: string
@@ -15,6 +18,8 @@ interface CommunityQuest {
 	startDate: Date
 	endDate: Date
 }
+
+const client = createClient()
 
 export const mentorDetails: {
 	[key: string]: { message: string; imageUrl: string; lines: string[]; eventLines?: string[] }
@@ -119,7 +124,9 @@ export function createFeverMeterBar(feverMeter: number, maxFeverMeter: number): 
 
 	const filledPercentage = Math.floor((feverMeter / maxFeverMeter) * 100)
 	const filledBlocksCount = Math.floor(filledPercentage / 10)
-	const emptyBlocksCount = 10 - filledBlocksCount
+
+	let emptyBlocksCount = 10 - filledBlocksCount
+	emptyBlocksCount = emptyBlocksCount < 0 ? 0 : emptyBlocksCount
 
 	const feverMeterBar = filledBlocks.repeat(filledBlocksCount) + emptyBlocks.repeat(emptyBlocksCount)
 
@@ -155,7 +162,9 @@ export async function createTechniqueSelectMenu(
 	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
 
 	for (const participant of participants) {
+		const user = await client.users.fetch(participant)
 		const userTechniques = await getUserTechniques(participant)
+
 		const techniqueOptions = userTechniques.map(techniqueName => ({
 			label: techniqueName,
 			description: "Select to use this technique",
@@ -164,17 +173,18 @@ export async function createTechniqueSelectMenu(
 
 		const selectMenu = new StringSelectMenuBuilder()
 			.setCustomId(`select-battle-option-${participant}`)
-			.setPlaceholder(`Choose your technique (${countdown}s)`)
+			.setPlaceholder(`${user.username}'s technique (${countdown}s)`)
 			.addOptions(techniqueOptions)
 
 		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+
 		rows.push(row)
 	}
 
 	return rows
 }
 
-export async function createRaidEmbed(raidBoss, participants, interaction) {
+export async function createRaidEmbed(raidBoss, participants, interaction, userTechnique = "") {
 	const primaryEmbed = new EmbedBuilder()
 		.setColor("Aqua")
 		.setTitle("Cursed Battle!")
@@ -192,8 +202,8 @@ export async function createRaidEmbed(raidBoss, participants, interaction) {
 		})
 		.addFields()
 
-	// Add participants' health to the embed
 	const participantsHealthFields = []
+
 	for (const participant of participants) {
 		const playerHealth = await getUserHealth(participant)
 		participantsHealthFields.push({
@@ -202,7 +212,16 @@ export async function createRaidEmbed(raidBoss, participants, interaction) {
 			inline: true
 		})
 	}
+
 	primaryEmbed.addFields(...participantsHealthFields)
+
+	if (userTechnique !== "") {
+		primaryEmbed.addFields({
+			name: "Last Used Technique",
+			value: userTechnique,
+			inline: false
+		})
+	}
 
 	if (raidBoss.awakeningStage === "Stage Five") {
 		primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
@@ -210,3 +229,37 @@ export async function createRaidEmbed(raidBoss, participants, interaction) {
 
 	return primaryEmbed
 }
+
+export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
+	// Calculate boss drops
+	const bossDrops: BossDrop[] = []
+	const dropCount = Math.floor(Math.random() * (raidParty.participants.length + 1)) + 1
+
+	for (let i = 0; i < dropCount; i++) {
+		try {
+			const drop = getBossDrop(raidBoss.name)
+			bossDrops.push(drop)
+		} catch (error) {
+			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
+		}
+	}
+
+	// Calculate participant rewards
+	//const participantRewards = calculateParticipantRewards(raidParty.participants)
+
+	// Create the raid ending embed
+	const raidEndEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle(`Raid Ended - ${raidBoss.name}`)
+		.setDescription("The raid has ended. Here are the results:")
+		.addFields({
+			name: "Boss Drops",
+			value: bossDrops.map(drop => `${drop.name}`).join("\n") || "No drops",
+			inline: false
+		})
+
+	// Update the raid message with the raid ending embed
+	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
+}
+
+client.login(process.env["DISCORD_BOT_TOKEN"])

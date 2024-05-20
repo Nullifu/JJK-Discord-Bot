@@ -337,7 +337,7 @@ cron.schedule("*/30 * * * *", async () => {
 //
 const clientId = "991443928790335518"
 
-client.setMaxListeners(300)
+client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
 export const randomdig2 = [
@@ -349,6 +349,7 @@ export const randomdig2 = [
 	"Uncovered",
 	"Dug up",
 	"Dug out",
+	"I can dig that",
 	"Exhumed"
 ]
 
@@ -696,26 +697,6 @@ const commands = [
 				.setName("prize_amount")
 				.setDescription("The amount of the prize (if the prize is not an item)")
 				.setRequired(false)
-		),
-	new SlashCommandBuilder()
-		.setName("trade")
-		.setDescription("Trading Command.")
-		.addStringOption(option =>
-			option
-				.setName("action")
-				.setDescription("The action to perform")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Initiate", value: "initiate" },
-					{ name: "Accept", value: "accept" },
-					{ name: "View", value: "view" },
-					{ name: "Previous", value: "previous" }
-				)
-		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-		.addStringOption(option => option.setName("item").setDescription("The item to trade").setRequired(false))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		)
 ].map(command => command.toJSON())
 
@@ -1050,12 +1031,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import { AutoPoster } from "topgg-autoposter"
-const poster = AutoPoster(process.env.TOPGG, client)
+//import { AutoPoster } from "topgg-autoposter"
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 

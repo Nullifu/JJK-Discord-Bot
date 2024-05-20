@@ -1626,7 +1626,7 @@ export async function executeBossAttack(
 		case chosenAttack.name === "Domain Expansion: Infinite Void" &&
 			randomOpponent.name === "Satoru Gojo (Shinjuku Showdown Arc)":
 			primaryEmbed.setDescription(`${randomOpponent.name} used ${chosenAttack.name}!`)
-			primaryEmbed.setImage("https://media1.tenor.com/m/9ZHCYYVz5VcAAAAC/notl-gojo-vs-sukuna.gif")
+			primaryEmbed.setImage("https://media1.tenor.com/m/fwRP3JXVRisAAAAC/infinite-void-jujutsu-kaisen.gif")
 
 			// Remove the select menu
 			await interaction.editReply({

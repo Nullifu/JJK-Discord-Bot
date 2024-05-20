@@ -708,44 +708,42 @@ export function generateBloodlustBar(currentBloodlust) {
 }
 
 export async function updateFeverMeter(collectedInteraction, userState, primaryEmbed) {
-	// Increase the fever meter by a certain amount
 	userState.feverMeter += 50
 
-	// Check if the fever meter reaches 100%
-	if (userState.feverMeter >= 100) {
+	if (userState.feverMeter >= 100 && !userState.isJackpotMode) {
 		userState.feverMeter = 100
 		userState.isJackpotMode = true
 
 		const jackpotImageUrl =
 			"https://cdn.discordapp.com/attachments/681985000521990179/1239658835459707032/image.png?ex=6643b9c2&is=66426842&hm=56c1613c73ac8b7e2158e36ed40ddd0b3ed523a4291fc0366c68223158e8ba51&"
+
 		primaryEmbed.setImage(jackpotImageUrl)
 
-		// Add a field to indicate Jackpot Mode activation
 		primaryEmbed.addFields({
 			name: "MUSIC.. START!",
 			value: "JACKPOT MODE ACTIVATED!"
 		})
 
-		// Update the embed with the first jackpot image
 		await collectedInteraction.editReply({ embeds: [primaryEmbed] })
 
-		// Wait for a short delay to allow the image to load
 		await new Promise(resolve => setTimeout(resolve, 2000))
 
 		const jackpotModeImageUrl2 = "https://media1.tenor.com/m/Rpk3q-OLFeYAAAAC/hakari-dance-hakari.gif"
+
 		primaryEmbed.setImage(jackpotModeImageUrl2)
 
-		// Remove the fever meter field from the embed
 		const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
+
 		if (feverMeterFieldIndex !== -1) {
 			primaryEmbed.spliceFields(feverMeterFieldIndex, 1)
 		}
 
-		// Update the embed with the second jackpot image
 		await collectedInteraction.editReply({ embeds: [primaryEmbed] })
-	} else {
+	} else if (!userState.isJackpotMode) {
 		const updatedFeverMeterBar = createFeverMeterBar(userState.feverMeter, 100)
+
 		const feverMeterFieldIndex = primaryEmbed.data.fields.findIndex(field => field.name === "Fever Meter")
+
 		if (feverMeterFieldIndex !== -1) {
 			primaryEmbed.spliceFields(feverMeterFieldIndex, 1, {
 				name: "Fever Meter",

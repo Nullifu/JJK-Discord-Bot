@@ -283,5 +283,6 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	"Nue": [{ name: "Bird Shikigami's Soul", rarity: "rare" }],
 	"Toad": [{ name: "Toad Shikigami's Soul", rarity: "rare" }],
 	"Great Serpent": [{ name: "Serpent Shikigami's Soul", rarity: "rare" }],
-	"Max Elephant": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }]
+	"Max Elephant": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }],
+	"gwennn": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }]
 }
