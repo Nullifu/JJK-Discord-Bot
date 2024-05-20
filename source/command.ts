@@ -256,20 +256,41 @@ const client1 = createClient()
 export async function handleRegisterCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	try {
 		const discordId = interaction.user.id
-
 		const blacklistedUser = (await getBlacklistedUsers()).find(user => user.userId === discordId)
 
 		if (blacklistedUser) {
 			const { startDate, endDate, reason } = blacklistedUser
 			const currentDate = new Date()
-
 			logger.warn("Blacklisted user tried to register:", blacklistedUser)
 
 			if (currentDate >= startDate && currentDate <= endDate) {
+				const appealEmbed = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Blacklist Notice")
+					.setDescription(`You have been blacklisted from registering for the following reason: ${reason}`)
+					.setImage("https://media1.tenor.com/m/LCkoYVmQ5BAAAAAC/real-jjk.gif")
+					.addFields(
+						{ name: "Start Date", value: startDate.toDateString(), inline: true },
+						{ name: "End Date", value: endDate.toDateString(), inline: true },
+						{
+							name: "Appeal",
+							value: "If you believe this is a mistake, please join our support server to appeal the decision."
+						}
+					)
+
+				const appealButton = new ButtonBuilder()
+					.setLabel("Join Support Server")
+					.setStyle(ButtonStyle.Link)
+					.setURL("https://discord.gg/your-server-invite-link")
+
+				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(appealButton)
+
 				await interaction.reply({
-					content: `You have been blacklisted from registering for the following reason: ${reason}, if you believe this is a mistake please contact the support team.`,
+					embeds: [appealEmbed],
+					components: [row],
 					ephemeral: true
 				})
+
 				return
 			}
 		}
@@ -287,7 +308,6 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 		if (result && "insertedId" in result) {
 			await addItemToUserInventory(discordId, "Starter Bundle", 1)
 			const imageURL = "https://storage.googleapis.com/jjk_bot_personal/Shibuya_(Anime).png"
-
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
