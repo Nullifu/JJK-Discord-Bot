@@ -330,7 +330,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 
 client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
@@ -380,7 +380,6 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
-	new SlashCommandBuilder().setName("raid").setDescription("Get information about the ongoing global event"),
 
 	new SlashCommandBuilder()
 		.setName("tame")

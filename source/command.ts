@@ -35,7 +35,7 @@ import {
 } from "./attacks.js"
 import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
 import { bossDrops } from "./bossdrops.js"
-import logger, { createClient, digCooldown, digCooldowns,  sendForManualReview } from "./bot.js"
+import logger, { createClient, digCooldown, digCooldowns, sendForManualReview } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -2180,7 +2180,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					label: techniqueName,
 					description: "Select to use this technique",
 					value: techniqueName
-			  }))
+				}))
 			: []
 
 	const battleOptions = [
@@ -3678,10 +3678,10 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			const selectedSkill = isHeavenlySkill
 				? heavenlyrestrictionskills[characterName]?.find(
 						skill => skill.name.toLowerCase() === techniqueName.toLowerCase()
-				  )
+					)
 				: (logger.info("techniqueName:", techniqueName),
-				  logger.info("CLAN_SKILLS flattened:", Object.values(CLAN_SKILLS).flat()),
-				  Object.values(CLAN_SKILLS)
+					logger.info("CLAN_SKILLS flattened:", Object.values(CLAN_SKILLS).flat()),
+					Object.values(CLAN_SKILLS)
 						.flat()
 						.find(skill => skill.name.toLowerCase() === techniqueName.toLowerCase()))
 
@@ -3981,7 +3981,7 @@ function getRandomBenefactor() {
 						benefactor.itemQuantityMin && benefactor.itemQuantityMax
 							? Math.floor(
 									Math.random() * (benefactor.itemQuantityMax - benefactor.itemQuantityMin + 1)
-							  ) + benefactor.itemQuantityMin
+								) + benefactor.itemQuantityMin
 							: 0
 				}))
 				.filter(item => item.quantity > 0)
@@ -5484,16 +5484,16 @@ export async function handleClaimVoteRewards(interaction) {
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
 	const raidShopItems = [
-		{ name: "Raid Item 1", price: 100, rarity: "Common", maxPurchases: 5 },
-		{ name: "Raid Item 2", price: 200, rarity: "Rare", maxPurchases: 3 }
+		{ name: "Raid Item 1", price: 100, rarity: "Common" },
+		{ name: "Raid Item 2", price: 200, rarity: "Rare" }
 	]
 	const shikigamiShopItems = [
-		{ name: "Shikigami 1", price: 150, rarity: "Common", maxPurchases: 5 },
-		{ name: "Shikigami Item 2", price: 250, rarity: "Rare", maxPurchases: 3 }
+		{ name: "Shikigami food", price: 50000, rarity: "Common" },
+		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
 	]
 	const eventShopItems = [
-		{ name: "Prison Realm 100%", price: 150, rarity: "Common", maxPurchases: 5 },
-		{ name: "Shikigami Item 2", price: 250, rarity: "Rare", maxPurchases: 3 }
+		{ name: "Prison Realm 100%", price: 150, rarity: "Common" },
+		{ name: "Shikigami Item 2", price: 250, rarity: "Rare" }
 	]
 
 	const balance = await getBalance(interaction.user.id)
@@ -5535,22 +5535,10 @@ export async function handleShopCommand(interaction) {
 					emoji: "💰"
 				},
 				{
-					label: "Raid Shop",
-					description: "View items in the raid shop",
-					value: "raid_shop",
-					emoji: "⚔️"
-				},
-				{
 					label: "Shikigami Shop",
 					description: "View items in the shikigami shop",
 					value: "shikigami_shop",
 					emoji: "🐺"
-				},
-				{
-					label: "Event Shop",
-					description: "View items in the event shop",
-					value: "event_shop",
-					emoji: "<:prison_realm:1193160559009484830>"
 				}
 			])
 
@@ -5571,7 +5559,6 @@ export async function handleShopCommand(interaction) {
 
 		const collector = message.createMessageComponentCollector({
 			componentType: ComponentType.StringSelect,
-			time: 15000
 		})
 
 		collector.on("collect", async i => {
@@ -5803,7 +5790,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					label: techniqueName,
 					description: "Select to use this technique",
 					value: techniqueName
-			  }))
+				}))
 			: []
 
 	const battleOptions = [
@@ -7536,8 +7523,8 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 						!(await checkStageMessaged(userId, "eventMessageSealing"))
 							? "Yuji Itadori"
 							: isGlobalEventActive && mentor === "Satoru Gojo"
-							? "Yuji Itadori"
-							: mentor
+								? "Yuji Itadori"
+								: mentor
 					} says:**`,
 					value: `${line}`,
 					inline: true
