@@ -3627,7 +3627,7 @@ function checkWin(spinResults: string[]): boolean {
 
 const userBetCounts = {}
 const userLastBetTimes = {}
-const cooldownPeriod = 60 * 1000 // 1 minute cooldown
+const cooldownPeriod = 15 * 1000
 const maxBetLimit = 25000000
 const dailyBetLimit = 20
 
@@ -3643,13 +3643,18 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 
 	const currentBalance = await getBalance(userId)
-	const itemEffects = await getUserItemEffects(userId)
-	const gamblerEffect = itemEffects.find(effect => effect.itemName === "Hakari Kinji's Token")
 
 	const { betCount } = await getUserGambleInfo(userId)
 
 	if (now - userLastBetTimes[userId] < cooldownPeriod) {
-		await interaction.reply("You're betting too quickly. Please wait a moment before trying again.")
+		const cooldownEnd = new Date(userLastBetTimes[userId] + cooldownPeriod)
+		const cooldownEndTimestamp = Math.floor(cooldownEnd.getTime() / 1000)
+
+		await interaction.reply({
+			content: `You're betting too quickly. Please wait until <t:${cooldownEndTimestamp}:R> before trying again.`,
+			ephemeral: true
+		})
+
 		return
 	}
 
@@ -3720,14 +3725,14 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			const winnings = betAmount * 2
 
 			await updateBalance(userId, winnings)
-			await updateGamblersData(userId, betAmount, winnings, 0, 0) // Update gambling stats
+			await updateGamblersData(userId, betAmount, winnings, 0, 0)
 			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${formatNumberWithCommas(
 				winnings
 			)} coins!`
 		} else {
 			const losses = betAmount
 			await updateBalance(userId, -losses)
-			await updateGamblersData(userId, betAmount, 0, losses, 0) // Update gambling stats
+			await updateGamblersData(userId, betAmount, 0, losses, 0)
 			resultMessage = `🪙 It landed on ${
 				result === "Heads" ? "Tails" : "Heads"
 			}! You lost ${formatNumberWithCommas(losses)} coins.`

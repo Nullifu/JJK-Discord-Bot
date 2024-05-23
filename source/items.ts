@@ -26,12 +26,12 @@ function generateItems(baseChances, weekendChances, isWeekend = false, modifiers
 				"Grade 4": weekendChances.grade4 || 0.24,
 				"Grade 1": weekendChances.grade1 || 0.16,
 				"Special Grade": weekendChances.specialGrade || 0.04
-		  }
+			}
 		: {
 				"Grade 4": baseChances.grade4 || 0.12,
 				"Grade 1": baseChances.grade1 || 0.08,
 				"Special Grade": baseChances.specialGrade || 0.02
-		  }
+			}
 
 	return items.map(item => ({
 		...item,
