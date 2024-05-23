@@ -7,16 +7,16 @@ import { ClientSession, Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
 import { v4 as uuidv4 } from "uuid"
-import { logger } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
+import logger from "./bot.js"
 
 dotenv()
 
 export const bossCollectionName = "bosses"
 export const shikigamCollectionName = "shiki"
-export const usersCollectionName = "users"
+export const usersCollectionName = "devuser"
 export const questsCollectioName = "quests"
 export const tradeCollectionName = "trades"
 export const shopCollectionName = "shop"
@@ -3736,7 +3736,7 @@ export async function getCurrentCommunityQuest(): Promise<CommunityQuest | null>
 		})
 		return quest
 	} catch (error) {
-		console.error("Error retrieving current community quest:", error)
+		logger.error("Error retrieving current community quest:", error)
 		return null
 	}
 }
@@ -3847,23 +3847,27 @@ export interface RaidBoss {
 	imageUrl: string
 	startDate: Date
 	endDate: Date
+	phases: {
+		name: string
+		health: number
+		gif: string
+	}[]
 }
 
 export interface RaidInstance {
+	_id: ObjectId
 	raidBossId: string
-	participants: string[]
+	participants: ParticipantInfo[]
 	currentHealth: number
 	createdAt: Date
 }
-
-// isUserParticipatingInRaid
 export async function isUserParticipatingInRaid(userId: string): Promise<boolean> {
 	try {
 		const database = client.db(mongoDatabase)
 		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
 
 		const raidInstance = await raidInstancesCollection.findOne({
-			participants: userId
+			"participants.id": userId
 		})
 
 		return !!raidInstance
@@ -3887,15 +3891,16 @@ export async function getRaidBossDetails(bossName: string): Promise<RaidBoss | n
 	}
 }
 
-// addUserToRaidParticipants
 export async function addUserToRaidParticipants(userId: string, raidInstanceId: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
 
+		const participant: ParticipantInfo = { id: userId, totalDamage: 0 }
+
 		await raidInstancesCollection.updateOne(
 			{ _id: new ObjectId(raidInstanceId) },
-			{ $addToSet: { participants: userId } }
+			{ $addToSet: { participants: participant } }
 		)
 	} catch (error) {
 		logger.error("Error adding user to raid participants:", error)
@@ -3930,10 +3935,14 @@ export async function createRaidParty(raidBossId: string, participants: string[]
 			throw new Error("Raid boss not found")
 		}
 
+		const raidPartyHealth = Math.floor(raidBoss.globalHealth * 0.1)
+
+		const participantsInfo = participants.map(id => ({ id, totalDamage: 0 }))
+
 		const raidParty: RaidParty = {
 			raidBossId,
-			participants,
-			globalHealth: raidBoss.globalHealth,
+			participants: participantsInfo,
+			partyHealth: raidPartyHealth,
 			pendingActions: [],
 			createdAt: new Date()
 		}
@@ -3951,10 +3960,15 @@ export async function createRaidParty(raidBossId: string, participants: string[]
 export interface RaidParty {
 	_id?: ObjectId
 	raidBossId: string
-	participants: string[]
-	globalHealth: number
+	participants: ParticipantInfo[]
+	partyHealth: number
 	pendingActions: PendingAction[]
 	createdAt: Date
+}
+
+export interface ParticipantInfo {
+	id: string
+	totalDamage: number
 }
 
 export interface PendingAction {
@@ -3999,14 +4013,13 @@ export async function updateRaidPartyPendingActions(raidPartyId, pendingActions)
 	await raidPartiesCollection.updateOne({ _id: new ObjectId(raidPartyId) }, { $set: { pendingActions } })
 }
 
-// getRaidInstanceByUser
 export async function getRaidInstanceByUser(userId: string): Promise<RaidInstance | null> {
 	try {
 		const database = client.db(mongoDatabase)
 		const raidInstancesCollection = database.collection<RaidInstance>(raidInstancesCollectionName)
 
 		const raidInstance = await raidInstancesCollection.findOne({
-			participants: userId
+			"participants.id": userId
 		})
 
 		return raidInstance || null
@@ -4026,7 +4039,7 @@ export async function handleRaidBossDefeat(
 
 	// Award rewards to participants
 	for (const participant of raidParty.participants) {
-		await awardRewards(participant, raidBossDetails)
+		await awardRewards(participant.id, raidBossDetails)
 	}
 
 	// Remove the raid party document
@@ -4039,12 +4052,13 @@ export async function handleRaidBossDefeat(
 		.setDescription(`Congratulations! You have defeated ${raidBossDetails.name}.`)
 
 	for (const participant of raidParty.participants) {
-		const participantUser = interaction.guild?.members.cache.get(participant)?.user
+		const participantUser = interaction.guild?.members.cache.get(participant.id)?.user
 		if (participantUser) {
 			await participantUser.send({ embeds: [victoryEmbed] })
 		}
 	}
 }
+
 export async function updateRaidBossHealth(raidBossId: string, health: number): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
@@ -4083,7 +4097,6 @@ export async function getBlacklistedUsers(): Promise<
 		const blacklistedUsersCollection = database.collection("blacklistedUsers")
 		const blacklistedUsers = await blacklistedUsersCollection.find().toArray()
 
-		// Map the retrieved documents to the expected format
 		return blacklistedUsers.map(user => ({
 			userId: user.userId,
 			startDate: user.startDate,
@@ -4115,4 +4128,28 @@ export async function updateBlacklistedUser(
 		logger.error("Error updating blacklisted user:", error)
 		throw error
 	}
+}
+
+export async function updateRaidBossPhase(
+	raidBossId: string,
+	phase: { name: string; health: number; gif: string }
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const collection = database.collection<RaidBoss>("raidBosses")
+		await collection.updateOne({ _id: raidBossId }, { $set: { name: phase.name, imageUrl: phase.gif } })
+	} catch (error) {
+		logger.error("Error updating raid boss phase:", error)
+		throw error
+	}
+}
+
+export function getCurrentPhase(raidBoss: RaidBoss): { name: string; health: number; gif: string } {
+	for (let i = 0; i < raidBoss.phases.length; i++) {
+		if (raidBoss.globalHealth > 0) {
+			return raidBoss.phases[i]
+		}
+		raidBoss.globalHealth += raidBoss.phases[i].health
+	}
+	return raidBoss.phases[raidBoss.phases.length - 1]
 }

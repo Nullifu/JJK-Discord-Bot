@@ -686,7 +686,7 @@ export const attacks: Record<string, Attack[]> = {
 			}
 		},
 		{
-			name: "Racism: World Cutting Slash",
+			name: "Fury: Bone Crush",
 			probability: 20,
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
@@ -1360,6 +1360,32 @@ export const attacks: Record<string, Attack[]> = {
 				return 60 * gradeDamageBonus
 			}
 		}
+	],
+	"King Of Curses": [
+		{
+			name: "Cleave",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Dismantle",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Domain Expansion: Malevolent Shrine",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
 	]
 }
 
@@ -1503,6 +1529,12 @@ export const TRANSFORMATIONS = [
 		description: "What a beautiful day to be reborn..",
 		image: "https://media1.tenor.com/m/yqzGzo2YiT0AAAAC/jjk-jjk-s2.gif",
 		effects: "Sanity Lost, 35% Damage Increase, 20% Damage Reduction"
+	},
+	{
+		name: "Gear Fifth",
+		description: "My heartbeat sounds funny! This is my PEAK.. GEAR FIFTH!",
+		image: "https://i.pinimg.com/originals/33/7a/f3/337af398877b856f25624144420a5230.gif",
+		effects: "Rubber, 35% Damage Increase, 20% Damage Reduction"
 	},
 	// Owner
 	{

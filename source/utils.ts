@@ -1,11 +1,20 @@
 import { StringSelectMenuBuilder } from "@discordjs/builders"
 import { randomInt } from "crypto"
 import { ActionRowBuilder, CommandInteraction, EmbedBuilder, SelectMenuBuilder } from "discord.js"
-import { BossDrop } from "./bossdrops.js"
+import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
 import { createClient } from "./bot.js"
-import { getBossDrop } from "./calculate.js"
 import { generateHealthBar } from "./fight.js"
-import { RaidBoss, RaidParty, getUserHealth, getUserTechniques } from "./mongodb.js"
+import {
+	ParticipantInfo,
+	RaidBoss,
+	RaidParty,
+	addItemToUserInventory,
+	getCurrentPhase,
+	getUserActiveTechniques,
+	getUserHealth,
+	updateRaidBossHealth,
+	updateRaidBossPhase
+} from "./mongodb.js"
 
 interface CommunityQuest {
 	questName: string
@@ -156,14 +165,14 @@ export function getYujiItadoriEventLine(quest: CommunityQuest | null): string {
 }
 
 export async function createTechniqueSelectMenu(
-	participants: string[],
+	participants: ParticipantInfo[],
 	countdown: number
 ): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
 	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
 
 	for (const participant of participants) {
-		const user = await client.users.fetch(participant)
-		const userTechniques = await getUserTechniques(participant)
+		const user = await client.users.fetch(participant.id)
+		const userTechniques = await getUserActiveTechniques(participant.id)
 
 		const techniqueOptions = userTechniques.map(techniqueName => ({
 			label: techniqueName,
@@ -184,33 +193,49 @@ export async function createTechniqueSelectMenu(
 	return rows
 }
 
-export async function createRaidEmbed(raidBoss, participants, interaction, userTechnique = "") {
+export async function createRaidEmbed(raidBoss, participants, interaction, userTechnique = "", raidEndTimestamp) {
 	const primaryEmbed = new EmbedBuilder()
 		.setColor("Aqua")
 		.setTitle("Cursed Battle!")
 		.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
-		.setImage(raidBoss.image_url)
+		.setImage(raidBoss.image_url) // Ensure this is the correct property
 		.addFields(
 			{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
 			{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
-			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true }
+			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true },
+			{ name: "Raid Ends", value: `<t:${raidEndTimestamp}:R>`, inline: true }
 		)
 		.addFields({
 			name: "Boss Health Status",
 			value: generateHealthBar(raidBoss.current_health, raidBoss.globalHealth),
 			inline: false
 		})
-		.addFields()
 
 	const participantsHealthFields = []
 
 	for (const participant of participants) {
-		const playerHealth = await getUserHealth(participant)
-		participantsHealthFields.push({
-			name: `${interaction.guild?.members.cache.get(participant)?.displayName || "Unknown"}`,
-			value: `:blue_heart: ${playerHealth.toString()}`,
-			inline: true
-		})
+		try {
+			// Access participant ID correctly
+			const playerHealth = await getUserHealth(participant.id)
+			const member = interaction.guild?.members.cache.get(participant.id)
+
+			if (!member) {
+				console.warn(`Participant with ID ${participant.id} not found in guild.`)
+			}
+
+			participantsHealthFields.push({
+				name: `${member?.displayName || "Unknown"}`,
+				value: `:blue_heart: ${playerHealth?.toString() || "0"}`,
+				inline: true
+			})
+		} catch (error) {
+			console.error(`Error fetching health for participant ${participant.id}:`, error)
+			participantsHealthFields.push({
+				name: "Unknown",
+				value: ":blue_heart: 0",
+				inline: true
+			})
+		}
 	}
 
 	primaryEmbed.addFields(...participantsHealthFields)
@@ -232,33 +257,84 @@ export async function createRaidEmbed(raidBoss, participants, interaction, userT
 
 export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
 	// Calculate boss drops
-	const bossDrops: BossDrop[] = []
-	const dropCount = Math.floor(Math.random() * (raidParty.participants.length + 1)) + 1
+	const bossDrops: RaidDrops[] = []
+	const participantDrops: { [participantId: string]: RaidDrops[] } = {}
 
-	for (let i = 0; i < dropCount; i++) {
-		try {
-			const drop = getBossDrop(raidBoss.name)
-			bossDrops.push(drop)
-		} catch (error) {
-			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
+	for (const participant of raidParty.participants) {
+		const { id, totalDamage } = participant
+		const dropCount = Math.floor(totalDamage / 1000)
+		const drops: RaidDrops[] = []
+
+		for (let i = 0; i < dropCount; i++) {
+			try {
+				const drop = getRaidBossDrop(raidBoss.name)
+				if (drop) {
+					drops.push(drop)
+				}
+			} catch (error) {
+				console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
+			}
+		}
+
+		participantDrops[id] = drops
+		bossDrops.push(...drops)
+
+		for (const drop of drops) {
+			try {
+				await addItemToUserInventory(id, drop.name, 1)
+			} catch (error) {
+				console.error(`Error adding item to user inventory for user ${id}:`, error)
+			}
 		}
 	}
 
-	// Calculate participant rewards
-	//const participantRewards = calculateParticipantRewards(raidParty.participants)
+	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 
-	// Create the raid ending embed
+	raidBoss.globalHealth -= totalDamage
+	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth)
+
+	if (raidBoss.globalHealth <= 0) {
+		const currentPhase = getCurrentPhase(raidBoss)
+		raidBoss.name = currentPhase.name
+		raidBoss.imageUrl = currentPhase.gif
+		await updateRaidBossPhase(raidBoss._id.toString(), currentPhase)
+	}
+
 	const raidEndEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
 		.setTitle(`Raid Ended - ${raidBoss.name}`)
 		.setDescription("The raid has ended. Here are the results:")
-		.addFields({
-			name: "Boss Drops",
-			value: bossDrops.map(drop => `${drop.name}`).join("\n") || "No drops",
+
+	for (const participant of raidParty.participants) {
+		const drops = participantDrops[participant.id]
+
+		// Group drops by rarity
+		const groupedDrops: { [rarity: string]: RaidDrops[] } = {}
+		for (const drop of drops) {
+			if (!groupedDrops[drop.rarity]) {
+				groupedDrops[drop.rarity] = []
+			}
+			groupedDrops[drop.rarity].push(drop)
+		}
+
+		const user = await client.users.fetch(participant.id)
+		const userMention = `${user.username}#${user.discriminator}`
+
+		const fieldValue =
+			Object.entries(groupedDrops)
+				.map(([rarity, drops]) => {
+					const dropsString = drops.map(drop => `${drop.name} (${drop.dropRate}%)`).join(", ")
+					return `${rarity}: ${dropsString}`
+				})
+				.join("\n") || "No drops"
+
+		raidEndEmbed.addFields({
+			name: `Drops for ${userMention}`,
+			value: fieldValue,
 			inline: false
 		})
+	}
 
-	// Update the raid message with the raid ending embed
 	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
 }
 

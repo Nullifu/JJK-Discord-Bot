@@ -1,5 +1,4 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
-import { logger } from "./bot.js"
 import { dirtyToCleanItemMap } from "./interface.js"
 import {
 	UserShikigami,
@@ -36,6 +35,7 @@ import {
 	updateUserUnlockedTitles,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
+import logger from "./bot.js"
 
 //
 export const items = [
@@ -90,12 +90,11 @@ export const itemEffects = [
 export const dailyitems = [
 	{ name: "Sukuna Finger" },
 	{ name: "Rikugan Eye" },
+	{ name: "Prison Realm Fragment" },
+	{ name: "Super Glue" },
 	{ name: "Heavenly Chain" },
-	{ name: "Osaka Plushie" },
-	{ name: "Nobara Plushie" },
-	{ name: "Megumi Plushie" },
-	{ name: "Sukuna Plushie" },
-	{ name: "Takada-Chan Plushie" }
+	{ name: "Cursed Shard" },
+	{ name: "(Shattered) Domain Remnants" }
 ]
 
 export const craftingRecipes = {
@@ -1855,7 +1854,7 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You open the cursed chest and get! 4x Sukuna Finger, 2x Rikugan Eye, 1x Special-Grade Geo Locator, + 200,000 Coins!"
 				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(console.error)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{

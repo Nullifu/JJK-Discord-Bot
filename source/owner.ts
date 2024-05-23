@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, InteractionResponse } from "discord.js"
 import { addItemToUserInventory, updateBalance, updateUserActiveTechniques } from "./mongodb.js"
-import { logger } from "./bot.js"
+import logger from "./bot.js"
 
 export async function handleGiveItemCommand(
 	interaction: ChatInputCommandInteraction
