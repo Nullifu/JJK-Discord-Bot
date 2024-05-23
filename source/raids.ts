@@ -169,7 +169,7 @@ export async function executeRaidBossAttack(
 	chosenAttack: any,
 	playerGrade: string,
 	playerHealth: number,
-	participantId: string // Ensure this is a string ID
+	participantId: string
 ) {
 	const baseDamage = chosenAttack.baseDamage(playerGrade)
 	const damageToPlayer = baseDamage

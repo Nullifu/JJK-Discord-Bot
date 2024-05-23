@@ -241,7 +241,7 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 8.0 | Raids!", type: ActivityType.Playing },
+		{ name: "Update 7.0 | Events!", type: ActivityType.Playing },
 		{ name: `${totalMembers} members`, type: ActivityType.Listening },
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
@@ -330,7 +330,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 
 client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
