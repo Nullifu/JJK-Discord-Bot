@@ -42,7 +42,8 @@ jobs:
             dist/
             image/
             package.json
-            package-lock.json
+            yarn.lock
+            .yarnrc.yml
 
   docker:
     name: Docker
