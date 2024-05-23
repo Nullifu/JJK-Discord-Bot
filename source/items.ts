@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 function generateItems(baseChances, weekendChances, isWeekend = false, modifiers = {}) {
 	const items = [
 		{ name: "Tailsman", rarity: "Grade 4" },
@@ -21,17 +20,19 @@ function generateItems(baseChances, weekendChances, isWeekend = false, modifiers
 		{ name: "Rikugan Eye", rarity: "Special Grade" }
 	]
 
-	const rarityChances = isWeekend
-		? {
-				"Grade 4": weekendChances.grade4 || 0.24,
-				"Grade 1": weekendChances.grade1 || 0.16,
-				"Special Grade": weekendChances.specialGrade || 0.04
-			}
-		: {
-				"Grade 4": baseChances.grade4 || 0.12,
-				"Grade 1": baseChances.grade1 || 0.08,
-				"Special Grade": baseChances.specialGrade || 0.02
-			}
+	const a = {
+		"Grade 4": weekendChances.grade4 || 0.24,
+		"Grade 1": weekendChances.grade1 || 0.16,
+		"Special Grade": weekendChances.specialGrade || 0.04
+	}
+
+	const b = {
+		"Grade 4": baseChances.grade4 || 0.12,
+		"Grade 1": baseChances.grade1 || 0.08,
+		"Special Grade": baseChances.specialGrade || 0.02
+	}
+
+	const rarityChances = isWeekend ? a : b
 
 	return items.map(item => ({
 		...item,
