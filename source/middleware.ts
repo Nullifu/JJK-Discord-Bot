@@ -2,13 +2,13 @@ interface User {
 	lastAlertedVersion?: string
 }
 const CURRENT_VERSION = "1.3.5"
-//
-//
-
 import { EmbedBuilder } from "@discordjs/builders"
 import { ChatInputCommandInteraction } from "discord.js"
-import { logger } from "./bot.js"
 import { getUser, updateLastAlertedVersion } from "./mongodb.js"
+import logger from "./bot.js"
+
+//
+//
 
 export async function checkRegistrationMiddleware(interaction: ChatInputCommandInteraction): Promise<boolean> {
 	logger.debug("Middleware started", interaction.commandName)

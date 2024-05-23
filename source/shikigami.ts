@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
 import { attacks } from "./attacks.js"
-import { logger } from "./bot.js"
 import { createBar, shikigamiThumbnails } from "./interface.js"
 import { getUserShikigami, increaseBond, updateShikigamiHealth } from "./mongodb.js"
 import { applyStatusEffect, calculateDamageWithEffects } from "./statuseffects.js"
+import logger from "./bot.js"
 
 export const activeShikigami = new Map()
 export const summonedShikigami = new Map()

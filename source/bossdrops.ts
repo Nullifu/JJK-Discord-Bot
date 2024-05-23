@@ -2,6 +2,11 @@ export interface BossDrop {
 	name: string
 	rarity: string
 }
+export interface RaidDrops {
+	name: string
+	rarity: string
+	dropRate: number
+}
 
 export const bossDrops: Record<string, BossDrop[]> = {
 	"Yasohachi Bridge Curse": [
@@ -278,11 +283,39 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Heian Era Scraps", rarity: "ultra rare" }
 	],
 	"Sukuna (Heian Era Enraged)": [{ name: "Heian Era Soul", rarity: "common" }],
+	//
 	"Mahoraga": [{ name: "Mahoraga's Soul", rarity: "rare" }],
 	"Divine Dogs": [{ name: "Divine Dogs Shikigami's Soul", rarity: "rare" }],
 	"Nue": [{ name: "Bird Shikigami's Soul", rarity: "rare" }],
 	"Toad": [{ name: "Toad Shikigami's Soul", rarity: "rare" }],
 	"Great Serpent": [{ name: "Serpent Shikigami's Soul", rarity: "rare" }],
-	"Max Elephant": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }],
-	"gwennn": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }]
+	"Max Elephant": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }]
+	//
+}
+
+const raidBossDrops: { [bossName: string]: RaidDrops[] } = {
+	"King Of Curses": [
+		{ name: "Sukuna Finger", rarity: "common", dropRate: 50 },
+		{ name: "Satoru Gojo's Ashy Remains", rarity: "rare", dropRate: 3 },
+		{ name: "Heian Era Awakening", rarity: "special grade", dropRate: 1 }
+	]
+}
+
+export function getRaidBossDrop(bossName: string): RaidDrops {
+	const drops = raidBossDrops[bossName]
+	if (!drops) {
+		throw new Error(`No drops found for raid boss "${bossName}"`)
+	}
+
+	const randomNumber = Math.random() * 100
+	let cumulativeDropRate = 0
+
+	for (const drop of drops) {
+		cumulativeDropRate += drop.dropRate
+		if (randomNumber <= cumulativeDropRate) {
+			return drop
+		}
+	}
+
+	return null
 }

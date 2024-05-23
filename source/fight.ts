@@ -152,7 +152,6 @@ export async function handleShikigamiTame(
 	const drop = getBossDrop(opponent.name)
 
 	activeCollectors.delete(interaction.user.id)
-	await updateUserHealth(interaction.user.id, 100)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
 	await removeAllStatusEffects(interaction.user.id)
 

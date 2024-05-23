@@ -59,7 +59,6 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
-	handleShikigamiShop,
 	handleShopCommand,
 	handleSupportCommand,
 	handleTame,
@@ -94,6 +93,21 @@ import {
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
 import { getRandomQuote } from "./shikigami.js"
 
+// Configure log4js
+log4js.configure({
+	appenders: {
+		console: { type: "console" },
+		file: { type: "file", filename: "logs/app.log" }
+	},
+	categories: {
+		default: { appenders: ["console", "file"], level: "debug" }
+	}
+})
+
+const logger = log4js.getLogger("jjk-bot")
+
+export default logger
+
 dotenv()
 
 export function createClient() {
@@ -112,26 +126,6 @@ export function createClient() {
 }
 
 const client = createClient()
-
-// Configure log4js
-log4js.configure({
-	appenders: {
-		console: { type: "console" },
-		file: { type: "file", filename: "logs/app.log" }
-	},
-	categories: {
-		default: { appenders: ["console", "file"], level: "debug" }
-	}
-})
-
-export const logger = log4js.getLogger("jjk-bot")
-
-logger.trace("This is a trace message")
-logger.debug("This is a debug message")
-logger.info("This is an info message")
-logger.warn("This is a warning message")
-logger.error("This is an error message")
-logger.fatal("This is a fatal message")
 
 let activities = []
 let index = 0
@@ -247,13 +241,13 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 7.0 | Part Two!", type: ActivityType.Playing },
+		{ name: "Update 8.0 | Raids!", type: ActivityType.Playing },
 		{ name: `${totalMembers} members`, type: ActivityType.Listening },
 		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
-		{ name: "Satoru Gojo's Sealing Event!", type: ActivityType.Competing },
-		{ name: "/register |  /help", type: ActivityType.Listening }
+		{ name: "King Of Curses Raid!", type: ActivityType.Competing },
+		{ name: "/register | /help", type: ActivityType.Listening }
 	]
 }
 
@@ -336,7 +330,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "991443928790335518"
+const clientId = "1216889497980112958"
 
 client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
@@ -368,10 +362,9 @@ const commands = [
 			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
 		),
 	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
-	new SlashCommandBuilder().setName("dailyshop").setDescription("Daily Shop"),
+	new SlashCommandBuilder().setName("shop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
-	new SlashCommandBuilder().setName("shikigamishop").setDescription("View shikigami shop"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
@@ -387,6 +380,7 @@ const commands = [
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+	new SlashCommandBuilder().setName("raid").setDescription("Get information about the ongoing global event"),
 
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -543,7 +537,10 @@ const commands = [
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
 					{ name: "#1 Fighting Box", value: "#1 Fighting Box" },
 					{ name: "Unknown Substance", value: "Unknown Substance" },
-					{ name: "Blessful Charm", value: "Blessful Charm" }
+					{ name: "Blessful Charm", value: "Blessful Charm" },
+					{ name: "Prison Realm 100%", value: "Prison Realm 100%" },
+					{ name: "Prison Realm 75%", value: "Prison Realm 75%" },
+					{ name: "Prison Realm 50%", value: "Prison Realm 50%" }
 				)
 		)
 		.addStringOption(option =>
@@ -904,7 +901,7 @@ client.on("interactionCreate", async interaction => {
 			case "updateprofileimage":
 				await handleUpdateProfileImageCommand(chatInputInteraction)
 				break
-			case "dailyshop":
+			case "shop":
 				await handleShopCommand(chatInputInteraction)
 				break
 
@@ -1012,9 +1009,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "owner-addtechnique":
 				await handleADDTECHNIQUE(chatInputInteraction)
-				break
-			case "shikigamishop":
-				await handleShikigamiShop(chatInputInteraction)
 				break
 			case "bug":
 				await handleBugReport(chatInputInteraction)

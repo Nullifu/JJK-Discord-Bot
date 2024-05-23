@@ -3,7 +3,7 @@ import { ImageAnnotatorClient } from "@google-cloud/vision"
 import AWS from "aws-sdk"
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js"
 import { config as dotenv } from "dotenv"
-import { logger } from "./bot.js"
+import logger from "./bot.js"
 
 dotenv()
 
