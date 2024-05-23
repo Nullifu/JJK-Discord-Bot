@@ -1625,7 +1625,7 @@ export const items1: Item1[] = [
 			const randomNumber = Math.floor(Math.random() * 100) + 1
 			let isLimitless = false
 
-			if (randomNumber <= 30) {
+			if (randomNumber <= 40) {
 				await addUserTechnique(interaction.user.id, "Imaginary Technique: Purple")
 				await updateUserOwnedInateClan(interaction.user.id, "Limitless")
 				await addUserQuest(interaction.user.id, "Satoru Gojo's Mission")

@@ -7,10 +7,10 @@ import { ClientSession, Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
 import { v4 as uuidv4 } from "uuid"
+import logger from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
-import logger from "./bot.js"
 
 dotenv()
 
@@ -4153,3 +4153,5 @@ export function getCurrentPhase(raidBoss: RaidBoss): { name: string; health: num
 	}
 	return raidBoss.phases[raidBoss.phases.length - 1]
 }
+
+updateShop()
