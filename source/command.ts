@@ -5483,157 +5483,65 @@ export async function handleClaimVoteRewards(interaction) {
 
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
-	const raidShopItems = [
-		{ name: "Raid Item 1", price: 100, rarity: "Common" },
-		{ name: "Raid Item 2", price: 200, rarity: "Rare" }
-	]
-	const shikigamiShopItems = [
-		{ name: "Shikigami food", price: 50000, rarity: "Common" },
-		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
-	]
-	const eventShopItems = [
-		{ name: "Prison Realm 100%", price: 150, rarity: "Common" },
-		{ name: "Shikigami Item 2", price: 250, rarity: "Rare" }
-	]
-
 	const balance = await getBalance(interaction.user.id)
 	const balance2 = balance.toLocaleString("en-US")
+
+	if (!shopItems || shopItems.length === 0) {
+		await interaction.reply("The shop is currently empty.")
+		return
+	}
 
 	try {
 		const lastResetTime = await getShopLastReset()
 		const resetIntervalMs = 1000 * 60 * 60 * 24
 		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+
 		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
 		const embed = new EmbedBuilder()
-			.setColor("#FFD700")
+			.setColor("#FFD700") // Gold color
 			.setTitle("✨ Shop Items ✨")
 			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
 			.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
 
-		const mainShopItemsField = shopItems
-			.map(item => {
-				return (
-					`**${item.name}** - ${item.rarity} Rarity\n` +
-					`Price: **${item.price || "None"}** coins\n` +
-					`Max Purchases: **${item.maxPurchases || "None"}**\n` +
-					"--------------------"
-				)
-			})
-			.join("\n")
-
-		embed.addFields([{ name: "Items in Main Shop", value: mainShopItemsField }])
-
-		const selectMenu = new StringSelectMenuBuilder()
-			.setCustomId("shop_select")
-			.setPlaceholder("Select a shop")
-			.addOptions([
-				{
-					label: "Main Shop",
-					description: "View items in the main shop",
-					value: "main_shop",
-					emoji: "💰"
-				},
-				{
-					label: "Shikigami Shop",
-					description: "View items in the shikigami shop",
-					value: "shikigami_shop",
-					emoji: "🐺"
-				}
-			])
-
-		const row = new ActionRowBuilder().addComponents(selectMenu)
-
-		const buttonRow = new ActionRowBuilder()
+		shopItems.forEach(item => {
+			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+				embed.addFields([
+					{
+						name: `**${item.name}** - ${item.rarity} Rarity`,
+						value: `Price: **${item.price || "None"}** coins | Max Purchases: **${
+							item.maxPurchases || "None"
+						}**`,
+						inline: false
+					}
+				])
+			}
+		})
+		//
+		const row = new ActionRowBuilder()
 		shopItems.forEach((item, index) => {
 			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
 				const button = new ButtonBuilder()
-					.setCustomId(`buy_main_shop_${index}`)
+					.setCustomId(`buy_${index}`)
 					.setLabel(item.name)
 					.setStyle(ButtonStyle.Primary)
-				buttonRow.addComponents(button)
+				row.addComponents(button)
 			}
 		})
 
-		const message = await interaction.reply({ embeds: [embed], components: [row, buttonRow], fetchReply: true })
+		//
+		const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true })
 
-		const collector = message.createMessageComponentCollector({
-			componentType: ComponentType.StringSelect,
-		})
+		const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 }) // Adjust time as needed
 
 		collector.on("collect", async i => {
-			if (!i.isStringSelectMenu()) return
-			await i.deferUpdate()
-
-			const selectedShop = i.values[0]
-			let selectedShopItems = []
-			let formattedShopName = ""
-
-			if (selectedShop === "main_shop") {
-				selectedShopItems = shopItems
-				formattedShopName = "Main Shop"
-			} else if (selectedShop === "raid_shop") {
-				selectedShopItems = raidShopItems
-				formattedShopName = "Raid Shop"
-			} else if (selectedShop === "shikigami_shop") {
-				selectedShopItems = shikigamiShopItems
-				formattedShopName = "Shikigami Shop"
-			} else if (selectedShop === "event_shop") {
-				selectedShopItems = eventShopItems
-				formattedShopName = "Event Shop"
-			}
-
-			const itemsField = selectedShopItems
-				.map(item => {
-					return (
-						`**${item.name}** - ${item.rarity} Rarity\n` +
-						`Price: **${item.price || "None"}** coins\n` +
-						`Max Purchases: **${item.maxPurchases || "None"}**\n` +
-						"--------------------"
-					)
-				})
-				.join("\n")
-
-			embed.spliceFields(1, 1, { name: `Items in ${formattedShopName}`, value: itemsField })
-
-			const buttonRow = new ActionRowBuilder()
-			selectedShopItems.forEach((item, index) => {
-				if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
-					const button = new ButtonBuilder()
-						.setCustomId(`buy_${selectedShop}_${index}`)
-						.setLabel(item.name)
-						.setStyle(ButtonStyle.Primary)
-					buttonRow.addComponents(button)
-				}
-			})
-
-			await i.editReply({ embeds: [embed], components: [row, buttonRow] })
-		})
-
-		collector.on("end", collected => {
-			logger.info(`Collected ${collected.size} interactions.`)
-		})
-
-		const buttonCollector = message.createMessageComponentCollector({
-			componentType: ComponentType.Button,
-			time: 15000
-		})
-
-		buttonCollector.on("collect", async i => {
 			if (!i.isButton()) return
+
 			await i.deferUpdate()
 
 			const userId = i.user.id
-			const [_, selectedShop, itemIndex] = i.customId.split("_")
-			let itemToBuy = null
-
-			if (selectedShop === "main_shop") {
-				itemToBuy = shopItems[itemIndex]
-			} else if (selectedShop === "raid_shop") {
-				itemToBuy = raidShopItems[itemIndex]
-			} else if (selectedShop === "shikigami_shop") {
-				itemToBuy = shikigamiShopItems[itemIndex]
-			}
+			const itemIndex = parseInt(i.customId.replace("buy_", ""))
+			const itemToBuy = shopItems[itemIndex]
 
 			if (!itemToBuy) {
 				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
@@ -5656,11 +5564,11 @@ export async function handleShopCommand(interaction) {
 			}
 
 			const balance = await getBalance(userId)
-
 			if (balance >= itemToBuy.price) {
 				await addItemToUserInventory(userId, itemToBuy.name, 1)
 				await updateBalance(userId, -itemToBuy.price)
 				await addUserPurchases(userId, itemToBuy.name, 1)
+
 				await i.followUp({
 					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} coins.`,
 					ephemeral: true
@@ -5673,11 +5581,10 @@ export async function handleShopCommand(interaction) {
 			}
 		})
 
-		buttonCollector.on("end", collected => {
+		collector.on("end", collected => {
 			logger.info(`Collected ${collected.size} interactions.`)
 		})
-
-		buttonCollector.stop
+		collector.stop
 	} catch (error) {
 		logger.error("Error fetching shop items:", error)
 		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })

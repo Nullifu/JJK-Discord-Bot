@@ -59,6 +59,7 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
+	handleShikigamiShop,
 	handleShopCommand,
 	handleSupportCommand,
 	handleTame,
@@ -378,6 +379,7 @@ const commands = [
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("createquest").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
+	new SlashCommandBuilder().setName("shikigamishop").setDescription("Shikigami Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 
@@ -969,6 +971,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "useitem":
 				await handleUseItemCommand(chatInputInteraction)
+				break
+			case "shikigamishop":
+				await handleShikigamiShop(chatInputInteraction)
 				break
 			case "achievements":
 				await handleAchievementsCommand(chatInputInteraction)
