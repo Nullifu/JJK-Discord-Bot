@@ -1,4 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import logger from "./bot.js"
 import { dirtyToCleanItemMap } from "./interface.js"
 import {
 	UserShikigami,
@@ -35,7 +36,6 @@ import {
 	updateUserUnlockedTitles,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
-import logger from "./bot.js"
 
 //
 export const items = [
@@ -1649,8 +1649,10 @@ export const items1: Item1[] = [
 			let embedFinal
 			if (isLimitless) {
 				const gains =
-					"You have gained:\n" + "• Inate Clan: Limitless\n" + "• Technique: Imaginary Technique: Purple\n"
-				;("• New Quest!: Satoru Gojo's Mission +1\n")
+					"You have gained:\n" +
+					"• Inate Clan: Limitless\n" +
+					"• Technique: Imaginary Technique: Purple\n" +
+					"• New Quest!: Satoru Gojo's Mission +1\n"
 				embedFinal = new EmbedBuilder()
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")

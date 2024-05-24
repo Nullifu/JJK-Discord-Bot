@@ -178,7 +178,7 @@ app.post("/topgg", async (request, response) => {
 	const user = await client.users.fetch(data.user)
 	if (user) {
 		try {
-			await user.send("Thank's for the vote! You got 100,000 Coins + A vote chest!")
+			await user.send("Thanks for the vote! You got 100,000 Coins + A vote chest!")
 			await updateBalance(user.id, 100000)
 			await addItemToUserInventory(user.id, "Cursed Vote Chest", 1)
 			logger.info(`Sent a direct message to user: ${user.tag}`)
@@ -192,6 +192,48 @@ app.post("/topgg", async (request, response) => {
 		data: {}
 	})
 })
+
+app.post("/purchase", async (request, response) => {
+	logger.info(`Received a purchase webhook: ${JSON.stringify(request.body)}`)
+
+	const auth = request.header("Authorization")
+	if (auth !== `Bearer ${API_SECRET}`) {
+		response.status(401).send({
+			code: error_code,
+			data: {
+				message: "Unauthorized"
+			}
+		})
+		return
+	}
+
+	const data = request.body as { user: string; product_id: string }
+	logger.info(`Received purchase from user: ${data.user}, product_id: ${data.product_id}`)
+	const user = await client.users.fetch(data.user)
+	if (user) {
+		try {
+			await grantEntitlement(user.id, data.product_id)
+			await user.send(`Thank you for your purchase! You have been granted ${data.product_id}.`)
+			logger.info(`Granted product ${data.product_id} to user: ${user.tag}`)
+		} catch (error) {
+			logger.error(`Failed to grant product to user: ${user.tag}`, error)
+		}
+	}
+
+	response.status(200).send({
+		code: success_code,
+		data: {}
+	})
+})
+
+const grantEntitlement = async (userId: string, productId: string) => {
+	if (productId === "3x Six Eyes") {
+		await addItemToUserInventory(userId, "Six Eyes", 3)
+		logger.info(`Granted 3 Six Eyes to user ${userId}`)
+	} else {
+		logger.error(`Unknown product: ${productId}`)
+	}
+}
 
 app.use((request, response) => {
 	response.status(404).send({
@@ -331,7 +373,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //
 //
-const clientId = "1216889497980112958"
+const clientId = "991443928790335518"
 
 client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
