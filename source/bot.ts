@@ -8,6 +8,7 @@ import {
 	ChannelType,
 	ChatInputCommandInteraction,
 	Client,
+	Entitlement,
 	GatewayIntentBits,
 	Partials,
 	PermissionFlagsBits,
@@ -257,6 +258,17 @@ client.on("ready", async () => {
 	} catch (error) {
 		logger.fatal("Error initializing database:", error)
 	}
+})
+
+client.on("entitlementCreate", async (entitlement: Entitlement) => {
+	logger.info(`Entitlement created: ${entitlement}`)
+})
+client.on("entitlementDelete", async (entitlement: Entitlement) => {
+	logger.info(`Entitlement deleted: ${entitlement}`)
+})
+client.on("entitlementUpdate", async (oldEntitlement: Entitlement | null, newEntitlement: Entitlement) => {
+	logger.info(`Entitlement update: ${oldEntitlement}`)
+	logger.info(`Entitlement update: ${newEntitlement}`)
 })
 
 setInterval(async () => {
