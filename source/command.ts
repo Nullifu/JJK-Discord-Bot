@@ -8209,4 +8209,36 @@ export async function handleBugReport(interaction: ChatInputCommandInteraction) 
 	await interaction.reply({ content: "Thank you for reporting the bug! We will look into it.", ephemeral: true })
 }
 
+export async function handlePurchaseHistoryCommand(interaction: ChatInputCommandInteraction) {
+	await interaction.deferReply({ ephemeral: true })
+
+	const entitlements = await interaction.client.application.entitlements.fetch({ user: interaction.user })
+	logger.debug("Entitlements:", entitlements.toJSON())
+
+	const skus = await interaction.client.application.fetchSKUs()
+	logger.debug("SKUs:", skus.toJSON())
+
+	const embed = new EmbedBuilder().setTitle("Purchase History").setColor("#0099ff").setTimestamp()
+	const validEntiltements = entitlements.filter(entitlement => entitlement.deleted === false)
+
+	if (validEntiltements.size === 0) {
+		embed.setDescription("You have not made any purchases yet.")
+	} else {
+		const entitlementFields = validEntiltements.map(entitlement => {
+			const purchaseDate = entitlement.startsTimestamp
+			const expiresDate = entitlement.endsAt?.toLocaleString()
+			const sku = skus.find(sku => sku.id === entitlement.skuId)
+
+			return {
+				name: `${sku.name}: ${purchaseDate} - ${expiresDate}`,
+				value: `Type: ${sku.type.toString()} `
+			}
+		})
+
+		embed.addFields(entitlementFields)
+	}
+
+	await interaction.editReply({ embeds: [embed] })
+}
+
 client1.login(process.env["DISCORD_BOT_TOKEN"])

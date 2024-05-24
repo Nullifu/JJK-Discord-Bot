@@ -14,8 +14,11 @@ import {
 	PermissionFlagsBits,
 	REST,
 	Routes,
+	SKU,
+	SKUType,
 	SlashCommandBuilder,
-	TextChannel
+	TextChannel,
+	User
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 
@@ -55,6 +58,7 @@ import {
 	handlePetShop,
 	handlePreviousTradesCommand,
 	handleProfileCommand,
+	handlePurchaseHistoryCommand,
 	handleQuestCommand,
 	handleRaidCommand,
 	handleRegisterCommand,
@@ -188,45 +192,16 @@ app.post("/topgg", async (request, response) => {
 	})
 })
 
-app.post("/purchase", async (request, response) => {
-	logger.info(`Received a purchase webhook: ${JSON.stringify(request.body)}`)
-
-	const auth = request.header("Authorization")
-	if (auth !== `Bearer ${process.env.BOT_SECRET}`) {
-		response.status(401).send({
-			code: error_code,
-			data: {
-				message: "Unauthorized"
-			}
-		})
-		return
+const grantEntitlement = async (entitlement: Entitlement, user: User, sku: SKU) => {
+	if (sku.type === SKUType.Consumable) {
+		await entitlement.consume()
+		logger.warn(`Consumed entitlement: ${entitlement.id}, SKU: ${sku.name}`)
 	}
 
-	const data = request.body as { user: string; product_id: string }
-	logger.info(`Received purchase from user: ${data.user}, product_id: ${data.product_id}`)
-	const user = await client.users.fetch(data.user)
-	if (user) {
-		try {
-			await grantEntitlement(user.id, data.product_id)
-			await user.send("Thank you for your purchase! You have been granted 3x Six Eyes.")
-			logger.info(`Granted product 3x Six Eyes to user: ${user.tag}`)
-		} catch (error) {
-			logger.error(`Failed to grant product to user: ${user.tag}`, error)
-		}
-	}
-
-	response.status(200).send({
-		code: success_code,
-		data: {}
-	})
-})
-
-const grantEntitlement = async (userId: string, productId: string) => {
-	if (productId === "12x Sukuna Finger") {
-		await addItemToUserInventory(userId, "Sukuna Finger", 12)
-		logger.info(`Granted 3 Six Eyes to user ${userId}`)
+	if (sku.id === "1243613622853439570") {
+		await addItemToUserInventory(user.id, "Sukuna Finger", 20)
 	} else {
-		logger.error(`Unknown product: ${productId}`)
+		logger.error(`Unknown product: ${sku.id}`)
 	}
 }
 
@@ -251,6 +226,7 @@ app.listen(parseInt(process.env["EXPRESS_PORT"] ?? "3000"), process.env["EXPRESS
 
 client.on("ready", async () => {
 	logger.info(`Logged in as ${client.user.tag}!`)
+	await doApplicationCommands(client.user.id)
 
 	try {
 		await initializeDatabase()
@@ -260,9 +236,24 @@ client.on("ready", async () => {
 	}
 })
 
-client.on("entitlementCreate", async (entitlement: Entitlement) => {
+client.on("entitlementCreate", async entitlement => {
 	logger.info(`Entitlement created: ${entitlement}`)
+
+	try {
+		const user = await entitlement.fetchUser()
+		const sku = (await client.application.fetchSKUs()).find(sku => sku.id === entitlement.skuId)
+
+		await grantEntitlement(entitlement, user, sku)
+
+		const confirmationMessage = `Thank you for your purchase of ${sku.name}! Enjoy your new item.`
+		await user.send(confirmationMessage)
+
+		logger.info(`Purchase handled: User ${user.username} (${user.id}) purchased ${sku.name}`)
+	} catch (error) {
+		logger.error(`Error handling purchase: ${error}`)
+	}
 })
+
 client.on("entitlementDelete", async (entitlement: Entitlement) => {
 	logger.info(`Entitlement deleted: ${entitlement}`)
 })
@@ -377,10 +368,6 @@ cron.schedule("*/30 * * * *", async () => {
 	}
 })
 
-//
-//
-const clientId = "991443928790335518"
-
 client.setMaxListeners(400)
 export const digCooldowns = new Map<string, number>()
 export const digCooldown = 15 * 1000
@@ -430,6 +417,7 @@ const commands = [
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("Shikigami Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+	new SlashCommandBuilder().setName("purchasehistory").setDescription("Check your purchase history"),
 
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -749,7 +737,7 @@ const commands = [
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
 
-async function doApplicationCommands() {
+async function doApplicationCommands(clientId: string) {
 	try {
 		logger.info("Started refreshing application (/) commands.")
 
@@ -760,7 +748,6 @@ async function doApplicationCommands() {
 		logger.error(error)
 	}
 }
-doApplicationCommands()
 
 // --------------------------------------------------------------------------------------------------------------------------\\
 // --------------------------------------------------------------------------------------------------------------------------\\
@@ -1043,6 +1030,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "beg":
 				await handleBegCommand(chatInputInteraction)
+				break
+			case "purchasehistory":
+				await handlePurchaseHistoryCommand(chatInputInteraction)
 				break
 			case "stats":
 				await handleViewStats(chatInputInteraction)
