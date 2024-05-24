@@ -823,32 +823,6 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
 		}
 	],
-	"TESTERS": [
-		{
-			name: "Solo Forbidden Area",
-			cost: "1",
-			clan: "Boogie Woogie",
-			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
-		},
-		{
-			name: "Hollow Purple",
-			cost: "1",
-			clan: "Boogie Woogie",
-			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
-		},
-		{
-			name: "Boogie Woogie Surplex",
-			cost: "1",
-			clan: "Boogie Woogie",
-			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
-		},
-		{
-			name: "Re-imagined BLACK FLASH",
-			cost: "1",
-			clan: "Boogie Woogie",
-			items: [{ name: "Takada-Chan Autograph", quantity: 1 }]
-		}
-	],
 	"Blood Manipulation": [
 		{
 			name: "Supernova",
