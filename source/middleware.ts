@@ -11,7 +11,7 @@ import logger from "./bot.js"
 //
 
 export async function checkRegistrationMiddleware(interaction: ChatInputCommandInteraction): Promise<boolean> {
-	logger.debug("Middleware started", interaction.commandName)
+	logger.debug("Middleware started", interaction.commandName, interaction.user.id)
 
 	try {
 		const discordId = interaction.user.id
