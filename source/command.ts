@@ -5105,26 +5105,45 @@ async function paginateTrades(interaction, trades, title) {
 
 export async function handleDonateCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
+
 	const targetUser = interaction.options.getUser("user")
 	const amount = interaction.options.getInteger("amount")
+
+	if (!targetUser) {
+		await interaction.reply({ content: "The user you are trying to donate to does not exist.", ephemeral: true })
+		return
+	}
+
+	const targetUserId = targetUser.id
+	const isTargetUserRegistered = await isUserRegistered(targetUserId)
+
+	if (!isTargetUserRegistered) {
+		await interaction.reply({ content: "The user you are trying to donate to is not registered.", ephemeral: true })
+		return
+	}
+
 	if (amount <= 0) {
 		await interaction.reply({ content: "You must donate a positive amount of coins.", ephemeral: true })
 		return
 	}
+
 	const userId = interaction.user.id
 	const userBalance = await getBalance(userId)
+
 	if (amount > userBalance) {
 		await interaction.reply({ content: "You do not have enough coins to donate.", ephemeral: true })
 		return
 	}
+
 	await updateBalance(userId, -amount)
-	await updateBalance(targetUser.id, amount)
+	await updateBalance(targetUserId, amount)
 
 	await interaction.reply({
 		content: `You have donated ${amount} coins to ${targetUser.username}.`,
 		ephemeral: true
 	})
 }
+
 export async function handleEquipTechniqueCommand(interaction) {
 	const userId = interaction.user.id
 	const inputTechniquesString = interaction.options.getString("techniques")
@@ -7930,7 +7949,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 			return
 		}
 
-		// Reset participants' health to their maximum health
 		for (const participant of raidParty.participants) {
 			try {
 				const usermaxhealth = await getUserMaxHealth(participant.id)
@@ -8018,7 +8036,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				})
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 
-				// Update the interaction message
 				await i.update({ embeds: [updatedEmbed], components: updatedComponents })
 
 				if (selectedTechnique === "Lapse: Blue") {
@@ -8057,7 +8074,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					return
 				}
 
-				// Reset the lastUsedTechniques array at the start of each round
 				const lastUsedTechniques = []
 
 				for (const combination of dualTechniqueCombinations) {
@@ -8104,7 +8120,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.pendingActions
 						)
 
-						// Update the updatedEmbed with the new boss health
 						const updatedEmbedBuilder = await createRaidEmbed(
 							updatedRaidBoss,
 							updatedRaidParty.participants,
@@ -8145,7 +8160,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 				await updateRaidPartyPendingActions(raidParty._id.toString(), [])
 
-				// Update the updatedEmbed with the new boss health
 				const updatedEmbedBuilder = await createRaidEmbed(
 					updatedRaidBoss,
 					updatedRaidParty.participants,
