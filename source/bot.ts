@@ -197,7 +197,7 @@ app.post("/purchase", async (request, response) => {
 	logger.info(`Received a purchase webhook: ${JSON.stringify(request.body)}`)
 
 	const auth = request.header("Authorization")
-	if (auth !== `Bearer ${API_SECRET}`) {
+	if (auth !== `Bearer ${process.env.BOT_SECRET}`) {
 		response.status(401).send({
 			code: error_code,
 			data: {
@@ -213,8 +213,8 @@ app.post("/purchase", async (request, response) => {
 	if (user) {
 		try {
 			await grantEntitlement(user.id, data.product_id)
-			await user.send(`Thank you for your purchase! You have been granted ${data.product_id}.`)
-			logger.info(`Granted product ${data.product_id} to user: ${user.tag}`)
+			await user.send("Thank you for your purchase! You have been granted 3x Six Eyes.")
+			logger.info(`Granted product 3x Six Eyes to user: ${user.tag}`)
 		} catch (error) {
 			logger.error(`Failed to grant product to user: ${user.tag}`, error)
 		}
