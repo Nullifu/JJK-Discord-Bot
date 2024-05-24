@@ -227,8 +227,8 @@ app.post("/purchase", async (request, response) => {
 })
 
 const grantEntitlement = async (userId: string, productId: string) => {
-	if (productId === "3x Six Eyes") {
-		await addItemToUserInventory(userId, "Six Eyes", 3)
+	if (productId === "12x Sukuna Finger") {
+		await addItemToUserInventory(userId, "Sukuna Finger", 12)
 		logger.info(`Granted 3 Six Eyes to user ${userId}`)
 	} else {
 		logger.error(`Unknown product: ${productId}`)
