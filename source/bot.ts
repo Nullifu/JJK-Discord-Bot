@@ -113,12 +113,7 @@ dotenv()
 
 export function createClient() {
 	const client = new Client({
-		intents: [
-			GatewayIntentBits.Guilds,
-			GatewayIntentBits.GuildMessages,
-			GatewayIntentBits.MessageContent,
-			GatewayIntentBits.DirectMessages
-		],
+		intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages],
 		partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
 	})
 
