@@ -282,7 +282,15 @@ async function updateDynamicActivities() {
 		totalMembers += guild.memberCount
 	})
 
-	activities = [{ name: `${totalMembers} members`, type: ActivityType.Listening }]
+	activities = [
+		{ name: "Update 7.0 | Events!", type: ActivityType.Playing },
+		{ name: `${totalMembers} members`, type: ActivityType.Listening },
+		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
+		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
+		{ name: "The Shibuya Incident", type: ActivityType.Playing },
+		{ name: "King Of Curses Raid!", type: ActivityType.Competing },
+		{ name: "/register | /help", type: ActivityType.Listening }
+	]
 }
 
 client.on("guildCreate", guild => {
