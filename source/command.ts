@@ -165,11 +165,13 @@ import {
 	handleRaidBossDefeat,
 	handleTradeAcceptance,
 	healShikigami,
+	isUserRegistered,
 	logImageUrl,
 	markStageAsMessaged,
 	mongoDatabase,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
+	removeRaidPartyPendingActions,
 	removeUserQuest,
 	startNewSession,
 	updateBalance,
@@ -7864,6 +7866,25 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 	collector.on("collect", async (i: MessageComponentInteraction) => {
 		if (i.customId === "join_raid") {
+			const userRegistered = await isUserRegistered(i.user.id)
+			const userActiveTechniques = await getUserActiveTechniques(i.user.id)
+
+			if (!userRegistered) {
+				await i.reply({
+					content: "You need to be registered on the bot to join the raid party.",
+					ephemeral: true
+				})
+				return
+			}
+
+			if (userActiveTechniques.length === 0) {
+				await i.reply({
+					content: "You need to have active techniques to join the raid party.",
+					ephemeral: true
+				})
+				return
+			}
+
 			if (!participants.includes(i.user.id)) {
 				participants.push(i.user.id)
 				const participantsString = participants.map(p => `<@${p}>`).join(", ")
@@ -7943,7 +7964,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 			const battleOptionSelectMenuCollectorRaid = interaction.channel.createMessageComponentCollector({
 				filter: i => {
 					const participantId = i.customId.split("-")[3]
-					return raidParty.participants.includes(participantId) && i.user.id === participantId
+					return raidParty.participants.some(p => p.id === participantId) && i.user.id === participantId
 				},
 				componentType: ComponentType.StringSelect,
 				time: Math.min(TECHNIQUE_SELECTION_DURATION, remainingTime)
@@ -8036,6 +8057,9 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					return
 				}
 
+				// Reset the lastUsedTechniques array at the start of each round
+				const lastUsedTechniques = []
+
 				for (const combination of dualTechniqueCombinations) {
 					const usersWithTechnique1 = updatedRaidParty.pendingActions.filter(
 						action => action.technique === combination.technique1
@@ -8068,12 +8092,13 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							dualTechniqueCombinations: dualTechniqueCombinations
 						})
 
+						lastUsedTechniques.push(combination.fieldValue)
+
 						updatedRaidBoss.current_health -= damage
 						await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 
-						updatedRaidParty.pendingActions = updatedRaidParty.pendingActions.filter(
-							action => action.userId !== user1.userId && action.userId !== user2.userId
-						)
+						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
+
 						await updateRaidPartyPendingActions(
 							updatedRaidParty._id.toString(),
 							updatedRaidParty.pendingActions
@@ -8090,6 +8115,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						updatedEmbed = updatedEmbedBuilder.toJSON()
 					}
 				}
+
 				console.debug("Executing pending actions")
 				for (const action of updatedRaidParty.pendingActions) {
 					console.debug("Processing action:", action)
@@ -8119,7 +8145,16 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 				await updateRaidPartyPendingActions(raidParty._id.toString(), [])
 
-				// Add this block to include the boss's attack and damage details on the main embed
+				// Update the updatedEmbed with the new boss health
+				const updatedEmbedBuilder = await createRaidEmbed(
+					updatedRaidBoss,
+					updatedRaidParty.participants,
+					interaction,
+					lastUsedTechniques.join("\n"),
+					raidEndTime
+				)
+				updatedEmbed = updatedEmbedBuilder.toJSON()
+
 				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
 				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
 					updatedEmbed.fields.push({

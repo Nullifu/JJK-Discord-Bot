@@ -5,7 +5,6 @@ import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
 import { createClient } from "./bot.js"
 import { generateHealthBar } from "./fight.js"
 import {
-	ParticipantInfo,
 	RaidBoss,
 	RaidParty,
 	addItemToUserInventory,
@@ -165,7 +164,7 @@ export function getYujiItadoriEventLine(quest: CommunityQuest | null): string {
 }
 
 export async function createTechniqueSelectMenu(
-	participants: ParticipantInfo[],
+	participants: { id: string; totalDamage: number }[],
 	countdown: number
 ): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
 	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
@@ -181,12 +180,11 @@ export async function createTechniqueSelectMenu(
 		}))
 
 		const selectMenu = new StringSelectMenuBuilder()
-			.setCustomId(`select-battle-option-${participant}`)
+			.setCustomId(`select-battle-option-${participant.id}`)
 			.setPlaceholder(`${user.username}'s technique (${countdown}s)`)
 			.addOptions(techniqueOptions)
 
 		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-
 		rows.push(row)
 	}
 

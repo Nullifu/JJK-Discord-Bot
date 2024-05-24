@@ -16,7 +16,7 @@ dotenv()
 
 export const bossCollectionName = "bosses"
 export const shikigamCollectionName = "shiki"
-export const usersCollectionName = "users"
+export const usersCollectionName = "testerusers"
 export const questsCollectioName = "quests"
 export const tradeCollectionName = "trades"
 export const shopCollectionName = "shop"
@@ -4028,6 +4028,18 @@ export async function getRaidInstanceByUser(userId: string): Promise<RaidInstanc
 		return null
 	}
 }
+// remove raid party pending actions
+export async function removeRaidPartyPendingActions(raidPartyId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+
+		await raidPartiesCollection.updateOne({ _id: new ObjectId(raidPartyId) }, { $set: { pendingActions: [] } })
+	} catch (error) {
+		logger.error("Error removing raid party pending actions:", error)
+		throw error
+	}
+}
 
 export async function handleRaidBossDefeat(
 	interaction: CommandInteraction,
@@ -4154,4 +4166,15 @@ export function getCurrentPhase(raidBoss: RaidBoss): { name: string; health: num
 	return raidBoss.phases[raidBoss.phases.length - 1]
 }
 
-updateShop()
+// is user registered
+export async function isUserRegistered(userId: string): Promise<boolean> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return !!user
+	} catch (error) {
+		logger.error("Error checking if user is registered:", error)
+		throw error
+	}
+}

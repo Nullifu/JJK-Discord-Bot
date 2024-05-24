@@ -117,7 +117,6 @@ export function createClient() {
 			GatewayIntentBits.Guilds,
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.MessageContent,
-			GatewayIntentBits.GuildMembers,
 			GatewayIntentBits.DirectMessages
 		],
 		partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User]
@@ -283,15 +282,7 @@ async function updateDynamicActivities() {
 		totalMembers += guild.memberCount
 	})
 
-	activities = [
-		{ name: "Update 7.0 | Events!", type: ActivityType.Playing },
-		{ name: `${totalMembers} members`, type: ActivityType.Listening },
-		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
-		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
-		{ name: "The Shibuya Incident", type: ActivityType.Playing },
-		{ name: "King Of Curses Raid!", type: ActivityType.Competing },
-		{ name: "/register | /help", type: ActivityType.Listening }
-	]
+	activities = [{ name: `${totalMembers} members`, type: ActivityType.Listening }]
 }
 
 client.on("guildCreate", guild => {
@@ -1075,12 +1066,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-//import { AutoPoster } from "topgg-autoposter"
-//const poster = AutoPoster(process.env.TOPGG, client)
+import { AutoPoster } from "topgg-autoposter"
+const poster = AutoPoster(process.env.TOPGG, client)
 
-//poster.on("posted", stats => {
-//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-//})
+poster.on("posted", stats => {
+	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 
