@@ -100,7 +100,7 @@ export const dailyitems = [
 export const craftingRecipes = {
 	prison_realm: {
 		requiredItems: [
-			{ name: "Prison Realm Fragment", quantity: 6 },
+			{ name: "Prison Realm", quantity: 6 },
 			{ name: "Rikugan Eye", quantity: 2 }
 		],
 		craftedItemName: "Prison Realm",
@@ -244,7 +244,7 @@ export const craftingRecipes = {
 	},
 	special_locator: {
 		requiredItems: [
-			{ name: "Prison Realm Fragment", quantity: 6 },
+			{ name: "Prison Realm", quantity: 6 },
 			{ name: "Rikugan Eye", quantity: 2 },
 			{ name: "Special-Grade Cursed Object" || "Special Grade Cursed Object", quantity: 4 },
 			{ name: "Sukuna Finger", quantity: 1 }
