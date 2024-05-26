@@ -100,8 +100,8 @@ export const dailyitems = [
 export const craftingRecipes = {
 	prison_realm: {
 		requiredItems: [
-			{ name: "Prison Realm", quantity: 1 },
-			{ name: "Rikugan Eye", quantity: 2 }
+			{ name: "Prison Realm Fragments", quantity: 6 },
+			{ name: "Rikugan Eye", quantity: 1 }
 		],
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
