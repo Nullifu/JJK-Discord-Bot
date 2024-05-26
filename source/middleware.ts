@@ -1,7 +1,7 @@
 interface User {
 	lastAlertedVersion?: string
 }
-const CURRENT_VERSION = "1.3.5"
+const CURRENT_VERSION = "1.4.0"
 import { EmbedBuilder } from "@discordjs/builders"
 import { ChatInputCommandInteraction } from "discord.js"
 import { getUser, updateLastAlertedVersion } from "./mongodb.js"

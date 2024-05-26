@@ -1574,32 +1574,40 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 7.0 PART ONE", // Replace with your actual version number
-			date: "07-05-24", // Adjust the date as needed
+			version: "Update 8.0 RAIDS", // Replace with your actual version number
+			date: "26/05/24",
 			changes: [
 				{
-					name: "**User Awakenings!**",
-					value: "New awakening systems to launch yourself through the jujutsu world.. Start out by getting a mentor, from the quests.\n- Craft the new item called Unknown Substance.. use it if your strong enough.."
+					name: "**Satoru Gojo's Unsealing!**",
+					value: "With everyone's help Satoru Gojo has been unsealed! Work together with him to bring down **Curse King** In his most scary state yet! Be wary this boss has no limits..."
 				},
 				{
-					name: "BALANCED ALL SKILLS + + HEAVENLY RESTRICTION SEMI-REWORK.",
-					value: "+ 5 New Bosses!\n+ 9 New Techniques!\nHeavenly restriction may now be the most POWERFUL it's ever been.."
+					name: "ADDED:",
+					value: "+ HP LIMIT INCREASED 300 > 400\n+ Raid Command, Bring together a group of up to five people and join a raid against the current Raid Boss!\n+ Raid Secrets!\n+ Raid Shop.\n+ Bug Report Command\n+ Tutorial Command"
 				},
 				{
-					name: "MENTORS!",
-					value: "Current mentors are Satoru Gojo, Ryomen Sukuna. Each with there respective quests"
+					name: "----------------------",
+					value: "+ RE-Worked Quest System.\n+ RE-Worked Crafting.\n+ RE-ADDED SELLING"
 				},
 				{
-					name: "Found a bug? Report it!",
-					value: "If you've found any bugs or issues, please report them in the support server. > /support <"
+					name: "CHANGES:",
+					value: "- Awakening, Extra damage taken 15% > 10%\n- Moved all shops into /shop\n- Changed Daily Streak Reward + Items\n- Changed Heian Era Awakening Remnant Cost\n- Buffed World Cutting Slash 6 > 8\n- Buffed Divergent Fist, Made it a Special Skill for starters\n- Buffed Prayer Song 4 > 12\n- Gambler Fever (Jackpot) Cost Changed\n- REMOVED CRAFT CUSTOM FROM CRAFTING COMMAND < Will try come up with another method to implement this modal builder kinda buggy atm sorry"
 				},
 				{
-					name: "**Thank you everybody who uses the bot!**",
-					value: "I appreciate all the support and feedback i've received so far. Thank you!"
+					name: "FIXES:",
+					value: "- Fixed Pure Dismantle\n- Fixed Shinjiku Showdown Gojo\n- Fixed Toji Reincarntion Skill\n- Fixed Taming Mahoraga\n- Fixed Shop Not Resetting\n- Fixed Bug With Shop\n- Fixed Transformations Not Equipping"
 				},
 				{
-					name: "**forgot to update this again..**",
-					value: "Stay up to date with the bot by joining the community server! > /support <"
+					name: "RAID SPECIAL DUEL TECHNIQUES:",
+					value: "User's can activate a **DUEL TECHNIQUE** by combining there power to do EXTRDODINARY Power!\n\n+ Solo Forbidden Area + Hollow Purple = Maximum Technique: Purple\n+ Boogie Woogie Surplex + RE-Imagined Black Flash = Brotherly Beatdown\n+ Cleave + Dismantle = World Cutting Slash\n+ Divine Flame + Flame Arrow = Divine Flame Arrow\n+ Maximum Lapse Blue + Maximum Reversal Red = Hollow: Nuke"
+				},
+				{
+					name: "CURSED SPIRIT MANIPULATION CURRENTLY HAS NO LOGIC ATTACHED TO IT, IT WILL COME SOON DO NOT WORRY.",
+					value: ""
+				},
+				{
+					name: "CREDITS TO TESTERS FOR TESTING THIS UPDATE FOR ME:",
+					value: "AtomicApex\nTheReal_Simon\nRayquazza\nRaix"
 				}
 			]
 		}
@@ -5051,10 +5059,8 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 	const alertEmbed = new EmbedBuilder()
 		.setColor("#FF0000")
 		.setTitle("🚨 Alert!")
-		.setDescription(
-			"Users with suspected fraudlent money have been WIPED! If you've lost money that was obtained through legitimate means, please contact the developers."
-		)
-		.setFooter({ text: "You know who you are" })
+		.setDescription("RAID UPDATE IS LIVE! Please check the #announcements channel for more information.")
+		.setFooter({ text: "would you lose?" })
 
 	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
 }
@@ -8318,8 +8324,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						techniqueName: selectedTechnique,
 						damageMultiplier: 3,
 						imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
-						description:
-							"Aka... Doryoku... I'll show you the true power **Lapse: Blue**!",
+						description: "Aka... Doryoku... I'll show you the true power **Lapse: Blue**!",
 						fieldValue: selectedTechnique,
 						userTechniques: userTechniquesFight2,
 						userId: userId,
