@@ -3,7 +3,11 @@
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
-import { MessageActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
+import {
+	MessageActionRowComponentBuilder,
+	ModalActionRowComponentBuilder,
+	SelectMenuBuilder
+} from "@discordjs/builders"
 import {
 	APIEmbed,
 	ActionRowBuilder,
@@ -18,11 +22,14 @@ import {
 	EmbedBuilder,
 	Interaction,
 	MessageComponentInteraction,
+	ModalBuilder,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
 	StringSelectMenuInteraction,
 	TextBasedChannel,
-	TextChannel
+	TextChannel,
+	TextInputBuilder,
+	TextInputStyle
 } from "discord.js"
 import { ClientSession, Collection } from "mongodb"
 import ms from "ms"
@@ -112,6 +119,7 @@ import {
 	createGiveaway,
 	createRaidParty,
 	createTradeRequest,
+	createUserTutorialState,
 	feedShikigami,
 	getActiveTrades,
 	getAllShopItems,
@@ -157,6 +165,7 @@ import {
 	getUserStatusEffects,
 	getUserTechniques,
 	getUserTransformation,
+	getUserTutorialState,
 	getUserUnlockedBosses,
 	getUserUnlockedTitles,
 	getUserUnlockedTransformations,
@@ -173,11 +182,14 @@ import {
 	removeItemFromUserInventory,
 	removeRaidPartyPendingActions,
 	removeUserQuest,
+	setUserTutorialMessageId,
+	setUserTutorialState,
 	startNewSession,
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
 	updateRaidBossHealth,
+	updateRaidParty,
 	updateRaidPartyPendingActions,
 	updateUserAchievements,
 	updateUserActiveHeavenlyTechniques,
@@ -310,6 +322,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 
 		if (result && "insertedId" in result) {
 			await addItemToUserInventory(discordId, "Starter Bundle", 1)
+			await setUserTutorialState(discordId, { isRegistered: true })
 			const imageURL = "https://storage.googleapis.com/jjk_bot_personal/Shibuya_(Anime).png"
 			const welcomeEmbed = new EmbedBuilder()
 				.setColor(0x5d2e8c)
@@ -504,20 +517,20 @@ export async function handleInventoryCommand(interaction) {
 	})
 }
 
-export async function handleDigCommand(interaction) {
+export async function handleDigCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply()
+	const userId = interaction.user.id
 
-	await updateUserCommandsUsed(interaction.user.id)
+	await updateUserCommandsUsed(userId)
 
 	const currentTime = Date.now()
-	const authorId = interaction.user.id
-	const timestamp = digCooldowns.get(authorId)
+	const timestamp = digCooldowns.get(userId)
 
 	if (timestamp) {
 		const expirationTime = timestamp + digCooldown
 		if (currentTime < expirationTime) {
 			const digCooldownEmbed = new EmbedBuilder()
-				.setColor(0x4b0082)
+				.setColor("DarkPurple")
 				.setTitle("Energy Recharge Needed")
 				.setTimestamp()
 				.setDescription(
@@ -531,30 +544,57 @@ export async function handleDigCommand(interaction) {
 		}
 	}
 
-	digCooldowns.set(authorId, currentTime)
+	digCooldowns.set(userId, currentTime)
 
-	const itemDiscoveryChance = 0.7
+	const userState = await getUserTutorialState(userId)
+	const isTutorial = userState && !userState.digUsed
+
+	const itemDiscoveryChance = isTutorial ? 1 : 0.7
 	const doesDiscoverItem = Math.random() < itemDiscoveryChance
-	const coinsFound = Math.floor(Math.random() * 20000) + 1
+	const coinsFound = isTutorial ? 20000 : Math.floor(Math.random() * 20000) + 1
 
 	await updateBalance(interaction.user.id, coinsFound)
 	await updateUserFavoriteCommand(interaction.user.id, "Dig")
 
 	if (doesDiscoverItem) {
-		const itemFound = getRandomItem()
+		const itemFound = isTutorial ? { name: "Tailsman" } : getRandomItem()
 
 		if (itemFound) {
-			await addItemToUserInventory(authorId, itemFound.name, 1)
+			await addItemToUserInventory(userId, itemFound.name, 1)
 
 			const digEmbed = new EmbedBuilder()
-				.setColor(0x00ff00)
-				.setTitle("Digging Results")
-				.setDescription(`You unearthed \\\`⌬${coinsFound}\\\` coins! **You also found a ${itemFound.name}!**`)
+				.setColor("Green")
+				.setTitle(isTutorial ? "Tutorial Dig Results" : "Digging Results")
+				.setDescription(
+					isTutorial
+						? `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}, Handy!**`
+						: `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`
+				)
 				.setTimestamp()
 			await interaction.editReply({ embeds: [digEmbed] })
+
+			if (isTutorial) {
+				userState.digUsed = true // Update state
+				await setUserTutorialState(userId, userState)
+
+				// Refresh the tutorial message to update the buttons
+				const tutorialMessageId = userState.tutorialMessageId
+				const dmChannel = await interaction.user.createDM()
+				const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
+
+				if (tutorialMessage) {
+					const step = 1 // Assuming the dig command is for step 1
+					const buttons = await getButtons(step, userId)
+
+					await tutorialMessage.edit({
+						embeds: [tutorialPages[step]],
+						components: [buttons]
+					})
+				}
+			}
 		} else {
 			const digEmbed = new EmbedBuilder()
-				.setColor(0x00ff00)
+				.setColor("Green")
 				.setTitle("Digging Results")
 				.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
 				.setTimestamp()
@@ -562,7 +602,7 @@ export async function handleDigCommand(interaction) {
 		}
 	} else {
 		const digEmbed = new EmbedBuilder()
-			.setColor(0x00ff00)
+			.setColor("Green")
 			.setTitle("Digging Results")
 			.setDescription(`You unearthed \`⌬${coinsFound}\` coins but didn't find any items this time.`)
 			.setTimestamp()
@@ -570,7 +610,6 @@ export async function handleDigCommand(interaction) {
 	}
 	await postCommandMiddleware(interaction)
 }
-
 export async function handleJobSelection(interaction: CommandInteraction) {
 	if (!interaction.isChatInputCommand()) return
 
@@ -653,7 +692,7 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	const { lastDaily, streak: lastStreak } = await getUserDailyData(userId)
 
 	if (currentTime - lastDaily < oneDayMs) {
-		const nextAvailableTime = Math.floor((lastDaily + oneDayMs) / 1000) // Convert to seconds for the Discord timestamp
+		const nextAvailableTime = Math.floor((lastDaily + oneDayMs) / 1000)
 
 		await interaction.reply({
 			content: `You must wait before you can claim your daily reward again. You can claim it again <t:${nextAvailableTime}:R>.`,
@@ -711,11 +750,18 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							logger.error("Recipe details not found for key:", key)
 							return null
 						}
-						const emojiId = recipe.emoji && recipe.emoji.match(/:([0-9]+)>/)?.[1]
+						const emojiId = recipe.emoji && recipe.emoji.match(/:(\d+)>/)?.[1]
+
+						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
+						const maxCraftableAmount = recipe.requiredItems.reduce((min, item) => {
+							const inventoryQuantity = inventoryMap.get(item.name) || 0
+							const maxCraftableForItem = Math.floor(inventoryQuantity / item.quantity)
+							return Math.min(min, maxCraftableForItem)
+						}, Infinity)
 
 						return {
 							label: recipe.craftedItemName,
-							description: "Click to craft this item",
+							description: `Craftable Amount: ${maxCraftableAmount}`,
 							value: key,
 							emoji: emojiId ? { id: emojiId } : undefined
 						}
@@ -776,6 +822,12 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					return
 				}
 
+				const maxCraftableAmount = selectedItemRecipe.requiredItems.reduce((min, item) => {
+					const inventoryQuantity = inventoryMap.get(item.name) || 0
+					const maxCraftableForItem = Math.floor(inventoryQuantity / item.quantity)
+					return Math.min(min, maxCraftableForItem)
+				}, Infinity)
+
 				const confirmButton = new ButtonBuilder()
 					.setCustomId("confirmCraft")
 					.setLabel("Craft 1")
@@ -784,15 +836,9 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 
 				const craftMaxButton = new ButtonBuilder()
 					.setCustomId("craftMax")
-					.setLabel("Craft Max")
+					.setLabel(`Craft Max (${maxCraftableAmount})`)
 					.setStyle(ButtonStyle.Primary)
 					.setEmoji("🔧")
-
-				const craftCustomButton = new ButtonBuilder()
-					.setCustomId("craftCustom")
-					.setLabel("Craft Custom")
-					.setStyle(ButtonStyle.Secondary)
-					.setEmoji("🔢")
 
 				const cancelButton = new ButtonBuilder()
 					.setCustomId("cancelCraft")
@@ -803,7 +849,6 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 					confirmButton,
 					craftMaxButton,
-					craftCustomButton,
 					cancelButton
 				)
 
@@ -931,89 +976,111 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 								components: []
 							})
 						}
-					} else if (buttonInteraction.customId === "craftCustom") {
-						await buttonInteraction.editReply({
-							content: "Please enter the desired quantity to craft:",
-							components: []
-						})
+					} else if (interaction.customId === "craftCustom") {
+						const modal = new ModalBuilder()
+							.setCustomId("craftCustomModal")
+							.setTitle("Custom Craft Quantity")
 
-						const messageFilter = m => m.author.id === interaction.user.id
-						const messageCollector = interaction.channel.createMessageCollector({
-							filter: messageFilter,
-							time: 30000,
-							max: 1
-						})
+						const quantityInput = new TextInputBuilder()
+							.setCustomId("quantityInput")
+							.setLabel("Enter the desired quantity to craft")
+							.setStyle(TextInputStyle.Short)
+							.setRequired(true)
+							.setPlaceholder("Quantity")
 
-						messageCollector.on("collect", async message => {
-							const quantity = parseInt(message.content)
+						const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+							quantityInput
+						)
+						modal.addComponents(actionRow)
 
-							if (isNaN(quantity) || quantity <= 0) {
-								await buttonInteraction.followUp({
-									content: "Invalid quantity. Please enter a valid number greater than 0.",
-									ephemeral: true
-								})
-								return
-							}
+						await interaction.showModal(modal)
 
-							const userInventory = await getUserInventory(interaction.user.id)
-							const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-
-							const missingItems = selectedItemRecipe.requiredItems.filter(item => {
-								const inventoryQuantity = inventoryMap.get(item.name) || 0
-								return inventoryQuantity < item.quantity * quantity
+						const modalSubmitInteraction = await interaction
+							.awaitModalSubmit({
+								time: 60000,
+								filter: i => i.customId === "craftCustomModal" && i.user.id === interaction.user.id
+							})
+							.catch(error => {
+								logger.error("Modal submit interaction error:", error)
+								return null
 							})
 
-							if (missingItems.length > 0) {
-								const errorEmbed = new EmbedBuilder()
-									.setColor("Red")
-									.setTitle("Insufficient Items")
-									.setDescription("You do not have enough items to craft the specified quantity.")
-									.addFields({
-										name: "Missing Items",
-										value: missingItems
-											.map(
-												item =>
-													`${item.name} (${
-														item.quantity * quantity - (inventoryMap.get(item.name) || 0)
-													} missing)`
-											)
-											.join("\n")
-									})
+						if (!modalSubmitInteraction) {
+							await interaction.followUp({
+								content: "Modal submission timed out.",
+								ephemeral: true
+							})
+							return
+						}
 
-								await buttonInteraction.followUp({
-									embeds: [errorEmbed],
-									ephemeral: true
-								})
-								return
-							}
+						await modalSubmitInteraction.deferReply({ ephemeral: true })
 
-							try {
-								for (const requiredItem of selectedItemRecipe.requiredItems) {
-									await removeItemFromUserInventory(
-										interaction.user.id,
-										requiredItem.name,
-										requiredItem.quantity * quantity
-									)
-								}
-								await addItemToUserInventory(
-									interaction.user.id,
-									selectedItemRecipe.craftedItemName,
-									quantity
-								)
+						const quantity = parseInt(modalSubmitInteraction.fields.getTextInputValue("quantityInput"))
 
-								await buttonInteraction.followUp({
-									ephemeral: true,
-									content: `You have successfully crafted ${quantity}x ${selectedItemRecipe.craftedItemName}!`,
-									components: []
-								})
-							} catch (error) {
-								logger.fatal("Error during crafting:", error)
-								await buttonInteraction.followUp({
-									content: "There was an error during the crafting process. Please try again.",
-									ephemeral: true
-								})
-							}
+						if (isNaN(quantity) || quantity <= 0) {
+							await modalSubmitInteraction.followUp({
+								content: "Invalid quantity. Please enter a valid number greater than 0.",
+								ephemeral: true
+							})
+							return
+						}
+
+						const userInventory = await getUserInventory(interaction.user.id)
+						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
+
+						const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+							const inventoryQuantity = inventoryMap.get(item.name) || 0
+							return inventoryQuantity < item.quantity * quantity
 						})
+
+						if (missingItems.length > 0) {
+							const errorEmbed = new EmbedBuilder()
+								.setColor("Red")
+								.setTitle("Insufficient Items")
+								.setDescription("You do not have enough items to craft the specified quantity.")
+								.addFields({
+									name: "Missing Items",
+									value: missingItems
+										.map(
+											item =>
+												`${item.name} (${item.quantity * quantity - (inventoryMap.get(item.name) || 0)} missing)`
+										)
+										.join("\n")
+								})
+
+							await modalSubmitInteraction.followUp({
+								embeds: [errorEmbed],
+								ephemeral: true
+							})
+							return
+						}
+
+						try {
+							for (const requiredItem of selectedItemRecipe.requiredItems) {
+								await removeItemFromUserInventory(
+									interaction.user.id,
+									requiredItem.name,
+									requiredItem.quantity * quantity
+								)
+							}
+							await addItemToUserInventory(
+								interaction.user.id,
+								selectedItemRecipe.craftedItemName,
+								quantity
+							)
+
+							await modalSubmitInteraction.followUp({
+								ephemeral: true,
+								content: `You have successfully crafted ${quantity}x ${selectedItemRecipe.craftedItemName}!`,
+								components: []
+							})
+						} catch (error) {
+							logger.fatal("Error during crafting:", error)
+							await modalSubmitInteraction.followUp({
+								content: "There was an error during the crafting process. Please try again.",
+								ephemeral: true
+							})
+						}
 					} else if (buttonInteraction.customId === "cancelCraft") {
 						await buttonInteraction.editReply({ content: "Crafting canceled.", components: [] })
 					}
@@ -2610,6 +2677,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Nah I'd Lose") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 40,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/maxresdefault.jpg",
+					description: "Don't worry, I'll lose.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Hollow Purple") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2736,7 +2815,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 4,
+					damageMultiplier: 12,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1225688422551785544/image.png?ex=66220a4c&is=660f954c&hm=df32c017b95d2a118b22ff2999990e6ab413e14acbe354b059bee5ced017db16&",
 					description: "**You synchronize with your opponent's movements... it's absolutely chilling.**",
@@ -2825,10 +2904,22 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 6,
+					damageMultiplier: 8,
 					imageUrl:
 						"https://cdn.discordapp.com/attachments/1094302755960664255/1231296159050633349/ezgif-5-4e8c15c666.gif?ex=66254d68&is=6623fbe8&hm=229aa5f92f55cb990cea75086e49ed65d89a0cff2d85a9a0a0405c35f91174b4&",
 					description: `Dissect! ${randomOpponent.name}`,
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Divergent Fist") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 2,
+					imageUrl: "https://media1.tenor.com/m/bmrdIgprUAQAAAAC/itadori-yuji-jujutsu-kaisen.gif",
+					description: "I'm gonna hit you with everything I've got!",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2966,6 +3057,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 21,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-4-d1e7fb00df.gif",
 					description: "Behind you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Jogo's Testicle Torsion Technique") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 30,
+					imageUrl:
+						"https://media1.tenor.com/m/xS-ZEkkyhjgAAAAC/nah-i%27d-win-%E5%91%AA%E8%A1%93%E5%BB%BB%E6%88%A6.gif",
+					description: "I'm going to twist your balls off..",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -3579,39 +3683,11 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					embedTitle = "Invalid Character"
 					customIdPrefix = ""
 				}
-			} else if (i.values[0] === "curse_king_(heian_era)") {
-				skillsToDisplay = CLAN_SKILLS["Curse King (Heian Era)"].filter(
-					skill => !userTechniques.includes(skill.name)
-				)
-				embedTitle = "Curse King (Heian Era) Techniques"
-				customIdPrefix = "buy_technique_"
-			} else if (i.values[0] === "god_of_lightning_(heian_era)") {
-				skillsToDisplay = CLAN_SKILLS["God of Lightning (Heian Era)"].filter(
-					skill => !userTechniques.includes(skill.name)
-				)
-				embedTitle = "God of Lightning (Heian Era) Techniques"
-				customIdPrefix = "buy_technique_"
-
-				//
 			} else if (i.values[0] === "demon_vessel_(awoken)") {
 				skillsToDisplay = CLAN_SKILLS["Demon Vessel (Awoken)"].filter(
 					skill => !userTechniques.includes(skill.name)
 				)
 				embedTitle = "Demon Vessel (Awoken) Techniques"
-				customIdPrefix = "buy_technique_"
-
-				//
-			} else if (i.values[0] === "the_strongest") {
-				skillsToDisplay = CLAN_SKILLS["The Strongest"].filter(skill => !userTechniques.includes(skill.name))
-				embedTitle = "The Strongest Techniques"
-				customIdPrefix = "buy_technique_"
-
-				//
-			} else if (i.values[0] === "gambler_fever_(jackpot)") {
-				skillsToDisplay = CLAN_SKILLS["Gambler Fever (Jackpot)"].filter(
-					skill => !userTechniques.includes(skill.name)
-				)
-				embedTitle = "Gambler Fever (Jackpot) Techniques"
 				customIdPrefix = "buy_technique_"
 			} else {
 				const selectedClan = clans.find(clan => clan.toLowerCase().replace(/\s+/g, "_") === i.values[0])
@@ -3626,7 +3702,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					content: "There are no more techniques available for you to purchase in this category.",
 					components: []
 				})
-				techniqueshopcollector.stop
+				techniqueshopcollector.stop()
 				return
 			}
 
@@ -3681,13 +3757,10 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				? heavenlyrestrictionskills[characterName]?.find(
 						skill => skill.name.toLowerCase() === techniqueName.toLowerCase()
 					)
-				: (logger.info("techniqueName:", techniqueName),
-					logger.info("CLAN_SKILLS flattened:", Object.values(CLAN_SKILLS).flat()),
-					Object.values(CLAN_SKILLS)
+				: Object.values(CLAN_SKILLS)
 						.flat()
-						.find(skill => skill.name.toLowerCase() === techniqueName.toLowerCase()))
+						.find(skill => skill.name.toLowerCase() === techniqueName.toLowerCase())
 
-			//
 			if (!selectedSkill) {
 				await i.followUp({ content: "This technique does not exist." })
 				return
@@ -3730,6 +3803,28 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				components: [],
 				ephemeral: true
 			})
+
+			// Update the tutorial state if the purchased technique is "Divergent Fist"
+			if (selectedSkill.name === "Divergent Fist") {
+				const userState = await getUserTutorialState(userId)
+				userState.techniquePurchased = true
+				await setUserTutorialState(userId, userState)
+
+				// Refresh the tutorial message to update the buttons
+				const tutorialMessageId = userState.tutorialMessageId
+				const dmChannel = await interaction.user.createDM()
+				const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
+
+				if (tutorialMessage) {
+					const step = 2 // Assuming the technique purchase is for step 2
+					const buttons = await getButtons(step, userId)
+
+					await tutorialMessage.edit({
+						embeds: [tutorialPages[step]],
+						components: [buttons]
+					})
+				}
+			}
 		}
 	})
 
@@ -3738,6 +3833,7 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 		userCollectors.delete(userId)
 	})
 }
+
 function formatUptime(uptime: number): string {
 	const totalSeconds = uptime / 1000
 	const days = Math.floor(totalSeconds / 86400)
@@ -5220,7 +5316,27 @@ export async function handleEquipTechniqueCommand(interaction) {
 			response += `Heavenly Restriction Techniques equipped: ${activatedHeavenlyTechniquesDisplay}`
 		}
 
-		return await interaction.reply(response.trim())
+		await interaction.reply(response.trim())
+
+		const userState = await getUserTutorialState(userId)
+		if (!userState.techniqueEquipped) {
+			userState.techniqueEquipped = true
+			await setUserTutorialState(userId, userState)
+
+			const tutorialMessageId = userState.tutorialMessageId
+			const dmChannel = await interaction.user.createDM()
+			const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
+
+			if (tutorialMessage) {
+				const step = 3
+				const buttons = await getButtons(step, userId)
+
+				await tutorialMessage.edit({
+					embeds: [tutorialPages[step]],
+					components: [buttons]
+				})
+			}
+		}
 	} catch (error) {
 		logger.error("Error equipping techniques:", error)
 		return await interaction.reply({
@@ -5415,7 +5531,9 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 		})
 
 		const selectedTransformationName = (selectMenuInteraction as StringSelectMenuInteraction).values[0]
-		await updateUserTransformation(interaction.user.id, selectedTransformationName)
+		await updateUserTransformation(interaction.user.id, selectedTransformationName, {
+			transformation: selectedTransformationName
+		})
 
 		await selectMenuInteraction.update({
 			content: `You have equipped ${selectedTransformationName}!`,
@@ -5504,108 +5622,258 @@ export async function handleClaimVoteRewards(interaction) {
 
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
+	const raidShopItems = [
+		{ name: "Jogo's Testicle Torsion Technique", price: 1000, rarity: "Common", maxPurchases: 1 },
+		{ name: "Heian Era Awakening", price: 450, rarity: "Common", maxPurchases: 1 },
+		{ name: "Satoru Gojo's Ashy Remains", price: 100, rarity: "Rare" }
+	]
+	const shikigamiShopItems = [
+		{ name: "Shikigami food", price: 50000, rarity: "Common" },
+		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
+	]
+
 	const balance = await getBalance(interaction.user.id)
 	const balance2 = balance.toLocaleString("en-US")
-
-	if (!shopItems || shopItems.length === 0) {
-		await interaction.reply("The shop is currently empty.")
-		return
-	}
 
 	try {
 		const lastResetTime = await getShopLastReset()
 		const resetIntervalMs = 1000 * 60 * 60 * 24
 		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
-
 		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+		const userInventory = await getUserInventory(interaction.user.id)
+		const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
+		const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
 
 		const embed = new EmbedBuilder()
-			.setColor("#FFD700") // Gold color
+			.setColor("#FFD700")
 			.setTitle("✨ Shop Items ✨")
 			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
 			.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
 
-		shopItems.forEach(item => {
-			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
-				embed.addFields([
-					{
-						name: `**${item.name}** - ${item.rarity} Rarity`,
-						value: `Price: **${item.price || "None"}** coins | Max Purchases: **${
-							item.maxPurchases || "None"
-						}**`,
-						inline: false
-					}
-				])
-			}
-		})
-		//
-		const row = new ActionRowBuilder()
+		const mainShopItemsField = shopItems
+			.map(item => {
+				return (
+					`**${item.name}** - ${item.rarity} Rarity\n` +
+					`Price: **${item.price || "None"}** coins\n` +
+					`Max Purchases: **${item.maxPurchases || "None"}**\n` +
+					"--------------------"
+				)
+			})
+			.join("\n")
+
+		embed.addFields([{ name: "Items in Main Shop", value: mainShopItemsField }])
+
+		const selectMenu = new StringSelectMenuBuilder()
+			.setCustomId("shop_select")
+			.setPlaceholder("Select a shop")
+			.addOptions([
+				{
+					label: "Main Shop",
+					description: "View items in the main shop",
+					value: "main_shop",
+					emoji: "💰"
+				},
+				{
+					label: "Shikigami Shop",
+					description: "View items in the shikigami shop",
+					value: "shikigami_shop",
+					emoji: "🐺"
+				},
+				{
+					label: "Raid Shop",
+					description: "View items in the raid shop",
+					value: "raid_shop",
+					emoji: "⚔️"
+				}
+			])
+
+		const row = new ActionRowBuilder().addComponents(selectMenu)
+
+		const buttonRow = new ActionRowBuilder()
 		shopItems.forEach((item, index) => {
 			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
 				const button = new ButtonBuilder()
-					.setCustomId(`buy_${index}`)
+					.setCustomId(`buy_main_shop_${index}`)
 					.setLabel(item.name)
 					.setStyle(ButtonStyle.Primary)
-				row.addComponents(button)
+				buttonRow.addComponents(button)
 			}
 		})
 
-		//
-		const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true })
+		let selectedShop = "main_shop"
 
-		const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 }) // Adjust time as needed
+		const message = await interaction.reply({ embeds: [embed], components: [row, buttonRow], fetchReply: true })
+
+		const collector = message.createMessageComponentCollector({
+			componentType: ComponentType.StringSelect
+		})
 
 		collector.on("collect", async i => {
-			if (!i.isButton()) return
-
+			if (!i.isStringSelectMenu()) return
 			await i.deferUpdate()
 
-			const userId = i.user.id
-			const itemIndex = parseInt(i.customId.replace("buy_", ""))
-			const itemToBuy = shopItems[itemIndex]
+			selectedShop = i.values[0]
+			let selectedShopItems = []
+			let formattedShopName = ""
 
-			if (!itemToBuy) {
-				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
-				return
+			if (selectedShop === "main_shop") {
+				selectedShopItems = shopItems
+				formattedShopName = "Main Shop"
+			} else if (selectedShop === "raid_shop") {
+				selectedShopItems = raidShopItems
+				formattedShopName = "Raid Shop"
+			} else if (selectedShop === "shikigami_shop") {
+				selectedShopItems = shikigamiShopItems
+				formattedShopName = "Shikigami Shop"
 			}
 
-			// Retrieve user's purchase history
-			const userPurchases = await getUserPurchases(userId)
-			const userItemPurchase = userPurchases.find(p => p.itemName === itemToBuy.name) || {
-				itemName: itemToBuy.name,
-				purchasedAmount: 0
-			}
-
-			if (userItemPurchase.purchasedAmount >= itemToBuy.maxPurchases) {
-				await i.followUp({
-					content: `You have reached the purchase limit for ${itemToBuy.name}.`,
-					ephemeral: true
+			const itemsField = selectedShopItems
+				.map(item => {
+					return (
+						`**${item.name}** - ${item.rarity} Rarity\n` +
+						`Price: **${item.price || "None"}** ${selectedShop === "raid_shop" ? "Raid Tokens" : "coins"}\n` +
+						`Max Purchases: **${item.maxPurchases || "None"}**\n` +
+						"--------------------"
+					)
 				})
-				return
-			}
+				.join("\n")
 
-			const balance = await getBalance(userId)
-			if (balance >= itemToBuy.price) {
-				await addItemToUserInventory(userId, itemToBuy.name, 1)
-				await updateBalance(userId, -itemToBuy.price)
-				await addUserPurchases(userId, itemToBuy.name, 1)
+			embed.spliceFields(1, 1, { name: `Items in ${formattedShopName}`, value: itemsField })
 
-				await i.followUp({
-					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} coins.`,
-					ephemeral: true
-				})
+			if (selectedShop === "raid_shop") {
+				embed.setDescription(
+					`\n💰 Your balance: **${balance2}**\n🎟️ Your Raid Tokens: **${raidTokens}**\nCheck out these limited-time offers:`
+				)
 			} else {
-				await i.followUp({
-					content: `You do not have enough coins to purchase ${itemToBuy.name}.`,
-					ephemeral: true
-				})
+				embed.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
 			}
+
+			const buttonRow = new ActionRowBuilder()
+			selectedShopItems.forEach((item, index) => {
+				if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+					const button = new ButtonBuilder()
+						.setCustomId(`buy_${selectedShop}_${index}`)
+						.setLabel(item.name)
+						.setStyle(ButtonStyle.Primary)
+					buttonRow.addComponents(button)
+				}
+				logger.debug("Custom ID:", `buy_${selectedShop}_${index}`)
+			})
+
+			await i.editReply({ embeds: [embed], components: [row, buttonRow] })
 		})
 
 		collector.on("end", collected => {
 			logger.info(`Collected ${collected.size} interactions.`)
 		})
-		collector.stop
+
+		const buttonCollector = message.createMessageComponentCollector({
+			componentType: ComponentType.Button,
+			time: 15000
+		})
+
+		buttonCollector.on("collect", async i => {
+			if (!i.isButton()) return
+			await i.deferUpdate()
+
+			const userId = i.user.id
+			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|event)_shop_(\d+)$/)
+
+			if (!customIdMatch) {
+				logger.error("Invalid custom ID format:", i.customId)
+				await i.followUp({ content: "Invalid custom ID format.", ephemeral: true })
+				return
+			}
+
+			const [_, shopType, itemIndexStr] = customIdMatch
+
+			logger.debug("Shop Type:", shopType)
+			logger.debug("Item Index Str:", itemIndexStr)
+
+			const itemIndex = parseInt(itemIndexStr, 10)
+
+			logger.debug("Parsed Item Index:", itemIndex)
+
+			let selectedShopItems = []
+
+			if (shopType === "main") {
+				selectedShopItems = shopItems
+			} else if (shopType === "raid") {
+				selectedShopItems = raidShopItems
+			} else if (shopType === "shikigami") {
+				selectedShopItems = shikigamiShopItems
+			}
+
+			if (itemIndex >= 0 && itemIndex < selectedShopItems.length) {
+				const itemToBuy = selectedShopItems[itemIndex]
+				logger.debug("Item to Buy:", itemToBuy)
+
+				const userPurchases = await getUserPurchases(userId)
+				const userItemPurchase = userPurchases.find(p => p.itemName === itemToBuy.name) || {
+					itemName: itemToBuy.name,
+					purchasedAmount: 0
+				}
+
+				if (userItemPurchase.purchasedAmount >= itemToBuy.maxPurchases) {
+					await i.followUp({
+						content: `You have reached the purchase limit for ${itemToBuy.name}.`,
+						ephemeral: true
+					})
+					return
+				}
+
+				if (itemToBuy.name === "Heian Era Awakening") {
+					const userUnlockedTransformations = await getUserUnlockedTransformations(userId)
+					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
+					await updateUserUnlockedTransformations(userId, updatedUnlockedTransformations)
+				}
+
+				if (shopType === "raid") {
+					// Check if the user has enough Raid Tokens in their inventory
+					const userInventory = await getUserInventory(userId)
+					const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
+					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
+
+					if (raidTokens < itemToBuy.price) {
+						await i.followUp({
+							content: `You do not have enough Raid Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price}, You have: ${raidTokens}`,
+							ephemeral: true
+						})
+						return
+					}
+
+					await removeItemFromUserInventory(userId, "Raid Token", itemToBuy.price)
+				} else {
+					const balance = await getBalance(userId)
+
+					if (balance < itemToBuy.price) {
+						await i.followUp({
+							content: `You do not have enough coins to purchase ${itemToBuy.name}.`,
+							ephemeral: true
+						})
+						return
+					}
+
+					await updateBalance(userId, -itemToBuy.price)
+				}
+
+				await addItemToUserInventory(userId, itemToBuy.name, 1)
+				await addUserPurchases(userId, itemToBuy.name, 1)
+				await i.followUp({
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} ${shopType === "raid" ? "Raid Tokens" : "coins"}.`,
+					ephemeral: true
+				})
+			} else {
+				logger.error("Invalid item index:", itemIndex)
+				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
+			}
+		})
+
+		buttonCollector.on("end", collected => {
+			logger.info(`Collected ${collected.size} interactions.`)
+		})
+
+		buttonCollector.stop
 	} catch (error) {
 		logger.error("Error fetching shop items:", error)
 		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
@@ -5630,33 +5898,29 @@ export async function handleEquipInateClanCommand(interaction) {
 
 export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const userTechniquesTame = new Map<string, any>()
+
 	await updateUserHealth(interaction.user.id, playerHealth1)
 	await interaction.deferReply()
 	await updateUserCommandsUsed(interaction.user.id)
 
-	// Get the chosen shikigami name from the user input
 	const chosenShikigamiName = interaction.options.getString("shikigami")
 
-	// Check if the chosen shikigami is Mahoraga
+	const userShikigami: { name: string }[] = await getUserShikigami(interaction.user.id)
+
 	const isMahoraga = chosenShikigamiName === "Mahoraga"
 
 	if (isMahoraga) {
-		// Fetch the user's shikigami
-		const userShikigami: { name: string }[] = await getUserShikigami(interaction.user.id)
-
-		// Check if the user has the required shikigami to summon Mahoraga
-
 		const requiredShikigami = ["Divine Dogs", "Nue", "Toad", "Max Elephant"]
 		const hasRequiredShikigami = requiredShikigami.every(shikigamiName => {
-			return userShikigami && userShikigami.some(shikigami => shikigami.name === shikigamiName)
+			return userShikigami.some(shikigami => shikigami.name === shikigamiName)
 		})
 
 		if (!hasRequiredShikigami) {
-			const userShikigamiValue = userShikigami
-				? userShikigami.map(shikigami => shikigami.name).join(", ")
-				: "None"
+			const userShikigamiValue =
+				userShikigami.length > 0 ? userShikigami.map(shikigami => shikigami.name).join(", ") : "None"
 
 			const errorEmbed = new EmbedBuilder()
 				.setColor("Red")
@@ -5671,6 +5935,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				ephemeral: true,
 				embeds: [errorEmbed]
 			})
+
 			return
 		}
 	}
@@ -5691,7 +5956,6 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 
 	// Check if the user is lucky enough to get a Divine-General Mahoraga
 	if (chosenShikigami.name === "Mahoraga" && randomChance < divineGeneralChance) {
-		// User got a Divine-General Mahoraga
 		chosenShikigami.name = "Divine-General Mahoraga"
 		chosenShikigami.current_health = 650
 		chosenShikigami.max_health = 650
@@ -7964,9 +8228,15 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 			raidParty.participants,
 			interaction,
 			"",
-			raidEndTime
+			raidEndTime,
+			raidParty.partyHealth
 		)
-		const rows = await createTechniqueSelectMenu(raidParty.participants, RAID_DURATION / 1000)
+
+		const rows = await createTechniqueSelectMenu(
+			raidParty.participants,
+			raidParty.deadParticipants || [],
+			RAID_DURATION / 1000
+		)
 
 		await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
 
@@ -7995,7 +8265,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				raidParty.participants,
 				interaction,
 				lastUsedTechniques.join("\n"),
-				raidEndTime
+				raidEndTime,
+				raidParty.partyHealth
 			)
 
 			updatedEmbedBuilder.addFields({
@@ -8024,7 +8295,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					raidParty.participants,
 					interaction,
 					lastUsedTechniques.join("\n"),
-					raidEndTime
+					raidEndTime,
+					raidParty.partyHealth
 				)
 
 				const techniqueSelectionEndTimestamp = Math.floor((Date.now() + TECHNIQUE_SELECTION_DURATION) / 1000)
@@ -8115,23 +8387,23 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
 
-						await updateRaidPartyPendingActions(
-							updatedRaidParty._id.toString(),
-							updatedRaidParty.pendingActions
-						)
+						raidParty.pendingActions = []
+						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
 						const updatedEmbedBuilder = await createRaidEmbed(
 							updatedRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
-							raidEndTime
+							raidEndTime,
+							updatedRaidParty.partyHealth
 						)
+
 						updatedEmbed = updatedEmbedBuilder.toJSON()
 					}
 				}
 
-				console.debug("Executing pending actions")
+				logger.debug("Executing pending actions")
 				for (const action of updatedRaidParty.pendingActions) {
 					console.debug("Processing action:", action)
 					if (action.technique === "World Cutting Slash") {
@@ -8156,28 +8428,58 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				const totalDamage = updatedRaidParty.pendingActions.reduce((sum, action) => sum + action.damage, 0)
 
 				updatedRaidBoss.current_health -= totalDamage
-
 				await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
-				await updateRaidPartyPendingActions(raidParty._id.toString(), [])
+
+				updatedRaidParty.partyHealth -= totalDamage
+
+				await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
+
+				for (const action of updatedRaidParty.pendingActions) {
+					const participantIndex = updatedRaidParty.participants.findIndex(p => p.id === action.userId)
+					if (participantIndex !== -1) {
+						updatedRaidParty.participants[participantIndex].totalDamage += action.damage
+					}
+				}
+
+				updatedRaidParty.pendingActions = []
+				await updateRaidPartyPendingActions(raidParty._id.toString(), updatedRaidParty.pendingActions)
 
 				const updatedEmbedBuilder = await createRaidEmbed(
 					updatedRaidBoss,
 					updatedRaidParty.participants,
 					interaction,
 					lastUsedTechniques.join("\n"),
-					raidEndTime
+					raidEndTime,
+					updatedRaidParty.partyHealth
 				)
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 
 				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
 				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
+					const participantUser = await client1.users.fetch(participant)
+					const participantName = participantUser.username
+
 					updatedEmbed.fields.push({
-						name: `${updatedRaidBoss.name} Attacks ${participant}!`,
+						name: `${updatedRaidBoss.name} Attacks ${participantName}!`,
 						value: `Used ${attackName} and dealt ${damage} damage. ${remainingHealth} health remaining.`
 					})
+
+					if (remainingHealth <= 0) {
+						const deadParticipants = updatedRaidParty.deadParticipants || []
+						await updateRaidParty({
+							...updatedRaidParty,
+							deadParticipants: [...deadParticipants, participant]
+						})
+					}
 				}
 
-				await interaction.editReply({ embeds: [updatedEmbed], components: [...rows] })
+				const updatedrows = await createTechniqueSelectMenu(
+					updatedRaidParty.participants,
+					updatedRaidParty.deadParticipants || [],
+					remainingTime / 1000
+				)
+
+				await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedrows] })
 
 				if (updatedRaidBoss.current_health <= 0) {
 					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
@@ -8253,6 +8555,141 @@ export async function handlePurchaseHistoryCommand(interaction: ChatInputCommand
 	}
 
 	await interaction.editReply({ embeds: [embed] })
+}
+
+export const tutorialPages = [
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Step 1")
+		.setDescription(
+			"Hey there! Welcome to the JJK Bot tutorial. You are being automatically registered and given a starter bundle. Let's get started, Press **Next** When Ready!"
+		),
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Step 2")
+		.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-3-731c252f7e.gif")
+		.setDescription("Alright! Let's start by using the `/dig` command to find an item."),
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Step 3")
+		.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-3-1d4c8d7bca.gif")
+		.setDescription(
+			"Now use the item you gained from the dig command to buy Divergent Fist! (/technique [Techniques]) It's under **Demon Vessel**"
+		),
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Step 4")
+		.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-3-ed3edfb88d.gif")
+		.setDescription("Equip your new technique using `/technique equip Divergent Fist`."),
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Step 5")
+		.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-3-cefd3b76de.gif")
+		.setDescription("Now use the `/fight` command to engage in battle."),
+	new EmbedBuilder()
+		.setColor("Aqua")
+		.setTitle("Tutorial Complete")
+		.setImage("https://storage.googleapis.com/jjk_bot_personal/Shibuya_(Anime).png")
+		.setDescription(
+			"Congratulations! You have completed the tutorial. For more help, you can use /guide [topic] or /help. You've been given a free starter bundle as well!"
+		)
+		.setFooter({
+			text: "Credits to AtomicApex."
+		})
+]
+
+export const getButtons = async (step, userId) => {
+	const userState = await getUserTutorialState(userId)
+	const row = new ActionRowBuilder<ButtonBuilder>()
+
+	if (step > 0) {
+		row.addComponents(
+			new ButtonBuilder()
+				.setCustomId("previous")
+				.setLabel("Previous")
+				.setStyle(ButtonStyle.Primary)
+				.setDisabled(step === 0)
+		)
+	}
+
+	const canProceed =
+		step === 0 ||
+		(step === 1 && userState.digUsed) ||
+		(step === 2 && userState.techniquePurchased) ||
+		(step === 3 && userState.techniqueEquipped) ||
+		(step === 4 && userState.fightUsed)
+
+	row.addComponents(
+		new ButtonBuilder().setCustomId("next").setLabel("Next").setStyle(ButtonStyle.Primary).setDisabled(!canProceed)
+	)
+
+	return row
+}
+
+export async function handleTutorialCommand(interaction: CommandInteraction): Promise<void> {
+	const userId = interaction.user.id
+	const user = await interaction.client.users.fetch(userId)
+	const dmChannel = await user.createDM()
+
+	let userState = await getUserTutorialState(userId)
+
+	if (!userState || !userState.isRegistered) {
+		const result = await addUser(userId)
+		if (result && "insertedId" in result) {
+			await addItemToUserInventory(userId, "Starter Bundle", 1)
+			userState = await createUserTutorialState(userId)
+			userState.isRegistered = true
+			await setUserTutorialState(userId, userState)
+		} else {
+			await interaction.reply({
+				content: "There was an unexpected issue with your registration.",
+				ephemeral: true
+			})
+			return
+		}
+	}
+
+	let step = 0
+
+	await interaction.reply({
+		content: "I have sent you a DM with the tutorial!",
+		ephemeral: true
+	})
+
+	const tutorialMessage = await dmChannel.send({
+		embeds: [tutorialPages[step]],
+		components: [await getButtons(step, userId)]
+	})
+
+	await setUserTutorialMessageId(userId, tutorialMessage.id)
+
+	const filter = i => i.user.id === userId
+	const collector = tutorialMessage.createMessageComponentCollector({
+		filter,
+		componentType: ComponentType.Button
+	})
+
+	collector.on("collect", async i => {
+		if (i.customId === "previous") {
+			step--
+		} else if (i.customId === "next") {
+			step++
+		}
+
+		userState = await getUserTutorialState(userId)
+		const buttons = await getButtons(step, userId)
+
+		await i.update({
+			embeds: [tutorialPages[step]],
+			components: [buttons]
+		})
+	})
+
+	collector.on("end", async () => {
+		if (tutorialMessage.editable) {
+			await tutorialMessage.edit({ components: [] })
+		}
+	})
 }
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

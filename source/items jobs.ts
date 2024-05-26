@@ -136,21 +136,24 @@ export const craftingRecipes = {
 			{ name: "Satoru Gojo's Respect", quantity: 1 },
 			{ name: "Sukuna's Honour", quantity: 1 }
 		],
-		craftedItemName: "Unknown Substance"
+		craftedItemName: "Unknown Substance",
+		emoji: "<:Substance:1243877991801425981>"
 	},
 	awakening: {
 		requiredItems: [
-			{ name: "Awakening Remnant", quantity: 6 },
-			{ name: "Heian Era Scraps", quantity: 4 }
+			{ name: "Awakening Remnant", quantity: 9 },
+			{ name: "Heian Era Scraps", quantity: 6 }
 		],
-		craftedItemName: "Heian Era Awakening Remnant"
+		craftedItemName: "Heian Era Awakening Remnant",
+		emoji: "<:Remnant:1243878925415747707>"
 	},
 	health_vial: {
 		requiredItems: [
 			{ name: "Empty Bottle", quantity: 2 },
 			{ name: "Malevolent Shrine (Blood Vial)", quantity: 3 }
 		],
-		craftedItemName: "Cursed Energy Vial"
+		craftedItemName: "Cursed Energy Vial",
+		emoji: "<:Vial:1243877992967569520>"
 	},
 	specialgradespray: {
 		requiredItems: [
@@ -970,7 +973,8 @@ export const CLAN_SKILLS = {
 			cost: "9280000",
 			clan: "Gambler Fever (Jackpot)",
 			items: [
-				{ name: "Hakari Kinji's Token", quantity: 20 },
+				{ name: "Gambler Token", quantity: 18 },
+				{ name: "Sukuna Finger", quantity: 12 },
 				{ name: "Heian Era Scraps", quantity: 3 }
 			],
 			stage: "Stage Five"
@@ -1948,7 +1952,6 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
-
 	{
 		itemName: "#1 Fighting Box",
 		description: "#1 Fighting Box",
@@ -2302,6 +2305,100 @@ export const items1: Item1[] = [
 			})
 
 			await interaction.editReply({ embeds: [embedFinal] })
+		}
+	},
+	{
+		itemName: "Prison Realm 100%",
+		description: "Prison Realm 100%",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const newShikigami: UserShikigami = {
+				name: "Prison Realm Spirit",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+			await updateUserShikigami(interaction.user.id, newShikigami)
+			await updateUserUnlockedTitles(interaction.user.id, ["Satoru Gojo's Sealing Master"])
+			await updateUserUnlockedTitles(interaction.user.id, ["#1 Event Winner"])
+			await addUserTechnique(interaction.user.id, "Cursed Spirit Manipulation: Prison Realm")
+			await addUserTechnique(interaction.user.id, "Cursed Spirit Manipulation: Forged Bonds")
+			await addUserTechnique(interaction.user.id, "Cursed Spirit Manipulation: Release")
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(
+					"Gate: Open.. You opened the box and received: [TITLE] Satoru Gojo's Sealing Master, [TITLE] #1 Event Winner,  [TECHNIQUE] Cursed Spirit Manipulation: Prison Realm, Cursed Spirit Manipulation: Forged Bonds, Cursed Spirit Manipulation: Release, [SHIKIGAMI] Prison Realm Spirit"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Prison Realm 75%",
+		description: "Prison Realm 75%",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const newShikigami: UserShikigami = {
+				name: "Prison Realm Spirit",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+			await updateUserShikigami(interaction.user.id, newShikigami)
+
+			await updateUserUnlockedTitles(interaction.user.id, ["Satoru Gojo's Sealing Master"])
+			await addUserTechnique(interaction.user.id, "Cursed Spirit Manipulation: Forged Bonds")
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(
+					"Gate: Open.. You opened the box and received: Satoru Gojo's Sealing Master, Cursed Spirit Manipulation: Forged Bonds"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Prison Realm 50%",
+		description: "Prison Realm 50%",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await updateUserUnlockedTitles(interaction.user.id, ["Satoru Gojo's Sealing Master"])
+
+			const newShikigami: UserShikigami = {
+				name: "Prison Realm Spirit",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+			await updateUserShikigami(interaction.user.id, newShikigami)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(
+					"Gate: Open.. You opened the box and received: Satoru Gojo's Sealing Master, Prison Realm Spirit"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	}
 ]

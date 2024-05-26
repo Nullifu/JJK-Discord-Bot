@@ -119,7 +119,8 @@ const statusEffectModifiers = {
 	},
 	"Beach Bum": { damageReduction: 0.2, damageIncrease: 1.2 },
 	"Adaption": { damageReduction: 0.85, damageIncrease: 1.2 },
-	"Prayer Song": { damageReduction: 0.2 }
+	"Prayer Song": { damageReduction: 0.2 },
+	"Sanity Lost": { damageReduction: 0.2, damageIncrease: 1.8 }
 }
 
 export function calculateDamageWithEffects(baseDamage, userId, statusEffects) {

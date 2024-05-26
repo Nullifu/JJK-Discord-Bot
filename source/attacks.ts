@@ -1528,7 +1528,7 @@ export const TRANSFORMATIONS = [
 		name: "Heian Era Awakening",
 		description: "What a beautiful day to be reborn..",
 		image: "https://media1.tenor.com/m/yqzGzo2YiT0AAAAC/jjk-jjk-s2.gif",
-		effects: "Sanity Lost, 35% Damage Increase, 20% Damage Reduction"
+		effects: "Sanity Lost, 50% Damage Increase, 20% Damage Reduction"
 	},
 	{
 		name: "Gear Fifth",

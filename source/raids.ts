@@ -125,7 +125,7 @@ export async function applyBossDamage(raidBoss, participants, interaction) {
 	const attackDetails = []
 
 	for (const participant of participants) {
-		const participantId = participant.id // Access the id property
+		const participantId = participant.id
 		const playerHealth = await getUserHealth(participantId)
 		const possibleAttacks = attacks[raidBoss.name]
 		const chosenAttack = possibleAttacks[Math.floor(Math.random() * possibleAttacks.length)]

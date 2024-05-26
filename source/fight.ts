@@ -3,7 +3,7 @@
 import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/builders"
 import { ButtonStyle, CacheType, ChatInputCommandInteraction, ComponentType, EmbedBuilder } from "discord.js"
 import { calculateDamage, getBossDrop, getRandomXPGain } from "./calculate.js"
-import { activeCollectors } from "./command.js"
+import { activeCollectors, getButtons, tutorialPages } from "./command.js"
 import { BossData } from "./interface.js"
 import {
 	addItemToUserInventory,
@@ -11,8 +11,10 @@ import {
 	getUserGrade,
 	getUserMaxHealth,
 	getUserShikigami,
+	getUserTutorialState,
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
+	setUserTutorialState,
 	updateBalance,
 	updateCommunityQuestProgress,
 	updateMonthlyFightsWon,
@@ -106,20 +108,18 @@ export async function handleBossDeath(
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
 	await removeAllStatusEffects(interaction.user.id)
-	//
 	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
-	//
 	await updateCommunityQuestProgress("Satoru Gojo's Sealing", 1)
-	//
 	await updateUserFightsWon(interaction.user.id)
 	await updateMonthlyFightsWon(interaction.user.id)
 
 	const drop = getBossDrop(opponent.name)
 	await addItemToUserInventory(interaction.user.id, drop.name, 1)
 	await updateBalance(interaction.user.id, coinsGained)
+
 	const privateEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
 		.setTitle("Battle Rewards")
@@ -129,6 +129,30 @@ export async function handleBossDeath(
 			{ name: "Coins Gained", value: `You've gained ${coinsGained} Coins for defeating the boss!` }
 		)
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })
+
+	const userState = await getUserTutorialState(interaction.user.id)
+
+	if (userState && userState.fightUsed === undefined) {
+		userState.fightUsed = true
+		await setUserTutorialState(interaction.user.id, userState)
+
+		const tutorialMessageId = userState.tutorialMessageId
+
+		if (tutorialMessageId) {
+			const dmChannel = await interaction.user.createDM()
+			const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
+
+			if (tutorialMessage) {
+				const step = 4
+				const buttons = await getButtons(step, interaction.user.id)
+
+				await tutorialMessage.edit({
+					embeds: [tutorialPages[step]],
+					components: [buttons]
+				})
+			}
+		}
+	}
 }
 
 export async function handleShikigamiTame(

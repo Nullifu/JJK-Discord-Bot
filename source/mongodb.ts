@@ -1648,7 +1648,7 @@ export async function updateUserMaxHealth(userId: string, healthIncrement: numbe
 		if (user) {
 			let { health, maxhealth } = user
 
-			maxhealth = Math.min(maxhealth + healthIncrement, 300)
+			maxhealth = Math.min(maxhealth + healthIncrement, 400)
 
 			health = Math.min(health, maxhealth)
 
@@ -2093,12 +2093,16 @@ export async function getUserTransformation(userId: string): Promise<string> {
 }
 
 // update user trasnformation
-export async function updateUserTransformation(userId: string, transformation: string): Promise<void> {
+export async function updateUserTransformation(
+	userId: string,
+	transformationName: string,
+	updateData: { transformation: string }
+): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ userId: userId }, { $set: { transformation } })
+		await usersCollection.updateOne({ id: userId }, { $set: updateData })
 	} catch (error) {
 		logger.error("Error updating user transformation:", error)
 		throw error
@@ -2304,8 +2308,7 @@ async function updateShop(): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const shopsCollection = database.collection(shopCollectionName)
-
-		const resetInterval = 86400000 // 24 hours in milliseconds
+		const resetInterval = 86400000
 
 		let shopData = await shopsCollection.findOne({})
 		logger.info("Shop data:", shopData)
@@ -2313,18 +2316,21 @@ async function updateShop(): Promise<void> {
 		const now = new Date()
 
 		const shouldGenerateItems =
-			!shopData || now.getTime() - new Date(shopData.lastShopReset).getTime() >= resetInterval
+			!shopData || !shopData.nextShopReset || now.getTime() >= new Date(shopData.nextShopReset).getTime()
 
 		if (shouldGenerateItems) {
 			await resetAllUserPurchases()
 			const newShopItems = await generateDailyShop()
 			logger.info("New shop items:", newShopItems)
 
+			const nextResetTimestamp = new Date(now.getTime() + resetInterval)
+
 			if (!shopData) {
 				shopData = {
 					_id: new ObjectId(),
 					shopItems: newShopItems,
-					lastShopReset: now
+					lastShopReset: now,
+					nextShopReset: nextResetTimestamp
 				}
 				await shopsCollection.insertOne(shopData)
 				logger.info("Shop created with items: ", shopData)
@@ -2333,12 +2339,12 @@ async function updateShop(): Promise<void> {
 					{ _id: shopData._id },
 					{
 						$set: {
-							shopItems: newShopItems, // newShopItems should be an array
-							lastShopReset: now
+							shopItems: newShopItems,
+							lastShopReset: now,
+							nextShopReset: nextResetTimestamp
 						}
 					}
 				)
-
 				logger.info("Shop reset successfully with new items!")
 			}
 		} else {
@@ -2349,7 +2355,6 @@ async function updateShop(): Promise<void> {
 		throw error
 	}
 }
-
 async function generateDailyShop() {
 	logger.info("shopItems length", shopItems.length)
 	const dailyShopItems = []
@@ -3854,6 +3859,11 @@ export interface RaidBoss {
 	}[]
 }
 
+interface Participant {
+	id: string
+	totalDamage: number
+}
+
 export interface RaidInstance {
 	_id: ObjectId
 	raidBossId: string
@@ -3929,7 +3939,7 @@ export async function createRaidParty(raidBossId: string, participants: string[]
 		const database = client.db(mongoDatabase)
 		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
 
-		const raidBoss = await getRaidBossDetails(raidBossId)
+		const raidBoss: RaidBoss | null = await getRaidBossDetails(raidBossId)
 
 		if (!raidBoss) {
 			throw new Error("Raid boss not found")
@@ -3937,7 +3947,7 @@ export async function createRaidParty(raidBossId: string, participants: string[]
 
 		const raidPartyHealth = Math.floor(raidBoss.globalHealth * 0.1)
 
-		const participantsInfo = participants.map(id => ({ id, totalDamage: 0 }))
+		const participantsInfo: Participant[] = participants.map(id => ({ id, totalDamage: 0 }))
 
 		const raidParty: RaidParty = {
 			raidBossId,
@@ -3961,6 +3971,7 @@ export interface RaidParty {
 	_id?: ObjectId
 	raidBossId: string
 	participants: ParticipantInfo[]
+	deadParticipants?: string[]
 	partyHealth: number
 	pendingActions: PendingAction[]
 	createdAt: Date
@@ -3977,7 +3988,6 @@ export interface PendingAction {
 	damage: number
 }
 
-// resolve raid actions
 export async function resolveRaidActions(raidPartyId: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
@@ -4175,6 +4185,114 @@ export async function isUserRegistered(userId: string): Promise<boolean> {
 		return !!user
 	} catch (error) {
 		logger.error("Error checking if user is registered:", error)
+		throw error
+	}
+}
+
+export interface TutorialState {
+	digUsed: boolean
+	begUsed: boolean
+	itemAcquired: boolean
+	techniquePurchased: boolean
+	isRegistered: boolean
+	tutorialMessageId?: string
+	techniqueEquipped: boolean
+	fightUsed: boolean
+}
+
+export async function createUserTutorialState(userId: string): Promise<TutorialState> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const initialState: TutorialState = {
+			digUsed: false,
+			fightUsed: false,
+			techniqueEquipped: false,
+			begUsed: false,
+			itemAcquired: false,
+			techniquePurchased: false,
+			isRegistered: false
+		}
+		await usersCollection.updateOne({ id: userId }, { $set: { tutorialState: initialState } }, { upsert: true })
+		return initialState
+	} catch (error) {
+		console.error("Error creating user tutorial state:", error)
+		throw error
+	}
+}
+export async function setUserTutorialState(userId: string, tutorialState: Partial<TutorialState>): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { tutorialState: tutorialState } })
+	} catch (error) {
+		console.error("Error setting user tutorial state:", error)
+		throw error
+	}
+}
+
+export async function getUserTutorialState(userId: string): Promise<TutorialState | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		if (user && user.tutorialState) {
+			return user.tutorialState
+		} else {
+			return null
+		}
+	} catch (error) {
+		console.error("Error getting user tutorial state:", error)
+		throw error
+	}
+}
+
+export async function setUserTutorialMessageId(userId: string, messageId: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { "tutorialState.tutorialMessageId": messageId } })
+	} catch (error) {
+		console.error("Error setting user tutorial message ID:", error)
+		throw error
+	}
+}
+
+//updateraidparty
+export async function updateRaidParty(raidParty: RaidParty): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidPartiesCollection = database.collection<RaidParty>("raidParties")
+		await raidPartiesCollection.updateOne({ _id: new ObjectId(raidParty._id) }, { $set: raidParty })
+	} catch (error) {
+		logger.error("Error updating raid party:", error)
+		throw error
+	}
+}
+
+export async function markSpecialDropAsClaimed(raidBossName: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection("raidBosses")
+
+		await raidBossesCollection.updateOne({ name: raidBossName }, { $set: { specialDropClaimed: true } })
+	} catch (error) {
+		console.error("Error marking special drop as claimed:", error)
+		throw error
+	}
+}
+
+export async function checkSpecialDropClaimed(raidBossName: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection("raidBosses")
+
+		const raidBoss = await raidBossesCollection.findOne({ name: raidBossName })
+		return raidBoss?.specialDropClaimed || false
+	} catch (error) {
+		console.error("Error checking if special drop is claimed:", error)
 		throw error
 	}
 }

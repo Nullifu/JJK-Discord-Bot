@@ -8,11 +8,17 @@ import {
 	RaidBoss,
 	RaidParty,
 	addItemToUserInventory,
+	addUserTechnique,
+	checkSpecialDropClaimed,
 	getCurrentPhase,
 	getUserActiveTechniques,
 	getUserHealth,
+	getUserTutorialState,
+	getUserUnlockedTransformations,
+	markSpecialDropAsClaimed,
 	updateRaidBossHealth,
-	updateRaidBossPhase
+	updateRaidBossPhase,
+	updateUserUnlockedTransformations
 } from "./mongodb.js"
 
 interface CommunityQuest {
@@ -165,40 +171,54 @@ export function getYujiItadoriEventLine(quest: CommunityQuest | null): string {
 
 export async function createTechniqueSelectMenu(
 	participants: { id: string; totalDamage: number }[],
+	deadParticipants: string[],
 	countdown: number
 ): Promise<ActionRowBuilder<SelectMenuBuilder>[]> {
 	const rows: ActionRowBuilder<SelectMenuBuilder>[] = []
 
 	for (const participant of participants) {
-		const user = await client.users.fetch(participant.id)
-		const userTechniques = await getUserActiveTechniques(participant.id)
+		if (!deadParticipants.includes(participant.id)) {
+			const user = await client.users.fetch(participant.id)
+			const userHealth = await getUserHealth(participant.id)
 
-		const techniqueOptions = userTechniques.map(techniqueName => ({
-			label: techniqueName,
-			description: "Select to use this technique",
-			value: techniqueName
-		}))
+			if (userHealth > 0) {
+				const userTechniques = await getUserActiveTechniques(participant.id)
 
-		const selectMenu = new StringSelectMenuBuilder()
-			.setCustomId(`select-battle-option-${participant.id}`)
-			.setPlaceholder(`${user.username}'s technique (${countdown}s)`)
-			.addOptions(techniqueOptions)
+				const techniqueOptions = userTechniques.map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName
+				}))
 
-		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
-		rows.push(row)
+				const selectMenu = new StringSelectMenuBuilder()
+					.setCustomId(`select-battle-option-${participant.id}`)
+					.setPlaceholder(`${user.username}'s technique (${countdown}s)`)
+					.addOptions(techniqueOptions)
+
+				const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+				rows.push(row)
+			}
+		}
 	}
 
 	return rows
 }
 
-export async function createRaidEmbed(raidBoss, participants, interaction, userTechnique = "", raidEndTimestamp) {
+export async function createRaidEmbed(
+	raidBoss,
+	participants,
+	interaction,
+	userTechnique = "",
+	raidEndTimestamp,
+	partyHealth
+) {
 	const primaryEmbed = new EmbedBuilder()
 		.setColor("Aqua")
 		.setTitle("Cursed Battle!")
 		.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
-		.setImage(raidBoss.image_url) // Ensure this is the correct property
+		.setImage(raidBoss.image_url)
 		.addFields(
-			{ name: "Boss Health", value: `:heart: ${raidBoss.current_health.toString()}`, inline: true },
+			{ name: "Party Health", value: `:shield: ${partyHealth.toString()}`, inline: true }, // Replacing Boss Health with Party Health
 			{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
 			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true },
 			{ name: "Raid Ends", value: `<t:${raidEndTimestamp}:R>`, inline: true }
@@ -213,7 +233,6 @@ export async function createRaidEmbed(raidBoss, participants, interaction, userT
 
 	for (const participant of participants) {
 		try {
-			// Access participant ID correctly
 			const playerHealth = await getUserHealth(participant.id)
 			const member = interaction.guild?.members.cache.get(participant.id)
 
@@ -260,7 +279,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 
 	for (const participant of raidParty.participants) {
 		const { id, totalDamage } = participant
-		const dropCount = Math.floor(totalDamage / 1000)
+		const dropCount = Math.floor(totalDamage / 0)
 		const drops: RaidDrops[] = []
 
 		for (let i = 0; i < dropCount; i++) {
@@ -277,17 +296,57 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		participantDrops[id] = drops
 		bossDrops.push(...drops)
 
+		const randomNumber = Math.floor(Math.random() * (20 - 10 + 1) + 10)
+
 		for (const drop of drops) {
 			try {
 				await addItemToUserInventory(id, drop.name, 1)
+				await addItemToUserInventory(id, "Raid Token", randomNumber)
+
+				if (drop.name === "Heian Era Awakening") {
+					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
+					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
+					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+				}
 			} catch (error) {
 				console.error(`Error adding item to user inventory for user ${id}:`, error)
 			}
 		}
 	}
 
-	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
+	// Check if the special drop has already been claimed
+	const specialDropClaimed = await checkSpecialDropClaimed(raidBoss.name)
 
+	if (!specialDropClaimed) {
+		const randomNumber = Math.random()
+		const specialDropChance = 0.0001
+
+		if (randomNumber <= specialDropChance) {
+			const luckyParticipant = raidParty.participants[Math.floor(Math.random() * raidParty.participants.length)]
+			const specialDrop = "Nah I'd Lose"
+
+			try {
+				await addUserTechnique(luckyParticipant.id, specialDrop)
+				await markSpecialDropAsClaimed(raidBoss.name)
+
+				participantDrops[luckyParticipant.id].push({ name: specialDrop, rarity: "Special", dropRate: 0.01 })
+				bossDrops.push({ name: specialDrop, rarity: "Special", dropRate: 0.01 })
+
+				const luckyUser = await client.users.fetch(luckyParticipant.id)
+				const channelId = "1239327615379308677"
+				const channel = await client.channels.fetch(channelId)
+				if (channel && channel.isTextBased()) {
+					await channel.send(
+						`Congratulations! ${luckyUser.toString()} has obtained the special drop "Nah I'd Lose"!`
+					)
+				}
+			} catch (error) {
+				console.error(`Error adding special drop to user techniques for user ${luckyParticipant.id}:`, error)
+			}
+		}
+	}
+
+	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 	raidBoss.globalHealth -= totalDamage
 	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth)
 
@@ -334,6 +393,11 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 	}
 
 	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
+}
+
+export async function getUserTutorialMessageId(userId) {
+	const userState = await getUserTutorialState(userId)
+	return userState.tutorialMessageId
 }
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

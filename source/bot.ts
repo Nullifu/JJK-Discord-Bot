@@ -71,6 +71,7 @@ import {
 	handleTechniqueShopCommand,
 	handleTitleSelectCommand,
 	handleTradeCommand,
+	handleTutorialCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUpdateProfileImageCommand,
@@ -281,13 +282,14 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 7.0 | Events!", type: ActivityType.Playing },
-		{ name: `${totalMembers} members`, type: ActivityType.Listening },
-		{ name: `${client.guilds.cache.size} servers`, type: ActivityType.Listening },
+		{ name: "Update 8.0 | Raids!", type: ActivityType.Playing },
+		{ name: `${totalMembers.toLocaleString()} Sorcerers`, type: ActivityType.Listening },
+		{ name: `${client.guilds.cache.size.toLocaleString()} servers`, type: ActivityType.Listening },
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
 		{ name: "King Of Curses Raid!", type: ActivityType.Competing },
-		{ name: "/register | /help", type: ActivityType.Listening }
+		{ name: "/register | /help", type: ActivityType.Listening },
+		{ name: "/guide | /fight", type: ActivityType.Listening }
 	]
 }
 
@@ -302,7 +304,6 @@ client.on("guildCreate", guild => {
 	})
 
 	if (defaultChannel) {
-		// Create an embed with EmbedBuilder in v14
 		const welcomeEmbed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("Welcome to the Jujutsu Kaisen Discord Bot!")
@@ -417,6 +418,13 @@ const commands = [
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("Shikigami Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
+	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
+	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
+	new SlashCommandBuilder()
+		.setName("sell")
+		.setDescription("Sell an item from your inventory.")
+		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
+		.addIntegerOption(option => option.setName("quantity").setDescription("How many to sell").setRequired(false)),
 	new SlashCommandBuilder().setName("purchasehistory").setDescription("Check your purchase history"),
 
 	new SlashCommandBuilder()
@@ -800,6 +808,10 @@ client.on("interactionCreate", async interaction => {
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
 	const { commandName } = chatInputInteraction
+	if (commandName === "tutorial") {
+		await handleTutorialCommand(chatInputInteraction)
+		return
+	}
 	if (commandName === "register") {
 		await handleRegisterCommand(chatInputInteraction)
 		return
