@@ -8722,7 +8722,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedrows] })
 
-				if (updatedRaidBoss.current_health <= 0) {
+				if (raidParty.partyHealth <= 0) {
 					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
 				} else {
 					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION

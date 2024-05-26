@@ -4059,15 +4059,12 @@ export async function handleRaidBossDefeat(
 	const database = client.db(mongoDatabase)
 	const raidPartiesCollection = database.collection<RaidParty>("raidParties")
 
-	// Award rewards to participants
 	for (const participant of raidParty.participants) {
 		await awardRewards(participant.id, raidBossDetails)
 	}
 
-	// Remove the raid party document
 	await raidPartiesCollection.deleteOne({ _id: new ObjectId(raidParty._id) })
 
-	// Send a victory message to the participants
 	const victoryEmbed = new EmbedBuilder()
 		.setColor("#00ff00")
 		.setTitle("Raid Victory!")
