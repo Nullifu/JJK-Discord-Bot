@@ -289,7 +289,7 @@ export const craftingRecipes = {
 			{ name: "Cleaning Kit", quantity: 1 }
 		],
 		craftedItemName: "Cleaning Sponge",
-		emoji: "<:hygienespongecleaningcleanliness:1231284893871243397>"
+		emoji: "<:sponge1:1244363363161608192>"
 	}
 }
 

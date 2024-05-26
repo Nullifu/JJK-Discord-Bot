@@ -580,22 +580,27 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 			await interaction.editReply({ embeds: [digEmbed] })
 
 			if (isTutorial) {
-				userState.digUsed = true // Update state
+				userState.digUsed = true
+
 				await setUserTutorialState(userId, userState)
 
-				// Refresh the tutorial message to update the buttons
 				const tutorialMessageId = userState.tutorialMessageId
 				const dmChannel = await interaction.user.createDM()
-				const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
 
-				if (tutorialMessage) {
-					const step = 1 // Assuming the dig command is for step 1
-					const buttons = await getButtons(step, userId)
+				try {
+					const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
 
-					await tutorialMessage.edit({
-						embeds: [tutorialPages[step]],
-						components: [buttons]
-					})
+					if (tutorialMessage) {
+						const step = 1
+						const buttons = await getButtons(step, userId)
+
+						await tutorialMessage.edit({
+							embeds: [tutorialPages[step]],
+							components: [buttons]
+						})
+					}
+				} catch (error) {
+					console.error("Failed to fetch or edit the tutorial message:", error)
 				}
 			}
 		} else {
