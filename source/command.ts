@@ -5345,22 +5345,25 @@ export async function handleEquipTechniqueCommand(interaction) {
 		await interaction.reply(response.trim())
 
 		const userState = await getUserTutorialState(userId)
-		if (!userState.techniqueEquipped) {
+		if (userState && userState.techniqueEquipped === undefined) {
 			userState.techniqueEquipped = true
 			await setUserTutorialState(userId, userState)
 
 			const tutorialMessageId = userState.tutorialMessageId
-			const dmChannel = await interaction.user.createDM()
-			const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
 
-			if (tutorialMessage) {
-				const step = 3
-				const buttons = await getButtons(step, userId)
+			if (tutorialMessageId) {
+				const dmChannel = await interaction.user.createDM()
+				const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
 
-				await tutorialMessage.edit({
-					embeds: [tutorialPages[step]],
-					components: [buttons]
-				})
+				if (tutorialMessage) {
+					const step = 3
+					const buttons = await getButtons(step, userId)
+
+					await tutorialMessage.edit({
+						embeds: [tutorialPages[step]],
+						components: [buttons]
+					})
+				}
 			}
 		}
 	} catch (error) {
