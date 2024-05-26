@@ -2894,6 +2894,19 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Solo Forbidden Area") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 30,
+					imageUrl:
+						"https://64.media.tumblr.com/bf4c7320f2fcc0743c911ea174a3a7f2/8b2aaf7d220d5701-c0/s1280x1920/57858721add8c560100397b818093bc8a45d85da.jpg",
+					description: "A forbidden technique that can only be used by a single person. Solo Forbidden Area.",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Zenin Style: Playful Cloud: STRIKE") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
