@@ -263,7 +263,8 @@ export const craftingRecipes = {
 			{ name: "Jogos right testicle", quantity: 1 },
 			{ name: "Super Glue", quantity: 1 }
 		],
-		craftedItemName: "Jogos (Fixed) Balls"
+		craftedItemName: "Jogos (Fixed) Balls",
+		emoji: "<:balls:1244358115642839040>"
 	},
 
 	heavenly_restricted_blood: {

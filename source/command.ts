@@ -8544,7 +8544,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.participants[participantIndex4].totalDamage += damage
 						}
 
-						updatedRaidBoss.globalHealth -= damage
 						updatedRaidBoss.current_health -= damage
 
 						// Update the global health and current health in the database
