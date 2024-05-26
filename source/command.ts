@@ -3850,25 +3850,40 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 				ephemeral: true
 			})
 
-			// Update the tutorial state if the purchased technique is "Divergent Fist"
 			if (selectedSkill.name === "Divergent Fist") {
 				const userState = await getUserTutorialState(userId)
-				userState.techniquePurchased = true
-				await setUserTutorialState(userId, userState)
 
-				// Refresh the tutorial message to update the buttons
-				const tutorialMessageId = userState.tutorialMessageId
-				const dmChannel = await interaction.user.createDM()
-				const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId)
+				if (userState) {
+					userState.techniquePurchased = true
+					await setUserTutorialState(userId, userState)
 
-				if (tutorialMessage) {
-					const step = 2 // Assuming the technique purchase is for step 2
-					const buttons = await getButtons(step, userId)
+					const tutorialMessageId = userState.tutorialMessageId
+					if (tutorialMessageId) {
+						const dmChannel = await interaction.user.createDM()
+						const tutorialMessage = await dmChannel.messages.fetch(tutorialMessageId).catch(error => {
+							console.error("Failed to fetch the tutorial message:", error)
+						})
 
-					await tutorialMessage.edit({
-						embeds: [tutorialPages[step]],
-						components: [buttons]
-					})
+						if (tutorialMessage) {
+							const step = 2
+							const buttons = await getButtons(step, userId)
+
+							await tutorialMessage
+								.edit({
+									embeds: [tutorialPages[step]],
+									components: [buttons]
+								})
+								.catch(error => {
+									console.error("Failed to edit the tutorial message:", error)
+								})
+						} else {
+							console.error("Tutorial message not found")
+						}
+					} else {
+						console.error("Tutorial message ID is undefined")
+					}
+				} else {
+					console.error("User tutorial state is undefined")
 				}
 			}
 		}
