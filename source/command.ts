@@ -3618,6 +3618,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					return ["Stage Four", "Stage Five"].includes(userAwakeningStage)
 				} else if (clan === "Gambler Fever (Jackpot)") {
 					return ["Stage Five"].includes(userAwakeningStage)
+				} else if (clan === "Utahime Iori") {
+					return ["Stage Five"].includes(userAwakeningStage)
 				}
 				return true
 			})

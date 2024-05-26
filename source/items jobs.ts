@@ -996,6 +996,18 @@ export const CLAN_SKILLS = {
 			items: [{ name: "Hakari Kinji's Token", quantity: 16 }],
 			stage: "Stage Five"
 		}
+	],
+	"Utahime Iori": [
+		{
+			name: "Solo Forbidden Area",
+			cost: "9280000",
+			clan: "Solo Forbidden Area",
+			items: [
+				{ name: "Satoru Gojo's Ashy Remains", quantity: 18 },
+				{ name: "Sukuna Finger", quantity: 12 }
+			],
+			stage: "Stage Five"
+		}
 	]
 }
 
