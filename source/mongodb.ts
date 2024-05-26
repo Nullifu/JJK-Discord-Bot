@@ -4081,12 +4081,19 @@ export async function handleRaidBossDefeat(
 	}
 }
 
-export async function updateRaidBossHealth(raidBossId: string, health: number): Promise<void> {
+export async function updateRaidBossHealth(
+	raidBossId: string,
+	globalHealth: number,
+	currentHealth: number
+): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
 
-		await raidBossesCollection.updateOne({ _id: raidBossId }, { $set: { current_health: health } })
+		await raidBossesCollection.updateOne(
+			{ _id: raidBossId },
+			{ $set: { globalHealth, current_health: currentHealth } }
+		)
 	} catch (error) {
 		logger.error("Error updating raid boss health:", error)
 		throw error

@@ -8389,8 +8389,25 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 						lastUsedTechniques.push(combination.fieldValue)
 
-						updatedRaidBoss.current_health -= damage
-						await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
+						const totalDamage = raidParty.participants.reduce(
+							(sum, participant) => sum + participant.totalDamage,
+							0
+						)
+
+						// Update the global health and current health of the raid boss
+						updatedRaidBoss.globalHealth -= totalDamage
+						updatedRaidBoss.current_health -= totalDamage
+
+						// Update the global health and current health in the database
+						await updateRaidBossHealth(
+							updatedRaidBoss._id.toString(),
+							updatedRaidBoss.globalHealth,
+							updatedRaidBoss.current_health
+						)
+
+						updatedRaidParty.partyHealth -= totalDamage
+
+						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
 
 						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
 
@@ -8432,10 +8449,21 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					}
 				}
 
-				const totalDamage = updatedRaidParty.pendingActions.reduce((sum, action) => sum + action.damage, 0)
+				const totalDamage = raidParty.participants.reduce(
+					(sum, participant) => sum + participant.totalDamage,
+					0
+				)
 
+				// Update the global health and current health of the raid boss
+				updatedRaidBoss.globalHealth -= totalDamage
 				updatedRaidBoss.current_health -= totalDamage
-				await updateRaidBossHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
+
+				// Update the global health and current health in the database
+				await updateRaidBossHealth(
+					updatedRaidBoss._id.toString(),
+					updatedRaidBoss.globalHealth,
+					updatedRaidBoss.current_health
+				)
 
 				updatedRaidParty.partyHealth -= totalDamage
 

@@ -344,7 +344,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 
 	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 	raidBoss.globalHealth -= totalDamage
-	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth)
+	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth, raidBoss.current_health)
 
 	if (raidBoss.globalHealth <= 0) {
 		const currentPhase = getCurrentPhase(raidBoss)
