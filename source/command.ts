@@ -4879,7 +4879,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 
 	if (itemName === "Cursed Energy Vial") {
 		const userHealth = await getUserMaxHealth(userId)
-		if (userHealth === 300) {
+		if (userHealth === 400) {
 			const embed = new EmbedBuilder()
 				.setColor("#FFFF00")
 				.setTitle("Maximum Health")
