@@ -227,7 +227,7 @@ export const squadTechniqueCombinations = [
 		technique3: "Ten Shadows Technique: Nue",
 		technique4: "Ten Shadows Technique: Max Elephant",
 		technique5: "Solo Forbidden Area",
-		damageMultiplier: 600,
+		damageMultiplier: 900,
 		imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
 		description: (user1, user2, user3, user4, user5, technique1, technique2, technique3, technique4, technique5) =>
 			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}, ${user5.username} used ${technique5}!`,
