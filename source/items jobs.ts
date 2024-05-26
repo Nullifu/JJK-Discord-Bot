@@ -1003,7 +1003,7 @@ export const CLAN_SKILLS = {
 			cost: "9280000",
 			clan: "Solo Forbidden Area",
 			items: [
-				{ name: "Satoru Gojo's Ashy Remains", quantity: 18 },
+				{ name: "Satoru Gojo's Ashy Remains", quantity: 2 },
 				{ name: "Sukuna Finger", quantity: 12 }
 			],
 			stage: "Stage Five"

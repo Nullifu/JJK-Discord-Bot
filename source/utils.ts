@@ -225,7 +225,7 @@ export async function createRaidEmbed(
 		)
 		.addFields({
 			name: "Boss Health Status",
-			value: generateHealthBar(raidBoss.current_health, raidBoss.globalHealth),
+			value: generateHealthBar(partyHealth, raidBoss.globalHealth),
 			inline: false
 		})
 
@@ -273,24 +273,20 @@ export async function createRaidEmbed(
 }
 
 export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
-	// Calculate boss drops
 	const bossDrops: RaidDrops[] = []
 	const participantDrops: { [participantId: string]: RaidDrops[] } = {}
 
 	for (const participant of raidParty.participants) {
-		const { id, totalDamage } = participant
-		const dropCount = Math.floor(totalDamage / 0)
+		const { id } = participant
 		const drops: RaidDrops[] = []
 
-		for (let i = 0; i < dropCount; i++) {
-			try {
-				const drop = getRaidBossDrop(raidBoss.name)
-				if (drop) {
-					drops.push(drop)
-				}
-			} catch (error) {
-				console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
+		try {
+			const drop = getRaidBossDrop(raidBoss.name)
+			if (drop) {
+				drops.push(drop)
 			}
+		} catch (error) {
+			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
 		}
 
 		participantDrops[id] = drops

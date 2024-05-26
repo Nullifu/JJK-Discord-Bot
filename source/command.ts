@@ -8319,7 +8319,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						damageMultiplier: 3,
 						imageUrl: "https://media1.tenor.com/m/XaWgrCmuguAAAAAC/jjk-jujutsu-kaisen.gif",
 						description:
-							"Heh, You're strong but you're not the only one who can use cursed energy. **Disaster Flames: Full Fire Formation**",
+							"Aka... Doryoku... I'll show you the true power **Lapse: Blue**!",
 						fieldValue: selectedTechnique,
 						userTechniques: userTechniquesFight2,
 						userId: userId,
