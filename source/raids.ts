@@ -73,6 +73,65 @@ export async function executeDualTechnique1({
 	return damage
 }
 
+export async function executeSquadTechnique({
+	interaction,
+	technique1,
+	technique2,
+	technique3,
+	technique4,
+	damageMultiplier,
+	imageUrl,
+	description,
+	fieldValue,
+	userId1,
+	userId2,
+	userId3,
+	userId4,
+	primaryEmbed,
+	updateEmbed = true,
+	rows
+}) {
+	let damage = 0
+
+	damage =
+		(calculateDamage(technique1, userId1) +
+			calculateDamage(technique2, userId2) +
+			calculateDamage(technique3, userId3) +
+			calculateDamage(technique4, userId4)) *
+		damageMultiplier
+
+	const user1 = await interaction.client.users.fetch(userId1)
+	const user2 = await interaction.client.users.fetch(userId2)
+	const user3 = await interaction.client.users.fetch(userId3)
+	const user4 = await interaction.client.users.fetch(userId4)
+
+	if (updateEmbed) {
+		const specialTechniqueEmbed = new EmbedBuilder(primaryEmbed)
+			.setImage(imageUrl)
+			.setDescription(description(user1, user2, user3, user4, technique1, technique2, technique3, technique4))
+			.setFields(
+				{ name: "Technique Used", value: fieldValue, inline: true },
+				{ name: "Damage Dealt", value: `${damage}`, inline: true }
+			)
+
+		await interaction.editReply({ embeds: [specialTechniqueEmbed] })
+		await delay(5000)
+		await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
+	} else {
+		const newEmbed = new EmbedBuilder()
+			.setImage(imageUrl)
+			.setDescription(description(user1, user2, user3, user4, technique1, technique2, technique3, technique4))
+			.setFields(
+				{ name: "Technique Used", value: fieldValue, inline: true },
+				{ name: "Damage Dealt", value: `${damage}`, inline: true }
+			)
+
+		await interaction.editReply({ embeds: [newEmbed] })
+	}
+
+	return damage
+}
+
 export const dualTechniqueCombinations = [
 	{
 		technique1: "Solo Forbidden Area",
@@ -118,6 +177,41 @@ export const dualTechniqueCombinations = [
 		description: (user1, user2, technique1, technique2) =>
 			`${user1.username} used ${technique1} and ${user2.username} used ${technique2}!`,
 		fieldValue: "Divine Flame Arrow"
+	}
+]
+
+export const squadTechniqueCombinations = [
+	{
+		technique1: "Ten Shadows Technique: Divine Dogs",
+		technique2: "Ten Shadows Technique: Toad",
+		technique3: "Ten Shadows Technique: Nue",
+		technique4: "Ten Shadows Technique: Max Elephant",
+		damageMultiplier: 600,
+		imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
+		description: (user1, user2, user3, user4, technique1, technique2, technique3, technique4) =>
+			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}!`,
+		fieldValue: "With our treasures combined, we are Mahoraga!"
+	},
+	{
+		technique1: "Boogie Woogie Surplex",
+		technique2: "Re-imagined BLACK FLASH",
+		technique3: "Solo Forbidden Area",
+		damageMultiplier: 300,
+		imageUrl: "https://media1.tenor.com/m/KgCx2ZcEvxQAAAAC/yuji-awakened-jujutsu-kaisen.gif",
+		description: (user1, user2, user3, technique1, technique2, technique3) =>
+			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3},`,
+		fieldValue:
+			"With **Solo Forbidden Area** and **Boogie Woogie Surplex** I call this 120% Potential Output: **Brotherly Based Beatdown**"
+	},
+	{
+		technique1: "Cleave",
+		technique2: "Dismantle",
+		technique3: "Flame Arrow",
+		damageMultiplier: 350,
+		imageUrl: "https://media1.tenor.com/m/E0pIWKD2Tl4AAAAC/sukuna-fire-arrow.gif",
+		description: (user1, user2, user3, technique1, technique2, technique3) =>
+			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3},`,
+		fieldValue: "Pathetic, you're all pathetic. Binding Vow: **World of Flames**"
 	}
 ]
 

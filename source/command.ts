@@ -219,7 +219,13 @@ import {
 	userExists,
 	viewTradeRequests
 } from "./mongodb.js"
-import { applyBossDamage, dualTechniqueCombinations, executeDualTechnique1 } from "./raids.js"
+import {
+	applyBossDamage,
+	dualTechniqueCombinations,
+	executeDualTechnique1,
+	executeSquadTechnique,
+	squadTechniqueCombinations
+} from "./raids.js"
 import {
 	activeShikigami,
 	createShikigamiEmbed,
@@ -2673,13 +2679,25 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-			} else if (selectedValue === "Chiyo's Cursed Manipulation Technique") {
+			} else if (selectedValue === "Imaginary Technique: White") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 16,
-					imageUrl: "https://i.kym-cdn.com/photos/images/original/002/031/427/6ba.gif",
-					description: "I'm gonna need you to sit down and shut up.",
+					damageMultiplier: 28,
+					imageUrl: "https://media1.tenor.com/m/jG4ODQWzWG0AAAAC/jidion-guy-milk-in-car.gif",
+					description: "Guys...",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Wonder Of U") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-35ad74a53c.gif",
+					description: "Wonder of U: I am the calamity.",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -8117,7 +8135,6 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 		logger.error("Error handling giveaway end:", error)
 	}
 }
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const userTechniquesFight2 = new Map<string, any>()
 const RAID_DURATION = 180000
@@ -8311,6 +8328,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				updatedEmbedBuilder.addFields({
 					name: "Technique Selection Ends",
+
 					value: `<t:${techniqueSelectionEndTimestamp}:R>`,
 					inline: true
 				})
@@ -8331,12 +8349,32 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						primaryEmbed: updatedEmbed
 					})
 					raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+
+					const participantIndex = raidParty.participants.findIndex(p => p.id === userId)
+					if (participantIndex !== -1) {
+						raidParty.participants[participantIndex].totalDamage += damage
+						updatedRaidBoss.globalHealth -= damage
+						updatedRaidBoss.current_health -= damage
+					}
 				} else {
 					const damage = calculateDamage(selectedTechnique, userId)
 					raidParty.pendingActions.push({ userId, technique: selectedTechnique, damage })
+
+					const participantIndex = raidParty.participants.findIndex(p => p.id === userId)
+					if (participantIndex !== -1) {
+						raidParty.participants[participantIndex].totalDamage += damage
+						updatedRaidBoss.globalHealth -= damage
+						updatedRaidBoss.current_health -= damage
+					}
 				}
 
 				await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+
+				await updateRaidBossHealth(
+					updatedRaidBoss._id.toString(),
+					updatedRaidBoss.globalHealth,
+					updatedRaidBoss.current_health
+				)
 			})
 
 			battleOptionSelectMenuCollectorRaid.on("end", async collected => {
@@ -8389,14 +8427,122 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 						lastUsedTechniques.push(combination.fieldValue)
 
-						const totalDamage = raidParty.participants.reduce(
-							(sum, participant) => sum + participant.totalDamage,
-							0
+						const participantIndex1 = updatedRaidParty.participants.findIndex(p => p.id === user1.userId)
+						const participantIndex2 = updatedRaidParty.participants.findIndex(p => p.id === user2.userId)
+
+						if (participantIndex1 !== -1) {
+							updatedRaidParty.participants[participantIndex1].totalDamage += damage
+						}
+
+						if (participantIndex2 !== -1) {
+							updatedRaidParty.participants[participantIndex2].totalDamage += damage
+						}
+
+						updatedRaidBoss.globalHealth -= damage
+						updatedRaidBoss.current_health -= damage
+
+						await updateRaidBossHealth(
+							updatedRaidBoss._id.toString(),
+							updatedRaidBoss.globalHealth,
+							updatedRaidBoss.current_health
 						)
 
-						// Update the global health and current health of the raid boss
-						updatedRaidBoss.globalHealth -= totalDamage
-						updatedRaidBoss.current_health -= totalDamage
+						updatedRaidParty.partyHealth -= damage
+
+						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
+
+						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
+
+						raidParty.pendingActions = []
+						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
+
+						const updatedEmbedBuilder = await createRaidEmbed(
+							updatedRaidBoss,
+							updatedRaidParty.participants,
+							interaction,
+							lastUsedTechniques.join("\n"),
+							raidEndTime,
+							updatedRaidParty.partyHealth
+						)
+
+						updatedEmbed = updatedEmbedBuilder.toJSON()
+					}
+				}
+
+				for (const combination of squadTechniqueCombinations) {
+					const usersWithTechnique1 = updatedRaidParty.pendingActions.filter(
+						action => action.technique === combination.technique1
+					)
+					const usersWithTechnique2 = updatedRaidParty.pendingActions.filter(
+						action => action.technique === combination.technique2
+					)
+					const usersWithTechnique3 = updatedRaidParty.pendingActions.filter(
+						action => action.technique === combination.technique3
+					)
+					const usersWithTechnique4 = updatedRaidParty.pendingActions.filter(
+						action => action.technique === combination.technique4
+					)
+
+					if (
+						usersWithTechnique1.length === 1 &&
+						usersWithTechnique2.length === 1 &&
+						usersWithTechnique3.length === 1 &&
+						usersWithTechnique4.length === 1
+					) {
+						const user1 = usersWithTechnique1[0]
+						const user2 = usersWithTechnique2[0]
+						const user3 = usersWithTechnique3[0]
+						const user4 = usersWithTechnique4[0]
+						const technique1 = user1.technique
+						const technique2 = user2.technique
+						const technique3 = user3.technique
+						const technique4 = user4.technique
+
+						const damage = await executeSquadTechnique({
+							interaction: interaction,
+							technique1: technique1,
+							technique2: technique2,
+							technique3: technique3,
+							technique4: technique4,
+							damageMultiplier: combination.damageMultiplier,
+							imageUrl: combination.imageUrl,
+							description: combination.description,
+							fieldValue: combination.fieldValue,
+							userId1: user1.userId,
+							userId2: user2.userId,
+							userId3: user3.userId,
+							userId4: user4.userId,
+							primaryEmbed: updatedEmbed,
+							updateEmbed: true,
+							rows: rows
+						})
+
+						lastUsedTechniques.push(combination.fieldValue)
+
+						// Update the participants' total damage and the raid boss's health
+						const participantIndex1 = updatedRaidParty.participants.findIndex(p => p.id === user1.userId)
+						const participantIndex2 = updatedRaidParty.participants.findIndex(p => p.id === user2.userId)
+						const participantIndex3 = updatedRaidParty.participants.findIndex(p => p.id === user3.userId)
+						const participantIndex4 = updatedRaidParty.participants.findIndex(p => p.id === user4.userId)
+
+						if (participantIndex1 !== -1) {
+							updatedRaidParty.participants[participantIndex1].totalDamage += damage
+						}
+
+						if (participantIndex2 !== -1) {
+							updatedRaidParty.participants[participantIndex2].totalDamage += damage
+						}
+
+						if (participantIndex3 !== -1) {
+							updatedRaidParty.participants[participantIndex3].totalDamage += damage
+						}
+
+						if (participantIndex4 !== -1) {
+							updatedRaidParty.participants[participantIndex4].totalDamage += damage
+						}
+
+						updatedRaidBoss.globalHealth -= damage
+						updatedRaidBoss.current_health -= damage
 
 						// Update the global health and current health in the database
 						await updateRaidBossHealth(
@@ -8405,7 +8551,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidBoss.current_health
 						)
 
-						updatedRaidParty.partyHealth -= totalDamage
+						updatedRaidParty.partyHealth -= damage
 
 						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
 
@@ -8443,9 +8589,23 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							primaryEmbed: null
 						})
 						action.damage = damage
+
+						const participantIndex = updatedRaidParty.participants.findIndex(p => p.id === action.userId)
+						if (participantIndex !== -1) {
+							updatedRaidParty.participants[participantIndex].totalDamage += damage
+							updatedRaidBoss.globalHealth -= damage
+							updatedRaidBoss.current_health -= damage
+						}
 					} else {
 						const damage = calculateDamage(action.technique, action.userId)
 						action.damage = damage
+
+						const participantIndex = updatedRaidParty.participants.findIndex(p => p.id === action.userId)
+						if (participantIndex !== -1) {
+							updatedRaidParty.participants[participantIndex].totalDamage += damage
+							updatedRaidBoss.globalHealth -= damage
+							updatedRaidBoss.current_health -= damage
+						}
 					}
 				}
 
@@ -8454,11 +8614,9 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					0
 				)
 
-				// Update the global health and current health of the raid boss
 				updatedRaidBoss.globalHealth -= totalDamage
 				updatedRaidBoss.current_health -= totalDamage
 
-				// Update the global health and current health in the database
 				await updateRaidBossHealth(
 					updatedRaidBoss._id.toString(),
 					updatedRaidBoss.globalHealth,
