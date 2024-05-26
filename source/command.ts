@@ -5917,12 +5917,17 @@ export async function handleShopCommand(interaction) {
 // equip inate clan use getuserownedinateclan
 export async function handleEquipInateClanCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
+
 	const userId = interaction.user.id
 	const clanName = interaction.options.getString("clan")
 
 	const userClans = await getUserOwnedInateClan(userId)
-	if (!userClans.includes(clanName)) {
-		await interaction.reply({ content: "You do not own this clan.", ephemeral: true })
+
+	if (!userClans || !userClans.includes(clanName)) {
+		await interaction.reply({
+			content: "You do not own this clan.",
+			ephemeral: true
+		})
 		return
 	}
 
@@ -8498,7 +8503,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						usersWithTechnique1.length === 1 &&
 						usersWithTechnique2.length === 1 &&
 						usersWithTechnique3.length === 1 &&
-						usersWithTechnique4.length === 1 && 
+						usersWithTechnique4.length === 1 &&
 						usersWithTechnique5.length === 1
 					) {
 						const user1 = usersWithTechnique1[0]
