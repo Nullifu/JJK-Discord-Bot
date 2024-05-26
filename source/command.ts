@@ -8490,21 +8490,27 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					const usersWithTechnique4 = updatedRaidParty.pendingActions.filter(
 						action => action.technique === combination.technique4
 					)
+					const usersWithTechnique5 = updatedRaidParty.pendingActions.filter(
+						action => action.technique === combination.technique5
+					)
 
 					if (
 						usersWithTechnique1.length === 1 &&
 						usersWithTechnique2.length === 1 &&
 						usersWithTechnique3.length === 1 &&
-						usersWithTechnique4.length === 1
+						usersWithTechnique4.length === 1 && 
+						usersWithTechnique5.length === 1
 					) {
 						const user1 = usersWithTechnique1[0]
 						const user2 = usersWithTechnique2[0]
 						const user3 = usersWithTechnique3[0]
 						const user4 = usersWithTechnique4[0]
+						const user5 = usersWithTechnique5[0]
 						const technique1 = user1.technique
 						const technique2 = user2.technique
 						const technique3 = user3.technique
 						const technique4 = user4.technique
+						const technique5 = user5.technique
 
 						const damage = await executeSquadTechnique({
 							interaction: interaction,
@@ -8512,6 +8518,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							technique2: technique2,
 							technique3: technique3,
 							technique4: technique4,
+							technique5: technique5,
 							damageMultiplier: combination.damageMultiplier,
 							imageUrl: combination.imageUrl,
 							description: combination.description,
@@ -8520,6 +8527,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							userId2: user2.userId,
 							userId3: user3.userId,
 							userId4: user4.userId,
+							userId5: user5.userId,
 							primaryEmbed: updatedEmbed,
 							updateEmbed: true,
 							rows: rows

@@ -79,6 +79,7 @@ export async function executeSquadTechnique({
 	technique2,
 	technique3,
 	technique4,
+	technique5,
 	damageMultiplier,
 	imageUrl,
 	description,
@@ -87,6 +88,7 @@ export async function executeSquadTechnique({
 	userId2,
 	userId3,
 	userId4,
+	userId5,
 	primaryEmbed,
 	updateEmbed = true,
 	rows
@@ -94,21 +96,35 @@ export async function executeSquadTechnique({
 	let damage = 0
 
 	damage =
-		(calculateDamage(technique1, userId1) +
-			calculateDamage(technique2, userId2) +
-			calculateDamage(technique3, userId3) +
-			calculateDamage(technique4, userId4)) *
-		damageMultiplier
+		calculateDamage(technique1, userId1) +
+		calculateDamage(technique2, userId2) +
+		calculateDamage(technique3, userId3) +
+		calculateDamage(technique4, userId4) +
+		calculateDamage(technique5, userId5) * damageMultiplier
 
 	const user1 = await interaction.client.users.fetch(userId1)
 	const user2 = await interaction.client.users.fetch(userId2)
 	const user3 = await interaction.client.users.fetch(userId3)
 	const user4 = await interaction.client.users.fetch(userId4)
+	const user5 = await interaction.client.users.fetch(userId5)
 
 	if (updateEmbed) {
 		const specialTechniqueEmbed = new EmbedBuilder(primaryEmbed)
 			.setImage(imageUrl)
-			.setDescription(description(user1, user2, user3, user4, technique1, technique2, technique3, technique4))
+			.setDescription(
+				description(
+					user1,
+					user2,
+					user3,
+					user4,
+					user5,
+					technique1,
+					technique2,
+					technique3,
+					technique4,
+					technique5
+				)
+			)
 			.setFields(
 				{ name: "Technique Used", value: fieldValue, inline: true },
 				{ name: "Damage Dealt", value: `${damage}`, inline: true }
@@ -120,7 +136,20 @@ export async function executeSquadTechnique({
 	} else {
 		const newEmbed = new EmbedBuilder()
 			.setImage(imageUrl)
-			.setDescription(description(user1, user2, user3, user4, technique1, technique2, technique3, technique4))
+			.setDescription(
+				description(
+					user1,
+					user2,
+					user3,
+					user4,
+					user5,
+					technique1,
+					technique2,
+					technique3,
+					technique4,
+					technique5
+				)
+			)
 			.setFields(
 				{ name: "Technique Used", value: fieldValue, inline: true },
 				{ name: "Damage Dealt", value: `${damage}`, inline: true }
@@ -191,6 +220,18 @@ export const squadTechniqueCombinations = [
 		description: (user1, user2, user3, user4, technique1, technique2, technique3, technique4) =>
 			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}!`,
 		fieldValue: "With our treasures combined, we are Mahoraga!"
+	},
+	{
+		technique1: "Ten Shadows Technique: Divine Dogs",
+		technique2: "Ten Shadows Technique: Toad",
+		technique3: "Ten Shadows Technique: Nue",
+		technique4: "Ten Shadows Technique: Max Elephant",
+		technique5: "Solo Forbidden Area",
+		damageMultiplier: 600,
+		imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
+		description: (user1, user2, user3, user4, user5, technique1, technique2, technique3, technique4, technique5) =>
+			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}, ${user5.username} used ${technique5}!`,
+		fieldValue: "With Solo Forbidden Area, And our treasures combined, We Are.. Adapted Mahoraga!"
 	},
 	{
 		technique1: "Boogie Woogie Surplex",
