@@ -274,30 +274,33 @@ export async function createRaidEmbed(
 
 export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
 	const bossDrops: RaidDrops[] = []
-	const participantDrops: { [participantId: string]: RaidDrops[] } = {}
+	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number } } = {}
+
+	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 
 	for (const participant of raidParty.participants) {
-		const { id } = participant
+		const { id, totalDamage: participantDamage } = participant
+		const damagePercentage = (participantDamage / totalDamage) * 100
 		const drops: RaidDrops[] = []
+		const raidTokens = Math.floor(Math.random() * (20 - 10 + 1) + 10)
 
 		try {
 			const drop = getRaidBossDrop(raidBoss.name)
 			if (drop) {
-				drops.push(drop)
+				const adjustedDropRate = Math.min(drop.dropRate * (1 + damagePercentage / 100), 0.5)
+				drops.push({ ...drop, dropRate: adjustedDropRate })
 			}
 		} catch (error) {
 			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
 		}
 
-		participantDrops[id] = drops
+		participantDrops[id] = { drops, raidTokens }
 		bossDrops.push(...drops)
-
-		const randomNumber = Math.floor(Math.random() * (20 - 10 + 1) + 10)
 
 		for (const drop of drops) {
 			try {
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", randomNumber)
+				await addItemToUserInventory(id, "Raid Token", raidTokens)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
@@ -325,7 +328,11 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 				await addUserTechnique(luckyParticipant.id, specialDrop)
 				await markSpecialDropAsClaimed(raidBoss.name)
 
-				participantDrops[luckyParticipant.id].push({ name: specialDrop, rarity: "Special", dropRate: 0.01 })
+				participantDrops[luckyParticipant.id].drops.push({
+					name: specialDrop,
+					rarity: "Special",
+					dropRate: 0.01
+				})
 				bossDrops.push({ name: specialDrop, rarity: "Special", dropRate: 0.01 })
 
 				const luckyUser = await client.users.fetch(luckyParticipant.id)
@@ -342,7 +349,6 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		}
 	}
 
-	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 	raidBoss.globalHealth -= totalDamage
 	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth, raidBoss.current_health)
 
@@ -359,7 +365,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		.setDescription("The raid has ended. Here are the results:")
 
 	for (const participant of raidParty.participants) {
-		const drops = participantDrops[participant.id]
+		const { drops, raidTokens } = participantDrops[participant.id]
 
 		// Group drops by rarity
 		const groupedDrops: { [rarity: string]: RaidDrops[] } = {}
@@ -376,16 +382,25 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		const fieldValue =
 			Object.entries(groupedDrops)
 				.map(([rarity, drops]) => {
-					const dropsString = drops.map(drop => `${drop.name} (${drop.dropRate}%)`).join(", ")
+					const dropsString = drops
+						.map(drop => `${drop.name} (${(drop.dropRate * 100).toFixed(2)}%)`)
+						.join(", ")
 					return `${rarity}: ${dropsString}`
 				})
 				.join("\n") || "No drops"
 
-		raidEndEmbed.addFields({
-			name: `Drops for ${userMention}`,
-			value: fieldValue,
-			inline: false
-		})
+		raidEndEmbed.addFields(
+			{
+				name: `Drops for ${userMention}`,
+				value: fieldValue,
+				inline: false
+			},
+			{
+				name: "Raid Tokens Earned",
+				value: `${raidTokens}`,
+				inline: true
+			}
+		)
 	}
 
 	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })

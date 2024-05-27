@@ -7,12 +7,15 @@ import { ClientSession, Collection, MongoClient, ObjectId } from "mongodb"
 import cron from "node-cron"
 import schedule from "node-schedule"
 import { v4 as uuidv4 } from "uuid"
-import logger from "./bot.js"
+import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
+import logger, { createClient } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 dotenv()
+
+const client1 = createClient()
 
 export const bossCollectionName = "bosses"
 export const shikigamCollectionName = "shiki"
@@ -3945,14 +3948,12 @@ export async function createRaidParty(raidBossId: string, participants: string[]
 			throw new Error("Raid boss not found")
 		}
 
-		const raidPartyHealth = Math.floor(raidBoss.globalHealth * 0.1)
-
 		const participantsInfo: Participant[] = participants.map(id => ({ id, totalDamage: 0 }))
 
 		const raidParty: RaidParty = {
 			raidBossId,
 			participants: participantsInfo,
-			partyHealth: raidPartyHealth,
+			partyHealth: 50000,
 			pendingActions: [],
 			createdAt: new Date()
 		}
@@ -4059,8 +4060,76 @@ export async function handleRaidBossDefeat(
 	const database = client.db(mongoDatabase)
 	const raidPartiesCollection = database.collection<RaidParty>("raidParties")
 
+	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
+	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number } } = {}
+
 	for (const participant of raidParty.participants) {
-		await awardRewards(participant.id, raidBossDetails)
+		const { id, totalDamage: participantDamage } = participant
+		const damagePercentage = (participantDamage / totalDamage) * 100
+		const drops: RaidDrops[] = []
+		const raidTokens = Math.floor(Math.random() * (30 - 20 + 1) + 20)
+
+		try {
+			const drop = getRaidBossDrop(raidBossDetails.name)
+			if (drop) {
+				const adjustedDropRate = Math.min(drop.dropRate * (1 + damagePercentage / 100), 1)
+				drops.push({ ...drop, dropRate: adjustedDropRate })
+			}
+		} catch (error) {
+			console.error(`Error getting drop for raid boss ${raidBossDetails.name}:`, error)
+		}
+
+		participantDrops[id] = { drops, raidTokens }
+
+		for (const drop of drops) {
+			try {
+				await addItemToUserInventory(id, drop.name, 1)
+				await addItemToUserInventory(id, "Raid Token", raidTokens)
+
+				if (drop.name === "Heian Era Awakening") {
+					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
+					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
+					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+				}
+			} catch (error) {
+				console.error(`Error adding item to user inventory for user ${id}:`, error)
+			}
+		}
+	}
+
+	// Check if the special drop has already been claimed
+	const specialDropClaimed = await checkSpecialDropClaimed(raidBossDetails.name)
+
+	if (!specialDropClaimed) {
+		const randomNumber = Math.random()
+		const specialDropChance = 0.001
+
+		if (randomNumber <= specialDropChance) {
+			const luckyParticipant = raidParty.participants[Math.floor(Math.random() * raidParty.participants.length)]
+			const specialDrop = "Nah I'd Lose"
+
+			try {
+				await addUserTechnique(luckyParticipant.id, specialDrop)
+				await markSpecialDropAsClaimed(raidBossDetails.name)
+
+				participantDrops[luckyParticipant.id].drops.push({
+					name: specialDrop,
+					rarity: "Special",
+					dropRate: 0.1
+				})
+
+				const luckyUser = await client1.users.fetch(luckyParticipant.id)
+				const channelId = "1239327615379308677"
+				const channel = await client1.channels.fetch(channelId)
+				if (channel && channel.isTextBased()) {
+					await channel.send(
+						`Congratulations! ${luckyUser.toString()} has obtained the special drop "Nah I'd Lose"!`
+					)
+				}
+			} catch (error) {
+				console.error(`Error adding special drop to user techniques for user ${luckyParticipant.id}:`, error)
+			}
+		}
 	}
 
 	await raidPartiesCollection.deleteOne({ _id: new ObjectId(raidParty._id) })
@@ -4071,6 +4140,43 @@ export async function handleRaidBossDefeat(
 		.setDescription(`Congratulations! You have defeated ${raidBossDetails.name}.`)
 
 	for (const participant of raidParty.participants) {
+		const { drops, raidTokens } = participantDrops[participant.id]
+
+		// Group drops by rarity
+		const groupedDrops: { [rarity: string]: RaidDrops[] } = {}
+		for (const drop of drops) {
+			if (!groupedDrops[drop.rarity]) {
+				groupedDrops[drop.rarity] = []
+			}
+			groupedDrops[drop.rarity].push(drop)
+		}
+
+		const user = await client1.users.fetch(participant.id)
+		const userMention = `${user.username}#${user.discriminator}`
+
+		const fieldValue =
+			Object.entries(groupedDrops)
+				.map(([rarity, drops]) => {
+					const dropsString = drops
+						.map(drop => `${drop.name} (${(drop.dropRate * 100).toFixed(2)}%)`)
+						.join(", ")
+					return `${rarity}: ${dropsString}`
+				})
+				.join("\n") || "No drops"
+
+		victoryEmbed.addFields(
+			{
+				name: `Rewards for ${userMention}`,
+				value: fieldValue,
+				inline: false
+			},
+			{
+				name: "Raid Tokens Earned",
+				value: `${raidTokens}`,
+				inline: true
+			}
+		)
+
 		const participantUser = interaction.guild?.members.cache.get(participant.id)?.user
 		if (participantUser) {
 			await participantUser.send({ embeds: [victoryEmbed] })
@@ -4109,9 +4215,6 @@ export async function getRaidPartyById(raidPartyId: string): Promise<RaidParty |
 		logger.error("Error retrieving raid party by ID:", error)
 		return null
 	}
-}
-function awardRewards(participant: string, raidBossDetails: RaidBoss) {
-	throw new Error("Function not implemented.")
 }
 
 export async function getBlacklistedUsers(): Promise<
@@ -4300,3 +4403,5 @@ export async function checkSpecialDropClaimed(raidBossName: string): Promise<boo
 		throw error
 	}
 }
+
+client1.login(process.env["DISCORD_BOT_TOKEN"])

@@ -8497,8 +8497,10 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						raidParty.pendingActions = []
 						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
+						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+
 						const updatedEmbedBuilder = await createRaidEmbed(
-							updatedRaidBoss,
+							latestRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
@@ -8590,9 +8592,9 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.participants[participantIndex4].totalDamage += damage
 						}
 
+						updatedRaidBoss.globalHealth -= damage
 						updatedRaidBoss.current_health -= damage
 
-						// Update the global health and current health in the database
 						await updateRaidBossHealth(
 							updatedRaidBoss._id.toString(),
 							updatedRaidBoss.globalHealth,
@@ -8608,8 +8610,10 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						raidParty.pendingActions = []
 						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
+						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+
 						const updatedEmbedBuilder = await createRaidEmbed(
-							updatedRaidBoss,
+							latestRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
@@ -8662,9 +8666,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					0
 				)
 
-				updatedRaidBoss.globalHealth -= totalDamage
-				updatedRaidBoss.current_health -= totalDamage
-
 				await updateRaidBossHealth(
 					updatedRaidBoss._id.toString(),
 					updatedRaidBoss.globalHealth,
@@ -8695,7 +8696,9 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				)
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 
-				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
+				const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+
+				const attackDetails = await applyBossDamage(latestRaidBoss, updatedRaidParty.participants, interaction)
 				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
 					const participantUser = await client1.users.fetch(participant)
 					const participantName = participantUser.username
