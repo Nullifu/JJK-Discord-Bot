@@ -215,7 +215,7 @@ export const squadTechniqueCombinations = [
 		technique2: "Ten Shadows Technique: Toad",
 		technique3: "Ten Shadows Technique: Nue",
 		technique4: "Ten Shadows Technique: Max Elephant",
-		damageMultiplier: 600,
+		damageMultiplier: 250,
 		imageUrl: "https://media1.tenor.com/m/lItEyBP-G48AAAAC/mahoraga-summoning-mahoraga.gif",
 		description: (user1, user2, user3, user4, technique1, technique2, technique3, technique4) =>
 			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}!`,
@@ -227,7 +227,7 @@ export const squadTechniqueCombinations = [
 		technique3: "Ten Shadows Technique: Nue",
 		technique4: "Ten Shadows Technique: Max Elephant",
 		technique5: "Solo Forbidden Area",
-		damageMultiplier: 900,
+		damageMultiplier: 350,
 		imageUrl: "https://media1.tenor.com/m/qHHfavrBuXoAAAAC/mahoraga-sword-of-exorcism.gif",
 		description: (user1, user2, user3, user4, user5, technique1, technique2, technique3, technique4, technique5) =>
 			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3}, and ${user4.username} used ${technique4}, ${user5.username} used ${technique5}!`,
@@ -248,7 +248,7 @@ export const squadTechniqueCombinations = [
 		technique1: "Cleave",
 		technique2: "Dismantle",
 		technique3: "Flame Arrow",
-		damageMultiplier: 350,
+		damageMultiplier: 325,
 		imageUrl: "https://media1.tenor.com/m/E0pIWKD2Tl4AAAAC/sukuna-fire-arrow.gif",
 		description: (user1, user2, user3, technique1, technique2, technique3) =>
 			`${user1.username} used ${technique1}, ${user2.username} used ${technique2}, ${user3.username} used ${technique3},`,

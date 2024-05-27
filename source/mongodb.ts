@@ -4097,7 +4097,6 @@ export async function handleRaidBossDefeat(
 		}
 	}
 
-	// Check if the special drop has already been claimed
 	const specialDropClaimed = await checkSpecialDropClaimed(raidBossDetails.name)
 
 	if (!specialDropClaimed) {
