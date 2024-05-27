@@ -215,19 +215,24 @@ export async function createRaidEmbed(
 	const primaryEmbed = new EmbedBuilder()
 		.setColor("Aqua")
 		.setTitle("Cursed Battle!")
-		.setDescription(`You're facing **${raidBoss.name}**! Choose your technique wisely.`)
-		.setImage(raidBoss.image_url)
+		.setDescription(
+			raidBoss ? `You're facing **${raidBoss.name}**! Choose your technique wisely.` : "Raid boss not found."
+		)
+		.setImage(raidBoss?.image_url || "")
 		.addFields(
-			{ name: "Party Health", value: `:shield: ${partyHealth.toString()}`, inline: true }, // Replacing Boss Health with Party Health
-			{ name: "Boss Grade", value: `${raidBoss.grade}`, inline: true },
-			{ name: "Boss Awakening", value: `${raidBoss.awakeningStage}` || "None", inline: true },
+			{ name: "Party Health", value: `:shield: ${partyHealth.toString()}`, inline: true },
+			{ name: "Boss Grade", value: raidBoss?.grade || "Unknown", inline: true },
+			{ name: "Boss Awakening", value: raidBoss?.awakeningStage || "None", inline: true },
 			{ name: "Raid Ends", value: `<t:${raidEndTimestamp}:R>`, inline: true }
 		)
-		.addFields({
+
+	if (raidBoss) {
+		primaryEmbed.addFields({
 			name: "Boss Health Status",
 			value: generateHealthBar(partyHealth, raidBoss.globalHealth),
 			inline: false
 		})
+	}
 
 	const participantsHealthFields = []
 
@@ -235,11 +240,9 @@ export async function createRaidEmbed(
 		try {
 			const playerHealth = await getUserHealth(participant.id)
 			const member = interaction.guild?.members.cache.get(participant.id)
-
 			if (!member) {
 				console.warn(`Participant with ID ${participant.id} not found in guild.`)
 			}
-
 			participantsHealthFields.push({
 				name: `${member?.displayName || "Unknown"}`,
 				value: `:blue_heart: ${playerHealth?.toString() || "0"}`,
@@ -265,13 +268,12 @@ export async function createRaidEmbed(
 		})
 	}
 
-	if (raidBoss.awakeningStage === "Stage Five") {
+	if (raidBoss?.awakeningStage === "Stage Five") {
 		primaryEmbed.setFooter({ text: "Be careful, There's no information on this boss.." })
 	}
 
 	return primaryEmbed
 }
-
 export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
 	const bossDrops: RaidDrops[] = []
 	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number } } = {}
