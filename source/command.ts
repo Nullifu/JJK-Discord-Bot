@@ -1988,6 +1988,19 @@ export async function handleGuideCommand(interaction) {
 			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 			break
 		}
+		case "raids": {
+			const guideEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Raids Guide")
+				.setDescription("Here's how you can participate in raids.")
+				.addFields({
+					name: "Basic",
+					value: "To participate in a raid, use the `/raid` command. You can join a raid with up to five people. Raids are a great way to earn rewards and fight powerful bosses. You can also use special techniques in raids to deal extra damage, Called DUEL TECHNIQUES, They are as follows\n\n+ Solo Forbidden Area + Hollow Purple = Maximum Technique: Purple\n+ Boogie Woogie Surplex + RE-Imagined Black Flash = Brotherly Beatdown\n+ Cleave + Dismantle = World Cutting Slash\n+ Divine Flame + Flame Arrow = Divine Flame Arrow\n+ Maximum Lapse Blue + Maximum Reversal Red = Hollow: Nuke"
+				})
+
+			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
+			break
+		}
 
 		case "technique": {
 			const guideEmbed = new EmbedBuilder()
@@ -5026,7 +5039,7 @@ export async function handleTradeCommand(interaction) {
 				},
 				{
 					name: "Next Steps",
-					value: "• ✅ **To Accept:** Use `/acceptrade`.\n• ❌ **To Decline:** Ignore this message.",
+					value: "• ✅ **To Accept:** Use `/trade accept`.\n• ❌ **To Decline:** Ignore this message.",
 					inline: false
 				},
 				{
@@ -5035,7 +5048,7 @@ export async function handleTradeCommand(interaction) {
 						"Please read carefully before proceeding with the trade:\n\n" +
 						"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
 						"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
-						"💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
+						"• 💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
 					inline: false
 				}
 			)
