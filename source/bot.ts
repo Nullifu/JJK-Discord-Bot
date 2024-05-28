@@ -92,6 +92,7 @@ import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
 	getShopLastReset,
+	getUserInventory,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
 	logImageUrl,
@@ -413,7 +414,6 @@ const commands = [
 	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
-	new SlashCommandBuilder().setName("createquest").setDescription("Work For Money!"),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("shikigamishop").setDescription("Shikigami Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
@@ -425,7 +425,6 @@ const commands = [
 		.setDescription("Sell an item from your inventory.")
 		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
 		.addIntegerOption(option => option.setName("quantity").setDescription("How many to sell").setRequired(false)),
-	new SlashCommandBuilder().setName("purchasehistory").setDescription("Check your purchase history"),
 
 	new SlashCommandBuilder()
 		.setName("tame")
@@ -527,6 +526,28 @@ const commands = [
 					{ name: "Items", value: "items" },
 					{ name: "Awakening", value: "awakening" }
 				)
+		),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Trading Command.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
+		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option =>
+			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
+		)
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		),
 
 	new SlashCommandBuilder()
@@ -759,7 +780,6 @@ async function doApplicationCommands(clientId: string) {
 
 // --------------------------------------------------------------------------------------------------------------------------\\
 // --------------------------------------------------------------------------------------------------------------------------\\
-//
 client.on("interactionCreate", async interaction => {
 	if (!interaction.isCommand()) return
 	const chatInputInteraction = interaction
@@ -778,19 +798,19 @@ client.on("interactionCreate", async interaction => {
 			.addFields(
 				{
 					name: "**General Commands**",
-					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `VoteClaim`, `Guide`"
+					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `Guide`, `Tutorial`"
 				},
 				{
 					name: "**Economy Commands**",
-					value: "`Work`, `Dig`, `Gamble`, `Beg`, `Donate`"
+					value: "`Work`, `Dig`, `Gamble`, `Beg`, `Donate`, `Daily`, `Shop`, `Sell`, `UseItem`, `Craft`"
 				},
 				{
 					name: "**Battle Commands**",
-					value: "`Fight`, `Tame`"
+					value: "`Fight`, `Tame`, `View Shikigami`, `Technique View/Equip`, `Quests`, `Event`, `Raid`, `ActiveEffects`, `Mentor`"
 				},
 				{
 					name: "**Other Commands**",
-					value: "`Alert`, `Update`, `Search`, `SelectJob`, `SelectTitle`"
+					value: "`Alert`, `Update`, `Search`, `SelectJob`, `SelectTitle`, `Bug`"
 				}
 			)
 			.setTimestamp()
@@ -845,13 +865,8 @@ client.on("interactionCreate", async interaction => {
 	//
 	client.on("interactionCreate", async interaction => {
 		if (interaction.isStringSelectMenu()) {
-			if (interaction.customId.startsWith("accept_trade_select_")) {
+			if (interaction.customId.startsWith("accept_trade_select")) {
 				try {
-					if (!interaction.deferred && !interaction.replied) {
-						await interaction.deferReply()
-					}
-
-					logger.info("Handling trade selection...")
 					await processTradeSelection(interaction)
 				} catch (error) {
 					logger.error("Error during trade selection processing:", error)
@@ -1073,9 +1088,25 @@ client.on("interactionCreate", async interaction => {
 
 client.on("interactionCreate", async interaction => {
 	if (interaction.isButton()) {
-		// Check if the button custom ID starts with "giveaway-"
 		if (interaction.customId.startsWith("giveaway-")) {
 			await handleGiveawayEntry(interaction as ButtonInteraction)
+		}
+	}
+})
+
+client.on("interactionCreate", async interaction => {
+	if (interaction.isAutocomplete()) {
+		if (interaction.commandName === "trade") {
+			const focusedOption = interaction.options.getFocused(true)
+			if (focusedOption.name === "item") {
+				const userInput = focusedOption.value.toLowerCase()
+				const userInventory = await getUserInventory(interaction.user.id)
+				const filteredItemChoices = userInventory
+					.filter(item => item.name.toLowerCase().includes(userInput))
+					.slice(0, 25)
+					.map(item => ({ name: item.name, value: item.name }))
+				await interaction.respond(filteredItemChoices)
+			}
 		}
 	}
 })
@@ -1083,12 +1114,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import { AutoPoster } from "topgg-autoposter"
-const poster = AutoPoster(process.env.TOPGG, client)
+//import { AutoPoster } from "topgg-autoposter"
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 

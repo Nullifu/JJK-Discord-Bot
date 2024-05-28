@@ -1693,6 +1693,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		const honors = (await getUserHonours(userId)) || []
 		const transform = await getUserTransformation(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
+		const awakening = await getUserAwakening(userId)
 
 		//
 		let userTechniques: string[] = await (userHeavenlyRestriction
@@ -1737,6 +1738,7 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
 				{ name: "🏅 Honours", value: honors.toString() || "None", inline: true },
+				{ name: "🔥 Awakening", value: awakening || "Stage Zero", inline: true },
 				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
 				{
 					name: "⚖️ Heavenly Restriction",
@@ -4983,32 +4985,31 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 }
 
 export async function handleTradeCommand(interaction) {
-	const targetUser = interaction.options.getUser("user")
-	const item = interaction.options.getString("item")
-	const quantity = interaction.options.getInteger("quantity")
-
-	const initiatorInventory = await getUserInventory(interaction.user.id)
-	const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
-
-	if (!initiatorItem) {
-		await interaction.reply({
-			content: "You do not have enough of the specified item to trade.",
-			ephemeral: true
-		})
-		return
-	}
-
-	const targetUserInventory = await getUserInventory(targetUser.id)
-
-	if (!targetUserInventory) {
-		await interaction.reply({
-			content: "The user you are trying to trade with does not exist or has no inventory.",
-			ephemeral: true
-		})
-		return
-	}
-
 	try {
+		const targetUser = interaction.options.getUser("user")
+		const item = interaction.options.getString("item")
+		const quantity = interaction.options.getInteger("quantity")
+
+		const initiatorInventory = await getUserInventory(interaction.user.id)
+		const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
+
+		if (!initiatorItem) {
+			await interaction.reply({
+				content: "You do not have enough of the specified item to trade.",
+				ephemeral: true
+			})
+			return
+		}
+
+		const targetUserInventory = await getUserInventory(targetUser.id)
+		if (!targetUserInventory) {
+			await interaction.reply({
+				content: "The user you are trying to trade with does not exist or has no inventory.",
+				ephemeral: true
+			})
+			return
+		}
+
 		await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
 
 		const tradeEmbed = new EmbedBuilder()
@@ -5061,6 +5062,7 @@ export async function handleTradeCommand(interaction) {
 		})
 	}
 }
+
 export async function handleViewEffectsCommand(interaction) {
 	const userId = interaction.user.id
 	await updateUserCommandsUsed(interaction.user.id)
@@ -5117,10 +5119,10 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 }
 
 export async function handleAcceptTrade(interaction) {
-	const userId = interaction.user.id
-	await interaction.deferReply()
-
 	try {
+		await interaction.deferReply({ ephemeral: true })
+
+		const userId = interaction.user.id
 		const tradeRequests = await viewTradeRequests(userId)
 
 		if (tradeRequests.length === 0) {
@@ -5128,48 +5130,109 @@ export async function handleAcceptTrade(interaction) {
 			return
 		}
 
-		const options = tradeRequests.map(request => {
-			return {
-				label: request.item,
-				description: `From: ${request.initiatorId} (Qty: ${request.quantity})`, // Replace ID with usernames if possible
-				value: request._id.toString()
-			}
-		})
+		const options = tradeRequests.map(request => ({
+			label: request.item,
+			description: `From: ${request.initiatorId} (Qty: ${request.quantity})`,
+			value: request._id.toString()
+		}))
 
 		const selectMenu = new SelectMenuBuilder()
-			.setCustomId("accept_trade_select_") // Modified line
+			.setCustomId("accept_trade_select")
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
 		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
 
-		return interaction.followUp({
+		await interaction.followUp({
 			content: "Choose a trade request to accept:",
 			components: [actionRow],
 			ephemeral: true
 		})
 	} catch (error) {
 		logger.error("Error in handleAcceptTrade:", error)
+		await interaction.followUp({
+			content: "An error occurred while processing your trade acceptance. Please try again later.",
+			ephemeral: true
+		})
 	}
 }
-export async function processTradeSelection(interaction) {
-	const selectedTradeId = interaction.values[0]
-	logger.debug("Selected trade ID:", selectedTradeId)
-	logger.debug("Start processing trade acceptance...")
+
+const processedTrades = new Set<string>()
+const pendingInteractions = new Set<string>()
+
+export async function processTradeSelection(interaction: Interaction) {
+	if (!interaction.isStringSelectMenu()) {
+		return
+	}
+
+	const stringSelectMenuInteraction = interaction as StringSelectMenuInteraction
+
+	if (!stringSelectMenuInteraction.customId.startsWith("accept_trade_select")) {
+		return
+	}
+
+	const selectedTradeId = stringSelectMenuInteraction.values[0]
+	const interactionId = stringSelectMenuInteraction.id
+
+	if (pendingInteractions.has(interactionId)) {
+		logger.warn(`Interaction ID: ${interactionId} is already being processed.`)
+		return
+	}
+
+	pendingInteractions.add(interactionId)
+
+	if (processedTrades.has(selectedTradeId)) {
+		logger.warn(`Trade ID: ${selectedTradeId} has already been processed.`)
+		pendingInteractions.delete(interactionId)
+		return
+	}
+
+	console.info("Handling trade selection...")
+	console.debug("Selected trade ID:", selectedTradeId)
+	console.debug("Start processing trade acceptance...")
+
+	let replied = false
+
+	if (!stringSelectMenuInteraction.deferred && !stringSelectMenuInteraction.replied) {
+		await stringSelectMenuInteraction.deferReply({ ephemeral: true })
+		replied = true
+	}
 
 	try {
-		await handleTradeAcceptance(selectedTradeId, interaction.user.id)
-		logger.info("Trade request accepted successfully!")
+		await handleTradeAcceptance(selectedTradeId, stringSelectMenuInteraction.user.id)
+		console.info("Trade request accepted successfully!")
 
-		if (!interaction.replied) {
-			await interaction.editReply({
-				content: "Trade request accepted successfully!",
-				ephemeral: true,
+		processedTrades.add(selectedTradeId)
+
+		if (replied) {
+			try {
+				await stringSelectMenuInteraction.editReply({
+					content: "Trade request accepted successfully!",
+					components: []
+				})
+			} catch (error) {
+				if (error.code === 10062) {
+					logger.warn("Unknown interaction error occurred while updating reply:", error)
+				} else {
+					throw error
+				}
+			}
+		}
+	} catch (error) {
+		logger.error("Error handling trade acceptance:", error)
+		if (!stringSelectMenuInteraction.replied && !stringSelectMenuInteraction.deferred) {
+			await stringSelectMenuInteraction.reply({
+				content: "An error occurred while processing the trade.",
+				ephemeral: true
+			})
+		} else if (stringSelectMenuInteraction.deferred) {
+			await stringSelectMenuInteraction.editReply({
+				content: "An error occurred while processing the trade.",
 				components: []
 			})
 		}
-	} catch (error) {
-		logger.error("Error handling trade acceptance:")
+	} finally {
+		pendingInteractions.delete(interactionId)
 	}
 }
 
@@ -5566,7 +5629,6 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 		await updateUserCommandsUsed(interaction.user.id)
 
 		const currentTransformation = await getUserTransformation(interaction.user.id)
-
 		const availableTransformations = unlockedTransformations.filter(transformationName => {
 			return transformationName && transformationName.trim() !== currentTransformation
 		})
@@ -5584,22 +5646,38 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 
 		await interaction.reply({
 			content: "Choose a transformation to equip:",
-			components: [row]
+			components: [row],
+			ephemeral: false
 		})
 
-		const selectMenuInteraction = await interaction.channel.awaitMessageComponent({
-			filter: i => i.user.id === interaction.user.id && i.isStringSelectMenu(),
-			time: 60000
+		const filter = (i: Interaction): i is StringSelectMenuInteraction =>
+			i.isStringSelectMenu() && i.customId === selectMenu.data.custom_id && i.user.id === interaction.user.id
+		const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+		collector.on("collect", async (selectMenuInteraction: StringSelectMenuInteraction) => {
+			await selectMenuInteraction.deferReply({ ephemeral: false })
+
+			const selectedTransformationName = selectMenuInteraction.values[0]
+
+			await updateUserTransformation(interaction.user.id, selectedTransformationName, {
+				transformation: selectedTransformationName
+			})
+
+			await selectMenuInteraction.editReply({
+				content: `You have equipped ${selectedTransformationName}!`,
+				components: []
+			})
+
+			collector.stop()
 		})
 
-		const selectedTransformationName = (selectMenuInteraction as StringSelectMenuInteraction).values[0]
-		await updateUserTransformation(interaction.user.id, selectedTransformationName, {
-			transformation: selectedTransformationName
-		})
-
-		await selectMenuInteraction.update({
-			content: `You have equipped ${selectedTransformationName}!`,
-			components: []
+		collector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				await interaction.editReply({
+					content: "The selection menu has timed out. Please try again.",
+					components: []
+				})
+			}
 		})
 	} catch (error) {
 		logger.error("Error handling equip transformation command:", error)
@@ -7751,6 +7829,14 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				imageUrl = getYujiItadoriImageUrl()
 				line = getYujiItadoriLine()
 			}
+		} else if (!isGlobalEventActive && mentor === "Satoru Gojo") {
+			message = mentorDetails["Satoru Gojo"].message
+
+			const randomIndex = Math.floor(Math.random() * mentorDetails["Satoru Gojo"].unsealingGifs.length)
+
+			imageUrl = mentorDetails["Satoru Gojo"].unsealingGifs[randomIndex]
+
+			line = mentorDetails["Satoru Gojo"].unsealingDialogues[randomIndex]
 		} else if (isGlobalEventActive && mentor === "Ryomen Sukuna") {
 			message = mentorDetails["Ryomen Sukuna"].message
 			imageUrl = mentorDetails["Ryomen Sukuna"].imageUrl
@@ -8370,7 +8456,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				updatedEmbedBuilder.addFields({
 					name: "Technique Selection Ends",
-
 					value: `<t:${techniqueSelectionEndTimestamp}:R>`,
 					inline: true
 				})
@@ -8405,8 +8490,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					const participantIndex = raidParty.participants.findIndex(p => p.id === userId)
 					if (participantIndex !== -1) {
 						raidParty.participants[participantIndex].totalDamage += damage
-						updatedRaidBoss.globalHealth -= damage
-						updatedRaidBoss.current_health -= damage
+						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
+						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
 					}
 				}
 
@@ -8417,6 +8502,16 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					updatedRaidBoss.globalHealth,
 					updatedRaidBoss.current_health
 				)
+
+				const participantsSelected = lastUsedTechniques.length
+				if (participantsSelected === raidParty.participants.length) {
+					battleOptionSelectMenuCollectorRaid.stop("All participants have selected their techniques")
+				}
+
+				if (updatedRaidBoss.current_health <= 0) {
+					await handleRaidBossDefeat(interaction, raidParty, updatedRaidBoss)
+					return
+				}
 			})
 
 			battleOptionSelectMenuCollectorRaid.on("end", async collected => {
@@ -8480,8 +8575,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.participants[participantIndex2].totalDamage += damage
 						}
 
-						updatedRaidBoss.globalHealth -= damage
-						updatedRaidBoss.current_health -= damage
+						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
+						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
 
 						await updateRaidBossHealth(
 							updatedRaidBoss._id.toString(),
@@ -8501,7 +8596,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 
 						const updatedEmbedBuilder = await createRaidEmbed(
-							updatedRaidBoss,
+							latestRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
@@ -8510,6 +8605,11 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						)
 
 						updatedEmbed = updatedEmbedBuilder.toJSON()
+
+						if (raidParty.partyHealth <= 0) {
+							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
+							return
+						}
 					}
 				}
 
@@ -8593,8 +8693,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.participants[participantIndex4].totalDamage += damage
 						}
 
-						updatedRaidBoss.globalHealth -= damage
-						updatedRaidBoss.current_health -= damage
+						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
+						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
 
 						await updateRaidBossHealth(
 							updatedRaidBoss._id.toString(),
@@ -8623,6 +8723,11 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						)
 
 						updatedEmbed = updatedEmbedBuilder.toJSON()
+
+						if (latestRaidBoss.current_health <= 0) {
+							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
+							return
+						}
 					}
 				}
 
@@ -8724,8 +8829,10 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedrows] })
 
-				if (raidParty.partyHealth <= 0) {
-					raidParty.partyHealth = 0 // Set the party health to 0 if it goes below 0
+				if (updatedRaidBoss.current_health <= 0) {
+					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
+				} else if (raidParty.partyHealth <= 0) {
+					raidParty.partyHealth = 0
 					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
 				} else {
 					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION

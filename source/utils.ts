@@ -36,12 +36,30 @@ interface CommunityQuest {
 const client = createClient()
 
 export const mentorDetails: {
-	[key: string]: { message: string; imageUrl: string; lines: string[]; eventLines?: string[] }
+	[key: string]: {
+		message: string
+		imageUrl: string
+		lines: string[]
+		eventLines?: string[]
+		unsealingGifs?: string[]
+		unsealingDialogues?: string[]
+	}
 } = {
 	"Satoru Gojo": {
-		message: "You are under the guidance of Satoru Gojo, the strongest Jujutsu sorcerer.",
-		imageUrl: "https://media1.tenor.com/m/DoXhSg0brxsAAAAC/gojo-satoru-satoru.gif",
-		lines: ["Don't worry, I'm the strongest.", "What you lack is imagination.", "Shall we get a little rough?"]
+		message: "Your mentor is Satoru Gojo.",
+		imageUrl: "https://example.com/satoru_gojo.png",
+		lines: ["You're doing great!", "Keep up the good work!", "I'm proud of your progress."],
+		unsealingGifs: [
+			"https://media1.tenor.com/m/_NCxT6vyWvwAAAAC/gojo-satoru-look-side-eye.gif",
+			"https://media1.tenor.com/m/Q5ad86OJGREAAAAC/jjk-jujutsu-kaisen.gif",
+			"https://media1.tenor.com/m/Vks0sCU26jMAAAAC/kenjaku-gojo-vs-sukuna.gif"
+		],
+		unsealingDialogues: [
+			"Thank you for your help in unsealing me. Sukuna is still a formidable raid boss, and the battle against him continues. We must stay vigilant and prepared.",
+			"Don't forget.. Sukuna's the challenger.",
+			"The fight against Sukuna is far from over. As an active raid boss, he remains a significant challenge. Let's keep training and working together to overcome him.",
+			"I appreciate your efforts in unsealing me. However, we cannot let our guard down. Sukuna's power as a raid boss is immense, and the battle rages on. Stay focused and ready."
+		]
 	},
 	"Curse King": {
 		message: "Ryomen Sukuna, the King of Curses, watches over your training.",
@@ -218,7 +236,7 @@ export async function createRaidEmbed(
 		.setDescription(
 			raidBoss ? `You're facing **${raidBoss.name}**! Choose your technique wisely.` : "Raid boss not found."
 		)
-		.setImage(raidBoss?.image_url || "")
+		.setImage(raidBoss?.image_url || "https://media1.tenor.com/m/8NHbdwPOrDsAAAAC/sukuna-sukuna-smile.gif")
 		.addFields(
 			{ name: "Party Health", value: `:shield: ${partyHealth.toString()}`, inline: true },
 			{ name: "Boss Grade", value: raidBoss?.grade || "Unknown", inline: true },
