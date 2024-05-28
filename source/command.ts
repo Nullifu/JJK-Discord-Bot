@@ -8697,9 +8697,8 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				)
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 
-				const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 
-				const attackDetails = await applyBossDamage(latestRaidBoss, updatedRaidParty.participants, interaction)
+				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
 				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
 					const participantUser = await client1.users.fetch(participant)
 					const participantName = participantUser.username
