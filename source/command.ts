@@ -8697,7 +8697,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				)
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 
-
 				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
 				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
 					const participantUser = await client1.users.fetch(participant)
@@ -8726,6 +8725,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedrows] })
 
 				if (raidParty.partyHealth <= 0) {
+					raidParty.partyHealth = 0 // Set the party health to 0 if it goes below 0
 					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
 				} else {
 					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION
