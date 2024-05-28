@@ -8289,6 +8289,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 		}
 
 		const raidEndTime = Math.floor((Date.now() + RAID_DURATION) / 1000)
+
 		const primaryEmbed = await createRaidEmbed(
 			raidBossDetails,
 			raidParty.participants,
@@ -8500,7 +8501,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 
 						const updatedEmbedBuilder = await createRaidEmbed(
-							latestRaidBoss,
+							updatedRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
@@ -8613,7 +8614,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 
 						const updatedEmbedBuilder = await createRaidEmbed(
-							latestRaidBoss,
+							updatedRaidBoss,
 							updatedRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
