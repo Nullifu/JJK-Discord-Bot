@@ -164,6 +164,15 @@ export async function executeSquadTechnique({
 export const dualTechniqueCombinations = [
 	{
 		technique1: "Solo Forbidden Area",
+		technique2: "Atomic",
+		damageMultiplier: 1000000,
+		imageUrl: "https://media1.tenor.com/m/v9AFQnNDKbcAAAAC/atomic-i-am-atomic.gif",
+		description: (user1, user2, technique1, technique2) =>
+			`${user1.username} used ${technique1} and ${user2.username} used ${technique2}!`,
+		fieldValue: "All Range.. ATOMIC"
+	},
+	{
+		technique1: "Solo Forbidden Area",
 		technique2: "Hollow Purple",
 		damageMultiplier: 200,
 		imageUrl: "https://storage.googleapis.com/jjk_bot_personal/ezgif-5-9322b02566.gif",
