@@ -761,6 +761,9 @@ const commands = [
 		.setName("bug")
 		.setDescription("Report a bug")
 		.addStringOption(option => option.setName("description").setDescription("Describe the bug").setRequired(true))
+		.addStringOption(option =>
+			option.setName("reproducible").setDescription("Steps to reproduce the bug").setRequired(false)
+		)
 		.addAttachmentOption(option => option.setName("image").setDescription("Upload an image related to the bug"))
 ].map(command => command.toJSON())
 
