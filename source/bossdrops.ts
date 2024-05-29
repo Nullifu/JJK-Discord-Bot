@@ -290,7 +290,6 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	"Toad": [{ name: "Toad Shikigami's Soul", rarity: "rare" }],
 	"Great Serpent": [{ name: "Serpent Shikigami's Soul", rarity: "rare" }],
 	"Max Elephant": [{ name: "Elephant Shikigami's Soul", rarity: "rare" }]
-	//
 }
 
 const raidBossDrops: { [bossName: string]: RaidDrops[] } = {

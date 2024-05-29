@@ -16,7 +16,7 @@ import {
 	getUserTutorialState,
 	getUserUnlockedTransformations,
 	markSpecialDropAsClaimed,
-	updateRaidBossHealth,
+	updateRaidBossCurrentHealth,
 	updateRaidBossPhase,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
@@ -201,12 +201,21 @@ export async function createTechniqueSelectMenu(
 
 			if (userHealth > 0) {
 				const userTechniques = await getUserActiveTechniques(participant.id)
-
-				const techniqueOptions = userTechniques.map(techniqueName => ({
-					label: techniqueName,
-					description: "Select to use this technique",
-					value: techniqueName
-				}))
+				const techniqueOptions = userTechniques.reduce((options, techniqueName) => {
+					const duplicateIndex = options.findIndex(option => option.label === techniqueName)
+					if (duplicateIndex !== -1) {
+						options[duplicateIndex].label += ` (${options[duplicateIndex].count + 1})`
+						options[duplicateIndex].count++
+					} else {
+						options.push({
+							label: techniqueName,
+							description: "Select to use this technique",
+							value: techniqueName,
+							count: 1
+						})
+					}
+					return options
+				}, [])
 
 				const selectMenu = new StringSelectMenuBuilder()
 					.setCustomId(`select-battle-option-${participant.id}`)
@@ -370,7 +379,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 	}
 
 	raidBoss.globalHealth -= totalDamage
-	await updateRaidBossHealth(raidBoss._id.toString(), raidBoss.globalHealth, raidBoss.current_health)
+	await updateRaidBossCurrentHealth(raidBoss._id.toString(), raidBoss.current_health)
 
 	if (raidBoss.globalHealth <= 0) {
 		const currentPhase = getCurrentPhase(raidBoss)

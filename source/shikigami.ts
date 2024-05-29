@@ -508,7 +508,7 @@ export async function handleDivineDogsDamage(interaction, randomOpponent, player
 
 const quotes = [
 	"Greetings from the author! I'm Akutami, the creator of Jujutsu Kaisen. I'm very happy to meet you all!",
-	"Greetings from the developer!",
+	"Greetings from the developer of JJK Bot! I'm very happy to meet you all!",
 	"Nice to meet you. Long time no see to the people who followed me in GIGA magazine. I'll do my very best!",
 	"It was through my editor, but a senpai creator complimented my first chapter. It really got me going!",
 	"I told someone the meal they treated me to was 'as tasty as snacks' and was told that was not an appropriate comparison.",

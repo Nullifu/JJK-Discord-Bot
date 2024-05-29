@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "discord.js"
 import { BossDrop, bossDrops } from "./bossdrops.js"
+import logger from "./bot.js"
 import { itemEffects } from "./items jobs.js"
 import {
 	checkUserHasHeavenlyRestriction,
@@ -14,7 +15,6 @@ import {
 	updateUserCommandsUsed
 } from "./mongodb.js"
 import { getRandomQuote } from "./shikigami.js"
-import logger from "./bot.js"
 
 export function calculateDamage(
 	playerGrade: string,
@@ -288,7 +288,7 @@ export async function createStatsEmbed(user) {
 	await updateUserCommandsUsed(user.id)
 
 	const favoriteCommandData = await getUserFavouriteCommand(user.id)
-	logger.info("Favorite Command Data:", favoriteCommandData) // Inspect the object
+	logger.info("Favorite Command Data:", favoriteCommandData)
 	const favouriteCommand = `**${favoriteCommandData.command}**\n\`Time's Used: ${favoriteCommandData.count}\``
 
 	const userStats = await getUserStats(user.id)

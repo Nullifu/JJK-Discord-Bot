@@ -4183,25 +4183,18 @@ export async function handleRaidBossDefeat(
 	}
 }
 
-export async function updateRaidBossHealth(
-	raidBossId: string,
-	globalHealth: number,
-	currentHealth: number
-): Promise<void> {
+// update raid boss current health
+export async function updateRaidBossCurrentHealth(bossName: string, currentHealth: number): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
 
-		await raidBossesCollection.updateOne(
-			{ _id: raidBossId },
-			{ $set: { globalHealth, current_health: currentHealth } }
-		)
+		await raidBossesCollection.updateOne({ name: bossName }, { $set: { current_health: currentHealth } })
 	} catch (error) {
-		logger.error("Error updating raid boss health:", error)
+		logger.error("Error updating raid boss current health:", error)
 		throw error
 	}
 }
-
 export async function getRaidPartyById(raidPartyId: string): Promise<RaidParty | null> {
 	try {
 		const database = client.db(mongoDatabase)

@@ -188,7 +188,7 @@ import {
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
-	updateRaidBossHealth,
+	updateRaidBossCurrentHealth,
 	updateRaidParty,
 	updateRaidPartyPendingActions,
 	updateUserAchievements,
@@ -2279,11 +2279,21 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	const techniqueOptions =
 		userTechniques && userTechniques.length > 0
-			? userTechniques.map(techniqueName => ({
-					label: techniqueName,
-					description: "Select to use this technique",
-					value: techniqueName
-				}))
+			? userTechniques.reduce((options, techniqueName, index) => {
+					const duplicateIndex = options.findIndex(option => option.label === techniqueName)
+					if (duplicateIndex !== -1) {
+						options[duplicateIndex].label += ` (${options[duplicateIndex].count + 1})`
+						options[duplicateIndex].count++
+					} else {
+						options.push({
+							label: techniqueName,
+							description: "Select to use this technique",
+							value: techniqueName,
+							count: 1
+						})
+					}
+					return options
+				}, [])
 			: []
 
 	const battleOptions = [
@@ -8510,11 +8520,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 				await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
-				await updateRaidBossHealth(
-					updatedRaidBoss._id.toString(),
-					updatedRaidBoss.globalHealth,
-					updatedRaidBoss.current_health
-				)
+				await updateRaidBossCurrentHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 
 				const participantsSelected = lastUsedTechniques.length
 				if (participantsSelected === raidParty.participants.length) {
@@ -8591,35 +8597,39 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
 						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
 
-						await updateRaidBossHealth(
+						await updateRaidBossCurrentHealth(
 							updatedRaidBoss._id.toString(),
-							updatedRaidBoss.globalHealth,
 							updatedRaidBoss.current_health
 						)
 
-						updatedRaidParty.partyHealth -= damage
-
+						updatedRaidParty.partyHealth = Math.max(0, updatedRaidParty.partyHealth - damage)
 						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
+
+						if (updatedRaidParty.partyHealth <= 0) {
+							const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
+							return
+						}
 
 						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
 
 						raidParty.pendingActions = []
 						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
-						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+						const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
 
 						const updatedEmbedBuilder = await createRaidEmbed(
-							latestRaidBoss,
-							updatedRaidParty.participants,
+							updatedRaidBoss,
+							latestRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
 							raidEndTime,
-							updatedRaidParty.partyHealth
+							latestRaidParty.partyHealth
 						)
-
 						updatedEmbed = updatedEmbedBuilder.toJSON()
 
-						if (raidParty.partyHealth <= 0) {
+						if (updatedRaidParty.partyHealth <= 0) {
+							const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
 							return
 						}
@@ -8706,17 +8716,14 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 							updatedRaidParty.participants[participantIndex4].totalDamage += damage
 						}
 
-						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
 						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
 
-						await updateRaidBossHealth(
+						await updateRaidBossCurrentHealth(
 							updatedRaidBoss._id.toString(),
-							updatedRaidBoss.globalHealth,
 							updatedRaidBoss.current_health
 						)
 
-						updatedRaidParty.partyHealth -= damage
-
+						updatedRaidParty.partyHealth = Math.max(0, updatedRaidParty.partyHealth - damage)
 						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
 
 						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
@@ -8724,20 +8731,20 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 						raidParty.pendingActions = []
 						await updateRaidPartyPendingActions(raidParty._id.toString(), raidParty.pendingActions)
 
-						const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+						const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
 
 						const updatedEmbedBuilder = await createRaidEmbed(
 							updatedRaidBoss,
-							updatedRaidParty.participants,
+							latestRaidParty.participants,
 							interaction,
 							lastUsedTechniques.join("\n"),
 							raidEndTime,
-							updatedRaidParty.partyHealth
+							latestRaidParty.partyHealth
 						)
-
 						updatedEmbed = updatedEmbedBuilder.toJSON()
 
-						if (latestRaidBoss.current_health <= 0) {
+						if (updatedRaidParty.partyHealth <= 0) {
+							const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
 							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
 							return
 						}
@@ -8785,11 +8792,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					0
 				)
 
-				await updateRaidBossHealth(
-					updatedRaidBoss._id.toString(),
-					updatedRaidBoss.globalHealth,
-					updatedRaidBoss.current_health
-				)
+				await updateRaidBossCurrentHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
 
 				updatedRaidParty.partyHealth -= totalDamage
 
@@ -8805,13 +8808,14 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				updatedRaidParty.pendingActions = []
 				await updateRaidPartyPendingActions(raidParty._id.toString(), updatedRaidParty.pendingActions)
 
+				const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
 				const updatedEmbedBuilder = await createRaidEmbed(
 					updatedRaidBoss,
-					updatedRaidParty.participants,
+					latestRaidParty.participants,
 					interaction,
 					lastUsedTechniques.join("\n"),
 					raidEndTime,
-					updatedRaidParty.partyHealth
+					latestRaidParty.partyHealth
 				)
 				updatedEmbed = updatedEmbedBuilder.toJSON()
 

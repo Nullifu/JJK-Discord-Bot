@@ -38,7 +38,7 @@ export interface Quest {
 	task?: string
 	totalProgress?: number
 	special?: boolean
-	instanceId: string // Add the instanceId property
+	instanceId: string
 }
 
 export const gradeMappings = {

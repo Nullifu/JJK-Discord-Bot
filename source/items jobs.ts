@@ -460,7 +460,7 @@ export const titles = [
 interface Achievement {
 	name: string
 	description: string
-	reward: string // Assuming every achievement has a reward. If not, use `reward?: string` for optional.
+	reward: string
 }
 
 export const allAchievements: Record<string, Achievement> = {
@@ -504,8 +504,6 @@ export const allAchievements: Record<string, Achievement> = {
 		description: "? ? ?",
 		reward: "[TITLE] The Honored One"
 	}
-
-	// Add additional achievements as needed.
 }
 
 export const lookupItems = [
@@ -1443,7 +1441,7 @@ export const items1: Item1[] = [
 				.setDescription("Your fingers close around the blood vial")
 			await interaction.followUp({ embeds: [embedFirst] })
 
-			await new Promise(resolve => setTimeout(resolve, 2000)) // Shorter delay
+			await new Promise(resolve => setTimeout(resolve, 2000))
 
 			const embedSecond = new EmbedBuilder()
 				.setColor("#8b0000")
@@ -2032,7 +2030,6 @@ export const items1: Item1[] = [
 				return
 			}
 
-			// Check if the user has already reached Stage One or higher
 			const userAwakening = await getUserAwakening(userId)
 			if (
 				userAwakening &&
@@ -2074,7 +2071,7 @@ export const items1: Item1[] = [
 			const userId = interaction.user.id
 
 			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+			const endTime = new Date(startTime.getTime() + 25 * 60000)
 
 			const itemEffect = {
 				itemName: "Blessful Charm",
