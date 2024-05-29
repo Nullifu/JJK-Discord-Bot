@@ -311,7 +311,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		const { id, totalDamage: participantDamage } = participant
 		const damagePercentage = (participantDamage / totalDamage) * 100
 		const drops: RaidDrops[] = []
-		const raidTokens = Math.floor(Math.random() * (20 - 10 + 1) + 10)
+		const raidTokens = Math.floor(Math.random() * (50 - 30 + 1) + 30)
 
 		try {
 			const drop = getRaidBossDrop(raidBoss.name)
