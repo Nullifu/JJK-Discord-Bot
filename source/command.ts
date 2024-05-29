@@ -8694,7 +8694,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 						lastUsedTechniques.push(combination.fieldValue)
 
-						// Update the participants' total damage and the raid boss's health
 						const participantIndex1 = updatedRaidParty.participants.findIndex(p => p.id === user1.userId)
 						const participantIndex2 = updatedRaidParty.participants.findIndex(p => p.id === user2.userId)
 						const participantIndex3 = updatedRaidParty.participants.findIndex(p => p.id === user3.userId)
