@@ -229,6 +229,8 @@ app.listen(parseInt(process.env["EXPRESS_PORT"] ?? "3000"), process.env["EXPRESS
 client.on("ready", async () => {
 	logger.info(`Logged in as ${client.user.tag}!`)
 	await doApplicationCommands(client.user.id)
+	const serverCount = client.guilds.cache.size
+	sendServerCountToAPI(serverCount)
 
 	try {
 		await initializeDatabase()
@@ -294,17 +296,24 @@ async function updateDynamicActivities() {
 	]
 }
 
-// sendServerCountToAPI
-export async function sendServerCountToAPI() {
-	const serverCount = client.guilds.cache.size
-	const response = await fetch("http://localhost:3000/api/server-count", {
-		method: "POST",
-		body: JSON.stringify({ serverCount }),
-		headers: { "Content-Type": "application/json" }
-	})
+async function sendServerCountToAPI(serverCount) {
+	try {
+		const response = await fetch("https://api.nullifu.dev/api/server-count", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": `Bearer ${process.env.API_SECRET}`
+			},
+			body: JSON.stringify({ serverCount: serverCount })
+		})
 
-	if (!response.ok) {
-		logger.error(`Failed to send server count to API: ${response.statusText}`)
+		if (response.ok) {
+			console.log("Server count sent to API successfully")
+		} else {
+			console.error("Failed to send server count to API")
+		}
+	} catch (error) {
+		console.error("Error sending server count to API:", error)
 	}
 }
 
