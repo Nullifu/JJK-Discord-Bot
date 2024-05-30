@@ -294,6 +294,20 @@ async function updateDynamicActivities() {
 	]
 }
 
+// sendServerCountToAPI
+export async function sendServerCountToAPI() {
+	const serverCount = client.guilds.cache.size
+	const response = await fetch("http://localhost:3000/api/server-count", {
+		method: "POST",
+		body: JSON.stringify({ serverCount }),
+		headers: { "Content-Type": "application/json" }
+	})
+
+	if (!response.ok) {
+		logger.error(`Failed to send server count to API: ${response.statusText}`)
+	}
+}
+
 client.on("guildCreate", guild => {
 	let defaultChannel = null
 	guild.channels.cache.forEach(channel => {
@@ -507,26 +521,7 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("toggleheavenlyrestriction")
 		.setDescription("Toggles your Heavenly Restriction status."),
-	new SlashCommandBuilder()
-		.setName("guide")
-		.setDescription("Get guides on various topics.")
-		.addStringOption(option =>
-			option
-				.setName("topic")
-				.setDescription("The topic of the guide you want to view.")
-				.setRequired(false)
-				.addChoices(
-					{ name: "Crafting", value: "crafting" },
-					{ name: "Techniques", value: "technique" },
-					{ name: "Special", value: "special" },
-					{ name: "Starter", value: "starter" },
-					{ name: "Fighting", value: "fighting" },
-					{ name: "Shikigami", value: "shikigami" },
-					{ name: "Quests", value: "quests" },
-					{ name: "Items", value: "items" },
-					{ name: "Awakening", value: "awakening" }
-				)
-		),
+	new SlashCommandBuilder().setName("guide").setDescription("Get guides on various topics."),
 	new SlashCommandBuilder()
 		.setName("trade")
 		.setDescription("Trading Command.")

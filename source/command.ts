@@ -3,11 +3,7 @@
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
-import {
-	MessageActionRowComponentBuilder,
-	ModalActionRowComponentBuilder,
-	SelectMenuBuilder
-} from "@discordjs/builders"
+import { ModalActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
 import {
 	APIEmbed,
 	ActionRowBuilder,
@@ -41,7 +37,6 @@ import {
 	heavenlyrestrictionskills
 } from "./attacks.js"
 import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
-import { bossDrops } from "./bossdrops.js"
 import logger, { createClient, digCooldown, digCooldowns, sendForManualReview } from "./bot.js"
 import {
 	calculateDamage,
@@ -1855,247 +1850,19 @@ export async function handleGuideCommand(interaction) {
 	const topic = interaction.options.getString("topic")
 
 	switch (topic) {
-		case "special": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Special Items")
-				.setDescription("Information on unique/special items")
-				.addFields({
-					name: "Basic Usages",
-					value: "Main item's you can use is as follows, Sukuna Finger, Six Eyes, Cursed Energy Vial, and more. Rewards: Cursed Energy Vial = +30hp, Six Eyes, Various effects, Sukuna Finger, Various effects."
-				})
-				.setImage(
-					"https://cdn.discordapp.com/attachments/1094302755960664255/1231374487774040074/image.png?ex=6636b9db&is=662444db&hm=b80646a17ca3cb4c205170abc51a1616810afb548d8746c80a313b7587aa195a&"
-				)
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "items": {
-			await interaction.deferReply({ ephemeral: true })
-
-			try {
-				const guideEmbed = new EmbedBuilder()
-					.setColor("#0099ff")
-					.setTitle("Items Guide")
-					.setDescription("Main methods of getting items")
-					.addFields({
-						name: "Item Rarities\n`C` - Common\n`R` - Rare\n`UR` - Ultra Rare",
-						value: "You can get items from /fight, /dig, /search, /beg, /quest, /daily.  Boss drops are as follows:\n"
-					})
-
-				const bossDropCount = Object.keys(bossDrops).length
-				const fieldsPerPage = 5
-				const totalPages = Math.ceil(bossDropCount / fieldsPerPage)
-
-				let currentPage = 1
-				let startIndex = 0
-				let endIndex = Math.min(startIndex + fieldsPerPage, bossDropCount)
-
-				const bossDropFields = generateBossDropFields(bossDrops, startIndex, endIndex)
-				guideEmbed.addFields(...bossDropFields)
-
-				const prevButton = new ButtonBuilder()
-					.setCustomId("prevPage")
-					.setLabel("Previous")
-					.setStyle(ButtonStyle.Primary)
-					.setDisabled(currentPage === 1)
-
-				const nextButton = new ButtonBuilder()
-					.setCustomId("nextPage")
-					.setLabel("Next")
-					.setStyle(ButtonStyle.Primary)
-					.setDisabled(currentPage === totalPages)
-
-				const pageInfo = `Page ${currentPage} of ${totalPages}`
-				const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-					prevButton,
-					nextButton
-				)
-
-				const message = await interaction.followUp({
-					embeds: [guideEmbed],
-					components: [row],
-					content: pageInfo,
-					ephemeral: true
-				})
-
-				const collector = message.createMessageComponentCollector({
-					time: 60000
-				})
-
-				collector.on("collect", async i => {
-					if (i.customId === "prevPage") {
-						currentPage--
-					} else if (i.customId === "nextPage") {
-						currentPage++
-					}
-
-					startIndex = (currentPage - 1) * fieldsPerPage
-					endIndex = Math.min(startIndex + fieldsPerPage, bossDropCount)
-
-					const newBossDropFields = generateBossDropFields(bossDrops, startIndex, endIndex)
-					const existingFieldCount = guideEmbed.data.fields?.length ?? 0
-					guideEmbed.spliceFields(
-						existingFieldCount - bossDropFields.length,
-						bossDropFields.length,
-						...newBossDropFields
-					)
-
-					prevButton.setDisabled(currentPage === 1)
-					nextButton.setDisabled(currentPage === totalPages)
-
-					const newPageInfo = `Page ${currentPage} of ${totalPages}`
-
-					await i.update({
-						embeds: [guideEmbed],
-						components: [row],
-						content: newPageInfo
-					})
-				})
-			} catch (error) {
-				logger.error("Error handling items guide command:", error)
-			}
-
-			break
-		}
-
-		case "quests": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Quest Guide")
-				.setDescription("Information on various quests!")
-				.addFields({
-					name: "Quests",
-					value: "There are certain types of quests in the bot. Some give you techniques, while others give you transformations.\n\n- Sukuna Acknowledgment Quest: You have to eat a Sukuna Finger until he notices you. There's a base 30% chance for this to happen. When you eat another finger, a quest shall start."
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "starter": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Starter Guide")
-				.setDescription("Here's how you can begin")
-				.addFields({
-					name: "Basic",
-					value: "You can acquire jobs with /jobselection. Some jobs require money and experience. You can get Money, XP, and Items by using /beg, /dig, /search, /fight, and /quest. I recommend working and searching until you have enough money to buy a technique, and then start fighting cursed spirits."
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-		case "raids": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Raids Guide")
-				.setDescription("Here's how you can participate in raids.")
-				.addFields({
-					name: "Basic",
-					value: "To participate in a raid, use the `/raid` command. You can join a raid with up to five people. Raids are a great way to earn rewards and fight powerful bosses. You can also use special techniques in raids to deal extra damage, Called DUEL TECHNIQUES, They are as follows\n\n+ Solo Forbidden Area + Hollow Purple = Maximum Technique: Purple\n+ Boogie Woogie Surplex + RE-Imagined Black Flash = Brotherly Beatdown\n+ Cleave + Dismantle = World Cutting Slash\n+ Divine Flame + Flame Arrow = Divine Flame Arrow\n+ Maximum Lapse Blue + Maximum Reversal Red = Hollow: Nuke"
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "technique": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Technique Guide")
-				.setDescription("Here's how you can acquire techniques.")
-				.addFields({
-					name: "Techniques",
-					value: "To acquire a technique, use `/technique shop`. All techniques require items and money. After you've bought a technique, you can equip it with the `/technique equip [TECHNIQUE NAME]` command and unequip it with `/unequip [TECHNIQUE NAME]`."
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "shikigami": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Shikigami Guide")
-				.setDescription("Here's how you can acquire Shikigami.")
-				.addFields({
-					name: "Shikigami",
-					value: "To acquire a shikigami, you must tame one through the /tame command. They are quite difficult, so be prepared! Once you've tamed a shikigami, you can use /shikigami view to view its stats and status. Once you acquire the right shikigami, you can go on to summon Mahoraga."
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "fighting": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Fighting Guide")
-				.setDescription("Guide to the fight command")
-				.addFields({
-					name: "Fighting",
-					value: "Probably the most unique thing about this bot. To start a fight, use /fight. Remember, you need techniques to fight these bosses. But have no fear, for you get a free technique when registering for the first time! It's not strong, but it'll help you in the start. Once you begin to acquire more items and cash, you can buy newer and greater techniques to rise up the ranks!"
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-		case "awakening": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Awakening Guide")
-				.setDescription("Guide to awakening's")
-				.addFields({
-					name: "Awakening",
-					value: "To awaken you must have, A MENTOR. and the required items, begin with crafting the Unknown sunstance use it then you begin the awakening process. you start out at stage one and the final is stage five, through this process some bosses will NOT be accesible til you complete this process."
-				})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
-		case "jobs": {
-			const guideEmbed = new EmbedBuilder()
-				.setColor("#0099ff")
-				.setTitle("Jobs Information")
-				.setDescription("All info on jobs")
-
-			jobs.forEach(job => {
-				const jobDetails =
-					`Payout: $${job.payout.min} - $${job.payout.max}\n` +
-					`Cost: $${job.cost}\n` +
-					`Required Experience: ${job.requiredExperience}\n` +
-					`Cooldown: ${formatCooldown(job.cooldown)}`
-
-				guideEmbed.addFields({
-					name: job.name,
-					value: jobDetails,
-					inline: true
-				})
-			})
-
-			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
-			break
-		}
-
 		default: {
 			const guideEmbed = new EmbedBuilder()
 				.setColor("#0099ff")
 				.setTitle("Jujutsu Kaisen Bot Guide")
-				.setDescription(
-					"Welcome to the Jujutsu Kaisen Bot! Here are some commands you can use to interact with the bot. [Very WIP]"
-				)
+				.setDescription("ALL INFORMATION IS BEING MOVED TO TRELLO")
 				.addFields(
 					{
-						name: "Commands",
-						value: "1. `/search` - Search for items!\n2. `/use` - Use an item from your inventory.\n3. `/fight` - Fight a cursed spirit.\n4. `/lookup` - Look up an item.\n5. `/achievements` - View your achievements.\n6. `/guide` - Display this guide.\n7. `/update` - View recent updates.\n8. `/support` - Get the support server link.\n9. `/claninfo` - Get information about clans.\n10. `/jujutsustats` - View your jujutsu stats."
+						name: "Important Notice",
+						value: "We are currently in the process of moving all guide information to Trello. Please check our Trello board for the most up-to-date information and guides."
 					},
 					{
-						name: "Additional Information",
-						value: "If you need more information on a specific topic, use `/guide [topic]` to get more details. For example, `/guide items` will provide information on items."
+						name: "Trello Board",
+						value: "You can find our Trello board at https://trello.com/b/JCCsLUX1/jjk-bot."
 					}
 				)
 
@@ -2108,9 +1875,7 @@ export async function handleLeaderBoardCommand(interaction) {
 	try {
 		const choice = interaction.options.getString("type")
 
-		const leaderboardEmbed = new EmbedBuilder()
-			.setColor("#FFA500") // Set a nice orange color
-			.setTimestamp()
+		const leaderboardEmbed = new EmbedBuilder().setColor("#FFA500").setTimestamp()
 
 		const rankEmojis = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
