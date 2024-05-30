@@ -2786,6 +2786,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "The Shoko") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://tenor.com/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
+					description: "Please the:",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "MAXIMUM: BLACK FLASH") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
