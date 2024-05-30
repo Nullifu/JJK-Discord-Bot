@@ -6335,13 +6335,13 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-			} else if (selectedValue === "the") {
+			} else if (selectedValue === "The Shoko") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 999,
-					imageUrl: "https://media1.tenor.com/m/RJjLn-wpV2QAAAAd/gojo-gojo-satoru.gif",
-					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
+					damageMultiplier: 28,
+					imageUrl: "https://tenor.com/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
+					description: "Please the:",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesTame,
 					userId: collectedInteraction.user.id,
