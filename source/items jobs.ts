@@ -1889,6 +1889,8 @@ export const items1: Item1[] = [
 				"Special-Grade Cursed Object",
 				"Bet Slip",
 				"Fraud Poster",
+				"Six Eyes",
+				"Yuta's Token",
 				"Hakari Kinji's Token"
 			]
 			function getRandomItem() {
@@ -1972,7 +1974,7 @@ export const items1: Item1[] = [
 			await interaction.deferReply()
 
 			const today = new Date()
-			const formattedDate = today.toLocaleDateString("en-US") // Example: 04/26/202
+			const formattedDate = today.toLocaleDateString("en-US")
 
 			const newShikigami: UserShikigami = {
 				name: "Ghost",
@@ -2087,7 +2089,7 @@ export const items1: Item1[] = [
 
 				const embedFinal = new EmbedBuilder()
 					.setColor("#006400")
-					.setTitle("Cursed Object")
+					.setTitle("Blessful Charm")
 					.setDescription(
 						"You put the item on and you and feel a warm sensation.. You are now blessed for the next 25 minutes. Awakened bosses are more likely to appear!"
 					)
@@ -2117,7 +2119,7 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("? ? ?")
 				.setDescription(
-					"You hold the shard close.. It begins to glow.. You feel a strange power awaken within you.."
+					"You crack the shard and feel a strange power awaken within you... Your awakening has progressed to the next stage!"
 				)
 
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
@@ -2135,7 +2137,7 @@ export const items1: Item1[] = [
 			const userId = interaction.user.id
 
 			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+			const endTime = new Date(startTime.getTime() + 25 * 60000)
 
 			const itemEffect = {
 				itemName: "Special-Grade Cursed Object",
@@ -2173,7 +2175,7 @@ export const items1: Item1[] = [
 			const userId = interaction.user.id
 
 			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 25 * 60000) // Add 25 minutes
+			const endTime = new Date(startTime.getTime() + 25 * 60000)
 
 			const itemEffect = {
 				itemName: "Curse Repellent",
@@ -2228,7 +2230,7 @@ export const items1: Item1[] = [
 
 				const itemToCleaned = userInventory[itemIndex]
 
-				const cleaningSuccess = Math.random() < 0.8 // 80% chance of successful cleaning
+				const cleaningSuccess = Math.random() < 0.8
 
 				if (cleaningSuccess) {
 					await removeItemFromUserInventory(userId, itemToCleaned.name, 1)
@@ -2251,7 +2253,9 @@ export const items1: Item1[] = [
 					const embedFinal = new EmbedBuilder()
 						.setColor("#FF0000")
 						.setTitle("Cleaning Sponge")
-						.setDescription(`Failed to clean "${itemToCleaned.name}"! The item has disappeared.`)
+						.setDescription(
+							`You begin to clean "${itemToCleaned.name}" But it fades into dust?.. The item has disappeared.`
+						)
 
 					await interaction.editReply({ embeds: [embedFinal] })
 				}

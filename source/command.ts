@@ -8877,6 +8877,7 @@ export async function handleBugReport(interaction: ChatInputCommandInteraction) 
 	const embed = new EmbedBuilder()
 		.setTitle("Bug Report")
 		.setDescription(description)
+		.addFields({ name: "UserId", value: interaction.user.id, inline: true })
 		.setTimestamp()
 		.setFooter({ text: `Reported by ${interaction.user.tag}` })
 
@@ -8889,7 +8890,11 @@ export async function handleBugReport(interaction: ChatInputCommandInteraction) 
 		await bugReportChannel.send({ embeds: [embed] })
 	}
 
-	await interaction.reply({ content: "Thank you for reporting the bug! We will look into it.", ephemeral: true })
+	await interaction.reply({
+		content:
+			"Thank you for reporting the bug! We will look into it. If the bug has caused you to lose items, please join the support server. `/support`",
+		ephemeral: true
+	})
 }
 
 export async function handlePurchaseHistoryCommand(interaction: ChatInputCommandInteraction) {
