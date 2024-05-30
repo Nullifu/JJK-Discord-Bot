@@ -6335,6 +6335,18 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "the") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 999,
+					imageUrl: "https://media1.tenor.com/m/RJjLn-wpV2QAAAAd/gojo-gojo-satoru.gif",
+					description: "Cursed Technique Lapse, Maximum Output.. BLUE!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesTame,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Maximum Technique: Red") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
