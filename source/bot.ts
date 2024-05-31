@@ -54,8 +54,8 @@ import {
 	handleJobSelection,
 	handleJujutsuStatsCommand,
 	handleLeaderBoardCommand,
-	handleLookupCommand,
 	handlePetShop,
+	handlePingCommand,
 	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handlePurchaseHistoryCommand,
@@ -87,7 +87,6 @@ import {
 	processTradeSelection,
 	viewQuestsCommand
 } from "./command.js"
-import { lookupItems } from "./items jobs.js"
 import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
@@ -304,7 +303,7 @@ async function sendServerCountToAPI(serverCount) {
 				"Content-Type": "application/json",
 				"Authorization": `Bearer ${process.env.API_SECRET}`
 			},
-			body: JSON.stringify({ serverCount: serverCount })
+			body: JSON.stringify({ code0dataserverCount0: serverCount })
 		})
 
 		if (response.ok) {
@@ -371,14 +370,11 @@ cron.schedule("*/5 * * * *", async () => {
 	const channel = await client.channels.fetch(channelId)
 	if (channel.isTextBased()) {
 		const message = await channel.messages.fetch(statsMessageId)
-
 		const lastResetTime = await getShopLastReset()
 		const resetIntervalMs = 1000 * 60 * 60 * 24
 		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
 		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
-
-		const statsEmbed = generateStatsEmbed(client, discordTimestamp)
-
+		const statsEmbed = await generateStatsEmbed(client, discordTimestamp)
 		await message.edit({ embeds: [statsEmbed] }).catch(logger.error)
 	}
 })
@@ -408,11 +404,6 @@ export const randomdig2 = [
 	"I can dig that",
 	"Exhumed"
 ]
-
-const itemChoices = lookupItems.map(item => ({
-	name: item.name,
-	value: item.name.toLowerCase().replace(/\s+/g, "_")
-}))
 
 // Slash Commands
 const commands = [
@@ -566,16 +557,6 @@ const commands = [
 		)
 		.addIntegerOption(option =>
 			option.setName("amount").setDescription("The amount of coins to gamble").setRequired(true)
-		),
-	new SlashCommandBuilder()
-		.setName("lookup")
-		.setDescription("Looks up an item and displays information about it.")
-		.addStringOption(option =>
-			option
-				.setName("name")
-				.setDescription("The name of the item to lookup")
-				.setRequired(true)
-				.addChoices(...itemChoices)
 		),
 
 	new SlashCommandBuilder().setName("craft").setDescription("Craft an item using components in your inventory."),
@@ -854,16 +835,16 @@ client.on("interactionCreate", async interaction => {
 		await handleGuideCommand(chatInputInteraction)
 		return
 	}
-	if (commandName === "lookup") {
-		await handleLookupCommand(chatInputInteraction)
-		return
-	}
 	if (commandName === "support") {
 		await handleSupportCommand(chatInputInteraction)
 		return
 	}
 	if (commandName === "update") {
 		await handleUpdateCommand(chatInputInteraction)
+		return
+	}
+	if (commandName === "ping") {
+		await handlePingCommand(chatInputInteraction)
 		return
 	}
 	//

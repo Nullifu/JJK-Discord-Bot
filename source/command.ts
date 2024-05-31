@@ -4,6 +4,7 @@
 /* eslint-disable prettier/prettier */
 let contextKey: string
 import { ModalActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
+import axios from "axios"
 import {
 	APIEmbed,
 	ActionRowBuilder,
@@ -2047,13 +2048,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			? userTechniques.reduce((options, techniqueName, index) => {
 					const duplicateIndex = options.findIndex(option => option.label === techniqueName)
 					if (duplicateIndex !== -1) {
-						options[duplicateIndex].label += ` (${options[duplicateIndex].count + 1})`
-						options[duplicateIndex].count++
+						const count = options[duplicateIndex].count + 1
+						options[duplicateIndex].label += ` (${count})`
+						options[duplicateIndex].value += `_${count}`
+						options[duplicateIndex].count = count
 					} else {
 						options.push({
 							label: techniqueName,
 							description: "Select to use this technique",
-							value: techniqueName,
+							value: `${techniqueName}_1`,
 							count: 1
 						})
 					}
@@ -3706,25 +3709,55 @@ function formatUptime(uptime: number): string {
 	return `${days}d ${hours}h ${minutes}m ${seconds}s`
 }
 
-export function generateStatsEmbed(client: Client, nextResetTimestamp: number): EmbedBuilder {
+export async function generateStatsEmbed(client: Client, nextResetTimestamp: number): Promise<EmbedBuilder> {
 	const uptime = formatUptime(client.uptime ?? 0)
-	const apiLatency = Math.round(client.ws.ping)
+	const discordApiLatency = Math.round(client.ws.ping)
+	const nullifuApiLatency = await getApiLatency()
+
+	const discordPingEmoji = getLatencyEmoji(discordApiLatency)
+	const nullifuPingEmoji = getLatencyEmoji(nullifuApiLatency)
 
 	const statsEmbed = new EmbedBuilder()
 		.setColor("#0099FF")
 		.setTitle("🤖 Bot Stats")
 		.setDescription("Current bot stats, updated every 5 minutes.")
 		.addFields(
-			{ name: "Uptime", value: uptime, inline: true },
-			{ name: "API Latency", value: `${apiLatency}ms`, inline: true },
-			{ name: "Status", value: "🟩", inline: true },
-			{ name: "Next Shop Reset", value: `<t:${nextResetTimestamp}:F>`, inline: true }
+			{ name: "📊 Uptime", value: `${uptime} ⏰`, inline: true },
+			{ name: "🌐 Discord API Latency", value: `${discordApiLatency}ms ${discordPingEmoji}`, inline: true },
+			{ name: "🧲 API Latency", value: `${nullifuApiLatency}ms ${nullifuPingEmoji}`, inline: true },
+			{ name: "📡 Status", value: "🟩", inline: true },
+			{ name: "🛒 Next Shop Reset", value: `<t:${nextResetTimestamp}:F> 🕒`, inline: true }
 		)
 		.setTimestamp()
 		.setFooter({ text: "Last Updated" })
 
 	return statsEmbed
 }
+
+function getLatencyEmoji(latency: number): string {
+	if (latency < 0) {
+		return "❓"
+	} else if (latency < 200) {
+		return "🟢"
+	} else if (latency < 400) {
+		return "🟡"
+	} else {
+		return "🔴"
+	}
+}
+
+async function getApiLatency(): Promise<number> {
+	const start = Date.now()
+	try {
+		await fetch("https://api.nullifu.dev")
+		const end = Date.now()
+		return end - start
+	} catch (error) {
+		console.error("Error fetching Nullifu API latency:", error)
+		return -1
+	}
+}
+
 export async function generateShopEmbed(): Promise<EmbedBuilder> {
 	const shopItems = await getAllShopItems() // Assuming you have this function
 
@@ -4692,7 +4725,7 @@ export async function abandonQuestCommand(interaction) {
 		if (i.isStringSelectMenu()) {
 			const instanceId = i.values[0]
 			await removeUserQuest(userId, instanceId)
-			await i.update({ content: `You have abandoned the quest with instance ID: ${instanceId}`, components: [] })
+			await i.update({ content: "You have abandoned the quest", components: [] })
 		}
 	})
 
@@ -8851,6 +8884,49 @@ export async function handleTutorialCommand(interaction: CommandInteraction): Pr
 			await tutorialMessage.edit({ components: [] })
 		}
 	})
+}
+
+// handle ping command
+export async function handlePingCommand(interaction: CommandInteraction) {
+	const client = interaction.client as Client
+
+	const apiPingStart = Date.now()
+	try {
+		await axios.get("https://api.nullifu.dev")
+		const apiPingEnd = Date.now()
+		const apiPingLatency = apiPingEnd - apiPingStart
+
+		const discordPingStart = Date.now()
+		await interaction.deferReply()
+		const discordPingEnd = Date.now()
+		const discordPingLatency = discordPingEnd - discordPingStart
+
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const uptimeSeconds = Math.floor(client.uptime! / 1000)
+		const uptimeMinutes = Math.floor(uptimeSeconds / 60)
+		const uptimeHours = Math.floor(uptimeMinutes / 60)
+		const uptimeDays = Math.floor(uptimeHours / 24)
+
+		const uptimeString = `${uptimeDays}d ${uptimeHours % 24}h ${uptimeMinutes % 60}m ${uptimeSeconds % 60}s`
+
+		const pingEmoji = apiPingLatency < 200 && discordPingLatency < 200 ? "🟢" : "🔴"
+
+		// Create the embed
+		const embed = new EmbedBuilder()
+			.setTitle("Ping Results")
+			.setColor("#00ff00")
+			.addFields(
+				{ name: "API Ping", value: `${apiPingLatency}ms`, inline: true },
+				{ name: "Discord API Ping", value: `${discordPingLatency}ms`, inline: true },
+				{ name: "Bot Uptime", value: uptimeString, inline: false }
+			)
+			.setFooter({ text: `Ping Status: ${pingEmoji}` })
+
+		await interaction.editReply({ embeds: [embed] })
+	} catch (error) {
+		console.error("Error pinging API:", error)
+		await interaction.editReply("Failed to ping the API.")
+	}
 }
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

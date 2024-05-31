@@ -311,8 +311,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		const { id, totalDamage: participantDamage } = participant
 		const damagePercentage = (participantDamage / totalDamage) * 100
 		const drops: RaidDrops[] = []
-		const raidTokens = Math.floor(Math.random() * (50 - 30 + 1) + 30)
-
+		const raidTokens = 35
 		try {
 			const drop = getRaidBossDrop(raidBoss.name)
 			if (drop) {
@@ -329,7 +328,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		for (const drop of drops) {
 			try {
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", raidTokens)
+				await addItemToUserInventory(id, "Raid Token", 35)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
@@ -342,7 +341,6 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		}
 	}
 
-	// Check if the special drop has already been claimed
 	const specialDropClaimed = await checkSpecialDropClaimed(raidBoss.name)
 
 	if (!specialDropClaimed) {

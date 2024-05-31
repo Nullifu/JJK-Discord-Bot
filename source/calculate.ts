@@ -155,10 +155,9 @@ export async function handleEffectEmbed(userId) {
 
 export async function handleClanDataEmbed(userId) {
 	const userClanData = await getUserInateClan(userId)
-
 	const clanEmbed = new EmbedBuilder().setColor("#0099ff").setTitle("Clan Information")
 
-	if (!userClanData || userClanData.clan === "") {
+	if (!userClanData || !userClanData.clan) {
 		clanEmbed.setDescription("You are not a member of any clan.")
 	} else {
 		clanEmbed.setDescription(`You are a member of the ${userClanData.clan} clan.`)
@@ -177,14 +176,17 @@ export async function handleClanDataEmbed(userId) {
 
 		clanEmbed.addFields(
 			{ name: "Clan", value: userClanData.clan.toString(), inline: true },
-			{ name: "Experience", value: userClanData.experience.toString(), inline: true },
-			{ name: "Tier", value: userClanData.tier.toString(), inline: true }
+			{
+				name: "Experience",
+				value: userClanData.experience ? userClanData.experience.toString() : "0",
+				inline: true
+			},
+			{ name: "Tier", value: userClanData.tier ? userClanData.tier.toString() : "0", inline: true }
 		)
 	}
 
 	return clanEmbed
 }
-
 export async function handleShikigamiEmbed(userid) {
 	const userShikigami = await getUserShikigami(userid)
 
