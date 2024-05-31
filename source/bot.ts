@@ -1099,12 +1099,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-//import { AutoPoster } from "topgg-autoposter"
-//const poster = AutoPoster(process.env.TOPGG, client)
+import { AutoPoster } from "topgg-autoposter"
+const poster = AutoPoster(process.env.TOPGG, client)
 
-//poster.on("posted", stats => {
-//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-//})
+poster.on("posted", stats => {
+	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 
