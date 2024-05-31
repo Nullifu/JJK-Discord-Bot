@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js"
 import { attacks } from "./attacks.js"
+import logger from "./bot.js"
 import { createBar, shikigamiThumbnails } from "./interface.js"
 import { getUserShikigami, increaseBond, updateShikigamiHealth } from "./mongodb.js"
 import { applyStatusEffect, calculateDamageWithEffects } from "./statuseffects.js"
-import logger from "./bot.js"
 
 export const activeShikigami = new Map()
 export const summonedShikigami = new Map()
@@ -509,6 +509,10 @@ export async function handleDivineDogsDamage(interaction, randomOpponent, player
 const quotes = [
 	"Greetings from the author! I'm Akutami, the creator of Jujutsu Kaisen. I'm very happy to meet you all!",
 	"Greetings from the developer of JJK Bot! I'm very happy to meet you all!",
+	"JJK Bot Developer here.. I hate these pesky bugs!",
+	"Greetings from the JJK Bot Developer! I'm not saying I'm Batman, but have you ever seen us in the same room together?",
+	"JJK Bot Developer here.. I'm a big fan of Jujutsu Kaisen!",
+	"JJK Bot Developer here.. I'm a big fan of Akutami-sensei!",
 	"Nice to meet you. Long time no see to the people who followed me in GIGA magazine. I'll do my very best!",
 	"It was through my editor, but a senpai creator complimented my first chapter. It really got me going!",
 	"I told someone the meal they treated me to was 'as tasty as snacks' and was told that was not an appropriate comparison.",
