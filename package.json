@@ -31,6 +31,7 @@
 		"@sapphire/shapeshift": "^4.0.0",
 		"@top-gg/sdk": "^3.1.6",
 		"aws-sdk": "^2.1626.0",
+		"axios": "^1.7.2",
 		"better-sqlite3": "^9.6.0",
 		"discord.js": "^14.15.2",
 		"dotenv": "^16.4.5",
