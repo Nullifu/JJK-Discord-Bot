@@ -2048,15 +2048,13 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			? userTechniques.reduce((options, techniqueName, index) => {
 					const duplicateIndex = options.findIndex(option => option.label === techniqueName)
 					if (duplicateIndex !== -1) {
-						const count = options[duplicateIndex].count + 1
-						options[duplicateIndex].label += ` (${count})`
-						options[duplicateIndex].value += `_${count}`
-						options[duplicateIndex].count = count
+						options[duplicateIndex].label += ` (${options[duplicateIndex].count + 1})`
+						options[duplicateIndex].count++
 					} else {
 						options.push({
 							label: techniqueName,
 							description: "Select to use this technique",
-							value: `${techniqueName}_1`,
+							value: techniqueName,
 							count: 1
 						})
 					}
