@@ -1160,14 +1160,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"better-sqlite3@npm:^9.6.0":
-  version: 9.6.0
-  resolution: "better-sqlite3@npm:9.6.0"
+"better-sqlite3@npm:^11.0.0":
+  version: 11.0.0
+  resolution: "better-sqlite3@npm:11.0.0"
   dependencies:
     bindings: "npm:^1.5.0"
     node-gyp: "npm:latest"
     prebuild-install: "npm:^7.1.1"
-  checksum: 10c0/8db9b38f414e26a56d4c40fc16e94a253118491dae0e2c054338a9e470f1a883c7eb4cb330f2f5737db30f704d4f2e697c59071ca04e03364ee9fe04375aa9c8
+  checksum: 10c0/5a55f8c171055d0fd589b88da58b9e8d9de60ae701ca189270d98a0c25cdabae01abcc27bef26cc2f0b6a8f119d86373089b0a89199df5ac06382d0193651598
   languageName: node
   linkType: hard
 
@@ -2809,7 +2809,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^7.10.0"
     aws-sdk: "npm:^2.1626.0"
     axios: "npm:^1.7.2"
-    better-sqlite3: "npm:^9.6.0"
+    better-sqlite3: "npm:^11.0.0"
     discord.js: "npm:^14.15.2"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^8.57.0"
