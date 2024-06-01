@@ -309,6 +309,11 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 
 	for (const participant of raidParty.participants) {
 		const { id, totalDamage: participantDamage } = participant
+		try {
+			await addItemToUserInventory(id, "Raid Token", 35)
+		} catch (error) {
+			console.error(`Error adding Raid Tokens to user ${id}'s inventory:`, error)
+		}
 		const damagePercentage = (participantDamage / totalDamage) * 100
 		const drops: RaidDrops[] = []
 		const raidTokens = 35

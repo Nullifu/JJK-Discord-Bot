@@ -470,6 +470,25 @@ export async function addItemToUserInventory(
 	}
 }
 
+// give item to all users
+export async function giveItemToAllUsers(itemName: string, quantityToAdd: number): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const updateResult = await usersCollection.updateMany(
+			{},
+			{ $push: { inventory: { name: itemName, quantity: quantityToAdd } } }
+		)
+
+		logger.info(`Updated inventory for ${updateResult.modifiedCount} users`)
+	} catch (error) {
+		logger.error("Error giving item to all users:", error)
+		throw error
+	}
+}
+
 // get user experience points
 export async function getUserExperience(userId: string): Promise<number> {
 	try {
@@ -1891,12 +1910,18 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Limit the active techniques to a maximum of 20
 		const updatedActiveTechniques = newActiveTechniques.slice(0, 20)
 
-		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(updatedActiveTechniques)}`)
+		const user = await usersCollection.findOne({ id: userId })
+		const currentActiveTechniques = user?.activeTechniques || []
 
-		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: updatedActiveTechniques } })
+		const filteredActiveTechniques = updatedActiveTechniques.filter(
+			technique => !currentActiveTechniques.includes(technique)
+		)
+
+		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(filteredActiveTechniques)}`)
+
+		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: filteredActiveTechniques } })
 
 		logger.debug(`Successfully updated active techniques for user ${userId}.`)
 	} catch (error) {

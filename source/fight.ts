@@ -795,25 +795,22 @@ export async function executeSpecialRaidBossTechnique({
 	primaryEmbed
 }) {
 	const techniquesUsed = userTechniquesFight.get(userId) || []
-
 	if (techniquesUsed.includes(techniqueName)) {
 		return 0
 	}
-
 	techniquesUsed.push(techniqueName)
 	userTechniquesFight.set(userId, techniquesUsed)
-
 	const playerGradeData = await getUserGrade(collectedInteraction.user.id)
 	const playerGradeString = playerGradeData
-
 	const damage = calculateDamage(playerGradeString, userId, true) * damageMultiplier
 
-	primaryEmbed.setImage(imageUrl)
-	primaryEmbed.setDescription(description)
-	primaryEmbed.setFields({ name: "Player Technique", value: fieldValue })
+	// Update the existing primaryEmbed
+	primaryEmbed
+		.setImage(imageUrl)
+		.setDescription(description)
+		.addFields({ name: "Player Technique", value: fieldValue })
 
 	await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [] })
 	await new Promise(resolve => setTimeout(resolve, 3000))
-
 	return damage
 }
