@@ -440,13 +440,6 @@ const commands = [
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
 	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
-	new SlashCommandBuilder()
-		.setName("givealluser")
-		.setDescription("Get a tutorial on how to play the bot!")
-		.addStringOption(option => option.setName("item").setDescription("The item to give").setRequired(true))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to give").setRequired(true)
-		),
 
 	new SlashCommandBuilder()
 		.setName("sell")
@@ -695,14 +688,6 @@ const commands = [
 		.addStringOption(option =>
 			option.setName("userid").setDescription("ID of the user to give the item to").setRequired(true)
 		)
-		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
-		),
-	new SlashCommandBuilder()
-		.setName("owner-giveallitem")
-		.setDescription("Gives an item to a specified user (Restricted to Bot Owner)")
-		.setDefaultMemberPermissions(0)
 		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
