@@ -2034,6 +2034,10 @@ export const items1: Item1[] = [
 				.setDescription(
 					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 2.5M Coins, a Hedgehog Pet, and the title: #2 Fighter (LB 2)!"
 				)
+				.addFields({
+					name: "Note",
+					value: "atomic is a god"
+				})
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
