@@ -2013,7 +2013,7 @@ export const items1: Item1[] = [
 			const formattedDate = today.toLocaleDateString("en-US")
 
 			const newShikigami: UserShikigami = {
-				name: "Hedgehog",
+				name: "Mini-AtomicApex",
 				experience: 0,
 				tier: 1,
 				tamedAt: new Date(),
