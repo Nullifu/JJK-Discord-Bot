@@ -1966,8 +1966,8 @@ export const items1: Item1[] = [
 		}
 	},
 	{
-		itemName: "#1 Fighting Box",
-		description: "#1 Fighting Box",
+		itemName: "#1 Fighting Box (LB 2)",
+		description: "#1 Fighting Box (LB 2)",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
@@ -1977,7 +1977,7 @@ export const items1: Item1[] = [
 			const formattedDate = today.toLocaleDateString("en-US")
 
 			const newShikigami: UserShikigami = {
-				name: "Ghost",
+				name: "Gecko",
 				experience: 0,
 				tier: 1,
 				tamedAt: new Date(),
@@ -1986,17 +1986,53 @@ export const items1: Item1[] = [
 				friendship: 100
 			}
 
-			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 20)
-			await addItemToUserInventory(interaction.user.id, "Six Eyes", 12)
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 30)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 20)
 			await updateBalance(interaction.user.id, 2500000)
 			await updateUserShikigami(interaction.user.id, newShikigami)
-			await updateUserUnlockedTitles(interaction.user.id, ["#1 Fighter (LB 1)"])
+			await updateUserUnlockedTitles(interaction.user.id, ["#1 Fighter (LB 2)"])
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
-				.setTitle(`#1 Fighter (LB 1 - ${formattedDate})`)
+				.setTitle(`#1 Fighter (LB 2 - ${formattedDate})`)
 				.setDescription(
-					"You opened the box and received: 20x Sukuna Finger, X12 Six Eyes, 2.5M Coins, a Ghost Pet, and the title: #1 Fighter!"
+					"You opened the box and received: 30x Sukuna Finger, X20 Six Eyes, 25,0M Coins, a Gecko Pet, and the title: #1 Fighter (LB 2)!"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "#2 Fighting Box (LB 2)",
+		description: "#1 Fighting Box (LB 2)",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const today = new Date()
+			const formattedDate = today.toLocaleDateString("en-US")
+
+			const newShikigami: UserShikigami = {
+				name: "Hedgehog",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 15)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 10)
+			await updateBalance(interaction.user.id, 250000)
+			await updateUserShikigami(interaction.user.id, newShikigami)
+			await updateUserUnlockedTitles(interaction.user.id, ["#2 Fighter (LB 2)"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle(`#1 Fighter (LB 2 - ${formattedDate})`)
+				.setDescription(
+					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 2.5M Coins, a Hedgehog Pet, and the title: #2 Fighter (LB 2)!"
 				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
