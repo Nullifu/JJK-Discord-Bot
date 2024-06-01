@@ -39,7 +39,7 @@
 		"log4js": "^6.9.1",
 		"moment-timezone": "^0.5.45",
 		"mongodb": "^6.6.2",
-		"mongoose": "^8.4.0",
+		"mongoose": "^8.4.1",
 		"node-cron": "^3.0.3",
 		"node-schedule": "^2.1.1",
 		"openai": "^4.47.1",
