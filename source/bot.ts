@@ -59,6 +59,7 @@ import {
 	handlePreviousTradesCommand,
 	handleProfileCommand,
 	handlePurchaseHistoryCommand,
+	handlePvpCommand,
 	handleQuestCommand,
 	handleRaidCommand,
 	handleRegisterCommand,
@@ -1014,6 +1015,9 @@ client.on("interactionCreate", async interaction => {
 
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
+				break
+			case "pvp":
+				await handlePvpCommand(chatInputInteraction)
 				break
 			case "work":
 				await handleWorkCommand(chatInputInteraction)

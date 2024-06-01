@@ -1913,18 +1913,12 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
+		// Limit the active techniques to a maximum of 20
 		const updatedActiveTechniques = newActiveTechniques.slice(0, 20)
 
-		const user = await usersCollection.findOne({ id: userId })
-		const currentActiveTechniques = user?.activeTechniques || []
+		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(updatedActiveTechniques)}`)
 
-		const filteredActiveTechniques = updatedActiveTechniques.filter(
-			technique => !currentActiveTechniques.includes(technique)
-		)
-
-		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(filteredActiveTechniques)}`)
-
-		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: filteredActiveTechniques } })
+		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: updatedActiveTechniques } })
 
 		logger.debug(`Successfully updated active techniques for user ${userId}.`)
 	} catch (error) {

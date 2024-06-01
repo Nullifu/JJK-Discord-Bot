@@ -8927,4 +8927,66 @@ export async function handlePingCommand(interaction: CommandInteraction) {
 	}
 }
 
+export async function handlePvpCommand(interaction: CommandInteraction) {
+	const opponentOption = interaction.options.get("opponent") || null
+	const opponent = opponentOption?.user
+
+	if (!opponent) {
+		await interaction.reply({ content: "Please mention a valid user to challenge.", ephemeral: true })
+		return
+	}
+
+	if (opponent.id === interaction.user.id) {
+		await interaction.reply({ content: "You cannot challenge yourself to a PvP battle.", ephemeral: true })
+		return
+	}
+
+	const confirmButton = new ButtonBuilder()
+		.setCustomId("pvp_confirm")
+		.setLabel("Confirm")
+		.setStyle(ButtonStyle.Success)
+
+	const denyButton = new ButtonBuilder().setCustomId("pvp_deny").setLabel("Deny").setStyle(ButtonStyle.Danger)
+
+	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, denyButton)
+
+	const embed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle("PvP Challenge")
+		.setDescription(`Hey ${opponent}, ${interaction.user} wants to challenge you to a PvP battle!`)
+		.setTimestamp()
+
+	await interaction.reply({
+		content: `${opponent}`,
+		embeds: [embed],
+		components: [row]
+	})
+
+	const filter = (i: Interaction) =>
+		i.isButton() && (i.customId === "pvp_confirm" || i.customId === "pvp_deny") && i.user.id === opponent.id
+
+	try {
+		const confirmation = await interaction.channel?.awaitMessageComponent({ filter, time: 60000 })
+
+		if (confirmation?.customId === "pvp_confirm") {
+			await confirmation.update({
+				content: `${opponent} has accepted the PvP challenge from ${interaction.user}!`,
+				embeds: [],
+				components: []
+			})
+		} else if (confirmation?.customId === "pvp_deny") {
+			await confirmation.update({
+				content: `${opponent} has declined the PvP challenge from ${interaction.user}.`,
+				embeds: [],
+				components: []
+			})
+		}
+	} catch (error) {
+		await interaction.editReply({
+			content: `${opponent} did not respond to the PvP challenge within 1 minute.`,
+			embeds: [],
+			components: []
+		})
+	}
+}
 client1.login(process.env["DISCORD_BOT_TOKEN"])
