@@ -8930,30 +8930,53 @@ export async function handlePingCommand(interaction: CommandInteraction) {
 export async function handlePvpCommand(interaction: CommandInteraction) {
 	const opponentOption = interaction.options.get("opponent") || null
 	const opponent = opponentOption?.user
-
 	if (!opponent) {
 		await interaction.reply({ content: "Please mention a valid user to challenge.", ephemeral: true })
 		return
 	}
-
 	if (opponent.id === interaction.user.id) {
 		await interaction.reply({ content: "You cannot challenge yourself to a PvP battle.", ephemeral: true })
 		return
 	}
 
+	const playerMaxHealth = await getUserMaxHealth(interaction.user.id)
+	const opponentMaxHealth = await getUserMaxHealth(opponent.id)
+
+	let playerDomainProgress = 0 // Initialize domain progress
+	let opponentDomainProgress = 0
+	let playerTransformationProgress = 0 // Initialize transformation progress
+	let opponentTransformationProgress = 0
+
 	const confirmButton = new ButtonBuilder()
 		.setCustomId("pvp_confirm")
 		.setLabel("Confirm")
 		.setStyle(ButtonStyle.Success)
-
 	const denyButton = new ButtonBuilder().setCustomId("pvp_deny").setLabel("Deny").setStyle(ButtonStyle.Danger)
-
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, denyButton)
-
 	const embed = new EmbedBuilder()
 		.setColor("#0099ff")
 		.setTitle("PvP Challenge")
 		.setDescription(`Hey ${opponent}, ${interaction.user} wants to challenge you to a PvP battle!`)
+		.addFields(
+			{ name: "Player Health", value: `:blue_heart: ${playerMaxHealth}`, inline: true },
+			{ name: "Opponent Health", value: `:blue_heart: ${opponentMaxHealth}`, inline: true }
+		)
+		.addFields(
+			{ name: "Player Domain Progress", value: generateProgressBar(playerDomainProgress, 100), inline: true },
+			{ name: "Opponent Domain Progress", value: generateProgressBar(opponentDomainProgress, 100), inline: true }
+		)
+		.addFields(
+			{
+				name: "Player Transformation Progress",
+				value: generateProgressBar(playerTransformationProgress, 100),
+				inline: true
+			},
+			{
+				name: "Opponent Transformation Progress",
+				value: generateProgressBar(opponentTransformationProgress, 100),
+				inline: true
+			}
+		)
 		.setTimestamp()
 
 	await interaction.reply({
@@ -8967,13 +8990,137 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 	try {
 		const confirmation = await interaction.channel?.awaitMessageComponent({ filter, time: 60000 })
-
 		if (confirmation?.customId === "pvp_confirm") {
 			await confirmation.update({
 				content: `${opponent} has accepted the PvP challenge from ${interaction.user}!`,
 				embeds: [],
 				components: []
 			})
+
+			// Start the battle loop
+			let playerHealth = playerMaxHealth
+			let opponentHealth = opponentMaxHealth
+			let currentTurn = Math.random() < 0.5 ? interaction.user.id : opponent.id // Randomly determine the first turn
+
+			while (playerHealth > 0 && opponentHealth > 0) {
+				const attacker = currentTurn === interaction.user.id ? interaction.user : opponent
+				const defender = currentTurn === interaction.user.id ? opponent : interaction.user
+
+				const techniques = await getUserActiveTechniques(attacker.id)
+				const techniqueOptions = techniques.map(techniqueName => ({
+					label: techniqueName,
+					description: "Select to use this technique",
+					value: techniqueName
+				}))
+
+				const selectMenu = new SelectMenuBuilder()
+					.setCustomId("select-technique")
+					.setPlaceholder("Choose your technique")
+					.addOptions(techniqueOptions)
+
+				const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+
+				const embed = new EmbedBuilder()
+					.setColor("#0099ff")
+					.setTitle("PvP Battle")
+					.setDescription(`It's ${attacker}'s turn!`)
+					.addFields(
+						{ name: "Player Health", value: `:blue_heart: ${playerHealth}`, inline: true },
+						{ name: "Opponent Health", value: `:blue_heart: ${opponentHealth}`, inline: true }
+					)
+					.addFields(
+						{
+							name: "Player Domain Progress",
+							value: generateProgressBar(playerDomainProgress, 100),
+							inline: true
+						},
+						{
+							name: "Opponent Domain Progress",
+							value: generateProgressBar(opponentDomainProgress, 100),
+							inline: true
+						}
+					)
+					.addFields(
+						{
+							name: "Player Transformation Progress",
+							value: generateProgressBar(playerTransformationProgress, 100),
+							inline: true
+						},
+						{
+							name: "Opponent Transformation Progress",
+							value: generateProgressBar(opponentTransformationProgress, 100),
+							inline: true
+						}
+					)
+
+				await interaction.editReply({
+					embeds: [embed],
+					components: [row]
+				})
+
+				const techniqueCollector = interaction.channel.createMessageComponentCollector({
+					filter: inter => inter.customId === "select-technique" && inter.user.id === attacker.id,
+					componentType: ComponentType.StringSelect,
+					time: 60000
+				})
+
+				techniqueCollector.once("collect", async collectedInteraction => {
+					const selectedTechnique = collectedInteraction.values[0]
+					const damage = calculateScaledDamage(selectedTechnique) // Implement your damage calculation function
+
+					if (currentTurn === interaction.user.id) {
+						opponentHealth = Math.max(0, opponentHealth - damage)
+						// Update domain and transformation progress for the player
+						playerDomainProgress += 10 // Increase domain progress by 10
+						playerTransformationProgress += 5 // Increase transformation progress by 5
+					} else {
+						playerHealth = Math.max(0, playerHealth - damage)
+						// Update domain and transformation progress for the opponent
+						opponentDomainProgress += 10
+						opponentTransformationProgress += 5
+					}
+
+					// Check if domain can be activated
+					if (playerDomainProgress >= 100) {
+						// Handle player domain activation
+					}
+					if (opponentDomainProgress >= 100) {
+						// Handle opponent domain activation
+					}
+
+					// Check if transformation can be activated
+					if (playerTransformationProgress >= 100) {
+						// Handle player transformation activation
+					}
+					if (opponentTransformationProgress >= 100) {
+						// Handle opponent transformation activation
+					}
+
+					currentTurn = currentTurn === interaction.user.id ? opponent.id : interaction.user.id
+				})
+
+				techniqueCollector.once("end", async (collected, reason) => {
+					if (reason === "time") {
+						await interaction.editReply({
+							content: "Battle timed out.",
+							embeds: [],
+							components: []
+						})
+					} else if (playerHealth <= 0) {
+						await interaction.editReply({
+							content: `${interaction.user} has been defeated by ${opponent}!`,
+							embeds: [],
+							components: []
+						})
+					} else if (opponentHealth <= 0) {
+						await interaction.editReply({
+							content: `${opponent} has been defeated by ${interaction.user}!`,
+							embeds: [],
+							components: []
+						})
+					}
+				})
+			}
 		} else if (confirmation?.customId === "pvp_deny") {
 			await confirmation.update({
 				content: `${opponent} has declined the PvP challenge from ${interaction.user}.`,
@@ -8989,4 +9136,19 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 		})
 	}
 }
+
+function generateProgressBar(value: number, max: number): string {
+	const length = 10
+	const progress = Math.round((value / max) * length)
+	const bar = "█".repeat(progress) + "▁".repeat(length - progress)
+	return `[${bar}] ${value}/${max}`
+}
+
+function calculateScaledDamage(technique: string): number {
+	// Implement your damage calculation logic here
+	// This function should return a scaled-down damage value based on the technique used
+	// For example, you could have a base damage value and apply a multiplier based on the technique
+	return 10 // Placeholder damage value
+}
+
 client1.login(process.env["DISCORD_BOT_TOKEN"])
