@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, InteractionResponse } from "discord.js"
-import { addItemToUserInventory, updateBalance, updateUserActiveTechniques } from "./mongodb.js"
 import logger from "./bot.js"
+import { addItemToUserInventory, giveItemToAllUsers, updateBalance, updateUserActiveTechniques } from "./mongodb.js"
 
 export async function handleGiveItemCommand(
 	interaction: ChatInputCommandInteraction
@@ -114,4 +114,18 @@ export async function handleADDTECHNIQUE(interaction: ChatInputCommandInteractio
 		logger.error("Error in handleADDTECHNIQUE command", error)
 		await interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
 	}
+}
+
+export async function handleGiveItemCommand11(interaction: ChatInputCommandInteraction) {
+	if (interaction.user.id !== "292385626773258240") {
+		await interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true })
+		return
+	}
+
+	const itemName = interaction.options.getString("item")
+	const quantity = interaction.options.getInteger("quantity")
+
+	await giveItemToAllUsers(itemName, quantity)
+
+	await interaction.reply(`Successfully gave ${quantity} ${itemName} to all users.`)
 }

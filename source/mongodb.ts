@@ -476,19 +476,22 @@ export async function giveItemToAllUsers(itemName: string, quantityToAdd: number
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection<User>(usersCollectionName)
-
 		const updateResult = await usersCollection.updateMany(
-			{},
+			{ "inventory.name": itemName },
+			{ $inc: { "inventory.$.quantity": quantityToAdd } }
+		)
+		const insertResult = await usersCollection.updateMany(
+			{ "inventory.name": { $ne: itemName } },
 			{ $push: { inventory: { name: itemName, quantity: quantityToAdd } } }
 		)
-
-		logger.info(`Updated inventory for ${updateResult.modifiedCount} users`)
+		logger.info(
+			`Updated inventory for ${updateResult.modifiedCount} users and added item for ${insertResult.modifiedCount} users`
+		)
 	} catch (error) {
 		logger.error("Error giving item to all users:", error)
 		throw error
 	}
 }
-
 // get user experience points
 export async function getUserExperience(userId: string): Promise<number> {
 	try {

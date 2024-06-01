@@ -97,7 +97,13 @@ import {
 	logImageUrl,
 	updateBalance
 } from "./mongodb.js"
-import { handleADDTECHNIQUE, handleGiveItemCommand, handleREMOVE, handleUpdateBalanceCommand } from "./owner.js"
+import {
+	handleADDTECHNIQUE,
+	handleGiveItemCommand,
+	handleGiveItemCommand11,
+	handleREMOVE,
+	handleUpdateBalanceCommand
+} from "./owner.js"
 import { getRandomQuote } from "./shikigami.js"
 
 // Configure log4js
@@ -435,6 +441,14 @@ const commands = [
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
 	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
 	new SlashCommandBuilder()
+		.setName("givealluser")
+		.setDescription("Get a tutorial on how to play the bot!")
+		.addStringOption(option => option.setName("item").setDescription("The item to give").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to give").setRequired(true)
+		),
+
+	new SlashCommandBuilder()
 		.setName("sell")
 		.setDescription("Sell an item from your inventory.")
 		.addStringOption(option => option.setName("item").setDescription("The item to sell").setRequired(true))
@@ -681,6 +695,14 @@ const commands = [
 		.addStringOption(option =>
 			option.setName("userid").setDescription("ID of the user to give the item to").setRequired(true)
 		)
+		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
+		),
+	new SlashCommandBuilder()
+		.setName("owner-giveallitem")
+		.setDescription("Gives an item to a specified user (Restricted to Bot Owner)")
+		.setDefaultMemberPermissions(0)
 		.addStringOption(option => option.setName("item").setDescription("Name of the item to give").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The amount of the item to give").setRequired(true)
@@ -1008,6 +1030,9 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "work":
 				await handleWorkCommand(chatInputInteraction)
+				break
+			case "owner-giveallitem":
+				await handleGiveItemCommand11(chatInputInteraction)
 				break
 
 			case "selectitle":
