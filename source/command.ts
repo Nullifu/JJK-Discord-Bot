@@ -2792,7 +2792,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 28,
-					imageUrl: "https://tenor.com/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
+					imageUrl: "https://tenor.com/en-GB/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
 					description: "Please the:",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
