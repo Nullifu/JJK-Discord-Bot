@@ -618,7 +618,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^20.12.12":
+"@types/node@npm:*, @types/node@npm:>=13.7.0":
   version: 20.12.13
   resolution: "@types/node@npm:20.12.13"
   dependencies:
@@ -633,6 +633,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~5.26.4"
   checksum: 10c0/0a17cf55c4e6ec90fdb47e73fde44a613ec0f6cd02619b156b1e8fd3f81f8b3346b06ca0757024ddff304d44c8ce5b99570eac8fa2d6baa0fc12e4b2146ac7c6
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^20.13.0":
+  version: 20.13.0
+  resolution: "@types/node@npm:20.13.0"
+  dependencies:
+    undici-types: "npm:~5.26.4"
+  checksum: 10c0/4fb1ab41d622bbf3434da138bd0f23052e5df3bc59852ea1228cdfe185fd9d66ea71171a68a3106452c883808be7eaa7bc4cd87f534708754d49849e817aa566
   languageName: node
   linkType: hard
 
@@ -2793,7 +2802,7 @@ __metadata:
     "@types/log4js": "npm:^2.3.5"
     "@types/lowdb": "npm:^1.0.15"
     "@types/mysql": "npm:^2.15.26"
-    "@types/node": "npm:^20.12.12"
+    "@types/node": "npm:^20.13.0"
     "@types/node-cron": "npm:^3.0.11"
     "@types/node-fetch": "npm:^2.6.11"
     "@typescript-eslint/eslint-plugin": "npm:^7.10.0"
