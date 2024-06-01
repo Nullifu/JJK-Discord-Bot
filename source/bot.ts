@@ -595,6 +595,7 @@ const commands = [
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
 					{ name: "#1 Fighting Box (LB 2)", value: "#1 Fighting Box (LB 2)" },
 					{ name: "#2 Fighting Box (LB 2)", value: "#2 Fighting Box (LB 2)" },
+					{ name: "#3 Fighting Box (LB 2)", value: "#3 Fighting Box (LB 2)" },
 					{ name: "Unknown Substance", value: "Unknown Substance" },
 					{ name: "Blessful Charm", value: "Blessful Charm" },
 					{ name: "Prison Realm 100%", value: "Prison Realm 100%" },

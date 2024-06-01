@@ -2003,7 +2003,7 @@ export const items1: Item1[] = [
 	},
 	{
 		itemName: "#2 Fighting Box (LB 2)",
-		description: "#1 Fighting Box (LB 2)",
+		description: "#2 Fighting Box (LB 2)",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
@@ -2024,20 +2024,56 @@ export const items1: Item1[] = [
 
 			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 15)
 			await addItemToUserInventory(interaction.user.id, "Six Eyes", 10)
-			await updateBalance(interaction.user.id, 250000)
+			await updateBalance(interaction.user.id, 2500000)
 			await updateUserShikigami(interaction.user.id, newShikigami)
 			await updateUserUnlockedTitles(interaction.user.id, ["#2 Fighter (LB 2)"])
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
-				.setTitle(`#1 Fighter (LB 2 - ${formattedDate})`)
+				.setTitle(`#2 Fighter (LB 2 - ${formattedDate})`)
 				.setDescription(
-					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 2.5M Coins, a Hedgehog Pet, and the title: #2 Fighter (LB 2)!"
+					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 2.5M Coins, a Mini-AtomicApex Pet, and the title: #2 Fighter (LB 2)!"
 				)
 				.addFields({
 					name: "Note",
 					value: "atomic is a god"
 				})
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "#3 Fighting Box (LB 2)",
+		description: "#3 Fighting Box (LB 2)",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const today = new Date()
+			const formattedDate = today.toLocaleDateString("en-US")
+
+			const newShikigami: UserShikigami = {
+				name: "Hedgehog",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 8)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 3)
+			await updateBalance(interaction.user.id, 250000)
+			await updateUserShikigami(interaction.user.id, newShikigami)
+			await updateUserUnlockedTitles(interaction.user.id, ["#3 Fighter (LB 2)"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle(`#3 Fighter (LB 2 - ${formattedDate})`)
+				.setDescription(
+					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 250k Coins, a Hegdehog Pet, and the title: #2 Fighter (LB 2)!"
+				)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
