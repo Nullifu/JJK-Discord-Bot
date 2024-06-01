@@ -6966,9 +6966,9 @@ export async function handleViewShikigami(interaction) {
 			return
 		}
 
-		const shikigamiOptions = userShikigami.map(shikigami => ({
+		const shikigamiOptions = userShikigami.map((shikigami, index) => ({
 			label: shikigami.name,
-			value: shikigami.name,
+			value: `${shikigami.name}_${index}`,
 			emoji: getShikigamiEmoji(shikigami.name)
 		}))
 
@@ -6988,7 +6988,8 @@ export async function handleViewShikigami(interaction) {
 				i.customId === "shikigami_select" && i.user.id === interaction.user.id && i.isStringSelectMenu()
 		})
 
-		const selectedShikigami = userShikigami.find(shikigami => shikigami.name === selectionInteraction.values[0])
+		const [selectedShikigamiName, selectedShikigamiIndex] = selectionInteraction.values[0].split("_")
+		const selectedShikigami = userShikigami[selectedShikigamiIndex]
 
 		const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
 
@@ -7017,9 +7018,8 @@ export async function handleViewShikigami(interaction) {
 			})
 
 			if (buttonInteraction.customId === "shikigami_select") {
-				const selectedShikigami = userShikigami.find(
-					shikigami => shikigami.name === buttonInteraction.values[0]
-				)
+				const [selectedShikigamiName, selectedShikigamiIndex] = buttonInteraction.values[0].split("_")
+				const selectedShikigami = userShikigami[selectedShikigamiIndex]
 
 				const shikigamiEmbed = createShikigamiEmbed(selectedShikigami)
 
