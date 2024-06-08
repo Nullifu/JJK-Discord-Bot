@@ -132,7 +132,8 @@ export async function handleBossDeath(
 		{ quest: "Satoru Gojo's Mission", amount: 1, description: "Training" },
 		{ quest: "Nanami's Task", amount: 1, description: "Complete Task" },
 		{ quest: "Kashimo's Task", amount: 1, description: "Defeat Foes" },
-		{ quesT: "Limitless Unleashed", amount: 1, description: "Defeat Foes" }
+		{ quest: "Limitless Unleashed", amount: 1, description: "Defeat Foes" },
+		{ quest: "Mission with Nobara", amount: 1, description: "Defeat 20 foes and find Nobara's eyes!" }
 	]
 
 	for (const generalQuest of generalQuests) {

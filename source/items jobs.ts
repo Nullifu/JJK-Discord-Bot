@@ -1310,15 +1310,15 @@ export const questsArray = [
 		instanceId: "uniqueInstanceId"
 	},
 	{
-		name: "The Honored One",
+		name: "Mission with Nobara",
 		description:
-			"The sacred six eyes, a technique limitless in power, awaits. Embark on this divine quest to be anointed with the Sacred Eye, marking you as the chosen wielder of the ancient and revered technique.",
+			"Nobara cant really see anymore so she needs your help to find her eyes. Defeat 10 foes and find her eyes!",
 		coins: 20000,
 		experience: 320,
 		item: "Sacred Eye",
-		itemQuantity: 2,
-		task: "Be blessed with the limitless technique...",
-		totalProgress: 1,
+		itemQuantity: 6,
+		task: "Defeat 10 foes and find Nobara's eyes!",
+		totalProgress: 10,
 		instanceId: "uniqueInstanceId"
 	},
 	{
