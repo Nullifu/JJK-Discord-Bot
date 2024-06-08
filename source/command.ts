@@ -9,7 +9,6 @@ import axios from "axios"
 import {
 	APIEmbed,
 	ActionRowBuilder,
-	Attachment,
 	ButtonBuilder,
 	ButtonStyle,
 	CacheType,
@@ -39,8 +38,7 @@ import {
 	executeBossAttack,
 	heavenlyrestrictionskills
 } from "./attacks.js"
-import { checkImageForNSFW, uploadImageToGoogleStorage } from "./aws.js"
-import logger, { createClient, digCooldown, digCooldowns, sendForManualReview } from "./bot.js"
+import logger, { createClient, digCooldown, digCooldowns } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
@@ -112,7 +110,6 @@ import {
 	addUserQuest,
 	addUserTechnique,
 	checkForNewAlerts,
-	checkProfileChangeCooldown,
 	checkStageMessaged,
 	checkUserHasHeavenlyRestriction,
 	checkWorkCooldown,
@@ -182,7 +179,6 @@ import {
 	handleTradeAcceptance,
 	healShikigami,
 	isUserRegistered,
-	logImageUrl,
 	markStageAsMessaged,
 	mongoDatabase,
 	removeAllStatusEffects,
@@ -215,8 +211,6 @@ import {
 	updateUserInateClan,
 	updateUserJob,
 	updateUserMentor,
-	updateUserProfileHeader,
-	updateUserProfileImage,
 	updateUserReverseCursedTechniqueStats,
 	updateUserSettings,
 	updateUserShikigami,
@@ -7712,72 +7706,7 @@ export async function handleViewStats(interaction) {
 	return statsEmbed
 }
 
-async function getBufferFromAttachment(attachment: Attachment): Promise<Buffer> {
-	const url = attachment.url
-	const response = await fetch(url)
-	const arrayBuffer = await response.arrayBuffer()
-	return Buffer.from(arrayBuffer)
-}
 
-export async function handleUpdateProfileImageCommand(interaction: ChatInputCommandInteraction) {
-	const userid = interaction.user.id
-
-	await interaction.deferReply({ ephemeral: true })
-
-	const cooldownStatus = await checkProfileChangeCooldown(userid)
-
-	if (cooldownStatus.limitReached) {
-		await interaction.followUp({
-			content: `Oops! You've hit the limit for profile updates. You can change your profile image again at <t:${cooldownStatus.nextResetTimestamp}:R>.`,
-			ephemeral: true
-		})
-		return
-	} else {
-		const subcommand = interaction.options.getSubcommand()
-		const imageAttachment = interaction.options.getAttachment("image", true)
-
-		if (!imageAttachment || !imageAttachment.contentType?.startsWith("image/")) {
-			await interaction.editReply({ content: "Please provide a valid image." })
-			return
-		}
-
-		const imageBuffer = await getBufferFromAttachment(imageAttachment)
-		const fileName = `${userid}_${subcommand}_${Date.now()}.${imageAttachment.contentType?.split("/")[1]}`
-		const contentType = imageAttachment.contentType ?? ""
-		const imageUrl = await uploadImageToGoogleStorage(imageBuffer, fileName, contentType)
-
-		await updateUserCooldowns(userid, "profileChange")
-		await logImageUrl(imageUrl, userid)
-		const { isSafe, requiresManualReview } = await checkImageForNSFW(imageUrl)
-
-		if (isSafe) {
-			try {
-				if (subcommand === "avatar") {
-					await updateUserProfileImage(userid, imageUrl)
-				} else if (subcommand === "header") {
-					await updateUserProfileHeader(userid, imageUrl)
-				}
-
-				await interaction.followUp(`Profile ${subcommand} updated successfully!`)
-			} catch (error) {
-				await interaction.followUp(`Failed to update profile ${subcommand}.`)
-			}
-		} else {
-			if (requiresManualReview) {
-				await sendForManualReview(imageUrl, interaction, subcommand)
-				await interaction.followUp({
-					ephemeral: true,
-					content: `Your ${subcommand} image has been sent for manual review. We will notify you once the review is completed, Please note this process may take awhile!`
-				})
-			} else {
-				await interaction.followUp({
-					ephemeral: true,
-					content: `**Warning:** Our image moderation system has detected potentially sensitive or explicit content in this ${subcommand} image. Please try again with a different image. If you believe this is a mistake, please open a support ticket.`
-				})
-			}
-		}
-	}
-}
 
 export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id

@@ -77,7 +77,6 @@ import {
 	handleTutorialCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
-	handleUpdateProfileImageCommand,
 	handleUseItemCommand,
 	handleViewEffectsCommand,
 	handleViewSettingsCommand,
@@ -987,9 +986,6 @@ client.on("interactionCreate", async interaction => {
 		switch (commandName) {
 			case "balance":
 				await handleBalanceCommand(chatInputInteraction)
-				break
-			case "updateprofileimage":
-				await handleUpdateProfileImageCommand(chatInputInteraction)
 				break
 			case "shop":
 				await handleShopCommand(chatInputInteraction)
