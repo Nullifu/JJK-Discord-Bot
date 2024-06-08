@@ -1148,7 +1148,8 @@ export const questsArray = [
 			{ description: "Defeat Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 1 }
 		],
 		totalProgress: 1,
-		instanceId: "uniqueInstanceId"
+		instanceId: "uniqueInstanceId",
+		specia: true
 	},
 	{
 		name: "Mentor: Curse King",

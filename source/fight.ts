@@ -92,7 +92,8 @@ export async function handleBossDeath(
 		],
 		"Satoru Gojo (Shinjuku Showdown Arc)": [
 			{ quest: "Stage Three Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" },
-			{ quest: "Stage Three Unleashed", amount: 1, condition: "Satoru Gojo (Shinjuku Showdown Arc)" }
+			{ quest: "Stage Three Unleashed", amount: 1, condition: "Satoru Gojo (Shinjuku Showdown Arc)" },
+			{ }
 		]
 	}
 
