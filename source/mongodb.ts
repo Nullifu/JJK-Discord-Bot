@@ -242,7 +242,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		await addSettingsToUsers(client.db(mongoDatabase))
+		// await addSettingsToUsers(client.db(mongoDatabase))
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
