@@ -1633,40 +1633,52 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "Update 8.0 RAIDS", // Replace with your actual version number
-			date: "26/05/24",
+			version: "UPDATE 9.0, Part One of the PvP Update!",
+			date: "08/06/24",
 			changes: [
 				{
-					name: "**Satoru Gojo's Unsealing!**",
-					value: "With everyone's help Satoru Gojo has been unsealed! Work together with him to bring down **Curse King** In his most scary state yet! Be wary this boss has no limits..."
+					name: "Enter a fierce fight with your destined enemy with the new pvp features!",
+					value: "\u200b"
 				},
 				{
-					name: "ADDED:",
-					value: "+ HP LIMIT INCREASED 300 > 400\n+ Raid Command, Bring together a group of up to five people and join a raid against the current Raid Boss!\n+ Raid Secrets!\n+ Raid Shop.\n+ Bug Report Command\n+ Tutorial Command"
+					name: "ADDED",
+					value: "- PVP\n- USER SETTINGS (Show Alerts, Ispvpable, Trades, showSpoiler)\n- Semi-Reworked Quests.. Again!\n- New Grades! Special Grade 4-1.\n- Daily Streaks, The more dailys you claim the bigger streak you have, Which equals to a bigger box reward!\n- New Skill Under, The Strongest!\n- New Way Skills Work, Some skills now require a Inate Clan tier requirement. Especially the new strongest skill!\n- Semi-Reworked Trading. Accounting in QoL Changes and user friendly features.\n- Fully RE-WORKED Alert System. you can disable this any time in settings, Developer alerts shall bypass this though.\n- New /consume Command, Skip your way through jujutsu using these Cursed Essences!\n- Updated Mentor. Gives new quest!"
 				},
 				{
-					name: "----------------------",
-					value: "+ RE-Worked Quest System.\n+ RE-Worked Crafting.\n+ RE-ADDED SELLING"
+					name: "New Techniques",
+					value: "- The Strongest, Six Point Palm < First skill with some special features!\n- Yuta Okkotsu (Manifested Rika) FULL SKILLSET.\n- Zenin Toji (Honored Arc) FULL SKILLSET."
 				},
 				{
-					name: "CHANGES:",
-					value: "- Awakening, Extra damage taken 15% > 10%\n- Moved all shops into /shop\n- Changed Daily Streak Reward + Items\n- Changed Heian Era Awakening Remnant Cost\n- Buffed World Cutting Slash 6 > 8\n- Buffed Divergent Fist, Made it a Special Skill for starters\n- Buffed Prayer Song 4 > 12\n- Gambler Fever (Jackpot) Cost Changed\n- REMOVED CRAFT CUSTOM FROM CRAFTING COMMAND < Will try come up with another method to implement this modal builder kinda buggy atm sorry"
+					name: "Changes",
+					value: "- Made it so you there's a chance you can get multiple drops from fight.\n- Fixed Abandon Quests.\n- Fixed Ping Command.\n- Fixed Satoru Gojo Mentor Bug.\n- Fixed Raid Tokens.\n- When there's no alerts in /alert, a secret message is there!\n- Changed Boss Death Handling.\n- Changed Bot Status Embed.\n- Updated True And Mutal Love.\n- Made it so you can mention a user's inventory to look at.\n- Fixed spelling mistake when using Six Eyes.\n- Fixed The Shoko Gif Bugging.\n- If a trade is left pending for 24 hours it will become ignored.\n- Bot no longer dms you when you recieve a trade request instead you will get a alert.\n- Removed Shikigami Shop.\n- Gamble Limit 25M > 20M\n- Added \"Nuh Uh\" if another user tries to use your button/menu.\n- Fixed some stuff when claiming quests.\n- Changed useitem > use.\n- Fixed dupe techniques, Bot will also now tell you when using /fight etc.\n- Nerfed cost of Gambler Fever (Jackpot)\n- Fixed Abandon Quest... There was a rare chance it errored telling you to abandon a quest.."
 				},
 				{
-					name: "FIXES:",
-					value: "- Fixed Pure Dismantle\n- Fixed Shinjiku Showdown Gojo\n- Fixed Toji Reincarntion Skill\n- Fixed Taming Mahoraga\n- Fixed Shop Not Resetting\n- Fixed Bug With Shop\n- Fixed Transformations Not Equipping"
+					name: "REMOVED",
+					value: "Update Profile Avatar/Header. All current user's with it will still keep it. I didn't really see it being used that much. If user's would like me to add it back i will."
 				},
 				{
-					name: "RAID SPECIAL DUEL TECHNIQUES:",
-					value: "User's can activate a **DUEL TECHNIQUE** by combining there power to do EXTRDODINARY Power!\n\n+ Solo Forbidden Area + Hollow Purple = Maximum Technique: Purple\n+ Boogie Woogie Surplex + RE-Imagined Black Flash = Brotherly Beatdown\n+ Cleave + Dismantle = World Cutting Slash\n+ Divine Flame + Flame Arrow = Divine Flame Arrow\n+ Maximum Lapse Blue + Maximum Reversal Red = Hollow: Nuke"
+					name: "BUFFED",
+					value: "- HEAVENLY RESTRICTION BIG BUFF, Heavenly Restriction now ignores dmg reduction\n- Jogos Ball Twister Technique\n- Imaginary Technique: Purple\n- Nah I'd Lose\n- Hollow Nuke"
 				},
 				{
-					name: "CURSED SPIRIT MANIPULATION CURRENTLY HAS NO LOGIC ATTACHED TO IT, IT WILL COME SOON DO NOT WORRY.",
-					value: ""
+					name: "New Shop Items",
+					value: "- Six Eyes\n- Heian Era Scraps\n- Sukuna Finger Bundle\n- Heian Era Awakening Remnant"
 				},
 				{
-					name: "CREDITS TO TESTERS FOR TESTING THIS UPDATE FOR ME:",
-					value: "AtomicApex\nTheReal_Simon\nRayquazza\nRaix"
+					name: "User's who got skills in this wave",
+					value: "Simon = Cry About It!\nShoko = The Shoko:\nfreaky(KAI/donut) = Ultimate Donut Strike"
+				},
+				{
+					name: "Not so needed information",
+					value: "This is part one of the pvp update, there's still quite alot missing i'm working best i can but i released this update as quickly as i could due to the fact i'm going on holiday soon, and i wanted you guys to have the pvp update atleast! i'm writing this as of the 6/6/24 hoping to get this update out on saturday, so expect over the coming week for me to update it as much as i can with new features skills etc. thank you <3\nI've also made a buy me a coffee as a way to support me if anyone would like to. https://www.buymeacoffee.com/nullifu <3\nALL TECHNIQUES IN THE GAME ARE INCLUDED IN PVP, BALANCING IS NOT FINAL ON ANYTHING. I WILL MONITOR IT OVER THE WEEK AND MAKE CHANGES IF NEEDED."
+				},
+				{
+					name: "Added All quotes from jjk bot quote event. + 350 of my own!",
+					value: "\u200b"
+				},
+				{
+					name: "Default Settings",
+					value: "Show Spoilers: False\nAccept Trades: True\nShow Alerts: True\npvpable: True"
 				}
 			]
 		}
@@ -1679,9 +1691,12 @@ export async function handleUpdateCommand(interaction) {
 		.setDescription(`Released on: **${recentUpdates[0].date}**\nHere's what's new:`)
 		.setTimestamp()
 
-	recentUpdates[0].changes.forEach(change => {
-		updateEmbed.addFields({ name: change.name, value: change.value })
-	})
+	updateEmbed.addFields(
+		recentUpdates[0].changes.map(change => ({
+			name: change.name,
+			value: change.value || "\u200b"
+		}))
+	)
 
 	await interaction.reply({ embeds: [updateEmbed], ephemeral: true })
 }

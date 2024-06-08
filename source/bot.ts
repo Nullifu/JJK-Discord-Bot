@@ -17,13 +17,14 @@ import {
 	SKU,
 	SKUType,
 	SlashCommandBuilder,
-	TextChannel,
 	User
 } from "discord.js"
 import { config as dotenv } from "dotenv"
 
+import express from "express"
 import log4js from "log4js"
 import cron from "node-cron"
+import { AutoPoster } from "topgg-autoposter"
 import {
 	abandonQuestCommand,
 	claimQuestsCommand,
@@ -97,7 +98,6 @@ import {
 	getUserInventory,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
-	logImageUrl,
 	updateBalance
 } from "./mongodb.js"
 import {
@@ -431,7 +431,7 @@ const commands = [
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("alert").setDescription("Bot Alerts"),
-	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
+	new SlashCommandBuilder().setName("update").setDescription("Recent bot updates!"),
 	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
@@ -1152,54 +1152,10 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
-import express from "express"
-//import { AutoPoster } from "topgg-autoposter"
-//const poster = AutoPoster(process.env.TOPGG, client)
+const poster = AutoPoster(process.env.TOPGG, client)
 
-//poster.on("posted", stats => {
-//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-//})
-
-///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
-
-export async function sendForManualReview(imageUrl: string, interaction, subcommand: string): Promise<void> {
-	try {
-		const moderationChannel = await client.channels.fetch(MODERATION_CHANNEL_ID)
-		if (moderationChannel && moderationChannel.type === ChannelType.GuildText) {
-			const textChannel = moderationChannel as TextChannel
-			const message = await textChannel.send({
-				content: `Hey <@292385626773258240> Review needed for the following ${subcommand} image from ${interaction.user.username}:`,
-				embeds: [
-					new EmbedBuilder()
-						.setImage(imageUrl)
-						.setTitle(`Review ${subcommand.charAt(0).toUpperCase() + subcommand.slice(1)} Image`)
-				]
-			})
-
-			logger.info("Manual review message sent for image:", message.attachments)
-
-			const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-				new ButtonBuilder()
-					.setCustomId(`confirm_accept_${message.id}`)
-					.setLabel("Confirm")
-					.setStyle(ButtonStyle.Success),
-				new ButtonBuilder()
-					.setCustomId(`confirm_deny_${message.id}`)
-					.setLabel("Deny")
-					.setStyle(ButtonStyle.Danger)
-			)
-
-			await message.edit({ components: [row] })
-
-			await logImageUrl(imageUrl, interaction.user.id)
-		} else {
-			logger.error("The fetched channel is not a text channel.")
-			throw new Error("Incorrect channel type")
-		}
-	} catch (error) {
-		logger.error("Failed to send message for manual review:", error)
-		throw error
-	}
-}
+poster.on("posted", stats => {
+	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+})
 
 client.login(process.env["DISCORD_BOT_TOKEN"])
