@@ -26,11 +26,9 @@
 		"eslint": "8.57.0"
 	},
 	"dependencies": {
-		"@canvas-fonts/arial": "^1.0.4",
 		"@discordjs/builders": "^1.8.2",
 		"@discordjs/rest": "^2.3.0",
 		"@google-cloud/storage": "^7.11.2",
-		"@google-cloud/vision": "^4.3.0",
 		"@sapphire/shapeshift": "^4.0.0",
 		"@top-gg/sdk": "^3.1.6",
 		"aws-sdk": "^2.1637.0",
@@ -40,12 +38,10 @@
 		"dotenv": "^16.4.5",
 		"express": "^4.19.2",
 		"log4js": "^6.9.1",
-		"moment-timezone": "^0.5.45",
 		"mongodb": "^6.7.0",
 		"mongoose": "^8.4.1",
 		"node-cron": "^3.0.3",
 		"node-schedule": "^2.1.1",
-		"openai": "^4.49.1",
 		"topgg-autoposter": "^2.0.2",
 		"uuid": "^9.0.1"
 	},

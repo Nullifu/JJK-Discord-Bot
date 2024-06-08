@@ -935,14 +935,14 @@ export const CLAN_SKILLS = {
 		{
 			name: "Transfiguration: Soul Touch",
 			cost: "2380000",
-			clan: "Curse King (Heian Era)",
+			clan: "Transfiguration (True Soul)",
 			items: [{ name: "Heian Era Scraps", quantity: 12 }],
 			stage: "Stage Two"
 		},
 		{
 			name: "Transfiguration: Decay",
 			cost: "450000",
-			clan: "Curse King (Heian Era)",
+			clan: "Transfiguration (True Soul)",
 			items: [{ name: "Heian Era Scraps", quantity: 6 }],
 			stage: "Stage Two"
 		}

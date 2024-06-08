@@ -3730,6 +3730,10 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 					return ["Stage Five"].includes(userAwakeningStage)
 				} else if (clan === "Utahime Iori") {
 					return ["Stage Five"].includes(userAwakeningStage)
+				} else if (clan === "Transfiguration (True Soul)") {
+					return ["Stage Two", "Stage Three", "Stage Four", "Stage Five"].includes(userAwakeningStage)
+				} else if (clan === "Yuta Okkotsu (Manifested Rika)") {
+					return ["Stage Five"].includes(userAwakeningStage)
 				}
 				return true
 			})
