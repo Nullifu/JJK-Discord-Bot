@@ -9298,8 +9298,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				player2Health: await getUserMaxHealth(opponent.id),
 				player1DomainProgress: 0,
 				player2DomainProgress: 0,
-				player1TransformationProgress: 100,
-				player2TransformationProgress: 100,
+				player1TransformationProgress: 0,
+				player2TransformationProgress: 0,
 				currentTurn: Math.random() < 0.5 ? interaction.user.id : opponent.id,
 				createdAt: new Date()
 			}
