@@ -4079,7 +4079,7 @@ function checkWin(spinResults: string[]): boolean {
 const userBetCounts = {}
 const userLastBetTimes = {}
 const cooldownPeriod = 15 * 1000
-const maxBetLimit = 15000000
+const maxBetLimit = 20000000
 const dailyBetLimit = 20
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
