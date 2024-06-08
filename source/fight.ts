@@ -8,6 +8,7 @@ import { activeCollectors, getButtons, tutorialPages } from "./command.js"
 import { BossData } from "./interface.js"
 import {
 	addItemToUserInventory,
+	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
 	getUserQuests,
@@ -105,24 +106,10 @@ export async function handleBossDeath(
 
 	const updatedQuests = []
 
-	async function updateQuestProgress(questId, description, amount) {
-		const userQuest = userQuestsData.quests.find(quest => quest.id === questId)
-		if (userQuest) {
-			const task = userQuest.tasks.find(task => task.description === description)
-			if (task) {
-				task.progress += amount
-				if (task.progress > task.totalProgress) {
-					task.progress = task.totalProgress
-				}
-				updatedQuests.push({ questId, taskDescription: task.description, amount })
-			}
-		}
-	}
-
 	if (questProgressions[opponent.name]) {
 		for (const questProgress of questProgressions[opponent.name]) {
 			if (activeQuests.includes(questProgress.quest)) {
-				await updateQuestProgress(questProgress.quest, questProgress.description, questProgress.amount)
+				await addUserQuestProgress(questProgress.quest, questProgress.description, questProgress.amount)
 			}
 		}
 	}
@@ -138,7 +125,7 @@ export async function handleBossDeath(
 
 	for (const generalQuest of generalQuests) {
 		if (activeQuests.includes(generalQuest.quest)) {
-			await updateQuestProgress(generalQuest.quest, generalQuest.description, generalQuest.amount)
+			await addUserQuestProgress(generalQuest.quest, generalQuest.description, generalQuest.amount)
 		}
 	}
 
