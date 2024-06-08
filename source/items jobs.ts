@@ -1056,7 +1056,8 @@ export const CLAN_SKILLS = {
 			clan: "Yuta Okkotsu (Manifested Rika)",
 			items: [
 				{ name: "Special-Grade Cursed Object", quantity: 2 },
-				{ name: "Sukuna Finger", quantity: 12 }
+				{ name: "Sukuna Finger", quantity: 12 },
+				{ name: "Heian Era Scraps", quantity: 3 }
 			],
 			stage: "Stage Five"
 		},
@@ -1066,7 +1067,8 @@ export const CLAN_SKILLS = {
 			clan: "Yuta Okkotsu (Manifested Rika)",
 			items: [
 				{ name: "Special-Grade Cursed Object", quantity: 5 },
-				{ name: "Sukuna Finger", quantity: 7 }
+				{ name: "Sukuna Finger", quantity: 7 },
+				{ name: "Heian Era Scraps", quantity: 3 }
 			],
 			stage: "Stage Five"
 		}
