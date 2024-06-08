@@ -5902,7 +5902,7 @@ export async function handleShopCommand(interaction) {
 		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
 	]
 	const essenceShopItems = [
-		{ name: "RCT Essence", price: 550000000, rarity: "Special Grade" },
+		{ name: "RCT Essence", price: 350000000, rarity: "Special Grade" },
 		{ name: "Simple Domain Essence", price: 550000000, rarity: "Special Grade" },
 		{ name: "Luck Essence", price: 12500000, rarity: "Special Grade" }
 	]
