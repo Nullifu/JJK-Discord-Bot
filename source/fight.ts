@@ -8,7 +8,6 @@ import { activeCollectors, getButtons, tutorialPages } from "./command.js"
 import { BossData } from "./interface.js"
 import {
 	addItemToUserInventory,
-	addUser,
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
@@ -97,9 +96,67 @@ export async function handleBossDeath(
 			{ quest: "Stage Three Unleashed", amount: 1, condition: "Satoru Gojo (Shinjuku Showdown Arc)" },
 			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" }
 		],
-		"Defeat Satoru Gojo Limit-Broken": [
+		"Satoru Gojo Limit-Broken": [
 			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo Limit-Broken" }
 		]
+	}
+
+	if (opponent.name === "Hakari Kinji") {
+		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari Kinji")
+	}
+	if (opponent.name === "Satoru Gojo") {
+		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Gojo")
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Gojo")
+		await addUserQuestProgress(interaction.user.id, "Mentor: The Strongest", 1)
+	}
+	if (opponent.name === "Sukuna") {
+		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
+		await addUserQuestProgress(interaction.user.id, "Mentor: Curse King", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Sukuna")
+	}
+	if (opponent.name === "Itadori") {
+		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
+	}
+	if (opponent.name === "Mahito Instant Spirit Body of Distorted Killing") {
+		await addUserQuestProgress(interaction.user.id, "Nature of Curses", 1)
+	}
+	if (opponent.name === "Hakari (Jackpot)") {
+		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
+		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Hakari Kinji")
+	}
+	if (opponent.name === "Dagon") {
+		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Dagon")
+	}
+	if (opponent.name === "Jogo") {
+		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Jogo")
+	}
+	if (opponent.name === "Hanami") {
+		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Hanami")
+	}
+	if (opponent.name === "Satoru Gojo Limit-Broken") {
+		await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Defeat Satoru Gojo Limit-Broken")
+	}
+	if (opponent.name === "Yuji Itadori (Awoken)") {
+		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Yuji Itadori (Awoken)")
+		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Defeat Yuji Itadori (Awoken)")
+		await addUserQuestProgress(interaction.user.id, "Stage Three Unleashed", 1, "Yuji Itadori (Awoken)")
+	}
+	if (opponent.name === "Satoru Gojo (Shinjuku Showdown Arc)") {
+		await addUserQuestProgress(
+			interaction.user.id,
+			"Stage Three Unleashed",
+			1,
+			"Defeat Satoru Gojo (Shinjuku Showdown Arc)"
+		)
+		await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Satoru Gojo (Shinjuku Showdown Arc)")
+		await addUserQuestProgress(
+			interaction.user.id,
+			"Stage Three Unleashed",
+			1,
+			"Satoru Gojo (Shinjuku Showdown Arc)"
+		)
 	}
 
 	const userQuestsData = await getUserQuests(interaction.user.id)
@@ -141,8 +198,7 @@ export async function handleBossDeath(
 	await updateUserInateClanExperience(interaction.user.id, 125, "Limitless")
 	await updatePlayerClanTier(interaction.user.id)
 	await updateUserFightsWon(interaction.user.id)
-	await addUserQuestProgress("Mission with Nobara", "Defeat Foes", 1)
-
+	await addUserQuestProgress("Mission with Nobara", 1, "Defeat 20 foes and find Nobara's eyes!")
 	await updateMonthlyFightsWon(interaction.user.id)
 
 	const drops = await getBossDrops(interaction.user.id, opponent.name)
