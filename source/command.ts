@@ -9564,10 +9564,13 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						const clashDefendCollector = interaction.channel.createMessageComponentCollector({
 							filter: (inter: MessageComponentInteraction) => inter.user.id === defender.id,
 							componentType: ComponentType.Button,
-							time: 60000
+							time: 5000
 						})
 
+						let opponentResponded = false
+
 						clashDefendCollector.on("collect", async clashDefendInteraction => {
+							opponentResponded = true
 							const selectedClashDefendValue = clashDefendInteraction.customId
 
 							if (selectedClashDefendValue === "clash") {
@@ -9670,12 +9673,58 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 								)
 							await updateBattleState()
 						})
+
+						clashDefendCollector.on("end", async (collected, reason) => {
+							if (!opponentResponded) {
+								// Defender didn't respond in time
+								const unleashedDamage = 150 // Example value for damage when domain is fully unleashed
+								pvpData.player2Health = Math.max(0, pvpData.player2Health - unleashedDamage)
+
+								const unleashedEmbed = new EmbedBuilder()
+									.setColor("Red")
+									.setTitle("Domain Fully Unleashed!")
+									.setDescription(`${attacker.username}'s domain has been fully unleashed!`)
+									.setImage(domainObject.open_image_URL)
+
+								await interaction.editReply({
+									content: "",
+									embeds: [unleashedEmbed],
+									components: []
+								})
+
+								await new Promise(resolve => setTimeout(resolve, 3000))
+
+								await client
+									.db(mongoDatabase)
+									.collection("pvp")
+									.updateOne(
+										{ pvpId },
+										{
+											$set: {
+												player2Health: pvpData.player2Health,
+												currentTurn: opponent.id
+											}
+										}
+									)
+
+								await updateBattleState()
+							}
+						})
 						return
 					} else if (selectedValue === "transform") {
+						console.info("Transformation selected.")
+						if (transformationState.get(contextKey)) {
+							await collectedInteraction.followUp({
+								content: "You can only transform once per fight.",
+								ephemeral: true
+							})
+							return
+						}
+
 						try {
 							const transformationInfo = await getUserTransformation(interaction.user.id)
 							if (!transformationInfo) {
-								await collectedInteraction.reply({
+								await collectedInteraction.followUp({
 									content: "You do not have a transformation unlocked yet.",
 									ephemeral: true
 								})
@@ -9709,10 +9758,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 							// Apply transformation effects
 							if (transformationObject.effects === "damageIncrease") {
-								// Increase the user's damage
 								pvpData.damageMultiplier = 1.5 // Example value
 							} else if (transformationObject.effects === "damageReduction") {
-								// Reduce the damage taken by the user
 								pvpData.damageReduction = 0.5 // Example value
 							}
 
@@ -9840,6 +9887,21 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				components: []
 			})
 		}
+		const confirmationCollector = interaction.channel.createMessageComponentCollector({
+			filter: filter,
+			componentType: ComponentType.Button,
+			time: 30000
+		})
+
+		confirmationCollector.on("end", async (collected, reason) => {
+			if (reason === "time") {
+				await interaction.editReply({
+					content: `${opponent} did not respond in time. The PvP challenge has been cancelled.`,
+					embeds: [],
+					components: []
+				})
+			}
+		})
 	} catch (error) {
 		console.error("An error occurred:", error)
 		await interaction.editReply({

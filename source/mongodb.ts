@@ -242,7 +242,7 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		// resetAllUsersQuests(client.db(mongoDatabase))
+		await addSettingsToUsers(client.db(mongoDatabase))
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
@@ -321,6 +321,26 @@ async function renameUserDocumentFields(database) {
 		}
 	} catch (error) {
 		logger.error("Error renaming fields:", error)
+	}
+}
+
+// add settings object to existing users
+async function addSettingsToUsers(database) {
+	const usersCollection = database.collection(usersCollectionName)
+
+	try {
+		const updateResult = await usersCollection.updateMany(
+			{ settings: { $exists: false } },
+			{ $set: { settings: { pvpable: true, acceptTrades: true, showAlerts: true, showSpoilers: false } } }
+		)
+
+		if (updateResult.matchedCount > 0) {
+			logger.info(`Added 'settings' object to ${updateResult.matchedCount} user documents`)
+		} else {
+			logger.info("No user documents found without 'settings' field")
+		}
+	} catch (error) {
+		logger.error("Error adding settings object:", error)
 	}
 }
 
