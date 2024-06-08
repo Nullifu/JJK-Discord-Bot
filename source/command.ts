@@ -7706,8 +7706,6 @@ export async function handleViewStats(interaction) {
 	return statsEmbed
 }
 
-
-
 export async function handleWorkCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	const userId = interaction.user.id
 	const userProfile = await getUserProfile(userId)
@@ -9201,6 +9199,9 @@ const challengeMessages = [
 	"{opponent}, are you ready to fight? {challenger} has challenged you to PvP!"
 ]
 
+const cooldowns = new Map<string, number>()
+const cooldownDuration = 30000
+
 const getRandomChallengeMessage = (challenger, opponent) => {
 	const randomIndex = Math.floor(Math.random() * challengeMessages.length)
 	return challengeMessages[randomIndex]
@@ -9215,6 +9216,19 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 	if (!opponent) {
 		await interaction.editReply({ content: "Please mention a valid user to challenge." })
 		return
+	}
+
+	if (cooldowns.has(interaction.user.id)) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const remainingTime = cooldowns.get(interaction.user.id)! - Date.now()
+		if (remainingTime > 0) {
+			const seconds = Math.ceil(remainingTime / 1000)
+			await interaction.reply({
+				content: `You're on cooldown. Please wait ${seconds} second(s) before using the PvP command again.`,
+				ephemeral: true
+			})
+			return
+		}
 	}
 	if (opponent.id === interaction.user.id) {
 		const wittyResponses = [
@@ -9319,6 +9333,11 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						}
 					)
 			}
+
+			cooldowns.set(interaction.user.id, Date.now() + cooldownDuration)
+			setTimeout(() => {
+				cooldowns.delete(interaction.user.id)
+			}, cooldownDuration)
 
 			const updateComponents = (techniques: string[], attacker: User, pvpData) => {
 				const techniqueOptions = techniques.map(techniqueName => ({
