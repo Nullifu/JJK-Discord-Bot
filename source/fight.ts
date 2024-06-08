@@ -8,6 +8,7 @@ import { activeCollectors, getButtons, tutorialPages } from "./command.js"
 import { BossData } from "./interface.js"
 import {
 	addItemToUserInventory,
+	addUser,
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
@@ -140,6 +141,7 @@ export async function handleBossDeath(
 	await updateUserInateClanExperience(interaction.user.id, 125, "Limitless")
 	await updatePlayerClanTier(interaction.user.id)
 	await updateUserFightsWon(interaction.user.id)
+	await addUserQuestProgress("Mission with Nobara", "Defeat Foes", 1)
 
 	await updateMonthlyFightsWon(interaction.user.id)
 
