@@ -1616,6 +1616,27 @@ export const consumeables: Item1[] = [
 				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 			}
 		}
+	},
+	{
+		itemName: "Inate Unleashed Essence",
+		description: "Luck Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			try {
+				await updateUserUnlockedTransformations(interaction.user.id, ["Realized Six Eyes"])
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Inate Essence")
+					.setDescription("You consume the essence.. Unleashing your Inate Power!")
+				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
 	}
 ]
 export const items1: Item1[] = [

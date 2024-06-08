@@ -1561,6 +1561,12 @@ export const TRANSFORMATIONS = [
 		image: "https://i.pinimg.com/originals/33/7a/f3/337af398877b856f25624144420a5230.gif",
 		effects: "Rubber, 35% Damage Increase, 20% Damage Reduction"
 	},
+	{
+		name: "Realized Six Eyes",
+		description: "Throughout heaven and earth, I alone am the honored one.",
+		image: "https://media1.tenor.com/m/-MHQstj5j68AAAAC/jujutsu-kaisen-gojo.gif",
+		effects: "Strongest Sorcerer, 40% Damage Increase, 25% Damage Reduction.. You also come back after death..."
+	},
 	// Owner
 	{
 		name: "Mugetsu",
