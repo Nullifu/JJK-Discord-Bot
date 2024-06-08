@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-inner-declarations */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable indent */
@@ -26,9 +27,10 @@ import {
 	TextBasedChannel,
 	TextChannel,
 	TextInputBuilder,
-	TextInputStyle
+	TextInputStyle,
+	User
 } from "discord.js"
-import { ClientSession, Collection } from "mongodb"
+import { ClientSession, Collection, ObjectId } from "mongodb"
 import ms from "ms"
 import {
 	DOMAIN_INFORMATION,
@@ -53,6 +55,7 @@ import {
 import {
 	executeSpecialRaidBossTechnique,
 	executeSpecialTechnique,
+	executeSpecialTechniquePvp,
 	export120,
 	exportCrashOut,
 	exportGambler,
@@ -84,6 +87,7 @@ import {
 	MiniGameResult,
 	allAchievements,
 	benefactors,
+	consumeables,
 	craftingRecipes,
 	dailyitems,
 	itemEffects,
@@ -100,18 +104,21 @@ import {
 import { getRandomItem } from "./items.js"
 import { postCommandMiddleware } from "./middleware.js"
 import {
+	UserSettings,
 	UserShikigami,
 	addItemToUserInventory,
 	addUser,
 	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
+	checkForNewAlerts,
 	checkProfileChangeCooldown,
 	checkStageMessaged,
 	checkUserHasHeavenlyRestriction,
 	checkWorkCooldown,
 	cleanShikigami,
 	client,
+	createAlert,
 	createGiveaway,
 	createRaidParty,
 	createTradeRequest,
@@ -134,9 +141,11 @@ import {
 	getShikigami,
 	getShopLastReset,
 	getUserAchievements,
+	getUserActiveDefenseTechnique,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
 	getUserAwakening,
+	getUserClanDetails,
 	getUserDailyData,
 	getUserDomain,
 	getUserFavouriteCommand,
@@ -156,6 +165,8 @@ import {
 	getUserPurchases,
 	getUserQuests,
 	getUserRegisteredDate,
+	getUserReverseCursedTechniqueStats,
+	getUserSettings,
 	getUserShikigami,
 	getUserStats,
 	getUserStatusEffects,
@@ -206,6 +217,8 @@ import {
 	updateUserMentor,
 	updateUserProfileHeader,
 	updateUserProfileImage,
+	updateUserReverseCursedTechniqueStats,
+	updateUserSettings,
 	updateUserShikigami,
 	updateUserTitle,
 	updateUserTransformation,
@@ -248,17 +261,22 @@ import {
 	createRaidEmbed,
 	createTechniqueSelectMenu,
 	getAwakeningDialogue,
+	getEmojiForClan,
 	getMentorDetails,
 	getYujiItadoriEventLine,
 	getYujiItadoriImageUrl,
 	getYujiItadoriLine,
 	handleRaidEnd,
-	mentorDetails
+	hasRequiredClanDetails,
+	jjkbotdevqutoes,
+	mentorDetails,
+	rareChance
 } from "./utils.js"
 
 const domainActivationState = new Map()
 const transformationState = new Map()
 const bossHealthMap = new Map()
+const rctState = new Map()
 
 export const searchCooldowns = new Map()
 export const searchCooldown = 60 * 1000
@@ -330,7 +348,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
 				.setDescription(
-					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /guide on a certain subject.\nYou've also got a free Starter Bundle in your inventory!`
+					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /guide for the trello link, with all Information.\nYou've also got a free Starter Bundle in your inventory!`
 				)
 				.setImage(imageURL)
 				.setTimestamp()
@@ -573,6 +591,7 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 						: `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`
 				)
 				.setTimestamp()
+				.setFooter({ text: getRandomQuote() })
 			await interaction.editReply({ embeds: [digEmbed] })
 
 			if (isTutorial) {
@@ -615,7 +634,23 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 			.setTimestamp()
 		await interaction.editReply({ embeds: [digEmbed] })
 	}
-	await postCommandMiddleware(interaction)
+	const settings = ((await getUserSettings(userId)) as UserSettings) || {
+		showAlerts: true
+	}
+
+	const { count, hasDeveloperAlerts } = await checkForNewAlerts(userId, settings.showAlerts)
+
+	if (count > 0) {
+		let alertMessage = `Hey, you've got ${count} unread alert(s)! Use **/alert** to view them!`
+		if (hasDeveloperAlerts) {
+			alertMessage += " (Including developer alerts)"
+		}
+
+		await interaction.followUp({
+			content: alertMessage,
+			ephemeral: true
+		})
+	}
 }
 export async function handleJobSelection(interaction: CommandInteraction) {
 	if (!interaction.isChatInputCommand()) return
@@ -695,38 +730,49 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 	const oneDayMs = 24 * 60 * 60 * 1000
 	const baseReward = 100000
 	const streakBonus = 25000
-
 	const { lastDaily, streak: lastStreak } = await getUserDailyData(userId)
 
 	if (currentTime - lastDaily < oneDayMs) {
 		const nextAvailableTime = Math.floor((lastDaily + oneDayMs) / 1000)
-
 		await interaction.reply({
 			content: `You must wait before you can claim your daily reward again. You can claim it again <t:${nextAvailableTime}:R>.`,
 			ephemeral: true
 		})
-
 		return
 	}
 
 	const streak = currentTime - lastDaily < oneDayMs * 2 ? lastStreak + 1 : 1
-
 	const coinsReward = baseReward + streakBonus * (streak - 1)
-
 	await updateUserDailyData(userId, currentTime, streak)
-
 	await updateBalance(userId, coinsReward)
-	const randomItemIndex = Math.floor(Math.random() * dailyitems.length)
-	const dailyItem = dailyitems[randomItemIndex]
-	await addItemToUserInventory(userId, dailyItem.name, 1)
+
+	let rewardItem
+	let rewardType
+
+	if (streak >= 5 && streak < 10) {
+		rewardItem = "Normal Box"
+		rewardType = "Box"
+	} else if (streak >= 10 && streak < 15) {
+		rewardItem = "Extreme Box"
+		rewardType = "Box"
+	} else if (streak >= 30) {
+		rewardItem = "Special Grade Box"
+		rewardType = "Box"
+	} else {
+		const randomItemIndex = Math.floor(Math.random() * dailyitems.length)
+		rewardItem = dailyitems[randomItemIndex].name
+		rewardType = "Daily Item"
+	}
+
+	await addItemToUserInventory(userId, rewardItem, 1)
 
 	const dailyEmbed = new EmbedBuilder()
 		.setColor(0x1f8b4c)
 		.setTitle("🎁 Daily Reward Claimed! 🎁")
-		.setThumbnail("https://i.pinimg.com/736x/8f/90/56/8f9056043d8ea491aab138f1a005599d.jpg") // Make sure this URL points to a relevant, visually appealing image
+		.setThumbnail("https://i.pinimg.com/736x/8f/90/56/8f9056043d8ea491aab138f1a005599d.jpg")
 		.addFields(
 			{ name: "Coins Awarded", value: `**${coinsReward.toLocaleString()} coins** 💰`, inline: true },
-			{ name: "Special Item", value: `**${dailyItem.name}** 🗝️`, inline: true },
+			{ name: "Special Reward", value: `**${rewardItem}**📦`, inline: true },
 			{ name: "Streak", value: `**${streak}** day(s) 🔥`, inline: false }
 		)
 		.setDescription(
@@ -736,7 +782,24 @@ export async function handleDailyCommand(interaction: ChatInputCommandInteractio
 		.setTimestamp()
 
 	await interaction.reply({ embeds: [dailyEmbed] })
-	await postCommandMiddleware(interaction)
+
+	const settings = ((await getUserSettings(userId)) as UserSettings) || {
+		showAlerts: true
+	}
+
+	const { count, hasDeveloperAlerts } = await checkForNewAlerts(userId, settings.showAlerts)
+
+	if (count > 0) {
+		let alertMessage = `Hey, you've got ${count} unread alert(s)! Use **/alert** to view them!`
+		if (hasDeveloperAlerts) {
+			alertMessage += " (Including developer alerts)"
+		}
+
+		await interaction.followUp({
+			content: alertMessage,
+			ephemeral: true
+		})
+	}
 }
 
 export async function handleCraftCommand(interaction: ChatInputCommandInteraction<CacheType>) {
@@ -1119,8 +1182,6 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 
 	logger.info("unlockedTitles:", unlockedTitles)
 
-	// Create the dropdown menu
-
 	const selectMenu = new SelectMenuBuilder()
 		.setCustomId("title_selection")
 		.setPlaceholder("No title selected")
@@ -1136,7 +1197,6 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
 	await interaction.reply({ embeds: [embed], components: [row] })
 
-	// Handle title selection
 	const filter = i => i.customId === "title_selection"
 
 	const collector = interaction.channel.createMessageComponentCollector({
@@ -1169,8 +1229,6 @@ export async function handleTitleSelectCommand(interaction: ChatInputCommandInte
 				interaction.followUp({ content: "You did not select a title.", components: [] }).catch(logger.error)
 			}
 		})
-
-		// collector.stop()
 	})
 }
 
@@ -1670,7 +1728,6 @@ function findTechniqueClan(techniqueName: string): string {
 	return ""
 }
 
-// Simplify technique names (assuming this function already exists in your code)
 function simplifyTechniqueName(fullName: string): string {
 	const nameMap = {
 		"Ten Shadows Technique: Eight-Handled Sword Divergent Sila Divine General Mahoraga": "Divine General Mahoraga"
@@ -1678,7 +1735,14 @@ function simplifyTechniqueName(fullName: string): string {
 	return nameMap[fullName] || fullName
 }
 
-export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInteraction) {
+function formatRCTStats(rctStats) {
+	if (!rctStats || !rctStats.obtained) {
+		return "RCT Not Obtained"
+	}
+	return `**Level**: ${rctStats.level}\n**Health Healed**: ${rctStats.healthHealed}\n**Experience**: ${rctStats.experience}`
+}
+
+export async function handleJujutsuStatsCommand(interaction) {
 	const targetUser = interaction.options.getUser("user") || interaction.user
 	const userId = targetUser.id
 
@@ -1690,9 +1754,9 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		const transform = await getUserTransformation(userId)
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const awakening = await getUserAwakening(userId)
+		const rctStats = await getUserReverseCursedTechniqueStats(userId)
 
-		//
-		let userTechniques: string[] = await (userHeavenlyRestriction
+		let userTechniques = await (userHeavenlyRestriction
 			? getUserActiveHeavenlyTechniques(userId)
 			: getUserActiveTechniques(userId))
 
@@ -1730,10 +1794,10 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 		// Construct the embed
 		const embed = new EmbedBuilder()
 			.setTitle(`${targetUser.username}'s Jujutsu Profile`)
-			.setColor("#4B0082") // Purple color
+			.setColor("#4B0082")
 			.setDescription("Dive into the depth of your Jujutsu prowess. Here are your current stats, sorcerer.")
 			.addFields(
-				{ name: "🏅 Honours", value: honors.toString() || "None", inline: true },
+				{ name: "🏅 Honours", value: honors.length > 0 ? honors.join(", ") : "None", inline: true },
 				{ name: "🔥 Awakening", value: awakening || "Stage Zero", inline: true },
 				{ name: "💓 Health", value: userMaxHealth.toString(), inline: true },
 				{
@@ -1742,8 +1806,10 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 					inline: true
 				},
 				{ name: "🔪 Transformation", value: transform || "None", inline: false },
+				{ name: "💪 RCT Stats", value: formatRCTStats(rctStats) || "Not Obtained", inline: false },
 				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay || "None", inline: false }
 			)
+			.setFooter({ text: getRandomQuote() })
 		const selectMenu = new StringSelectMenuBuilder()
 			.setCustomId("selectMenu")
 			.setPlaceholder("Select an option")
@@ -1809,43 +1875,6 @@ export async function handleJujutsuStatsCommand(interaction: ChatInputCommandInt
 	}
 }
 
-function formatCooldown(cooldown) {
-	const seconds = Math.floor((cooldown / 1000) % 60)
-	const minutes = Math.floor((cooldown / (1000 * 60)) % 60)
-	const hours = Math.floor((cooldown / (1000 * 60 * 60)) % 24)
-
-	return `${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "m " : ""}${seconds > 0 ? seconds + "s" : ""}`
-}
-
-function generateBossDropFields(bossDrops, startIndex, endIndex) {
-	const rarityAbbreviations = {
-		"common": "C",
-		"rare": "R",
-		"ultra rare": "UR"
-	}
-
-	const fields = []
-	for (let i = startIndex; i < endIndex; i++) {
-		const bossName = Object.keys(bossDrops)[i]
-		const drops = bossDrops[bossName]
-
-		const shortDropList =
-			drops.length > 3
-				? drops
-						.slice(0, 3)
-						.map(drop => `**${drop.name}** (${rarityAbbreviations[drop.rarity.toLowerCase()]})`)
-						.join(", ") + " ..."
-				: drops.map(drop => `${drop.name} (${rarityAbbreviations[drop.rarity.toLowerCase()]})`).join(", ")
-
-		fields.push({
-			name: `**${bossName}**`,
-			value: shortDropList,
-			inline: true
-		})
-	}
-	return fields
-}
-
 // guide command
 export async function handleGuideCommand(interaction) {
 	const topic = interaction.options.getString("topic")
@@ -1853,19 +1882,19 @@ export async function handleGuideCommand(interaction) {
 	switch (topic) {
 		default: {
 			const guideEmbed = new EmbedBuilder()
+				.setAuthor({
+					name: "Trello Credits: AtomicApex, Raix.",
+					iconURL:
+						"https://media.discordapp.net/attachments/1186763353494925404/1231808785090220042/Snapinsta.app_391524227_1278065773589666_2455587178141689864_n_1080.jpg?ex=66384e54&is=6625d954&hm=d208ac0a522cfc6446265782671b04d4207dd6fd6c102d779f8956ba25d9bec6&=&format=webp&width=554&height=554"
+				})
 				.setColor("#0099ff")
 				.setTitle("Jujutsu Kaisen Bot Guide")
-				.setDescription("ALL INFORMATION IS BEING MOVED TO TRELLO")
-				.addFields(
-					{
-						name: "Important Notice",
-						value: "We are currently in the process of moving all guide information to Trello. Please check our Trello board for the most up-to-date information and guides."
-					},
-					{
-						name: "Trello Board",
-						value: "You can find our Trello board at https://trello.com/b/JCCsLUX1/jjk-bot."
-					}
-				)
+				.setDescription("JJK Bot, Trello.")
+				.addFields({
+					name: "Trello Board",
+					value: "You can find our Trello board at https://trello.com/b/JCCsLUX1/jjk-bot."
+				})
+				.setFooter({ text: getRandomQuote() })
 
 			await interaction.reply({ embeds: [guideEmbed], ephemeral: true })
 		}
@@ -2031,6 +2060,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
 	//
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
+
+	const rctStats = await getUserReverseCursedTechniqueStats(interaction.user.id)
+	const rctlevel = rctStats ? "RCT Unlocked" : "🔒 RCT Not Unlocked"
 	//
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 	//
@@ -2042,6 +2074,21 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 	//
 	//
 	const domainname = await getUserDomain(interaction.user.id)
+
+	// Check for duplicate techniques
+	const techniqueCounts = userTechniques.reduce((counts, techniqueName) => {
+		counts[techniqueName] = (counts[techniqueName] || 0) + 1
+		return counts
+	}, {})
+
+	const duplicateTechniques = Object.keys(techniqueCounts).filter(techniqueName => techniqueCounts[techniqueName] > 1)
+
+	if (duplicateTechniques.length > 0) {
+		await interaction.followUp({
+			content: `You have equipped duplicate techniques: ${duplicateTechniques.join(", ")}. Please fix this before proceeding, /technique unequip <technique>`
+		})
+		return
+	}
 
 	const techniqueOptions =
 		userTechniques && userTechniques.length > 0
@@ -2070,6 +2117,15 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			emoji: {
 				name: "1564maskedgojode",
 				id: "1220626413141622794"
+			}
+		},
+		{
+			label: "Reverse Cursed Technique",
+			value: "rct",
+			description: rctlevel,
+			emoji: {
+				name: "rct",
+				id: "1221789476984979507"
 			}
 		},
 		{
@@ -2138,6 +2194,14 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	battleOptionSelectMenuCollector.on("collect", async collectedInteraction => {
 		await collectedInteraction.deferUpdate()
+		if (collectedInteraction.user.id !== interaction.user.id) {
+			await collectedInteraction.followUp({
+				content: "Nuh uh! This is not your battle!",
+				ephemeral: true
+			})
+			return
+		}
+
 		if (collectedInteraction.user.id !== interaction.user.id) return
 		const selectedValue = collectedInteraction.values[0]
 		let playerHealth = await getUserHealth(collectedInteraction.user.id)
@@ -2387,6 +2451,65 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					ephemeral: true
 				})
 			}
+		} else if (selectedValue === "rct") {
+			logger.info("Reverse Cursed Technique selected.")
+
+			try {
+				const rctStats = await getUserReverseCursedTechniqueStats(interaction.user.id)
+				if (!rctStats || !rctStats.obtained) {
+					await collectedInteraction.followUp({
+						content: "You do not have Reverse Cursed Technique unlocked yet.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const currentHealth = await getUserHealth(interaction.user.id)
+				const maxHealth = await getUserMaxHealth(interaction.user.id)
+
+				if (currentHealth >= maxHealth) {
+					await collectedInteraction.followUp({
+						content: "You already have maximum health and cannot use Reverse Cursed Technique.",
+						ephemeral: true
+					})
+					return
+				}
+
+				const rctLevel = rctStats.level
+				const healthRegeneration = rctLevel * 10
+				let newHealth = currentHealth + healthRegeneration
+				if (newHealth > maxHealth) {
+					newHealth = maxHealth
+				}
+
+				await updateUserHealth(interaction.user.id, newHealth)
+
+				rctStats.healthHealed += healthRegeneration
+				await updateUserReverseCursedTechniqueStats(interaction.user.id, rctStats)
+
+				rctState.set(contextKey, true)
+
+				// Create and send the embed message
+				const embed = new EmbedBuilder()
+					.setColor("#1f8b4c")
+					.setTitle("Reverse Cursed Technique Activated!")
+					.setDescription(`You have regenerated ${healthRegeneration} health`)
+					.addFields({ name: "New Health", value: `:blue_heart: ${newHealth.toString()}`, inline: true })
+					.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-5-5cfb8a9651.gif")
+					.setFooter({ text: `RCT Level: ${rctLevel}` })
+
+				await collectedInteraction.editReply({ embeds: [embed], components: [] })
+
+				await new Promise(resolve => setTimeout(resolve, 3000))
+
+				await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
+			} catch (error) {
+				console.error("Error during RCT activation:", error)
+				await collectedInteraction.followUp({
+					content: "An error occurred while trying to use your Reverse Cursed Technique.",
+					ephemeral: true
+				})
+			}
 		} else {
 			// get boss hp
 			const currentBossHealth = bossHealthMap.get(interaction.user.id) || randomOpponent.max_health
@@ -2503,7 +2626,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 40,
+					damageMultiplier: 90,
 					imageUrl: "https://storage.googleapis.com/jjk_bot_personal/maxresdefault.jpg",
 					description: "Don't worry, I'll lose.",
 					fieldValue: selectedValue,
@@ -2625,9 +2748,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 12,
-					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
-					description: "Hollow: NUKE! ",
+					damageMultiplier: 16,
+					imageUrl: "https://media1.tenor.com/m/Hx77RI9lzY4AAAAC/hollow-nuke-hollow-purple.gif",
+					description: "Polarized Light.. Crow ",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -2748,6 +2871,60 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Six Point Palm") {
+				const requiredTier = [1, 2]
+				const requiredClanName = "Limitless"
+				const rareChanceProbability = 0.05
+
+				const userHasRequiredDetails = await hasRequiredClanDetails(
+					collectedInteraction.user.id,
+					requiredTier,
+					requiredClanName
+				)
+				const rareChanceSuccess = rareChance(rareChanceProbability)
+
+				let techniqueParams
+
+				if (rareChanceSuccess) {
+					techniqueParams = {
+						collectedInteraction,
+						techniqueName: selectedValue,
+						damageMultiplier: 70,
+						imageUrl: "https://media1.tenor.com/m/gTzL4bykSakAAAAC/jujutsu-kaisen0-battle.gif",
+						description:
+							"You're six eyes begin to glow.. You're not sure what's happening.. **Unleashed Technique: Six Point Palm**",
+						fieldValue: selectedValue,
+						userTechniques: userTechniquesFight,
+						userId: collectedInteraction.user.id,
+						primaryEmbed
+					}
+				} else if (userHasRequiredDetails) {
+					techniqueParams = {
+						collectedInteraction,
+						techniqueName: selectedValue,
+						damageMultiplier: 48,
+						imageUrl: "https://media1.tenor.com/m/3R9gRhB7FAwAAAAC/gojo-satoru.gif",
+						description: "This isn't even my full power.. **Six Point Palm**",
+						fieldValue: selectedValue,
+						userTechniques: userTechniquesFight,
+						userId: collectedInteraction.user.id,
+						primaryEmbed
+					}
+				} else {
+					techniqueParams = {
+						collectedInteraction,
+						techniqueName: selectedValue,
+						damageMultiplier: 10,
+						imageUrl: "https://media1.tenor.com/m/-I0E2FViCOsAAAAC/gojo-satoru.gif",
+						description: "Oh come on now.. You're not even trying.",
+						fieldValue: selectedValue,
+						userTechniques: userTechniquesFight,
+						userId: collectedInteraction.user.id,
+						primaryEmbed
+					}
+				}
+
+				damage = await executeSpecialTechnique(techniqueParams)
 			} else if (selectedValue === "Divergent Fist") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -2764,7 +2941,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 3,
+					damageMultiplier: 4,
 					imageUrl:
 						"https://media1.tenor.com/m/whbTruPpfgkAAAAC/imaginary-technique-imaginary-technique-purple.gif",
 					description:
@@ -2792,7 +2969,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 28,
-					imageUrl: "https://tenor.com/en-GB/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
+					imageUrl: "https://media1.tenor.com/m/2sYS0uQV8IIAAAAd/jujutsu-kaisen-jujutsu-kaisen-fade.gif",
 					description: "Please the:",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
@@ -2842,6 +3019,68 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 4,
 					imageUrl: "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif",
 					description: "You gamble... AND FORTUNE FAVORS THE BOLD! You deal double damage!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Essence of the Soul: KOKUSEN") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://media1.tenor.com/m/0EERvw7z2aEAAAAC/jjk-jjk-s2.gif",
+					description: "AHHH I TRULY AM.. A CURSED SPIRIT!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Transfiguration: Soul Touch") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://media1.tenor.com/m/vuHtrhYou2MAAAAC/nobara-face-jujutsu-kaisen.gif",
+					description: "Now you're in for it..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Transfiguration: Decay") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 18,
+					imageUrl:
+						"https://media1.tenor.com/m/0ksR58u2OS4AAAAC/nanami-mahito-transfiguration-soul-touch.gif",
+					description: "I'm going to decay you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Copy: Cleave") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 38,
+					imageUrl: "https://static1.srcdn.com/wordpress/wp-content/uploads/2024/02/image0-15.jpeg",
+					description: "Copy: Cleave....",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Copy: Cursed Speech: Die") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 36,
+					imageUrl:
+						"https://media1.tenor.com/m/07LI2_CcWlsAAAAC/jujutsu-kaisen-mang%C3%A1-jujutsu-mang%C3%A1.gif",
+					description: "DIE..",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -3193,6 +3432,30 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Cry About It") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://media1.tenor.com/m/6ceiTdJ4eOoAAAAC/cry-about-it.gif",
+					description: "cry about it..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Ultimate Donut Strike") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://media1.tenor.com/m/9LfoU9FnMtkAAAAC/donut-donuts.gif",
+					description: "Ultimate Donut Strike..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
@@ -3473,7 +3736,8 @@ export async function handleTechniqueShopCommand(interaction: ChatInputCommandIn
 			.map(clan => ({
 				label: clan,
 				value: clan.toLowerCase().replace(/\s+/g, "_"),
-				description: `Select to view ${clan}'s techniques`
+				description: `Select to view ${clan}'s techniques`,
+				emoji: getEmojiForClan(clan)
 			}))
 	}
 
@@ -3802,7 +4066,7 @@ function checkWin(spinResults: string[]): boolean {
 const userBetCounts = {}
 const userLastBetTimes = {}
 const cooldownPeriod = 15 * 1000
-const maxBetLimit = 25000000
+const maxBetLimit = 15000000
 const dailyBetLimit = 20
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
@@ -3847,7 +4111,7 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 
 	if (betAmount > maxBetLimit) {
 		await interaction.reply({
-			content: `Your maximum bet limit is ${formatNumberWithCommas(maxBetLimit)} coins, Try increasing it!`,
+			content: `Your maximum bet limit is ${formatNumberWithCommas(maxBetLimit)} coins.`,
 			ephemeral: true
 		})
 		return
@@ -3948,7 +4212,6 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		}
 	}
 
-	// Update bet counts and last bet time
 	userBetCounts[userId]++
 	userLastBetTimes[userId] = now
 	await updateUserGambleInfo(userId)
@@ -3984,7 +4247,7 @@ function getRandomBenefactor() {
 }
 
 const begcooldown = new Map<string, number>()
-const begcooldownamount = 30 * 1000 // 5 seconds in milliseconds
+const begcooldownamount = 30 * 1000
 
 export async function handleBegCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
@@ -4000,16 +4263,12 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 		})
 	}
 
-	// Update Cooldown
 	begcooldown.set(userId, now)
 
-	// Get Random Benefactor
 	const chosenOne = getRandomBenefactor()
 
-	// Result Message Construction
 	let resultMessage = `You begged ${chosenOne.name}. `
 
-	// Benefactor's Words
 	if (chosenOne.words) {
 		resultMessage += `${chosenOne.name} says: "${chosenOne.words}" `
 	}
@@ -4061,8 +4320,6 @@ export async function handleBegCommand(interaction: ChatInputCommandInteraction)
 	await interaction.reply({ embeds: [resultEmbed] })
 }
 
-// handle sell command
-
 export async function handleSellCommand(interaction) {
 	const itemToSell = interaction.options.getString("item").toLowerCase()
 	const quantity = interaction.options.getInteger("quantity") || 1
@@ -4073,7 +4330,6 @@ export async function handleSellCommand(interaction) {
 		return interaction.reply({ content: "You don't have that item in your inventory.", ephemeral: true })
 	}
 
-	// Check if the user has sufficient quantity of the item
 	if (inventoryItem.quantity < quantity) {
 		return interaction.reply({
 			content: `You don't have enough ${inventoryItem.name} to sell. You only have ${inventoryItem.quantity}.`,
@@ -4126,19 +4382,7 @@ export async function handleSellCommand(interaction) {
 	})
 }
 
-function getRewardString(quest) {
-	let rewards = ""
-	if (quest.item) rewards += `${quest.item} (x${quest.itemQuantity})\n`
-	if (quest.items) {
-		Object.entries(quest.items).forEach(([itemName, quantity]) => {
-			rewards += `${itemName} (x${quantity})\n`
-		})
-	}
-	return rewards || "None" //
-}
-// Ban...KAI!
 export async function handleQuestCommand(interaction: ChatInputCommandInteraction) {
-	logger.info(questsArray)
 	const userId = interaction.user.id
 
 	const userActiveQuests = await getUserQuests(userId)
@@ -4165,84 +4409,66 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("select_quest")
-		.setPlaceholder("Select a Quest")
+		.setPlaceholder("Select Quests")
+		.setMinValues(1)
+		.setMaxValues(questOptions.length)
 		.addOptions(questOptions)
 
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
 	await interaction.reply({
-		content: "Select a quest to begin your adventure.",
-		components: [row]
+		content: "Select one or more quests to begin your adventure.",
+		components: [row],
+		ephemeral: true
 	})
-
-	logger.info("before menu")
 
 	const filter = i => i.customId === "select_quest" && i.user.id === interaction.user.id
 	const questCollector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
 
-	logger.info("after menu")
-
 	questCollector.on("collect", async i => {
 		if (i.isStringSelectMenu()) {
-			const selectedquestname = i.values[0]
-			if (activeQuestNames.includes(selectedquestname)) {
-				await i.update({
-					content: "You are already on this quest!",
-					embeds: [],
-					components: []
-				})
-				return
-			}
-			const selectedQuest = questsArray.find(quest => quest.name === selectedquestname)
+			const selectedQuestNames = i.values
 
-			await addUserQuest(userId, selectedQuest.name)
+			const embed = new EmbedBuilder().setColor("#0099ff").setTitle("Selected Quests")
 
-			logger.info("before embed")
-			const questEmbed = new EmbedBuilder()
-				.setTitle(selectedQuest.name)
-				.setDescription(selectedQuest.description)
-				.setColor("#0099ff")
-
-			if (selectedQuest.coins !== undefined && selectedQuest.coins !== null) {
-				questEmbed.addFields({ name: "Coins", value: selectedQuest.coins.toString(), inline: true })
-			}
-
-			if (selectedQuest.experience !== undefined && selectedQuest.experience !== null) {
-				questEmbed.addFields({ name: "EXP", value: selectedQuest.experience.toString(), inline: true })
-			}
-
-			if (selectedQuest.task !== undefined && selectedQuest.task !== null) {
-				questEmbed.addFields({ name: "Task", value: selectedQuest.task, inline: false })
-			}
-
-			const rewardString = getRewardString(selectedQuest)
-			if (rewardString !== undefined && rewardString !== null) {
-				questEmbed.addFields({ name: "Rewards", value: rewardString, inline: false })
-			}
-
-			if (selectedQuest.tasks) {
-				selectedQuest.tasks.forEach((task, index) => {
-					if (
-						task.description !== undefined &&
-						task.description !== null &&
-						task.progress !== undefined &&
-						task.progress !== null &&
-						task.totalProgress !== undefined &&
-						task.totalProgress !== null
-					) {
-						questEmbed.addFields({
-							name: `Task ${index + 1}`,
-							value: `${task.description} (${task.progress}/${task.totalProgress})`
+			if (selectedQuestNames.length >= 10) {
+				const questNamesString = selectedQuestNames.join(", ")
+				for (const selectedQuestName of selectedQuestNames) {
+					const selectedQuest = questsArray.find(quest => quest.name === selectedQuestName)
+					await addUserQuest(userId, selectedQuest.name)
+				}
+				embed.setDescription(`You accepted these quests: ${questNamesString}`)
+			} else {
+				for (const selectedQuestName of selectedQuestNames) {
+					if (activeQuestNames.includes(selectedQuestName)) {
+						await i.update({
+							content: `You are already on the quest "${selectedQuestName}"!`,
+							embeds: [],
+							components: []
 						})
+						return
 					}
-				})
+
+					const selectedQuest = questsArray.find(quest => quest.name === selectedQuestName)
+					await addUserQuest(userId, selectedQuest.name)
+
+					embed.addFields({ name: selectedQuest.name, value: selectedQuest.description })
+
+					if (selectedQuest.coins !== undefined && selectedQuest.coins !== null) {
+						embed.addFields({ name: "Coins", value: selectedQuest.coins.toString(), inline: true })
+					}
+
+					if (selectedQuest.experience !== undefined && selectedQuest.experience !== null) {
+						embed.addFields({ name: "EXP", value: selectedQuest.experience.toString(), inline: true })
+					}
+				}
 			}
 
 			await i.update({
-				embeds: [questEmbed],
+				content: "Quests selected:",
+				embeds: [embed],
 				components: []
 			})
-			logger.info("after embed")
 		}
 	})
 
@@ -4250,7 +4476,7 @@ export async function handleQuestCommand(interaction: ChatInputCommandInteractio
 		if (collected.size === 0) {
 			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
 		}
-		questCollector.stop
+		questCollector.stop()
 	})
 }
 
@@ -4460,8 +4686,10 @@ export async function claimQuestsCommand(interaction) {
 				await updateUserUnlockedTransformations(userId, ["Awakening"])
 				const curseking = new EmbedBuilder()
 					.setColor(0xff0000)
-					.setTitle("The Fearful King")
-					.setDescription("")
+					.setTitle("Awakening Unleashed!")
+					.setDescription(
+						"Oh.. you're getting stronger.. I'll teach you how to use the **Awakening** Transformation!"
+					)
 					.setImage("https://storage.googleapis.com/jjk_bot_personal/687474~1.GIF")
 					.addFields({
 						name: "Power Unleashed",
@@ -4476,7 +4704,7 @@ export async function claimQuestsCommand(interaction) {
 				const curseking = new EmbedBuilder()
 					.setColor(0xff0000)
 					.setTitle("bzzztbzzz-bzzzt")
-					.setDescription("")
+					.setDescription("You've unlocked the Maximum Output Transformation!")
 					.setImage(
 						"https://media1.tenor.com/m/2tA56I2eTK8AAAAC/jujutsu-kaisen-shinjuku-arc-hajime-kashimo.gif"
 					)
@@ -4510,7 +4738,7 @@ export async function claimQuestsCommand(interaction) {
 				})
 			}
 		} finally {
-			await session?.endSession() // End the session
+			await session?.endSession()
 		}
 	} catch (error) {
 		logger.error("Error starting session:", error)
@@ -4684,34 +4912,39 @@ export async function viewQuestsCommand(interaction: CommandInteraction) {
 		await interaction.editReply({ content: "An error occurred while processing your request.", components: [] })
 	}
 }
-// abandon quest with dropdown menu using getuserquest
 export async function abandonQuestCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
-
 	const userId = interaction.user.id
 	const userQuests = await getUserQuests(userId)
-
 	if (!userQuests || !Array.isArray(userQuests.quests) || userQuests.quests.length === 0) {
 		await interaction.reply("You have no active quests to abandon.")
 		return
 	}
 
-	const options = userQuests.quests
-		.filter(quest => quest.id && quest.instanceId)
-		.map(quest => ({
-			label: quest.id,
-			value: quest.instanceId
-		}))
+	const options = []
+	const instanceIds = new Set()
+
+	for (const quest of userQuests.quests) {
+		if (quest.id && quest.instanceId && !instanceIds.has(quest.instanceId)) {
+			options.push({
+				label: quest.id,
+				value: quest.instanceId
+			})
+			instanceIds.add(quest.instanceId)
+		}
+	}
 
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("abandon_quest")
-		.setPlaceholder("Select a Quest to Abandon")
+		.setPlaceholder("Select Quests to Abandon")
+		.setMinValues(1)
+		.setMaxValues(options.length)
 		.addOptions(options)
 
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
 	await interaction.reply({
-		content: "Select a quest to abandon.",
+		content: "Select the quests you want to abandon.",
 		components: [row],
 		ephemeral: true
 	})
@@ -4721,15 +4954,20 @@ export async function abandonQuestCommand(interaction) {
 
 	collector.on("collect", async i => {
 		if (i.isStringSelectMenu()) {
-			const instanceId = i.values[0]
-			await removeUserQuest(userId, instanceId)
-			await i.update({ content: "You have abandoned the quest", components: [] })
+			const selectedQuests = i.values
+			for (const instanceId of selectedQuests) {
+				await removeUserQuest(userId, instanceId)
+			}
+			await i.update({
+				content: `You have abandoned ${selectedQuests.length} quest(s).`,
+				components: []
+			})
 		}
 	})
 
 	collector.on("end", collected => {
 		if (collected.size === 0) {
-			interaction.editReply({ content: "You didn't select a quest in time.", components: [] })
+			interaction.editReply({ content: "You didn't select any quests to abandon.", components: [] })
 		}
 		collector.stop()
 	})
@@ -4814,12 +5052,75 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		await interaction.reply("Uh oh, something unexpected went wrong!")
 	}
 }
+export async function handleConsumeItem(interaction: ChatInputCommandInteraction): Promise<void> {
+	await updateUserCommandsUsed(interaction.user.id)
+
+	const userId = interaction.user.id
+	const itemName = interaction.options.getString("item")
+
+	const inventoryItems = await getUserInventory(userId)
+	const item = consumeables.find(i => i.itemName === itemName)
+	const hasItem = inventoryItems.some(i => i.name === itemName && i.quantity > 0)
+
+	if (!hasItem) {
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Search yields no results...")
+			.setDescription(`You rummage through your belongings but find no trace of ${itemName}.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	if (itemName === "RCT Essence") {
+		const mentor = await getUserReverseCursedTechniqueStats(userId)
+		if (mentor && mentor.obtained) {
+			const embed = new EmbedBuilder()
+				.setColor("#FF0000")
+				.setTitle("Already Obtained")
+				.setDescription(
+					"You have already obtained the Reverse Cursed Technique and cannot use the RCT Essence again."
+				)
+			await interaction.reply({ embeds: [embed], ephemeral: true })
+			return
+		}
+	}
+
+	if (!item) {
+		const embed = new EmbedBuilder()
+			.setColor("#FFFF00")
+			.setTitle("No Effect")
+			.setDescription(`You ponder the use of ${itemName}, but it seems to hold no significance.`)
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	try {
+		if (item) {
+			const result = await item.effect(interaction)
+			if (result === undefined) {
+				removeItemFromUserInventory(userId, itemName, 1)
+			}
+		}
+	} catch (error) {
+		logger.error("Error executing item effect:", error)
+		await interaction.reply("Uh oh, something unexpected went wrong!")
+	}
+}
 
 export async function handleTradeCommand(interaction) {
 	try {
 		const targetUser = interaction.options.getUser("user")
 		const item = interaction.options.getString("item")
 		const quantity = interaction.options.getInteger("quantity")
+
+		const targetUserSettings = await getUserSettings(targetUser.id)
+		if (targetUserSettings && !targetUserSettings.acceptTrades) {
+			await interaction.reply({
+				content: "The user you are trying to trade with does not accept trades.",
+				ephemeral: true
+			})
+			return
+		}
 
 		const initiatorInventory = await getUserInventory(interaction.user.id)
 		const initiatorItem = initiatorInventory.find(i => i.name === item && i.quantity >= quantity)
@@ -4843,48 +5144,10 @@ export async function handleTradeCommand(interaction) {
 
 		await createTradeRequest(interaction.user.id, targetUser.id, item, quantity)
 
-		const tradeEmbed = new EmbedBuilder()
-			.setColor("Aqua")
-			.setTitle("🔄 Trade Request")
-			.setDescription(
-				`You have received a trade request from ${interaction.user.username}. Please review the details below:`
-			)
-			.addFields(
-				{
-					name: "Trade Details",
-					value: `• **User:** <@${interaction.user.id}>\n• **Item:** ${item}\n• **Quantity:** ${quantity}`,
-					inline: false
-				},
-				{
-					name: "Next Steps",
-					value: "• ✅ **To Accept:** Use `/trade accept`.\n• ❌ **To Decline:** Ignore this message.",
-					inline: false
-				},
-				{
-					name: "⚠️ **IMPORTANT WARNING**",
-					value:
-						"Please read carefully before proceeding with the trade:\n\n" +
-						"• **🔁 Trades Are Final:** Once confirmed, trades cannot be reversed. Ensure you review the trade details thoroughly.\n" +
-						"• **🎁 Trading Direction:** Currently, trading involves the user **giving** you an item. This system does not allow for items to be taken from you without your consent. Always double-check who is the giver and the receiver in this transaction.\n\n" +
-						"• 💡 **Stay Informed:** Make informed decisions to ensure a fair and secure trading experience.",
-					inline: false
-				}
-			)
-			.setFooter({
-				text: "Trade requests are time-sensitive and subject to item availability."
-			})
+		const alertMessage = `You have received a trade request from ${interaction.user.username}.\nItem: ${quantity} x ${item}\nNote: Trading does not allow items to be taken from you; it only allows users to give items.\n\nTo accept the trade, use /trade accept. To ignore it, just leave it and it'll go away. You can disable trading in settings.`
+		await createAlert(targetUser.id, alertMessage)
 
-		try {
-			await targetUser.send({ embeds: [tradeEmbed] })
-			await interaction.reply({ content: "Trade request sent!", ephemeral: true })
-		} catch (error) {
-			logger.warn("Failed to send a trade request DM. Sending in the channel instead.", error)
-			await interaction.reply({
-				content: `Trade request for <@${targetUser.id}>:\n${
-					tradeEmbed.data.description
-				}\n\n${tradeEmbed.data.fields.map(field => `**${field.name}**\n${field.value}`).join("\n\n")}`
-			})
-		}
+		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
 	} catch (error) {
 		logger.error("Error occurred while processing the trade command:", error)
 		await interaction.reply({
@@ -4940,15 +5203,48 @@ export async function handleViewEffectsCommand(interaction) {
 // Handle alert command
 export async function handleAlertCommand(interaction: ChatInputCommandInteraction) {
 	await updateUserCommandsUsed(interaction.user.id)
-	const alertEmbed = new EmbedBuilder()
-		.setColor("#FF0000")
-		.setTitle("🚨 Alert!")
-		.setDescription("RAID UPDATE IS LIVE! Please check the #announcements channel for more information.")
-		.setFooter({ text: "would you lose?" })
+	const userId = interaction.user.id
 
-	await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
+	try {
+		await client.connect()
+
+		const database = client.db(mongoDatabase)
+		const alertsCollection = database.collection("alerts")
+
+		const unreadAlerts = await alertsCollection.find({ userId, read: false }).toArray()
+
+		if (unreadAlerts.length === 0) {
+			const randomQuote = jjkbotdevqutoes[Math.floor(Math.random() * jjkbotdevqutoes.length)]
+			const noAlertEmbed = new EmbedBuilder()
+				.setColor("#FF0000")
+				.setTitle("No Alerts!")
+				.setDescription(`\n${randomQuote}`)
+				.setThumbnail("https://i.pinimg.com/564x/43/89/55/438955da8ffeba5ba95a0b8a7a3feece.jpg")
+				.setFooter({ text: "Check back regularly for more updates!" })
+
+			await interaction.reply({ embeds: [noAlertEmbed], ephemeral: true })
+			return
+		}
+
+		// Create the alert message
+		const alertMessages = unreadAlerts.map(alert => alert.message).join("\n")
+		const alertEmbed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("🚨 Alerts!")
+			.setDescription(alertMessages)
+			.setFooter({ text: "Check back regularly for more updates!" })
+
+		await interaction.reply({ embeds: [alertEmbed], ephemeral: true })
+
+		await alertsCollection.updateMany({ userId, read: false }, { $set: { read: true } })
+	} catch (error) {
+		logger.error(`Error handling alerts for user ${userId}:`, error)
+		await interaction.reply({
+			content: "There was an error retrieving your alerts. Please try again later.",
+			ephemeral: true
+		})
+	}
 }
-
 export async function handleAcceptTrade(interaction) {
 	try {
 		await interaction.deferReply({ ephemeral: true })
@@ -5067,7 +5363,6 @@ export async function processTradeSelection(interaction: Interaction) {
 	}
 }
 
-// view trade command, it has a selectmenu with two options. active trades and previous trades active trades shows all current pending and outgoing trades and previous trades shows all completed trades
 export async function handlePreviousTradesCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
 	const userId = interaction.user.id
@@ -5602,6 +5897,11 @@ export async function handleShopCommand(interaction) {
 		{ name: "Shikigami food", price: 50000, rarity: "Common" },
 		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
 	]
+	const essenceShopItems = [
+		{ name: "RCT Essence", price: 550000000, rarity: "Special Grade" },
+		{ name: "Simple Domain Essence", price: 550000000, rarity: "Special Grade" },
+		{ name: "Luck Essence", price: 12500000, rarity: "Special Grade" }
+	]
 
 	const balance = await getBalance(interaction.user.id)
 	const balance2 = balance.toLocaleString("en-US")
@@ -5625,7 +5925,7 @@ export async function handleShopCommand(interaction) {
 			.map(item => {
 				return (
 					`**${item.name}** - ${item.rarity} Rarity\n` +
-					`Price: **${item.price || "None"}** coins\n` +
+					`Price: **${item.price.toLocaleString("en-US") || "None"}** coins\n` +
 					`Max Purchases: **${item.maxPurchases || "None"}**\n` +
 					"--------------------"
 				)
@@ -5655,6 +5955,12 @@ export async function handleShopCommand(interaction) {
 					description: "View items in the raid shop",
 					value: "raid_shop",
 					emoji: "⚔️"
+				},
+				{
+					label: "Essence Shop",
+					description: "View items in the essence shop",
+					value: "essence_shop",
+					emoji: "✨"
 				}
 			])
 
@@ -5696,13 +6002,16 @@ export async function handleShopCommand(interaction) {
 			} else if (selectedShop === "shikigami_shop") {
 				selectedShopItems = shikigamiShopItems
 				formattedShopName = "Shikigami Shop"
+			} else if (selectedShop === "essence_shop") {
+				selectedShopItems = essenceShopItems
+				formattedShopName = "Essence Shop"
 			}
 
 			const itemsField = selectedShopItems
 				.map(item => {
 					return (
 						`**${item.name}** - ${item.rarity} Rarity\n` +
-						`Price: **${item.price || "None"}** ${selectedShop === "raid_shop" ? "Raid Tokens" : "coins"}\n` +
+						`Price: **${item.price.toLocaleString("en-US") || "None"}** ${selectedShop === "raid_shop" ? "Raid Tokens" : "coins"}\n` +
 						`Max Purchases: **${item.maxPurchases || "None"}**\n` +
 						"--------------------"
 					)
@@ -5748,7 +6057,7 @@ export async function handleShopCommand(interaction) {
 			await i.deferUpdate()
 
 			const userId = i.user.id
-			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|event)_shop_(\d+)$/)
+			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence)_shop_(\d+)$/)
 
 			if (!customIdMatch) {
 				logger.error("Invalid custom ID format:", i.customId)
@@ -5773,6 +6082,8 @@ export async function handleShopCommand(interaction) {
 				selectedShopItems = raidShopItems
 			} else if (shopType === "shikigami") {
 				selectedShopItems = shikigamiShopItems
+			} else if (shopType === "essence") {
+				selectedShopItems = essenceShopItems
 			}
 
 			if (itemIndex >= 0 && itemIndex < selectedShopItems.length) {
@@ -5800,14 +6111,13 @@ export async function handleShopCommand(interaction) {
 				}
 
 				if (shopType === "raid") {
-					// Check if the user has enough Raid Tokens in their inventory
 					const userInventory = await getUserInventory(userId)
 					const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
 					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
 
 					if (raidTokens < itemToBuy.price) {
 						await i.followUp({
-							content: `You do not have enough Raid Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price}, You have: ${raidTokens}`,
+							content: `You do not have enough Raid Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price.toLocaleString("en-US")}, You have: ${raidTokens.toLocaleString("en-US")}`,
 							ephemeral: true
 						})
 						return
@@ -5831,7 +6141,7 @@ export async function handleShopCommand(interaction) {
 				await addItemToUserInventory(userId, itemToBuy.name, 1)
 				await addUserPurchases(userId, itemToBuy.name, 1)
 				await i.followUp({
-					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price} ${shopType === "raid" ? "Raid Tokens" : "coins"}.`,
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price.toLocaleString("en-US")} ${shopType === "raid" ? "Raid Tokens" : "coins"}.`,
 					ephemeral: true
 				})
 			} else {
@@ -5930,7 +6240,6 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 
 	const divineGeneralChance = 0.008
 
-	// Check if the user is lucky enough to get a Divine-General Mahoraga
 	if (chosenShikigami.name === "Mahoraga" && randomChance < divineGeneralChance) {
 		chosenShikigami.name = "Divine-General Mahoraga"
 		chosenShikigami.current_health = 650
@@ -5939,10 +6248,9 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		chosenShikigami.image_url = "https://media1.tenor.com/m/T7rdnze2j8oAAAAd/gojo-mahoraga.gif"
 	}
 
-	// Use the chosenShikigami as the opponent
 	const randomOpponent = chosenShikigami
 
-	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16) // Convert hex string to number
+	const cursedEnergyPurple = parseInt("#8A2BE2".replace("#", ""), 16)
 	const playerHealth = await getUserMaxHealth(interaction.user.id)
 	const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 	//
@@ -6281,18 +6589,6 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
-			} else if (selectedValue === "Genki Dama") {
-				damage = await executeSpecialTechnique({
-					collectedInteraction,
-					techniqueName: selectedValue,
-					damageMultiplier: 12,
-					imageUrl: "https://media1.tenor.com/m/8Ltt65SLeFUAAAAC/genki-dama-spirit-bomb.gif",
-					description: "PLEASE LEND ME SOME OF YOUR ENERRGY!",
-					fieldValue: selectedValue,
-					userTechniques: userTechniquesTame,
-					userId: collectedInteraction.user.id,
-					primaryEmbed
-				})
 			} else if (selectedValue === "Vengance Blade: Executioners Blade") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -6383,7 +6679,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					collectedInteraction,
 					techniqueName: selectedValue,
 					damageMultiplier: 28,
-					imageUrl: "https://tenor.com/view/jujutsu-kaisen-jujutsu-kaisen-fade-gif-27469765",
+					imageUrl: "https://media1.tenor.com/m/2sYS0uQV8IIAAAAd/jujutsu-kaisen-jujutsu-kaisen-fade.gif",
 					description: "Please the:",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesTame,
@@ -6419,8 +6715,8 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
 					techniqueName: selectedValue,
-					damageMultiplier: 6,
-					imageUrl: "https://media1.tenor.com/m/dzW6XIkw4VkAAAAC/hollow-purple-chapter-235.gif",
+					damageMultiplier: 16,
+					imageUrl: "https://media1.tenor.com/m/Hx77RI9lzY4AAAAC/hollow-nuke-hollow-purple.gif",
 					description:
 						"Nine point.. Polarized light. Crow and Shomyo chant. The gap between within and without. Hollow Technique: PURPLE!",
 					fieldValue: selectedValue,
@@ -6996,7 +7292,6 @@ export async function handleViewShikigami(interaction) {
 		const actionButtons = new ActionRowBuilder().addComponents(
 			new ButtonBuilder().setCustomId("feed_shikigami").setLabel("Feed").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("clean_shikigami").setLabel("Clean").setStyle(ButtonStyle.Primary),
-			new ButtonBuilder().setCustomId("play_shikigami").setLabel("Play").setStyle(ButtonStyle.Primary),
 			new ButtonBuilder().setCustomId("heal_shikigami").setLabel("Heal").setStyle(ButtonStyle.Primary)
 		)
 
@@ -7660,7 +7955,15 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 
 		let message, imageUrl, line
 
-		if (isGlobalEventActive && mentor === "Satoru Gojo") {
+		const userClanDetails = await getUserClanDetails(userId)
+		const isLimitlessTier1 = userClanDetails.clan === "Limitless" && userClanDetails.tier === 1
+
+		if (isLimitlessTier1 && mentor === "Satoru Gojo") {
+			await addUserQuest(userId, "Limitless Unleashed")
+			message = "Satoru Gojo sees your potential and gives you a special quest to master the Limitless technique."
+			imageUrl = "https://media1.tenor.com/m/3R9gRhB7FAwAAAAC/gojo-satoru.gif"
+			line = "You have much potential. Take this quest and master the Limitless technique."
+		} else if (isGlobalEventActive && mentor === "Satoru Gojo") {
 			if (!(await checkStageMessaged(userId, "eventMessageSealing"))) {
 				message = "You go to speak to your mentor... But he's gone?"
 				imageUrl = getYujiItadoriImageUrl()
@@ -7698,6 +8001,13 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 			;({ message, imageUrl, line } = getMentorDetails(mentor, hasAwakening))
 		}
 
+		// Additional comments from mentors based on user's clan
+		if (mentor === "Ryomen Sukuna" && userClanDetails.clan === "Limitless") {
+			line += "\n\nRyomen Sukuna: So, you are part of the Limitless clan? Interesting."
+		} else if (mentor === "Satoru Gojo" && userClanDetails.clan === "Demon Vessel") {
+			line += "\n\nSatoru Gojo: A Demon Vessel, huh? Let's see how you handle this power."
+		}
+
 		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("Mentor Details")
@@ -7719,10 +8029,15 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 				},
 				{
 					name: "Mentor",
-					value: isGlobalEventActive && mentor === "Satoru Gojo" ? "Yuji Itadori" : mentor,
+					value: mentor || "None",
 					inline: true
 				},
-				{ name: "Your Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true }
+				{ name: "Your Awakening", value: hasAwakening ? `${awakening}` : "Not Awakened", inline: true },
+				{
+					name: "Innate Clan",
+					value: userClanDetails ? `${userClanDetails.clan} (Tier ${userClanDetails.tier})` : "None",
+					inline: true
+				}
 			])
 
 		if (isGlobalEventActive) {
@@ -7792,7 +8107,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
 	}
 }
-
 export async function eventCommandHandler(interaction: CommandInteraction) {
 	try {
 		const currentQuest = await getCurrentCommunityQuest()
@@ -8927,25 +9241,65 @@ export async function handlePingCommand(interaction: CommandInteraction) {
 	}
 }
 
+const gifUrls = [
+	"https://media1.tenor.com/m/VgQGIDtP6ecAAAAd/jujutsu-kaisen-sukuna.gif",
+	"https://media1.tenor.com/m/338XAWz0ac0AAAAC/gojo-vs-sukuna-satoru-gojo.gif",
+	"https://media1.tenor.com/m/0LlNI_mLYScAAAAd/jjk-jujutsu-kaisen.gif"
+]
+
+export const getRandomGif = () => gifUrls[Math.floor(Math.random() * gifUrls.length)]
+
+const getRandomColor = () => Math.floor(Math.random() * 16777215)
+
+const generateProgressBar = (value, max) => {
+	if (value < 0) value = 0
+	if (value > max) value = max
+
+	const filledLength = Math.round((value / max) * 10)
+	const emptyLength = 10 - filledLength
+	return `${"█".repeat(filledLength)}${"░".repeat(emptyLength)} ${value}/${max}`
+}
+
+const challengeMessages = [
+	"Prepare for battle, {opponent}! {challenger} has challenged you to a PvP duel!",
+	"Hey {opponent}, {challenger} wants to test your strength in a PvP match!",
+	"{opponent}, {challenger} has issued a PvP challenge! Do you accept?",
+	"It's time to duel, {opponent}! {challenger} has thrown down the gauntlet!",
+	"{opponent}, are you ready to fight? {challenger} has challenged you to PvP!"
+]
+
+const getRandomChallengeMessage = (challenger, opponent) => {
+	const randomIndex = Math.floor(Math.random() * challengeMessages.length)
+	return challengeMessages[randomIndex]
+		.replace("{challenger}", challenger.username)
+		.replace("{opponent}", opponent.username)
+}
 export async function handlePvpCommand(interaction: CommandInteraction) {
+	await interaction.deferReply()
+
 	const opponentOption = interaction.options.get("opponent") || null
 	const opponent = opponentOption?.user
 	if (!opponent) {
-		await interaction.reply({ content: "Please mention a valid user to challenge.", ephemeral: true })
+		await interaction.editReply({ content: "Please mention a valid user to challenge." })
 		return
 	}
 	if (opponent.id === interaction.user.id) {
-		await interaction.reply({ content: "You cannot challenge yourself to a PvP battle.", ephemeral: true })
+		const wittyResponses = [
+			"You can't fight yourself! Try challenging someone else.",
+			"It's not healthy to battle yourself. Pick a real opponent!",
+			"A duel with yourself? That's not possible. Choose someone else!"
+		]
+		const randomResponse = wittyResponses[Math.floor(Math.random() * wittyResponses.length)]
+		await interaction.editReply({ content: randomResponse })
 		return
 	}
 
-	const playerMaxHealth = await getUserMaxHealth(interaction.user.id)
-	const opponentMaxHealth = await getUserMaxHealth(opponent.id)
-
-	let playerDomainProgress = 0 // Initialize domain progress
-	let opponentDomainProgress = 0
-	let playerTransformationProgress = 0 // Initialize transformation progress
-	let opponentTransformationProgress = 0
+	// Check if opponent is pvpable
+	const opponentSettings = await getUserSettings(opponent.id)
+	if (opponentSettings && !opponentSettings.pvpable) {
+		await interaction.editReply({ content: "This user does not accept PvP challenges." })
+		return
+	}
 
 	const confirmButton = new ButtonBuilder()
 		.setCustomId("pvp_confirm")
@@ -8954,59 +9308,86 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 	const denyButton = new ButtonBuilder().setCustomId("pvp_deny").setLabel("Deny").setStyle(ButtonStyle.Danger)
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmButton, denyButton)
 	const embed = new EmbedBuilder()
-		.setColor("#0099ff")
+		.setColor(getRandomColor())
 		.setTitle("PvP Challenge")
-		.setDescription(`Hey ${opponent}, ${interaction.user} wants to challenge you to a PvP battle!`)
-		.addFields(
-			{ name: "Player Health", value: `:blue_heart: ${playerMaxHealth}`, inline: true },
-			{ name: "Opponent Health", value: `:blue_heart: ${opponentMaxHealth}`, inline: true }
-		)
-		.addFields(
-			{ name: "Player Domain Progress", value: generateProgressBar(playerDomainProgress, 100), inline: true },
-			{ name: "Opponent Domain Progress", value: generateProgressBar(opponentDomainProgress, 100), inline: true }
-		)
-		.addFields(
-			{
-				name: "Player Transformation Progress",
-				value: generateProgressBar(playerTransformationProgress, 100),
-				inline: true
-			},
-			{
-				name: "Opponent Transformation Progress",
-				value: generateProgressBar(opponentTransformationProgress, 100),
-				inline: true
-			}
-		)
+		.setDescription(getRandomChallengeMessage(interaction.user, opponent))
 		.setTimestamp()
 
-	await interaction.reply({
-		content: `${opponent}`,
+	await interaction.editReply({
+		content: `${opponent}, you've been challenged!`,
 		embeds: [embed],
 		components: [row]
 	})
 
-	const filter = (i: Interaction) =>
+	const filter = (i: MessageComponentInteraction) =>
 		i.isButton() && (i.customId === "pvp_confirm" || i.customId === "pvp_deny") && i.user.id === opponent.id
 
 	try {
-		const confirmation = await interaction.channel?.awaitMessageComponent({ filter, time: 60000 })
-		if (confirmation?.customId === "pvp_confirm") {
+		if (!interaction.channel) {
+			await interaction.editReply({
+				content: "An error occurred: Channel not found.",
+				embeds: [],
+				components: []
+			})
+			return
+		}
+
+		const confirmation = await interaction.channel.awaitMessageComponent({ filter, time: 60000 })
+		if (confirmation.customId === "pvp_confirm") {
 			await confirmation.update({
 				content: `${opponent} has accepted the PvP challenge from ${interaction.user}!`,
 				embeds: [],
 				components: []
 			})
 
-			// Start the battle loop
-			let playerHealth = playerMaxHealth
-			let opponentHealth = opponentMaxHealth
-			let currentTurn = Math.random() < 0.5 ? interaction.user.id : opponent.id // Randomly determine the first turn
+			const pvpId = new ObjectId().toString()
+			const initialGif = getRandomGif()
 
-			while (playerHealth > 0 && opponentHealth > 0) {
-				const attacker = currentTurn === interaction.user.id ? interaction.user : opponent
-				const defender = currentTurn === interaction.user.id ? opponent : interaction.user
+			const pvpData = {
+				pvpId,
+				player1: interaction.user.id,
+				player2: opponent.id,
+				player1Health: await getUserMaxHealth(interaction.user.id),
+				player2Health: await getUserMaxHealth(opponent.id),
+				player1DomainProgress: 0,
+				player2DomainProgress: 0,
+				player1TransformationProgress: 100,
+				player2TransformationProgress: 100,
+				currentTurn: Math.random() < 0.5 ? interaction.user.id : opponent.id,
+				createdAt: new Date()
+			}
 
-				const techniques = await getUserActiveTechniques(attacker.id)
+			await client.db(mongoDatabase).collection("pvp").insertOne(pvpData)
+
+			const createEmbed = (attacker: User, pvpData) => {
+				return new EmbedBuilder()
+					.setTitle("PvP Battle")
+					.setDescription(`It's ${attacker.username}'s turn!`)
+					.setColor(getRandomColor())
+					.setImage(initialGif)
+					.addFields(
+						{
+							name: `${attacker.username}'s Stats`,
+							value: `
+                                **Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player1Health : pvpData.player2Health} :blue_heart:
+                                **Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1DomainProgress : pvpData.player2DomainProgress, 100)}
+                                **Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1TransformationProgress : pvpData.player2TransformationProgress, 100)}
+                            `,
+							inline: true
+						},
+						{
+							name: `${pvpData.currentTurn === interaction.user.id ? opponent.username : interaction.user.username}'s Stats`,
+							value: `
+                                **Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player2Health : pvpData.player1Health} :blue_heart:
+                                **Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2DomainProgress : pvpData.player1DomainProgress, 100)}
+                                **Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2TransformationProgress : pvpData.player1TransformationProgress, 100)}
+                            `,
+							inline: true
+						}
+					)
+			}
+
+			const updateComponents = (techniques: string[], attacker: User, pvpData) => {
 				const techniqueOptions = techniques.map(techniqueName => ({
 					label: techniqueName,
 					description: "Select to use this technique",
@@ -9014,114 +9395,445 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				}))
 
 				const selectMenu = new SelectMenuBuilder()
-					.setCustomId("select-technique")
+					.setCustomId("select-technique-pvp")
 					.setPlaceholder("Choose your technique")
 					.addOptions(techniqueOptions)
 
-				const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+				const domainButton = new ButtonBuilder()
+					.setCustomId("domain")
+					.setLabel("Domain")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(pvpData.player1DomainProgress < 100)
 
-				const embed = new EmbedBuilder()
-					.setColor("#0099ff")
-					.setTitle("PvP Battle")
-					.setDescription(`It's ${attacker}'s turn!`)
-					.addFields(
-						{ name: "Player Health", value: `:blue_heart: ${playerHealth}`, inline: true },
-						{ name: "Opponent Health", value: `:blue_heart: ${opponentHealth}`, inline: true }
-					)
-					.addFields(
-						{
-							name: "Player Domain Progress",
-							value: generateProgressBar(playerDomainProgress, 100),
-							inline: true
-						},
-						{
-							name: "Opponent Domain Progress",
-							value: generateProgressBar(opponentDomainProgress, 100),
-							inline: true
-						}
-					)
-					.addFields(
-						{
-							name: "Player Transformation Progress",
-							value: generateProgressBar(playerTransformationProgress, 100),
-							inline: true
-						},
-						{
-							name: "Opponent Transformation Progress",
-							value: generateProgressBar(opponentTransformationProgress, 100),
-							inline: true
-						}
-					)
+				const transformButton = new ButtonBuilder()
+					.setCustomId("transform")
+					.setLabel("Transform")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(pvpData.player1TransformationProgress < 100)
+
+				const surrenderButton = new ButtonBuilder()
+					.setCustomId("surrender")
+					.setLabel("Surrender")
+					.setStyle(ButtonStyle.Danger)
+
+				const selectMenuRow = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+				const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+					domainButton,
+					transformButton,
+					surrenderButton
+				)
+
+				return [selectMenuRow, buttonRow]
+			}
+
+			const updateBattleState = async () => {
+				const pvpData = await client.db(mongoDatabase).collection("pvp").findOne({ pvpId })
+				const attacker = pvpData.currentTurn === interaction.user.id ? interaction.user : opponent
+				const defender = pvpData.currentTurn === interaction.user.id ? opponent : interaction.user
+
+				console.debug(`Updating battle display before interaction turn for ${attacker.id}`)
+
+				const techniques = await getUserActiveTechniques(attacker.id)
+				const primaryEmbed = createEmbed(attacker, pvpData)
+				const components = updateComponents(techniques, attacker, pvpData)
 
 				await interaction.editReply({
-					embeds: [embed],
-					components: [row]
+					embeds: [primaryEmbed],
+					components: components
 				})
 
-				const techniqueCollector = interaction.channel.createMessageComponentCollector({
-					filter: inter => inter.customId === "select-technique" && inter.user.id === attacker.id,
-					componentType: ComponentType.StringSelect,
+				const collectorFilter = (inter: MessageComponentInteraction) => {
+					if (inter.isButton()) {
+						return inter.user.id === attacker.id
+					} else if (inter.isStringSelectMenu()) {
+						return inter.user.id === attacker.id && inter.customId === "select-technique-pvp"
+					} else {
+						inter.reply({ content: "Nuh uh, it's not your turn.", ephemeral: true })
+						return false
+					}
+				}
+
+				const buttonCollector = interaction.channel.createMessageComponentCollector({
+					filter: collectorFilter,
+					componentType: ComponentType.Button,
 					time: 60000
 				})
 
-				techniqueCollector.once("collect", async collectedInteraction => {
-					const selectedTechnique = collectedInteraction.values[0]
-					const damage = calculateScaledDamage(selectedTechnique) // Implement your damage calculation function
+				buttonCollector.on("collect", async collectedInteraction => {
+					const selectedValue = collectedInteraction.customId
 
-					if (currentTurn === interaction.user.id) {
-						opponentHealth = Math.max(0, opponentHealth - damage)
-						// Update domain and transformation progress for the player
-						playerDomainProgress += 10 // Increase domain progress by 10
-						playerTransformationProgress += 5 // Increase transformation progress by 5
+					if (selectedValue === "surrender") {
+						const surrenderEmbed = new EmbedBuilder()
+							.setColor("#FF0000")
+							.setTitle("Surrender")
+							.setDescription(`${attacker.username} has surrendered. ${defender.username} wins!`)
+							.setTimestamp()
+
+						await collectedInteraction.update({
+							content: "",
+							embeds: [surrenderEmbed],
+							components: []
+						})
+						buttonCollector.stop()
+						await client.db(mongoDatabase).collection("pvp").deleteOne({ pvpId })
+						return
+					} else if (selectedValue === "domain") {
+						if (pvpData.player1DomainProgress < 100) {
+							await collectedInteraction.reply({
+								content: "Your Domain Progress is not full yet.",
+								ephemeral: true
+							})
+							return
+						}
+
+						const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(attacker.id)
+
+						if (hasHeavenlyRestriction) {
+							await collectedInteraction.reply({
+								content: "Your Heavenly Restriction negates the use of domain expansion.",
+								ephemeral: true
+							})
+							return
+						}
+
+						const domainInfo = await getUserDomain(attacker.id)
+						if (!domainInfo) {
+							await collectedInteraction.reply({
+								content: "You do not have a domain unlocked yet.",
+								ephemeral: true
+							})
+							return
+						}
+
+						const domainObject = DOMAIN_EXPANSIONS.find(domain => domain.name === domainInfo)
+						if (!domainObject) {
+							console.error("Invalid domain found in the database.")
+							return
+						}
+
+						const domainEmbed = new EmbedBuilder()
+							.setColor("Blue")
+							.setTitle(`Domain Expansion... ${domainInfo}`)
+							.setDescription(`${attacker.username} has opened their domain ${domainInfo}!`)
+							.setImage(domainObject.open_image_URL)
+
+						await collectedInteraction.update({ embeds: [domainEmbed], components: [] })
+
+						// Apply status effect if applicable
+						if (domainObject.statusEffect) {
+							await applyStatusEffect(attacker.id, domainObject.statusEffect)
+						}
+
+						await new Promise(resolve => setTimeout(resolve, 3000))
+
+						// Update current turn to defender
+						pvpData.currentTurn = defender.id
+						await client
+							.db(mongoDatabase)
+							.collection("pvp")
+							.updateOne(
+								{ pvpId },
+								{
+									$set: { currentTurn: pvpData.currentTurn }
+								}
+							)
+
+						// Offer the opponent the chance to initiate a domain clash or defend
+						const clashButton = new ButtonBuilder()
+							.setCustomId("clash")
+							.setLabel("Domain Clash")
+							.setStyle(ButtonStyle.Primary)
+							.setDisabled(pvpData.player2DomainProgress < 100)
+
+						const defendButton = new ButtonBuilder()
+							.setCustomId("defend")
+							.setLabel("Defend")
+							.setStyle(ButtonStyle.Secondary)
+
+						const clashDefendRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+							clashButton,
+							defendButton
+						)
+
+						await collectedInteraction.editReply({
+							content: `${defender}, you have been challenged to a domain clash! Choose your action:`,
+							embeds: [domainEmbed],
+							components: [clashDefendRow]
+						})
+
+						const clashDefendCollector = interaction.channel.createMessageComponentCollector({
+							filter: (inter: MessageComponentInteraction) => inter.user.id === defender.id,
+							componentType: ComponentType.Button,
+							time: 60000
+						})
+
+						clashDefendCollector.on("collect", async clashDefendInteraction => {
+							const selectedClashDefendValue = clashDefendInteraction.customId
+
+							if (selectedClashDefendValue === "clash") {
+								const opponentDomainInfo = await getUserDomain(defender.id)
+								let clashEmbed
+
+								if (
+									(domainInfo === "Malevolent Shrine" && opponentDomainInfo === "Unlimited Void") ||
+									(domainInfo === "Unlimited Void" && opponentDomainInfo === "Malevolent Shrine")
+								) {
+									clashEmbed = new EmbedBuilder()
+										.setColor("Red")
+										.setTitle("Special Domain Clash!")
+										.setDescription("A fierce clash between Malevolent Shrine and Unlimited Void!")
+										.setImage(
+											"https://media1.tenor.com/m/SSY_DQmpNykAAAAC/gojo-vs-sukuna-satoru-gojo.gif"
+										)
+								} else {
+									clashEmbed = new EmbedBuilder()
+										.setColor("Red")
+										.setTitle("Domain Clash!")
+										.setDescription(
+											"Both players have activated their domains! A clash is imminent!"
+										)
+										.setImage("CLASH_IMAGE_URL")
+								}
+
+								await clashDefendInteraction.update({
+									embeds: [clashEmbed],
+									components: []
+								})
+
+								// Apply clash damage
+								const clashDamage = 100 // Example value for damage during a domain clash
+								pvpData.player1Health = Math.max(0, pvpData.player1Health - clashDamage)
+								pvpData.player2Health = Math.max(0, pvpData.player2Health - clashDamage)
+
+								await new Promise(resolve => setTimeout(resolve, 3000))
+
+								await client
+									.db(mongoDatabase)
+									.collection("pvp")
+									.updateOne(
+										{ pvpId },
+										{
+											$set: {
+												player1Health: pvpData.player1Health,
+												player2Health: pvpData.player2Health
+											}
+										}
+									)
+
+								// Restore interaction components after domain clash
+								await clashDefendInteraction.editReply({
+									embeds: [primaryEmbed],
+									components: components
+								})
+							} else if (selectedClashDefendValue === "defend") {
+								// Handle defend logic
+								const defenseTechnique = await getUserActiveDefenseTechnique(defender.id)
+								let defenseDescription = `${defender.username} has successfully defended against the domain attack.`
+
+								if (defenseTechnique) {
+									if (defenseTechnique === "Simple Domain") {
+										defenseDescription = `${defender.username} used Simple Domain to defend against the domain attack.`
+									} else if (defenseTechnique === "Hollow Wicker Basket") {
+										defenseDescription = `${defender.username} used Hollow Wicker Basket to defend against the domain attack.`
+									}
+								}
+
+								const defendEmbed = new EmbedBuilder()
+									.setColor("Green")
+									.setTitle("Defense Successful")
+									.setDescription(defenseDescription)
+
+								await clashDefendInteraction.update({ embeds: [defendEmbed], components: [] })
+
+								// Apply defense effects
+								// (Adjust health or other stats as necessary based on your game's mechanics)
+
+								await new Promise(resolve => setTimeout(resolve, 3000))
+
+								await clashDefendInteraction.editReply({
+									embeds: [primaryEmbed],
+									components: components
+								})
+							}
+
+							clashDefendCollector.stop()
+							pvpData.currentTurn =
+								pvpData.currentTurn === interaction.user.id ? opponent.id : interaction.user.id
+							await client
+								.db(mongoDatabase)
+								.collection("pvp")
+								.updateOne(
+									{ pvpId },
+									{
+										$set: { currentTurn: pvpData.currentTurn }
+									}
+								)
+							await updateBattleState()
+						})
+						return
+					} else if (selectedValue === "transform") {
+						try {
+							const transformationInfo = await getUserTransformation(interaction.user.id)
+							if (!transformationInfo) {
+								await collectedInteraction.reply({
+									content: "You do not have a transformation unlocked yet.",
+									ephemeral: true
+								})
+								return
+							}
+
+							const transformationObject = TRANSFORMATIONS.find(
+								transformation => transformation.name === transformationInfo
+							)
+							if (!transformationObject) {
+								console.error("Invalid transformation found in the database.")
+								return
+							}
+							transformationState.set(contextKey, true)
+							// embed here
+							const transformationEmbed = new EmbedBuilder()
+								.setColor("Blue")
+								.setTitle("Transformation!")
+								.setDescription(`Transformation: ${transformationInfo}`)
+								.addFields({
+									name: `${interaction.user.username}`,
+									value: "USES THEIR TRANSFORMATION!",
+									inline: false
+								})
+								.setImage(transformationObject.image)
+
+							await collectedInteraction.update({
+								embeds: [transformationEmbed],
+								components: []
+							})
+
+							// Apply transformation effects
+							if (transformationObject.effects === "damageIncrease") {
+								// Increase the user's damage
+								pvpData.damageMultiplier = 1.5 // Example value
+							} else if (transformationObject.effects === "damageReduction") {
+								// Reduce the damage taken by the user
+								pvpData.damageReduction = 0.5 // Example value
+							}
+
+							await new Promise(resolve => setTimeout(resolve, 3000))
+
+							pvpData.currentTurn =
+								pvpData.currentTurn === interaction.user.id ? opponent.id : interaction.user.id
+							await client
+								.db(mongoDatabase)
+								.collection("pvp")
+								.updateOne(
+									{ pvpId },
+									{
+										$set: { currentTurn: pvpData.currentTurn }
+									}
+								)
+							await updateBattleState()
+						} catch (error) {
+							console.error("An error occurred during transformation:", error)
+							await collectedInteraction.followUp({
+								content: "An error occurred during transformation.",
+								ephemeral: true
+							})
+						}
+						return
+					}
+
+					const usertechniquespvp = new Map()
+					const { damage, imageUrl, description } = await executeSpecialTechniquePvp({
+						collectedInteraction,
+						techniqueName: selectedValue,
+						damageMultiplier: pvpData.damageMultiplier || 1,
+						userTechniques: usertechniquespvp,
+						userId: collectedInteraction.user.id,
+						primaryEmbed,
+						rows: components
+					})
+
+					console.debug(`Damage dealt: ${damage}`)
+					console.debug("Embed after executing technique:", primaryEmbed.toJSON())
+
+					if (pvpData.currentTurn === interaction.user.id) {
+						pvpData.player2Health = Math.max(0, pvpData.player2Health - damage)
+						pvpData.player1DomainProgress += 10
+						pvpData.player1TransformationProgress += 5
 					} else {
-						playerHealth = Math.max(0, playerHealth - damage)
-						// Update domain and transformation progress for the opponent
-						opponentDomainProgress += 10
-						opponentTransformationProgress += 5
+						pvpData.player1Health = Math.max(0, pvpData.player1Health - damage)
+						pvpData.player2DomainProgress += 10
+						pvpData.player2TransformationProgress += 5
 					}
 
-					// Check if domain can be activated
-					if (playerDomainProgress >= 100) {
-						// Handle player domain activation
-					}
-					if (opponentDomainProgress >= 100) {
-						// Handle opponent domain activation
-					}
+					// Update the same embed with new values and image
+					primaryEmbed.setImage(imageUrl)
+					primaryEmbed.setDescription(description)
+					primaryEmbed.setFields(
+						{
+							name: `${attacker.username}'s Stats`,
+							value: `
+								**Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player1Health : pvpData.player2Health} :blue_heart:
+								**Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1DomainProgress : pvpData.player2DomainProgress, 100)}
+								**Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1TransformationProgress : pvpData.player2TransformationProgress, 100)}
+							`,
+							inline: true
+						},
+						{
+							name: `${pvpData.currentTurn === interaction.user.id ? opponent.username : interaction.user.username}'s Stats`,
+							value: `
+								**Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player2Health : pvpData.player1Health} :blue_heart:
+								**Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2DomainProgress : pvpData.player1DomainProgress, 100)}
+								**Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2TransformationProgress : pvpData.player1TransformationProgress, 100)}
+							`,
+							inline: true
+						}
+					)
 
-					// Check if transformation can be activated
-					if (playerTransformationProgress >= 100) {
-						// Handle player transformation activation
-					}
-					if (opponentTransformationProgress >= 100) {
-						// Handle opponent transformation activation
-					}
+					await interaction.editReply({
+						embeds: [primaryEmbed],
+						components: []
+					})
 
-					currentTurn = currentTurn === interaction.user.id ? opponent.id : interaction.user.id
-				})
+					await new Promise(resolve => setTimeout(resolve, 3000))
 
-				techniqueCollector.once("end", async (collected, reason) => {
-					if (reason === "time") {
-						await interaction.editReply({
-							content: "Battle timed out.",
-							embeds: [],
-							components: []
-						})
-					} else if (playerHealth <= 0) {
-						await interaction.editReply({
-							content: `${interaction.user} has been defeated by ${opponent}!`,
-							embeds: [],
-							components: []
-						})
-					} else if (opponentHealth <= 0) {
-						await interaction.editReply({
-							content: `${opponent} has been defeated by ${interaction.user}!`,
-							embeds: [],
-							components: []
-						})
-					}
+					await client
+						.db(mongoDatabase)
+						.collection("pvp")
+						.updateOne(
+							{ pvpId },
+							{
+								$set: {
+									player1Health: pvpData.player1Health,
+									player2Health: pvpData.player2Health,
+									player1DomainProgress: pvpData.player1DomainProgress,
+									player2DomainProgress: pvpData.player2DomainProgress,
+									player1TransformationProgress: pvpData.player1TransformationProgress,
+									player2TransformationProgress: pvpData.player2TransformationProgress
+								}
+							}
+						)
+
+					await interaction.editReply({
+						embeds: [primaryEmbed],
+						components: components
+					})
+
+					pvpData.currentTurn =
+						pvpData.currentTurn === interaction.user.id ? opponent.id : interaction.user.id
+					await client
+						.db(mongoDatabase)
+						.collection("pvp")
+						.updateOne(
+							{ pvpId },
+							{
+								$set: { currentTurn: pvpData.currentTurn }
+							}
+						)
+					await updateBattleState()
 				})
 			}
-		} else if (confirmation?.customId === "pvp_deny") {
+
+			await updateBattleState()
+		} else if (confirmation.customId === "pvp_deny") {
 			await confirmation.update({
 				content: `${opponent} has declined the PvP challenge from ${interaction.user}.`,
 				embeds: [],
@@ -9129,26 +9841,121 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 			})
 		}
 	} catch (error) {
+		console.error("An error occurred:", error)
 		await interaction.editReply({
-			content: `${opponent} did not respond to the PvP challenge within 1 minute.`,
+			content: `An error occurred while waiting for ${opponent}'s response.`,
 			embeds: [],
 			components: []
 		})
 	}
 }
 
-function generateProgressBar(value: number, max: number): string {
-	const length = 10
-	const progress = Math.round((value / max) * length)
-	const bar = "█".repeat(progress) + "▁".repeat(length - progress)
-	return `[${bar}] ${value}/${max}`
+export async function handleSettingsCommand(interaction: CommandInteraction) {
+	const userId = interaction.user.id
+
+	let settings = (await getUserSettings(userId)) as UserSettings
+	if (!settings) {
+		settings = { pvpable: true, acceptTrades: true, showAlerts: true, showSpoilers: true }
+	}
+
+	const updatedFields = []
+
+	const ispvpableOption = interaction.options.get("pvpable")
+	const ispvpable = ispvpableOption ? Boolean(ispvpableOption.value) : null
+	if (ispvpable !== null) {
+		settings.pvpable = ispvpable
+		updatedFields.push({ name: "PvP Available", value: ispvpable ? "Enabled" : "Disabled", inline: true })
+	}
+
+	const showAlertsOption = interaction.options.get("showalerts")
+	const showAlerts = showAlertsOption ? Boolean(showAlertsOption.value) : null
+	if (showAlerts !== null) {
+		settings.showAlerts = showAlerts
+		updatedFields.push({ name: "Show Alerts", value: showAlerts ? "Enabled" : "Disabled", inline: true })
+	}
+
+	const acceptTradesOption = interaction.options.get("acceptrades")
+	const acceptTrades = acceptTradesOption ? Boolean(acceptTradesOption.value) : null
+	if (acceptTrades !== null) {
+		settings.acceptTrades = acceptTrades
+		updatedFields.push({ name: "Accept Trades", value: acceptTrades ? "Enabled" : "Disabled", inline: true })
+	}
+	const showspoilerOption = interaction.options.get("showspoiler")
+	const showSpoiler = showspoilerOption ? Boolean(showspoilerOption.value) : null
+	if (showSpoiler !== null) {
+		settings.showSpoilers = showSpoiler
+		updatedFields.push({ name: "Show Spoiler", value: showSpoiler ? "Enabled" : "Disabled", inline: true })
+	}
+
+	await updateUserSettings(userId, settings)
+
+	const embed = new EmbedBuilder()
+		.setColor("#00FF00")
+		.setTitle("Settings Updated")
+		.setDescription("Your settings have been updated successfully.")
+		.addFields(updatedFields)
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [embed], ephemeral: true })
 }
 
-function calculateScaledDamage(technique: string): number {
-	// Implement your damage calculation logic here
-	// This function should return a scaled-down damage value based on the technique used
-	// For example, you could have a base damage value and apply a multiplier based on the technique
-	return 10 // Placeholder damage value
+export async function handleViewSettingsCommand(interaction: CommandInteraction) {
+	const userId = interaction.user.id
+	const settings = ((await getUserSettings(userId)) as UserSettings) || {
+		pvpable: true,
+		acceptTrades: true,
+		showAlerts: true,
+		showSpoilers: false
+	}
+
+	const embed = new EmbedBuilder()
+		.setColor("#00FF00")
+		.setTitle("Current Settings")
+		.addFields(
+			{
+				name: "PvP Available",
+				value: settings.pvpable ? "✅" : "❌",
+				inline: true
+			},
+			{
+				name: "PvP Available Description",
+				value: "Toggle whether you can engage in player versus player combat.",
+				inline: false
+			},
+			{
+				name: "Show Alerts",
+				value: settings.showAlerts ? "✅" : "❌",
+				inline: true
+			},
+			{
+				name: "Show Alerts Description",
+				value: "Toggle whether you receive alerts for important events.",
+				inline: false
+			},
+			{
+				name: "Accept Trades",
+				value: settings.acceptTrades ? "✅" : "❌",
+				inline: true
+			},
+			{
+				name: "Accept Trades Description",
+				value: "Toggle whether you can accept trade offers from other players.",
+				inline: false
+			},
+			{
+				name: "Show Spoilers",
+				value: settings.showSpoilers ? "✅" : "❌",
+				inline: true
+			},
+			{
+				name: "Show Spoilers Description",
+				value: "Toggle whether you want to see spoilers in the bot.",
+				inline: false
+			}
+		)
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [embed], ephemeral: true })
 }
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

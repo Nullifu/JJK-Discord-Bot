@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+dotenv()
+
 import { CommandInteraction, EmbedBuilder } from "discord.js"
 import { config as dotenv } from "dotenv"
 import moment from "moment-timezone"
@@ -12,8 +14,6 @@ import logger, { createClient } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
 import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
-
-dotenv()
 
 const client1 = createClient()
 
@@ -30,6 +30,8 @@ export const raidBossesCollectionName = "raidBosses"
 export const raidInstancesCollectionName = "raidParticipants"
 export const ownercommandCollectionName = "ownerLogs"
 export const blacklistedCollectionName = "blacklistedUsers"
+export const matchmakingCollectionName = "matchmaking"
+export const battlesCollectionName = "battles"
 
 export const mongoDatabase = process.env["MONGO_DATABASE"]
 export const mongoUri = process.env.MONGO_URI
@@ -101,6 +103,11 @@ cron.schedule("0 0 1 * *", async () => {
 	} catch (error) {
 		logger.error("Error resetting monthly fights won:", error)
 	}
+})
+
+cron.schedule("0 * * * *", () => {
+	console.log("Running scheduled task to check and expire pending trades.")
+	checkAndExpirePendingTrades()
 })
 
 // ----------------------------------------------------------------------------
@@ -175,6 +182,12 @@ export async function addUser(
 				amountGambled: 0,
 				amountLost: 0,
 				amountWon: 0
+			},
+			settings: {
+				pvpable: true,
+				acceptTrades: true,
+				showAlerts: true,
+				showSpoilers: false
 			}
 		})
 
@@ -624,6 +637,10 @@ export async function getUserHealth(userId: string): Promise<number> {
 }
 
 const gradeToBossGrade = {
+	"Special Grade 1": ["Unregistered Threat", "Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
+	"Special Grade 2": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
+	"Special Grade 3": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
+	"Special Grade 4": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
 	"Special Grade": ["Special Grade", "Grade 1", "Semi-Grade 1", "Grade 2"],
 	"Grade 1": ["Grade 1", "Semi-Grade 1", "Grade 2", "Grade 3"],
 	"Semi-Grade 1": ["Semi-Grade 1", "Grade 2", "Grade 3"],
@@ -661,7 +678,6 @@ export async function getBosses(userId: string): Promise<BossData[]> {
 				const allowedAwakeningStages = awakeningStages.slice(0, currentStageIndex + 1)
 
 				if (isBlessed) {
-					// Remove "Stage Zero" from allowedAwakeningStages if the user is blessed
 					const filteredAwakeningStages = allowedAwakeningStages.filter(stage => stage !== "Stage Zero")
 					query = {
 						...query,
@@ -832,13 +848,17 @@ export async function checkUserRegistration(userId) {
 
 // Function to determine the grade based on experience points
 function calculateGrade(experience) {
-	if (experience >= 3000) return "Special Grade"
+	if (experience >= 10000) return "Special Grade 1"
+	else if (experience >= 5500) return "Special Grade 2"
+	else if (experience >= 4500) return "Special Grade 3"
+	else if (experience >= 3500) return "Special Grade 4"
 	else if (experience >= 1750) return "Grade 1"
 	else if (experience >= 750) return "Semi-Grade 1"
 	else if (experience >= 500) return "Grade 2"
 	else if (experience >= 250) return "Grade 3"
 	else return "Grade 4"
 }
+
 function calculateTier(experience) {
 	if (experience >= 2250) return 1
 	else if (experience >= 1750) return 2
@@ -897,12 +917,82 @@ export async function updatePlayerClanTier(userId) {
 				logger.log(`Document for user ${userId} was found but not modified.`)
 			} else {
 				logger.log(`Clan tier updated to ${newTier} for user ${userId}.`)
+
+				if (newTier === 4 && player.inateclan.clan === "Limitless") {
+					await createAlert(
+						userId,
+						"Congratulations! You've reached tier 2 in the Limitless clan, Unlocking new abilities!"
+					)
+					await addUserQuest(userId, "Limitless Unleashed")
+					logger.debug(`Added Limitless Unleashed quest for user ${userId}`)
+				}
+				if (newTier === 1 && player.inateclan.clan === "Limitless") {
+					await createAlert(
+						userId,
+						"Congratulations! You've reached tier 1 in the limitless clan.. Your true potential has been unlocked!\n- New Quest: Limitless Unleashed"
+					)
+				}
 			}
 		} else {
 			logger.log(`No clan tier update needed for user ${userId}. Current tier is already ${newTier}.`)
 		}
 	} catch (error) {
 		logger.error(`Error updating clan tier for user ${userId}:`, error)
+	}
+}
+
+export async function createAlert(userId, message) {
+	const database = client.db(mongoDatabase)
+	const alertsCollection = database.collection("alerts")
+
+	const alert = {
+		userId,
+		message,
+		timestamp: new Date(),
+		read: false
+	}
+
+	await alertsCollection.insertOne(alert)
+}
+
+// get player clan tier
+export async function getUserClanTier(userId: string): Promise<number> {
+	try {
+		await client.connect()
+
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const player = await usersCollection.findOne({ id: userId }, { projection: { inateclan: 1 } })
+		if (!player || !player.inateclan) {
+			logger.log("No user or clan information found with the specified ID.")
+			return 0
+		}
+
+		return player.inateclan.tier
+	} catch (error) {
+		logger.error(`Error retrieving clan tier for user ${userId}:`, error)
+		return 0
+	}
+}
+
+export async function getUserClanDetails(userId: string): Promise<{ tier: number; clan: string }> {
+	try {
+		await client.connect()
+
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const player = await usersCollection.findOne({ id: userId }, { projection: { inateclan: 1 } })
+		if (!player || !player.inateclan) {
+			logger.log("No user or clan information found with the specified ID.")
+			return { tier: 0, clan: "" }
+		}
+
+		return { tier: player.inateclan.tier, clan: player.inateclan.clan }
+	} catch (error) {
+		logger.error(`Error retrieving clan details for user ${userId}:`, error)
+		return { tier: 0, clan: "" }
 	}
 }
 
@@ -1809,7 +1899,7 @@ export async function handleTradeAcceptance(tradeRequestId: string, userId: stri
 		await tradeRequestsCollection.updateOne({ _id: new ObjectId(tradeRequestId) }, { $set: { status: "accepted" } })
 	} catch (error) {
 		logger.error("Error during trade acceptance:", error)
-		throw error // Consider more specific error handling
+		throw error
 	}
 }
 // getPreviousTrades
@@ -1913,19 +2003,18 @@ export async function updateUserActiveTechniques(userId: string, newActiveTechni
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
+		// Remove duplicate techniques while preserving the order
+		const uniqueActiveTechniques = Array.from(new Set(newActiveTechniques))
+
 		// Limit the active techniques to a maximum of 20
-		const updatedActiveTechniques = newActiveTechniques.slice(0, 20)
+		const updatedActiveTechniques = uniqueActiveTechniques.slice(0, 20)
 
 		logger.debug(`Updating user ${userId} active techniques to: ${JSON.stringify(updatedActiveTechniques)}`)
-
 		await usersCollection.updateOne({ id: userId }, { $set: { activeTechniques: updatedActiveTechniques } })
-
 		logger.debug(`Successfully updated active techniques for user ${userId}.`)
 	} catch (error) {
 		logger.error("Error updating user active techniques:", error)
 		throw error
-	} finally {
-		await client.close()
 	}
 }
 
@@ -4417,5 +4506,341 @@ export async function checkSpecialDropClaimed(raidBossName: string): Promise<boo
 		throw error
 	}
 }
+
+// User Settings Interface
+export interface UserSettings {
+	pvpable: boolean
+	acceptTrades: boolean
+	showAlerts: boolean
+	showSpoilers: boolean
+}
+
+// Get user settings
+export async function getUserSettings(userId: string): Promise<UserSettings | null> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user?.settings || null
+	} catch (error) {
+		logger.error("Error getting user settings:", error)
+		return null
+	}
+}
+
+// Update user settings
+export async function updateUserSettings(userId: string, settings: UserSettings): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { settings } })
+	} catch (error) {
+		logger.error("Error updating user settings:", error)
+		throw error
+	}
+}
+
+export async function addUserToMatchmaking(userId, guildId, username, mmr) {
+	try {
+		const database = client.db(mongoDatabase)
+		const matchmakingCollection = database.collection(matchmakingCollectionName)
+
+		const filter = { guildId }
+
+		const update = {
+			$addToSet: {
+				users: {
+					userId,
+					username,
+					mmr,
+					timestamp: new Date()
+				}
+			}
+		}
+
+		// Perform an update operation
+		await matchmakingCollection.updateOne(filter, update, { upsert: true })
+	} catch (error) {
+		console.error("Error adding user to matchmaking:", error)
+		throw error
+	}
+}
+
+export async function findMatch(userId, mmr) {
+	try {
+		const database = client.db(mongoDatabase)
+		const matchmakingCollection = database.collection(matchmakingCollectionName)
+		const match = await matchmakingCollection.findOneAndDelete(
+			{
+				mmr: { $gte: mmr - 50, $lte: mmr + 50 },
+				userId: { $ne: userId }
+			},
+			{ sort: { timestamp: 1 } }
+		)
+		return match ? match.value : null
+	} catch (error) {
+		console.error("Error finding match:", error)
+		throw error
+	}
+}
+
+export async function createBattle(player1, player2) {
+	try {
+		const database = client.db(mongoDatabase)
+		const battlesCollection = database.collection(battlesCollectionName)
+		const battle = {
+			player1: { ...player1, health: 100, domainProgress: 0, transformationProgress: 0 },
+			player2: { ...player2, health: 100, domainProgress: 0, transformationProgress: 0 },
+			currentTurn: Math.random() < 0.5 ? player1.userId : player2.userId,
+			timestamp: new Date()
+		}
+		await battlesCollection.insertOne(battle)
+		return battle
+	} catch (error) {
+		console.error("Error creating battle:", error)
+		throw error
+	}
+}
+
+export async function getBattle(battleId) {
+	try {
+		const database = client.db(mongoDatabase)
+		const battlesCollection = database.collection(battlesCollectionName)
+		return await battlesCollection.findOne({ _id: battleId })
+	} catch (error) {
+		console.error("Error getting battle:", error)
+		throw error
+	}
+}
+
+export async function updateBattle(battleId, update) {
+	try {
+		const database = client.db(mongoDatabase)
+		const battlesCollection = database.collection(battlesCollectionName)
+		await battlesCollection.updateOne({ _id: battleId }, { $set: update })
+	} catch (error) {
+		console.error("Error updating battle:", error)
+		throw error
+	}
+}
+
+export async function deleteBattle(battleId) {
+	try {
+		const database = client.db(mongoDatabase)
+		const battlesCollection = database.collection(battlesCollectionName)
+		await battlesCollection.deleteOne({ _id: battleId })
+	} catch (error) {
+		console.error("Error deleting battle:", error)
+		throw error
+	}
+}
+
+// get user mmr
+export async function getUserMMR(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const matchmakingCollection = database.collection(usersCollectionName)
+		const user = await matchmakingCollection.findOne({ userId })
+		return user ? user.mmr : 0
+	} catch (error) {
+		console.error("Error getting user MMR:", error)
+		throw error
+	}
+}
+
+export async function getUserReverseCursedTechniqueLevel(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user && user.reverseCursedTechnique ? user.reverseCursedTechnique.level : 0
+	} catch (error) {
+		console.error("Error getting user reverse cursed technique level:", error)
+		throw error
+	}
+}
+
+export async function getUserReverseCursedTechniqueStats(userId) {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user ? user.reverseCursedTechnique : null
+	} catch (error) {
+		console.error("Error getting user reverse cursed technique stats:", error)
+		throw error
+	}
+}
+
+export async function updateUserReverseCursedTechnique(
+	userId: string,
+	level: number,
+	healthHealed: number,
+	experience: number,
+	obtained: boolean
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $set: { reverseCursedTechnique: { level, healthHealed, experience, obtained } } }
+		)
+	} catch (error) {
+		console.error("Error updating user reverse cursed technique:", error)
+		throw error
+	}
+}
+
+type Alert = {
+	userId: string
+	message: string
+	read: boolean
+	developerAlert: boolean
+	timestamp: Date
+}
+
+export async function checkForNewAlerts(
+	userId: string,
+	showAlerts: boolean
+): Promise<{ count: number; hasDeveloperAlerts: boolean }> {
+	try {
+		const database = client.db(mongoDatabase)
+		const alertsCollection = database.collection<Alert>("alerts")
+
+		let query: Partial<Alert> = { userId, read: false }
+
+		if (!showAlerts) {
+			query = { ...query, developerAlert: true }
+		}
+
+		const newAlerts = await alertsCollection.find(query).toArray()
+		const hasDeveloperAlerts = newAlerts.some(alert => alert.developerAlert)
+
+		return { count: newAlerts.length, hasDeveloperAlerts }
+	} catch (error) {
+		logger.error(`Error checking alerts for user ${userId}:`, error)
+		return { count: 0, hasDeveloperAlerts: false }
+	}
+}
+
+async function checkAndExpirePendingTrades() {
+	try {
+		await client.connect()
+
+		const database = client.db(mongoDatabase)
+		const tradesCollection = database.collection("trades")
+
+		const oneDayMs = 24 * 60 * 60 * 1000
+		const currentTime = Date.now()
+
+		const pendingTrades = await tradesCollection
+			.find({
+				status: "pending",
+				createdAt: { $lt: new Date(currentTime - oneDayMs) }
+			})
+			.toArray()
+
+		if (pendingTrades.length > 0) {
+			const tradeIds = pendingTrades.map(trade => trade._id)
+			await tradesCollection.updateMany({ _id: { $in: tradeIds } }, { $set: { status: "ignored" } })
+
+			console.log(`Updated ${tradeIds.length} pending trades to ignored.`)
+		} else {
+			console.log("No pending trades to update.")
+		}
+	} catch (error) {
+		console.error("Error checking and updating pending trades:", error)
+	}
+}
+// get user defense techniuqe
+export async function getUserActiveDefenseTechnique(userId: string): Promise<string | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user ? user.activedefenseTechnique : null
+	} catch (error) {
+		console.error("Error getting user defense technique:", error)
+		throw error
+	}
+}
+
+//update user active defense technique
+export async function updateUserActiveDefenseTechnique(userId: string, activedefenseTechnique: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { activedefenseTechnique } })
+	} catch (error) {
+		console.error("Error updating user active defense technique:", error)
+		throw error
+	}
+}
+
+// get user unlocked defense techniques
+export async function getUserUnlockedDefenseTechniques(userId: string): Promise<string[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user ? user.unlockedDefenseTechniques : []
+	} catch (error) {
+		console.error("Error getting user unlocked defense techniques:", error)
+		throw error
+	}
+}
+
+// update user unlocked defense techniques
+export async function updateUserUnlockedDefenseTechniques(userId: string, defenseTechniques: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { unlockedDefenseTechniques: defenseTechniques } })
+	} catch (error) {
+		console.error("Error updating user unlocked defense techniques:", error)
+		throw error
+	}
+}
+
+export async function updateUserReverseCursedTechniqueStats(userId, reverseCursedTechnique) {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { reverseCursedTechnique: reverseCursedTechnique } })
+	} catch (error) {
+		console.error("Error updating user reverse cursed technique stats:", error)
+		throw error
+	}
+}
+
+async function createDeveloperAlert(message) {
+	try {
+		const database = client.db(mongoDatabase)
+		const alertsCollection = database.collection("alerts")
+		const usersCollection = database.collection("users")
+
+		// Fetch all user IDs
+		const users = await usersCollection.find({}, { projection: { id: 1 } }).toArray()
+		const userIds = users.map(user => user.id)
+
+		const alerts = userIds.map(userId => ({
+			userId: userId.toString(),
+			message: message,
+			read: false,
+			developerAlert: true,
+			timestamp: new Date()
+		}))
+
+		await alertsCollection.insertMany(alerts)
+
+		console.log(`Developer alert created for ${userIds.length} users.`)
+	} catch (error) {
+		console.error("Error creating developer alert:", error)
+	}
+}
+
+//await createDeveloperAlert("This is a test developer alert.")
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

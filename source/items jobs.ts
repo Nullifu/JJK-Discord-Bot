@@ -31,8 +31,10 @@ import {
 	updateUserItemEffects,
 	updateUserMaxHealth,
 	updateUserOwnedInateClan,
+	updateUserReverseCursedTechnique,
 	updateUserShikigami,
 	updateUserUnlockedBosses,
+	updateUserUnlockedDefenseTechniques,
 	updateUserUnlockedTitles,
 	updateUserUnlockedTransformations
 } from "./mongodb.js"
@@ -78,6 +80,7 @@ export const items = [
 ]
 
 export const itemEffects = [
+	{ name: "Blessed", description: "**Blessed** Blessed by the gods!", time: 25 },
 	{ name: "Curse Repellent", description: "**Anti-Curse** Less likely to find curse spirit enemies!", time: 25 },
 	{
 		name: "Special-Grade Cursed Object",
@@ -918,6 +921,32 @@ export const CLAN_SKILLS = {
 			stage: "Stage Two"
 		}
 	],
+	"Transfiguration (True Soul)": [
+		{
+			name: "Essence of the Soul: KOKUSEN",
+			cost: "5280000",
+			clan: "Transfiguration (True Soul)",
+			items: [
+				{ name: "Junpei", quantity: 20 },
+				{ name: "Heian Era Scraps", quantity: 2 }
+			],
+			stage: "Stage Two"
+		},
+		{
+			name: "Transfiguration: Soul Touch",
+			cost: "2380000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 12 }],
+			stage: "Stage Two"
+		},
+		{
+			name: "Transfiguration: Decay",
+			cost: "450000",
+			clan: "Curse King (Heian Era)",
+			items: [{ name: "Heian Era Scraps", quantity: 6 }],
+			stage: "Stage Two"
+		}
+	],
 	"Demon Vessel (Awoken)": [
 		{
 			name: "Re-imagined BLACK FLASH",
@@ -938,6 +967,18 @@ export const CLAN_SKILLS = {
 		}
 	],
 	"The Strongest": [
+		{
+			name: "Six Point Palm",
+			cost: "5280000",
+			clan: "Limitless 100%",
+			items: [
+				{ name: "Six Eyes", quantity: 2 },
+				{ name: "RCT Essence", quantity: 2 },
+				{ name: "Sacred Eye", quantity: 3 },
+				{ name: "Heian Era Scraps", quantity: 3 }
+			],
+			stage: "Stage Four"
+		},
 		{
 			name: "Lapse Blue X Red: Combo",
 			cost: "5280000",
@@ -983,7 +1024,7 @@ export const CLAN_SKILLS = {
 			cost: "6580000",
 			clan: "Gambler Fever (Jackpot)",
 			items: [
-				{ name: "Hakari Kinji's Token", quantity: 18 },
+				{ name: "Gambler Token", quantity: 18 },
 				{ name: "Heian Era Scraps", quantity: 3 }
 			],
 			stage: "Stage Five"
@@ -1004,6 +1045,28 @@ export const CLAN_SKILLS = {
 			items: [
 				{ name: "Satoru Gojo's Ashy Remains", quantity: 2 },
 				{ name: "Sukuna Finger", quantity: 12 }
+			],
+			stage: "Stage Five"
+		}
+	],
+	"Yuta Okkotsu (Manifested Rika)": [
+		{
+			name: "Copy: Cleave",
+			cost: "7750000",
+			clan: "Yuta Okkotsu (Manifested Rika)",
+			items: [
+				{ name: "Special-Grade Cursed Object", quantity: 2 },
+				{ name: "Sukuna Finger", quantity: 12 }
+			],
+			stage: "Stage Five"
+		},
+		{
+			name: "Copy: Cursed Speech: Die",
+			cost: "6550000",
+			clan: "Yuta Okkotsu (Manifested Rika)",
+			items: [
+				{ name: "Special-Grade Cursed Object", quantity: 5 },
+				{ name: "Sukuna Finger", quantity: 7 }
 			],
 			stage: "Stage Five"
 		}
@@ -1070,6 +1133,21 @@ export const benefactors = [
 
 // quests array
 export const questsArray = [
+	{
+		name: "Limitless Unleashed",
+		description: "Unleash the full power of Limitless!",
+		coins: 0,
+		experience: 0,
+		items: { "Unleashed Inate Essence": 1 },
+		itemQuantity: 1,
+		tasks: [
+			{ description: "Defeat Foes", progress: 0, totalProgress: 12 },
+			{ description: "Defeat Satoru Gojo Limit-Broken", progress: 0, totalProgress: 1 },
+			{ description: "Defeat Satoru Gojo (Shinjuku Showdown Arc)", progress: 0, totalProgress: 1 }
+		],
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId"
+	},
 	{
 		name: "Mentor: Curse King",
 		description: "Mentor: Curse King",
@@ -1426,6 +1504,117 @@ export interface Item1 {
 	rarity?: "Common" | "Rare" | "Special"
 }
 
+export const consumeables: Item1[] = [
+	{
+		itemName: "Simple Domain Essence",
+		description: "Simple Domain Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Forbidden Choice...")
+				.setDescription("You feel a strange energy coming from the Essence...")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the essence, feeling an overwhelming power surge within..."
+				)
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await updateUserUnlockedDefenseTechniques(interaction.user.id, ["Simple Domain"])
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"You consume the essence, It grants you the power of the Simple Domain Technique, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - RCT, Level One."
+				)
+				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "RCT Essence",
+		description: "RCT Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("A Forbidden Choice...")
+				.setDescription("You feel a strange energy coming from the Essence...")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription(
+					"With a decisive motion, you consume the essence, feeling an overwhelming power surge within..."
+				)
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await updateUserReverseCursedTechnique(interaction.user.id, 0, 1, 0, true)
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"You consume the essence, It grants you the power of the Reverse Cursed Technique, You've used a forbidden essence. Skipping the process of learning the technique..."
+				)
+				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Luck Essence",
+		description: "Luck Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const startTime = new Date()
+			const endTime = new Date(startTime.getTime() + 60 * 60000)
+
+			const itemEffect = {
+				itemName: "Luck Essence",
+				effectName: "Lucky",
+				effectTime: 30,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString()
+			}
+			const itemEffectsArray = [itemEffect]
+
+			try {
+				await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Luck Essence")
+					.setDescription("You consume the essence.. You feel lucky for the next 30 minutes!")
+				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
+	}
+]
 export const items1: Item1[] = [
 	{
 		itemName: "Heavenly Restricted Blood",
@@ -1463,7 +1652,7 @@ export const items1: Item1[] = [
 					"As the blood enters your body, You feel your cursed energy depleting.. What have you done?"
 				)
 				.setImage(embedFirst.data.image?.url)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
 	{
@@ -1672,7 +1861,7 @@ export const items1: Item1[] = [
 					.setColor("#4b0082")
 					.setTitle("Re-Awoken Potential")
 					.setDescription(
-						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you... Satoru Gojo may have a intrest in you..\n\n${gains}`
+						`Your eyes have been blessed with the limitless technique... The power of infinity courses through you... Satoru Gojo may have a interest in you..\n\n${gains}`
 					)
 					.setImage("https://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
 			} else {
@@ -1966,114 +2155,58 @@ export const items1: Item1[] = [
 		}
 	},
 	{
-		itemName: "#1 Fighting Box (LB 2)",
+		itemName: "Normal Box",
 		description: "#1 Fighting Box (LB 2)",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			const today = new Date()
-			const formattedDate = today.toLocaleDateString("en-US")
-
-			const newShikigami: UserShikigami = {
-				name: "Gecko",
-				experience: 0,
-				tier: 1,
-				tamedAt: new Date(),
-				hygiene: 100,
-				hunger: 100,
-				friendship: 100
-			}
-
-			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 30)
-			await addItemToUserInventory(interaction.user.id, "Six Eyes", 20)
-			await updateBalance(interaction.user.id, 2500000)
-			await updateUserShikigami(interaction.user.id, newShikigami)
-			await updateUserUnlockedTitles(interaction.user.id, ["#1 Fighter (LB 2)"])
-
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400")
-				.setTitle(`#1 Fighter (LB 2 - ${formattedDate})`)
-				.setDescription(
-					"You opened the box and received: 30x Sukuna Finger, X20 Six Eyes, 25,0M Coins, a Gecko Pet, and the title: #1 Fighter (LB 2)!"
-				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
-		}
-	},
-	{
-		itemName: "#2 Fighting Box (LB 2)",
-		description: "#2 Fighting Box (LB 2)",
-		rarity: "Special",
-		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
-		effect: async interaction => {
-			await interaction.deferReply()
-
-			const today = new Date()
-			const formattedDate = today.toLocaleDateString("en-US")
-
-			const newShikigami: UserShikigami = {
-				name: "Mini-AtomicApex",
-				experience: 0,
-				tier: 1,
-				tamedAt: new Date(),
-				hygiene: 100,
-				hunger: 100,
-				friendship: 100
-			}
-
-			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 15)
-			await addItemToUserInventory(interaction.user.id, "Six Eyes", 10)
-			await updateBalance(interaction.user.id, 2500000)
-			await updateUserShikigami(interaction.user.id, newShikigami)
-			await updateUserUnlockedTitles(interaction.user.id, ["#2 Fighter (LB 2)"])
-
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400")
-				.setTitle(`#2 Fighter (LB 2 - ${formattedDate})`)
-				.setDescription(
-					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 2.5M Coins, a Mini-AtomicApex Pet, and the title: #2 Fighter (LB 2)!"
-				)
-				.addFields({
-					name: "Note",
-					value: "atomic is a god"
-				})
-			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
-		}
-	},
-	{
-		itemName: "#3 Fighting Box (LB 2)",
-		description: "#3 Fighting Box (LB 2)",
-		rarity: "Special",
-		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
-		effect: async interaction => {
-			await interaction.deferReply()
-
-			const today = new Date()
-			const formattedDate = today.toLocaleDateString("en-US")
-
-			const newShikigami: UserShikigami = {
-				name: "Hedgehog",
-				experience: 0,
-				tier: 1,
-				tamedAt: new Date(),
-				hygiene: 100,
-				hunger: 100,
-				friendship: 100
-			}
-
 			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 8)
 			await addItemToUserInventory(interaction.user.id, "Six Eyes", 3)
-			await updateBalance(interaction.user.id, 250000)
-			await updateUserShikigami(interaction.user.id, newShikigami)
-			await updateUserUnlockedTitles(interaction.user.id, ["#3 Fighter (LB 2)"])
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
-				.setTitle(`#3 Fighter (LB 2 - ${formattedDate})`)
-				.setDescription(
-					"You opened the box and received: 15 Sukuna Finger, X10 Six Eyes, 250k Coins, a Hegdehog Pet, and the title: #2 Fighter (LB 2)!"
-				)
+				.setTitle("Opening...")
+				.setDescription("You opened the box and received: 8x Sukuna Finger, 3x Six Eyes!")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Extreme Box",
+		description: "#1 Fighting Box (LB 2)",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 16)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 6)
+			await updateBalance(interaction.user.id, 100000)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription("You opened the box and received: 16x Sukuna Finger, 6x Six Eyes, + 100,000 Coins!")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Special Grade Box",
+		description: "#1 Fighting Box (LB 2)",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 26)
+			await addItemToUserInventory(interaction.user.id, "Six Eyes", 12)
+			await updateBalance(interaction.user.id, 200000)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription("You opened the box and received: 26x Sukuna Finger, 12x Six Eyes, + 200,000 Coins!")
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
@@ -2512,8 +2645,12 @@ export const shopItems = [
 	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 2 },
 	{ name: "Curse Repellent", rarity: "Special Grade", price: 200000, maxPurchases: 8 },
 	{ name: "Sukuna Finger", rarity: "Special Grade", price: 350000, maxPurchases: 8 },
-	{ name: "Rikugan Eye", rarity: "Special Grade", price: 750000, maxPurchases: 6 },
-	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 }
+	{ name: "Rikugan Eye", rarity: "Special Grade", price: 400000, maxPurchases: 6 },
+	{ name: "Six Eyes", rarity: "Special Grade", price: 1500000, maxPurchases: 3 },
+	{ name: "Heian Era Scraps", rarity: "Special Grade", price: 1500000, maxPurchases: 3 },
+	{ name: "Sukuna Finger Bundle", rarity: "Special Grade", price: 850000, maxPurchases: 1 },
+	{ name: "Cursed Chest", rarity: "Special Grade", price: 2500000, maxPurchases: 1 },
+	{ name: "Heian Era Awakening Remnant", rarity: "Special Grade", price: 15000000, maxPurchases: 1 }
 ]
 export interface MiniGameResult {
 	success: "full" | "partial" | "fail"

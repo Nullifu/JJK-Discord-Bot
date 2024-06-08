@@ -76,5 +76,4 @@ export const rarityAbbreviations = {
 	"rare": "R",
 	"ultra rare": "UR",
 	"special grade": "SG"
-	// ... add more as needed
 }

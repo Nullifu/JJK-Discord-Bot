@@ -27,7 +27,6 @@ function getGradeDamageBonus(grade: string): number {
 }
 
 export const attacks: Record<string, Attack[]> = {
-	// Sukana's attacks
 	"Fly Heads": [
 		{
 			name: "Cursed Blast",
@@ -1384,6 +1383,32 @@ export const attacks: Record<string, Attack[]> = {
 			baseDamage: (playerGrade: string) => {
 				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
 				return 60 * gradeDamageBonus
+			}
+		}
+	],
+	"Gege Akutami": [
+		{
+			name: "Satoru Gojo's Bottom Half",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 125 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Sukuna's Big Toe",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "I want you to join the fight against the King Of Curses",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 100000 * gradeDamageBonus
 			}
 		}
 	]

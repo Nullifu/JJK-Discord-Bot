@@ -37,6 +37,7 @@ import {
 	handleBalanceCommand,
 	handleBegCommand,
 	handleBugReport,
+	handleConsumeItem,
 	handleCraftCommand,
 	handleDailyCommand,
 	handleDigCommand,
@@ -65,6 +66,7 @@ import {
 	handleRegisterCommand,
 	handleSearchCommand,
 	handleSellCommand,
+	handleSettingsCommand,
 	handleShikigamiShop,
 	handleShopCommand,
 	handleSupportCommand,
@@ -78,6 +80,7 @@ import {
 	handleUpdateProfileImageCommand,
 	handleUseItemCommand,
 	handleViewEffectsCommand,
+	handleViewSettingsCommand,
 	handleViewShikigami,
 	handleViewStats,
 	handleViewTechniquesCommand,
@@ -291,12 +294,13 @@ async function updateDynamicActivities() {
 	})
 
 	activities = [
-		{ name: "Update 8.0 | Raids!", type: ActivityType.Playing },
+		{ name: "Update 9.0 | PVP!", type: ActivityType.Playing },
 		{ name: `${totalMembers.toLocaleString()} Sorcerers`, type: ActivityType.Listening },
 		{ name: `${client.guilds.cache.size.toLocaleString()} servers`, type: ActivityType.Listening },
 		{ name: "Jujutsu Kaisen", type: ActivityType.Watching },
 		{ name: "The Shibuya Incident", type: ActivityType.Playing },
-		{ name: "King Of Curses Raid!", type: ActivityType.Competing },
+		{ name: "Shinjuku Showdown Arc", type: ActivityType.Playing },
+		{ name: "Cursed Clash", type: ActivityType.Competing },
 		{ name: "/register | /help", type: ActivityType.Listening },
 		{ name: "/guide | /fight", type: ActivityType.Listening }
 	]
@@ -427,20 +431,44 @@ const commands = [
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
-	new SlashCommandBuilder().setName("alert").setDescription("DEV Alerts"),
+	new SlashCommandBuilder().setName("alert").setDescription("Bot Alerts"),
 	new SlashCommandBuilder().setName("update").setDescription("Update from the developer!"),
 	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
-	new SlashCommandBuilder().setName("inventory").setDescription("User Inventory"),
+	new SlashCommandBuilder()
+		.setName("inventory")
+		.setDescription("User Inventory")
+		.addUserOption(option =>
+			option.setName("user").setDescription("The user to display the inventory for").setRequired(false)
+		),
 	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
+
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
-	new SlashCommandBuilder().setName("shikigamishop").setDescription("Shikigami Shop"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
 	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
+	new SlashCommandBuilder()
+		.setName("settings")
+		.setDescription("Update your user settings")
+		.addBooleanOption(option => option.setName("pvpable").setDescription("Toggle PvP availability"))
+		.addBooleanOption(option => option.setName("showalerts").setDescription("Toggle alert notifications"))
+		.addBooleanOption(option => option.setName("acceptrades").setDescription("Toggle trade acceptance"))
+		.addBooleanOption(option => option.setName("showspoiler").setDescription("Toggle showing spoilers")),
+	new SlashCommandBuilder().setName("settingview").setDescription("Credits"),
+	new SlashCommandBuilder()
+		.setName("pvp")
+		.setDescription("PvP related commands")
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("challenge")
+				.setDescription("Challenge another user to a PvP battle")
+				.addUserOption(option =>
+					option.setName("opponent").setDescription("The user you want to challenge").setRequired(true)
+				)
+		),
 
 	new SlashCommandBuilder()
 		.setName("sell")
@@ -486,25 +514,7 @@ const commands = [
 	new SlashCommandBuilder().setName("register").setDescription("Join Jujutsu Rankings!"),
 	new SlashCommandBuilder().setName("help").setDescription("Help"),
 	new SlashCommandBuilder().setName("beg").setDescription("Beg for coins or items."),
-	new SlashCommandBuilder()
-		.setName("updateprofileimage")
-		.setDescription("Update your profile image")
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName("avatar")
-				.setDescription("Update your profile avatar")
-				.addAttachmentOption(option =>
-					option.setName("image").setDescription("The image to set as your profile avatar").setRequired(true)
-				)
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName("header")
-				.setDescription("Update your profile header")
-				.addAttachmentOption(option =>
-					option.setName("image").setDescription("The image to set as your profile header").setRequired(true)
-				)
-		),
+
 	new SlashCommandBuilder()
 		.setName("donate")
 		.setDescription("Donate to the poor!")
@@ -569,7 +579,7 @@ const commands = [
 
 	new SlashCommandBuilder().setName("craft").setDescription("Craft an item using components in your inventory."),
 	new SlashCommandBuilder()
-		.setName("useitem")
+		.setName("use")
 		.setDescription("Use an item from your inventory")
 		.addStringOption(option =>
 			option
@@ -594,14 +604,11 @@ const commands = [
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
 					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
-					{ name: "#1 Fighting Box (LB 2)", value: "#1 Fighting Box (LB 2)" },
-					{ name: "#2 Fighting Box (LB 2)", value: "#2 Fighting Box (LB 2)" },
-					{ name: "#3 Fighting Box (LB 2)", value: "#3 Fighting Box (LB 2)" },
 					{ name: "Unknown Substance", value: "Unknown Substance" },
 					{ name: "Blessful Charm", value: "Blessful Charm" },
-					{ name: "Prison Realm 100%", value: "Prison Realm 100%" },
-					{ name: "Prison Realm 75%", value: "Prison Realm 75%" },
-					{ name: "Prison Realm 50%", value: "Prison Realm 50%" }
+					{ name: "Normal Box", value: "Normal Box" },
+					{ name: "Extreme Box", value: "Extreme Box" },
+					{ name: "Special Grade Box", value: "Special Grade Box" }
 				)
 		)
 		.addStringOption(option =>
@@ -612,6 +619,21 @@ const commands = [
 				.addChoices(
 					{ name: "(Dirty) Sukuna Finger", value: "(Dirty) Sukuna Finger" },
 					{ name: "(Dirty) Rikugan Eye", value: "(Dirty) Rikugan Eye" }
+				)
+		),
+	new SlashCommandBuilder()
+		.setName("consume")
+		.setDescription("Consume an item from your inventory")
+		.addStringOption(option =>
+			option
+				.setName("item")
+				.setDescription("The name of the item to consume")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Simple Domain Essence", value: "Simple Domain Essence" },
+					{ name: "RCT Essence", value: "RCT Essence" },
+					{ name: "Luck Essence", value: "Luck Essence" },
+					{ name: "Inate Unleashed Essence", value: "Inate Unleashed Essence" }
 				)
 		),
 
@@ -951,6 +973,16 @@ client.on("interactionCreate", async interaction => {
 				break
 			default:
 		}
+	} else if (commandName === "pvp") {
+		const action = interaction.options.getSubcommand()
+
+		switch (action) {
+			case "challenge":
+				await handlePvpCommand(interaction)
+				break
+			default:
+				await interaction.reply({ content: "Unknown action.", ephemeral: true })
+		}
 	} else {
 		switch (commandName) {
 			case "balance":
@@ -985,6 +1017,9 @@ client.on("interactionCreate", async interaction => {
 			case "event":
 				await eventCommandHandler(chatInputInteraction)
 				break
+			case "settings":
+				await handleSettingsCommand(chatInputInteraction)
+				break
 			case "viewshikigami":
 				await handleViewShikigami(chatInputInteraction)
 				break
@@ -1000,6 +1035,9 @@ client.on("interactionCreate", async interaction => {
 			case "activeffects":
 				await handleViewEffectsCommand(chatInputInteraction)
 				break
+			case "settingview":
+				await handleViewSettingsCommand(chatInputInteraction)
+				break
 
 			case "fight":
 				await handleFightCommand(chatInputInteraction)
@@ -1011,6 +1049,10 @@ client.on("interactionCreate", async interaction => {
 
 			case "raid":
 				await handleRaidCommand(chatInputInteraction)
+				break
+
+			case "consume":
+				await handleConsumeItem(chatInputInteraction)
 				break
 
 			case "selectjob":
@@ -1032,7 +1074,7 @@ client.on("interactionCreate", async interaction => {
 			case "search":
 				await handleSearchCommand(chatInputInteraction)
 				break
-			case "useitem":
+			case "use":
 				await handleUseItemCommand(chatInputInteraction)
 				break
 			case "shikigamishop":
@@ -1115,12 +1157,12 @@ client.on("interactionCreate", async interaction => {
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
 import express from "express"
-import { AutoPoster } from "topgg-autoposter"
-const poster = AutoPoster(process.env.TOPGG, client)
+//import { AutoPoster } from "topgg-autoposter"
+//const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+//poster.on("posted", stats => {
+//logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+//})
 
 ///////////////////////// PROFILE IMAGE COMMAND ///////////////////////////
 

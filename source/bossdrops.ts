@@ -1,6 +1,7 @@
 export interface BossDrop {
 	name: string
 	rarity: string
+	probability?: number
 }
 export interface RaidDrops {
 	name: string
@@ -270,13 +271,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Heian Era Scraps", rarity: "ultra rare" },
 		{ name: "Awakening Remnant", rarity: "ultra rare" }
 	],
-	"Sukuna (Heian Era)": [
-		{ name: "Satoru Gojo's Remains", rarity: "common" },
-		{ name: "Go//Jo", rarity: "rare" },
-		{ name: "Cleaning Kit", rarity: "rare" },
-		{ name: "Fraud Poster", rarity: "rare" },
-		{ name: "Malevolent Shrine (Upgrade)", rarity: "rare" }
-	],
+	"Sukuna (Heian Era)": [{ name: "Hollow Wicker Basket Essence", rarity: "ultra rare" }],
 	"Kenjaku": [
 		{ name: "Mahitos Soul", rarity: "rare" },
 		{ name: "Split Shard", rarity: "ultra rare" },

@@ -291,6 +291,10 @@ export const gojoRespectMessages = [
 ]
 
 export const healthMultipliersByGrade = {
+	"special grade 1": 4.5,
+	"special grade 2": 4.0,
+	"special grade 3": 3.7,
+	"special grade 4": 3.3,
 	"special grade": 3.0,
 	"grade 1": 2.5,
 	"semi-grade 1": 1.7,

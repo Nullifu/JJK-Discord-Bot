@@ -1,5 +1,5 @@
 import { EmbedBuilder } from "discord.js"
-import { BossDrop, bossDrops } from "./bossdrops.js"
+import { bossDrops } from "./bossdrops.js"
 import logger from "./bot.js"
 import { itemEffects } from "./items jobs.js"
 import {
@@ -70,16 +70,24 @@ export function calculateBloodlustBoost(
 
 function getGradeDamageBonus(grade: string): number {
 	switch (grade) {
-		case "Special Grade":
+		case "Special Grade 1":
+			return 2.5
+		case "Special Grade 2":
+			return 2.2
+		case "Special Grade 3":
 			return 2.0
+		case "Special Grade 4":
+			return 1.8
+		case "Special Grade":
+			return 1.6
 		case "Grade 1":
-			return 1.7
+			return 1.5
 		case "Semi-Grade 1":
-			return 1.4
+			return 1.3
 		case "Grade 2":
-			return 1.2
-		case "Grade 3":
 			return 1.1
+		case "Grade 3":
+			return 1.05
 		case "Grade 4":
 		default:
 			return 1.0
@@ -87,7 +95,6 @@ function getGradeDamageBonus(grade: string): number {
 }
 
 export function getRandomXPGain(min = 150, max = 320) {
-	// The maximum is inclusive and the minimum is inclusive
 	return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
@@ -116,7 +123,6 @@ export function createInventoryPage(items, startIndex, itemsPerPage, user) {
 
 	return inventoryEmbed
 }
-// buildActiveEffectsEmbed get active effects using getuseractiveeffects
 export async function handleEffectEmbed(userId) {
 	const userEffects = await getUserItemEffects(userId)
 
@@ -130,11 +136,10 @@ export async function handleEffectEmbed(userId) {
 		userEffects.forEach(effect => {
 			const effectDetails = itemEffects.find(e => e.name === effect.itemName)
 			if (effectDetails) {
-				// Calculate remaining time
 				const endTime = new Date(effect.endTime)
 				const now = new Date()
 				const remainingTime = endTime.getTime() - now.getTime()
-				const remainingMinutes = Math.round(remainingTime / 60000) // Convert milliseconds to minutes
+				const remainingMinutes = Math.round(remainingTime / 60000)
 
 				let valueString = `• ${effectDetails.description}`
 				if (remainingTime > 0) {
@@ -279,11 +284,46 @@ export function calculateEarnings(userProfile) {
 	return earnings
 }
 
-export function getBossDrop(bossName: string): BossDrop {
+export const rarityProbabilities: Record<string, number> = {
+	"common": 0.7,
+	"rare": 0.5,
+	"very rare": 0.1,
+	"ultra rare": 0.05
+}
+
+export async function getBossDrops(userId, bossName) {
 	const drops = bossDrops[bossName]
 	if (!drops || drops.length === 0) throw new Error("No drops found for the boss!")
-	const dropIndex = Math.floor(Math.random() * drops.length)
-	return drops[dropIndex]
+
+	const userEffects = await getUserItemEffects(userId)
+	const luckyEffect = userEffects.find(effect => effect.effectName === "Lucky")
+	const dropIncreaseFactor = luckyEffect ? 0.1 : 0 // Increase drop probability by 10% if Lucky effect is active
+
+	const obtainedDrops = []
+	const numberOfDrops = Math.floor(Math.random() * 3) + 1
+
+	while (obtainedDrops.length < numberOfDrops) {
+		const randomIndex = Math.floor(Math.random() * drops.length)
+		const drop = drops[randomIndex]
+		let dropProbability = drop.probability ?? rarityProbabilities[drop.rarity.toLowerCase()] ?? 0.5
+
+		dropProbability += dropIncreaseFactor
+
+		if (Math.random() < dropProbability) {
+			obtainedDrops.push(drop)
+			console.log(`Obtained drop: ${drop.name}`)
+		} else {
+			console.log(`Did not obtain drop: ${drop.name}`)
+		}
+
+		if (obtainedDrops.length === 0 && obtainedDrops.length + 1 === numberOfDrops) {
+			const guaranteedDropIndex = Math.floor(Math.random() * drops.length)
+			obtainedDrops.push(drops[guaranteedDropIndex])
+			console.log(`Guaranteed drop: ${drops[guaranteedDropIndex].name}`)
+		}
+	}
+
+	return obtainedDrops
 }
 
 export async function createStatsEmbed(user) {

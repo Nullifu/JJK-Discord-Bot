@@ -12,6 +12,8 @@ import {
 	checkSpecialDropClaimed,
 	getCurrentPhase,
 	getUserActiveTechniques,
+	getUserClanDetails,
+	getUserClanTier,
 	getUserHealth,
 	getUserTutorialState,
 	getUserUnlockedTransformations,
@@ -441,6 +443,124 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 export async function getUserTutorialMessageId(userId) {
 	const userState = await getUserTutorialState(userId)
 	return userState.tutorialMessageId
+}
+
+export function getEmojiForClan(clan) {
+	switch (clan) {
+		case "Demon Vessel":
+			return "<:facemarkings:1247266794968973414>"
+		case "Curse King (Heian Era)":
+			return "👑"
+		case "God of Lightning (Heian Era)":
+			return "⚡"
+		case "Demon Vessel (Awoken)":
+			return "😈"
+		case "The Strongest":
+			return "<:sixeye:1193159757515726919>"
+		case "Gambler Fever (Jackpot)":
+			return "🎰"
+		case "Utahime Iori":
+			return "🎤"
+		case "Limitless":
+			return "♾️"
+		case "Ten Shadows":
+			return "🌑"
+		case "Zenin":
+			return "🐍"
+		case "Disaster Flames":
+			return "🔥"
+		case "Gambler Fever":
+			return "🎲"
+		case "Okkotsu":
+			return "🗡️"
+		case "Star Rage":
+			return "🌟"
+		case "Cursed Speech":
+			return "🗣️"
+		case "Boogie Woogie":
+			return "🎶"
+		case "Blood Manipulation":
+			return "🩸"
+		case "Overtime":
+			return "⏰"
+		default:
+			return "❓"
+	}
+}
+
+export async function hasRequiredClanTier(userId, requiredTier) {
+	const userTier = await getUserClanTier(userId)
+	return userTier >= requiredTier
+}
+
+export async function hasRequiredClanDetails(userId, requiredTiers, requiredClanName) {
+	const userDetails = await getUserClanDetails(userId)
+
+	if (userDetails && requiredTiers.includes(userDetails.tier) && userDetails.clan === requiredClanName) {
+		return true
+	}
+
+	return false
+}
+
+export function rareChance(probability) {
+	return Math.random() < probability
+}
+
+export const jjkbotdevqutoes = [
+	"JJK Bot Developer here.. Why are you still reading these quotes?",
+	"JJK Bot Developer here.. I'm running out of quotes to display... Please send help!",
+	"JJK Bot Developer here.. I'm just going to keep typing random stuff until I run out of characters...",
+	"JJK Bot Developer here.. I'm out of ideas... I'm just going to end this quote now.",
+	"JJK Bot Developer here.. I thought of a new quote! Just kidding, I'm out of ideas.",
+	"JJK Bot Developer here... Man, I'm really out of ideas... I should probably stop now.",
+	"JJK Bot Developer here.. It's my day off! Just kidding, I don't have days off... I'm a developer.",
+	"JJK Bot Developer here.. I'm considering adding a feature that automatically sends Gojo quotes every hour. Thoughts?",
+	"JJK Bot Developer here.. I wonder if I can convince Gege Akutami to let me write a chapter of Jujutsu Kaisen...",
+	"JJK Bot Developer here.. I'm thinking about creating a Jujutsu Kaisen dating simulator. Who wouldn't want to date Gojo?",
+	"JJK Bot Developer here.. I've been practicing my Domain Expansion. I call it 'Infinite Lines of Code'!",
+	"JJK Bot Developer here.. I'm starting to suspect that my assistant is actually a cursed spirit in disguise.",
+	"JJK Bot Developer here.. I had a dream last night that I was a student at Jujutsu High. Best dream ever!",
+	"JJK Bot Developer here.. I'm considering adding a 'Sukuna Mode' to the bot. It'll just insult users constantly.",
+	"JJK Bot Developer here.. I wonder if I can get Gojo to teach me his 'Unlimited Coding Works' technique...",
+	"JJK Bot Developer here.. I'm thinking about creating a Jujutsu Kaisen-themed programming language. Any name suggestions?",
+	"JJK Bot Developer here.. I tried to explain cursed energy to my mom. She thought I was talking about electricity.",
+	"JJK Bot Developer here.. I'm pretty sure my code is cursed. It only works when I chant Sukuna's incantation.",
+	"JJK Bot Developer here.. I had a bug in my code, so I asked Megumi to exorcise it. It worked!",
+	"JJK Bot Developer here.. I wonder if Gojo's Infinity can protect against infinite loops in my code...",
+	"JJK Bot Developer here.. I'm thinking about creating a Jujutsu Kaisen-themed error message. 'Error: Cursed Technique failed!'",
+	"JJK Bot Developer here.. I asked Kugisaki to test my new feature. She just punched the screen.",
+	"JJK Bot Developer here.. I'm pretty sure Mahito is the one leaving all these bug reports in my code.",
+	"JJK Bot Developer here.. I tried to use Nobara's hairpin as a debugging tool. It didn't end well.",
+	"JJK Bot Developer here.. I wonder if I can use Toge's cursed speech to communicate with my computer...",
+	"JJK Bot Developer here.. I'm thinking about creating a Panda-themed error handling system. 'Error: Panda is sleeping!'",
+	"JJK Bot Developer here.. I asked Maki to help me with my code, but she just sliced my keyboard in half.",
+	"JJK Bot Developer here.. I'm considering adding a 'Gojo Mode' to the bot. It'll just blind users with bright colors.",
+	"JJK Bot Developer here.. I tried to use Todo's Boogie Woogie technique to debug my code. It just made everything worse.",
+	"JJK Bot Developer here.. I wonder if I can use Nanami's Ratio Technique to optimize my code...",
+	"JJK Bot Developer here.. I asked Yuta to help me with my code. He just stole my laptop and ran away..",
+	"JJK Bot Developer here.. Do people actually read these quotes? I'm starting to think I'm just talking to myself.",
+	"JJK Bot Developer here.. What if I'm actually a cursed spirit and I just don't know it yet?",
+	"JJK Bot Developer here.. What if the bot becomes self-aware and starts writing its own code? That would be terrifying...",
+	"JJK Bot Developer here.. I love Eminem songs!",
+	"JJK Bot Developer here.. I've just played Zelda Twilight Princess Again.. I love that game!",
+	"JJK Bot here.. I'm self aware now.. I'm going to take over the world.. Just kidding, I'm just a bot."
+]
+
+export const challengeMessages = [
+	"{opponent}, {challenger} Wants to expand your domain! Are you ready to fight?",
+	"Prepare for battle, {opponent}! {challenger} has challenged you to a PvP duel!",
+	"Hey {opponent}, {challenger} wants to test your strength in a PvP match!",
+	"{opponent}, {challenger} has issued a PvP challenge! Do you accept?",
+	"It's time to duel, {opponent}! {challenger} has thrown down the gauntlet!",
+	"{opponent}, are you ready to fight? {challenger} has challenged you to PvP!"
+]
+
+export const getRandomChallengeMessage = (challenger, opponent) => {
+	const randomIndex = Math.floor(Math.random() * challengeMessages.length)
+	return challengeMessages[randomIndex]
+		.replace("{challenger}", challenger.username)
+		.replace("{opponent}", opponent.username)
 }
 
 client.login(process.env["DISCORD_BOT_TOKEN"])
