@@ -4835,6 +4835,18 @@ export async function updateUserReverseCursedTechniqueStats(userId, reverseCurse
 	}
 }
 
+// update reverse cursed technique experience
+export async function updateUserReverseCursedTechniqueExperience(userId: string, experience: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { "reverseCursedTechnique.experience": experience } })
+	} catch (error) {
+		console.error("Error updating user reverse cursed technique experience:", error)
+		throw error
+	}
+}
+
 async function createDeveloperAlert(message) {
 	try {
 		const database = client.db(mongoDatabase)

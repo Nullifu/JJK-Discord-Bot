@@ -211,6 +211,7 @@ import {
 	updateUserInateClan,
 	updateUserJob,
 	updateUserMentor,
+	updateUserReverseCursedTechniqueExperience,
 	updateUserReverseCursedTechniqueStats,
 	updateUserSettings,
 	updateUserShikigami,
@@ -2483,9 +2484,11 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					})
 					return
 				}
-
 				const rctLevel = rctStats.level
-				const healthRegeneration = rctLevel * 10
+				let healthRegeneration = rctLevel * 10
+				if (rctLevel === 0) {
+					healthRegeneration = 20
+				}
 				let newHealth = currentHealth + healthRegeneration
 				if (newHealth > maxHealth) {
 					newHealth = maxHealth
@@ -2495,6 +2498,16 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				rctStats.healthHealed += healthRegeneration
 				await updateUserReverseCursedTechniqueStats(interaction.user.id, rctStats)
+
+				// Gain RCT experience
+				const rctExperience = Math.floor(Math.random() * (60 - 10 + 1) + 10)
+				await updateUserReverseCursedTechniqueExperience(interaction.user.id, rctExperience)
+
+				// Check if RCT experience is 100 and level up
+				if (rctExperience >= 100) {
+					rctStats.level += 1
+					await updateUserReverseCursedTechniqueStats(interaction.user.id, rctStats)
+				}
 
 				rctState.set(contextKey, true)
 
