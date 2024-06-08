@@ -1,5 +1,14 @@
-# NPM dependencies
+# Dependencies
 node_modules/
+
+# Yarn
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
 # Builds
 dist/
@@ -10,4 +19,5 @@ dist/
 # Logs
 logs/
 
+# Configuration
 config/
