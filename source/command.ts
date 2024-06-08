@@ -9395,10 +9395,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				})
 
 				const collectorFilter = (inter: MessageComponentInteraction) => {
-					if (inter.isButton()) {
-						return inter.user.id === attacker.id
-					} else if (inter.isStringSelectMenu()) {
-						return inter.user.id === attacker.id && inter.customId === "select-technique-pvp"
+					if (inter.user.id === attacker.id) {
+						return true
 					} else {
 						inter.reply({ content: "Nuh uh, it's not your turn.", ephemeral: true })
 						return false
@@ -9555,8 +9553,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 									components: []
 								})
 
-								// Apply clash damage
-								const clashDamage = 100 // Example value for damage during a domain clash
+								const clashDamage = 100
 								pvpData.player1Health = Math.max(0, pvpData.player1Health - clashDamage)
 								pvpData.player2Health = Math.max(0, pvpData.player2Health - clashDamage)
 
@@ -9575,13 +9572,11 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 										}
 									)
 
-								// Restore interaction components after domain clash
 								await clashDefendInteraction.editReply({
 									embeds: [primaryEmbed],
 									components: components
 								})
 							} else if (selectedClashDefendValue === "defend") {
-								// Handle defend logic
 								const defenseTechnique = await getUserActiveDefenseTechnique(defender.id)
 								let defenseDescription = `${defender.username} has successfully defended against the domain attack.`
 
@@ -9600,8 +9595,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 								await clashDefendInteraction.update({ embeds: [defendEmbed], components: [] })
 
-								// Apply defense effects
-								// (Adjust health or other stats as necessary based on your game's mechanics)
+								//
 
 								await new Promise(resolve => setTimeout(resolve, 3000))
 
@@ -9738,6 +9732,16 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						}
 						return
 					}
+				})
+
+				const techniqueCollector = interaction.channel.createMessageComponentCollector({
+					filter: collectorFilter,
+					componentType: ComponentType.StringSelect,
+					time: 60000
+				})
+
+				techniqueCollector.on("collect", async collectedInteraction => {
+					const selectedValue = collectedInteraction.values[0]
 
 					const usertechniquespvp = new Map()
 					const { damage, imageUrl, description } = await executeSpecialTechniquePvp({
