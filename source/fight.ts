@@ -93,7 +93,10 @@ export async function handleBossDeath(
 		"Satoru Gojo (Shinjuku Showdown Arc)": [
 			{ quest: "Stage Three Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" },
 			{ quest: "Stage Three Unleashed", amount: 1, condition: "Satoru Gojo (Shinjuku Showdown Arc)" },
-			{ }
+			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" }
+		],
+		"Defeat Satoru Gojo Limit-Broken": [
+			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo Limit-Broken" }
 		]
 	}
 
@@ -128,7 +131,8 @@ export async function handleBossDeath(
 		{ quest: "Awakening", amount: 1, description: "Defeat Foes" },
 		{ quest: "Satoru Gojo's Mission", amount: 1, description: "Training" },
 		{ quest: "Nanami's Task", amount: 1, description: "Complete Task" },
-		{ quest: "Kashimo's Task", amount: 1, description: "Defeat Foes" }
+		{ quest: "Kashimo's Task", amount: 1, description: "Defeat Foes" },
+		{ quesT: "Limitless Unleashed", amount: 1, description: "Defeat Foes" }
 	]
 
 	for (const generalQuest of generalQuests) {
@@ -148,6 +152,7 @@ export async function handleBossDeath(
 	await updateUserInateClanExperience(interaction.user.id, 125, "Limitless")
 	await updatePlayerClanTier(interaction.user.id)
 	await updateUserFightsWon(interaction.user.id)
+
 	await updateMonthlyFightsWon(interaction.user.id)
 
 	const drops = await getBossDrops(interaction.user.id, opponent.name)
