@@ -9839,21 +9839,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				components: []
 			})
 		}
-		const confirmationCollector = interaction.channel.createMessageComponentCollector({
-			filter: filter,
-			componentType: ComponentType.Button,
-			time: 30000
-		})
-
-		confirmationCollector.on("end", async (collected, reason) => {
-			if (reason === "time") {
-				await interaction.editReply({
-					content: `${opponent} did not respond in time. The PvP challenge has been cancelled.`,
-					embeds: [],
-					components: []
-				})
-			}
-		})
 	} catch (error) {
 		console.error("An error occurred:", error)
 		await interaction.editReply({
