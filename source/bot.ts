@@ -631,7 +631,7 @@ const commands = [
 					{ name: "Simple Domain Essence", value: "Simple Domain Essence" },
 					{ name: "RCT Essence", value: "RCT Essence" },
 					{ name: "Luck Essence", value: "Luck Essence" },
-					{ name: "Inate Unleashed Essence", value: "Inate Unleashed Essence" }
+					{ name: "Unleashed Inate Essence", value: "Inate Unleashed Essence" }
 				)
 		),
 
