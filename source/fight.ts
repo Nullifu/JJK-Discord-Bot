@@ -183,7 +183,15 @@ export async function handleBossDeath(
 
 	for (const generalQuest of generalQuests) {
 		if (activeQuests.includes(generalQuest.quest)) {
-			await addUserQuestProgress(generalQuest.quest, generalQuest.description, generalQuest.amount)
+			console.log(`Processing quest: ${generalQuest.quest}`)
+			await addUserQuestProgress(
+				interaction.user.id,
+				generalQuest.quest,
+				generalQuest.amount,
+				generalQuest.description
+			)
+		} else {
+			console.log(`Skipping quest: ${generalQuest.quest} - not in activeQuests`)
 		}
 	}
 
