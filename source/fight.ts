@@ -167,7 +167,12 @@ export async function handleBossDeath(
 	if (questProgressions[opponent.name]) {
 		for (const questProgress of questProgressions[opponent.name]) {
 			if (activeQuests.includes(questProgress.quest)) {
-				await addUserQuestProgress(questProgress.quest, questProgress.description, questProgress.amount)
+				await addUserQuestProgress(
+					interaction.user.id,
+					questProgress.quest,
+					questProgress.amount,
+					questProgress.condition || null
+				)
 			}
 		}
 	}
@@ -181,17 +186,15 @@ export async function handleBossDeath(
 		{ quest: "Mission with Nobara", amount: 1, description: "Defeat 20 foes and find Nobara's eyes!" }
 	]
 
+	// Process general quests
 	for (const generalQuest of generalQuests) {
 		if (activeQuests.includes(generalQuest.quest)) {
-			console.log(`Processing quest: ${generalQuest.quest}`)
 			await addUserQuestProgress(
 				interaction.user.id,
 				generalQuest.quest,
 				generalQuest.amount,
 				generalQuest.description
 			)
-		} else {
-			console.log(`Skipping quest: ${generalQuest.quest} - not in activeQuests`)
 		}
 	}
 
