@@ -6136,6 +6136,10 @@ export async function handleShopCommand(interaction) {
 					await updateUserUnlockedTransformations(userId, updatedUnlockedTransformations)
 				}
 
+				if (itemToBuy.name === "Jogo's Testicle Torsion Technique") {
+					await addUserTechnique(userId, "Jogo's Testicle Torsion Technique")
+				}
+
 				if (shopType === "raid") {
 					const userInventory = await getUserInventory(userId)
 					const raidTokenItem = userInventory.find(item => item.name === "Raid Token")

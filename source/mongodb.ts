@@ -4961,6 +4961,6 @@ export async function handleTradeAcceptanceWithLock(tradeId, userId) {
 	}
 }
 
-await createDeveloperAlert("Sorry for all the bugs lately, I'm working on fixing them now. Thanks for your patience!")
+//await createDeveloperAlert("Sorry for all the bugs lately, I'm working on fixing them now. Thanks for your patience!")
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])
