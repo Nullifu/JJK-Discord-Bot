@@ -234,11 +234,13 @@ app.listen(parseInt(process.env["EXPRESS_PORT"] ?? "3000"), process.env["EXPRESS
 
 ////////
 
-client.on("ready", async () => {
+const interactionProcessing = new Set()
+
+client.once("ready", async () => {
 	logger.info(`Logged in as ${client.user.tag}!`)
+	interactionProcessing.clear()
+	logger.info("Interaction processing state has been reset.")
 	await doApplicationCommands(client.user.id)
-	const serverCount = client.guilds.cache.size
-	sendServerCountToAPI(serverCount)
 
 	try {
 		await initializeDatabase()
@@ -303,27 +305,6 @@ async function updateDynamicActivities() {
 		{ name: "/register | /help", type: ActivityType.Listening },
 		{ name: "/guide | /fight", type: ActivityType.Listening }
 	]
-}
-
-async function sendServerCountToAPI(serverCount) {
-	try {
-		const response = await fetch("https://api.nullifu.dev/api/server-count", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"Authorization": `Bearer ${process.env.API_SECRET}`
-			},
-			body: JSON.stringify({ code0dataserverCount0: serverCount })
-		})
-
-		if (response.ok) {
-			console.log("Server count sent to API successfully")
-		} else {
-			console.error("Failed to send server count to API")
-		}
-	} catch (error) {
-		console.error("Error sending server count to API:", error)
-	}
 }
 
 client.on("guildCreate", guild => {
@@ -539,28 +520,28 @@ const commands = [
 		.setName("toggleheavenlyrestriction")
 		.setDescription("Toggles your Heavenly Restriction status."),
 	new SlashCommandBuilder().setName("guide").setDescription("Get guides on various topics."),
-	// new SlashCommandBuilder()
-	// 	.setName("trade")
-	// 	.setDescription("Trading Command.")
-	// 	.addStringOption(option =>
-	// 		option
-	// 			.setName("action")
-	// 			.setDescription("The action to perform")
-	// 			.setRequired(true)
-	// 			.addChoices(
-	// 				{ name: "Initiate", value: "initiate" },
-	// 				{ name: "Accept", value: "accept" },
-	// 				{ name: "View", value: "view" },
-	// 				{ name: "Previous", value: "previous" }
-	// 			)
-	// 	)
-	// 	.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-	// 	.addStringOption(option =>
-	// 		option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
-	// 	)
-	// 	.addIntegerOption(option =>
-	// 		option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
-	// 	),
+	new SlashCommandBuilder()
+		.setName("trade")
+		.setDescription("Trading Command.")
+		.addStringOption(option =>
+			option
+				.setName("action")
+				.setDescription("The action to perform")
+				.setRequired(true)
+				.addChoices(
+					{ name: "Initiate", value: "initiate" },
+					{ name: "Accept", value: "accept" },
+					{ name: "View", value: "view" },
+					{ name: "Previous", value: "previous" }
+				)
+		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+		.addStringOption(option =>
+			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
+		)
+		.addIntegerOption(option =>
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
+		),
 
 	new SlashCommandBuilder()
 		.setName("gamble")
@@ -839,6 +820,18 @@ client.on("interactionCreate", async interaction => {
 })
 
 client.on("interactionCreate", async interaction => {
+	if (!interaction.isStringSelectMenu()) return
+
+	if (interaction.customId.startsWith("accept_trade_select")) {
+		try {
+			await processTradeSelection(interaction)
+		} catch (error) {
+			logger.error("Error during trade selection processing:", error)
+		}
+	}
+})
+
+client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
@@ -878,17 +871,6 @@ client.on("interactionCreate", async interaction => {
 		return
 	}
 	//
-	client.on("interactionCreate", async interaction => {
-		if (interaction.isStringSelectMenu()) {
-			if (interaction.customId.startsWith("accept_trade_select")) {
-				try {
-					await processTradeSelection(interaction)
-				} catch (error) {
-					logger.error("Error during trade selection processing:", error)
-				}
-			}
-		}
-	})
 
 	//
 

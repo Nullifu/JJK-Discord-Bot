@@ -176,7 +176,7 @@ import {
 	getUserWorked,
 	giveawayCollectionName,
 	handleRaidBossDefeat,
-	handleTradeAcceptanceWithLock,
+	handleTradeAcceptance,
 	healShikigami,
 	isUserRegistered,
 	markStageAsMessaged,
@@ -5271,15 +5271,13 @@ export async function handleAlertCommand(interaction: ChatInputCommandInteractio
 		})
 	}
 }
-export async function handleAcceptTrade(interaction) {
+export async function handleAcceptTrade(interaction: ChatInputCommandInteraction) {
 	try {
-		await interaction.deferReply({ ephemeral: true })
-
 		const userId = interaction.user.id
 		const tradeRequests = await viewTradeRequests(userId)
 
 		if (tradeRequests.length === 0) {
-			await interaction.followUp({ content: "You have no pending trade requests.", ephemeral: true })
+			await interaction.reply("You have no pending trade requests.")
 			return
 		}
 
@@ -5294,19 +5292,16 @@ export async function handleAcceptTrade(interaction) {
 			.setPlaceholder("Select a trade request to accept")
 			.addOptions(options)
 
-		const actionRow = new ActionRowBuilder().addComponents(selectMenu)
+		const actionRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
 
-		await interaction.followUp({
+		await interaction.reply({
 			content: "Choose a trade request to accept:",
 			components: [actionRow],
 			ephemeral: true
 		})
 	} catch (error) {
 		logger.error("Error in handleAcceptTrade:", error)
-		await interaction.followUp({
-			content: "An error occurred while processing your trade acceptance. Please try again later.",
-			ephemeral: true
-		})
+		await interaction.reply("An error occurred while processing your trade acceptance. Please try again later.")
 	}
 }
 
@@ -5314,18 +5309,19 @@ const processedTrades = new Set<string>()
 const pendingInteractions = new Set<string>()
 
 export async function processTradeSelection(interaction: Interaction) {
+	const interactionId = interaction.id
+	logger.info(`Processing trade selection for interaction ID: ${interactionId}`)
+
 	if (!interaction.isStringSelectMenu()) {
 		return
 	}
 
 	const stringSelectMenuInteraction = interaction as StringSelectMenuInteraction
-
 	if (!stringSelectMenuInteraction.customId.startsWith("accept_trade_select")) {
 		return
 	}
 
 	const selectedTradeId = stringSelectMenuInteraction.values[0]
-	const interactionId = stringSelectMenuInteraction.id
 
 	if (pendingInteractions.has(interactionId)) {
 		logger.warn(`Interaction ID: ${interactionId} is already being processed.`)
@@ -5340,9 +5336,9 @@ export async function processTradeSelection(interaction: Interaction) {
 		return
 	}
 
-	console.info("Handling trade selection...")
-	console.debug("Selected trade ID:", selectedTradeId)
-	console.debug("Start processing trade acceptance...")
+	logger.info("Handling trade selection...")
+	logger.debug(`Selected trade ID: ${selectedTradeId}`)
+	logger.debug("Start processing trade acceptance...")
 
 	let replied = false
 
@@ -5352,8 +5348,8 @@ export async function processTradeSelection(interaction: Interaction) {
 	}
 
 	try {
-		await handleTradeAcceptanceWithLock(selectedTradeId, stringSelectMenuInteraction.user.id)
-		console.info("Trade request accepted successfully!")
+		await handleTradeAcceptance(selectedTradeId, stringSelectMenuInteraction.user.id)
+		logger.info("Trade request accepted successfully!")
 
 		processedTrades.add(selectedTradeId)
 
