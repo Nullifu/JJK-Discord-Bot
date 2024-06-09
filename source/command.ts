@@ -176,7 +176,7 @@ import {
 	getUserWorked,
 	giveawayCollectionName,
 	handleRaidBossDefeat,
-	handleTradeAcceptance,
+	handleTradeAcceptanceWithLock,
 	healShikigami,
 	isUserRegistered,
 	markStageAsMessaged,
@@ -5352,7 +5352,7 @@ export async function processTradeSelection(interaction: Interaction) {
 	}
 
 	try {
-		await handleTradeAcceptance(selectedTradeId, stringSelectMenuInteraction.user.id)
+		await handleTradeAcceptanceWithLock(selectedTradeId, stringSelectMenuInteraction.user.id)
 		console.info("Trade request accepted successfully!")
 
 		processedTrades.add(selectedTradeId)

@@ -4873,6 +4873,94 @@ async function createDeveloperAlert(message) {
 	}
 }
 
-//await createDeveloperAlert("This is a test developer alert.")
+export async function handleTradeAcceptanceWithLock(tradeId, userId) {
+	const database = client.db(mongoDatabase)
+	const tradeRequestsCollection = database.collection(tradeCollectionName)
+	const usersCollection = database.collection(usersCollectionName)
+
+	const session = client.startSession()
+
+	try {
+		session.startTransaction()
+
+		const tradeRequest = await tradeRequestsCollection.findOne(
+			{
+				_id: new ObjectId(tradeId),
+				status: "pending",
+				targetUserId: userId
+			},
+			{ session }
+		)
+
+		if (!tradeRequest) {
+			throw new Error("Trade request not found or not valid for this user.")
+		}
+
+		const initiatorInventory = await usersCollection.findOne(
+			{
+				"id": tradeRequest.initiatorId,
+				"inventory.name": tradeRequest.item
+			},
+			{ session }
+		)
+
+		if (
+			!initiatorInventory ||
+			initiatorInventory.inventory.find(i => i.name === tradeRequest.item).quantity < tradeRequest.quantity
+		) {
+			throw new Error("Initiator does not have enough items to complete this trade.")
+		}
+
+		// Decrement the item quantity from the initiator's inventory
+		const updateInitiatorResult = await usersCollection.updateOne(
+			{
+				"id": tradeRequest.initiatorId,
+				"inventory.name": tradeRequest.item,
+				"inventory.quantity": { $gte: tradeRequest.quantity }
+			},
+			{
+				$inc: { "inventory.$.quantity": -tradeRequest.quantity }
+			},
+			{ session }
+		)
+
+		if (updateInitiatorResult.modifiedCount === 0) {
+			throw new Error("Failed to update initiator's inventory.")
+		}
+
+		// Add the item quantity to the target's inventory
+		const updateTargetResult = await usersCollection.updateOne(
+			{
+				"id": tradeRequest.targetUserId,
+				"inventory.name": tradeRequest.item
+			},
+			{
+				$inc: { "inventory.$.quantity": tradeRequest.quantity }
+			},
+			{ upsert: true, session }
+		)
+
+		if (updateTargetResult.modifiedCount === 0) {
+			throw new Error("Failed to update target's inventory.")
+		}
+
+		// Update the trade request status to accepted
+		await tradeRequestsCollection.updateOne(
+			{ _id: new ObjectId(tradeId) },
+			{ $set: { status: "accepted" } },
+			{ session }
+		)
+
+		await session.commitTransaction()
+	} catch (error) {
+		await session.abortTransaction()
+		logger.error("Error during trade acceptance:", error)
+		throw error
+	} finally {
+		session.endSession()
+	}
+}
+
+await createDeveloperAlert("Sorry for all the bugs lately, I'm working on fixing them now. Thanks for your patience!")
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])
