@@ -539,28 +539,28 @@ const commands = [
 		.setName("toggleheavenlyrestriction")
 		.setDescription("Toggles your Heavenly Restriction status."),
 	new SlashCommandBuilder().setName("guide").setDescription("Get guides on various topics."),
-	new SlashCommandBuilder()
-		.setName("trade")
-		.setDescription("Trading Command.")
-		.addStringOption(option =>
-			option
-				.setName("action")
-				.setDescription("The action to perform")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Initiate", value: "initiate" },
-					{ name: "Accept", value: "accept" },
-					{ name: "View", value: "view" },
-					{ name: "Previous", value: "previous" }
-				)
-		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-		.addStringOption(option =>
-			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
-		)
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
-		),
+	// new SlashCommandBuilder()
+	// 	.setName("trade")
+	// 	.setDescription("Trading Command.")
+	// 	.addStringOption(option =>
+	// 		option
+	// 			.setName("action")
+	// 			.setDescription("The action to perform")
+	// 			.setRequired(true)
+	// 			.addChoices(
+	// 				{ name: "Initiate", value: "initiate" },
+	// 				{ name: "Accept", value: "accept" },
+	// 				{ name: "View", value: "view" },
+	// 				{ name: "Previous", value: "previous" }
+	// 			)
+	// 	)
+	// 	.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
+	// 	.addStringOption(option =>
+	// 		option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
+	// 	)
+	// 	.addIntegerOption(option =>
+	// 		option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
+	// 	),
 
 	new SlashCommandBuilder()
 		.setName("gamble")
