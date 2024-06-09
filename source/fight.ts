@@ -47,7 +47,7 @@ export async function handleBossDeath(
 	if (opponent.name === "Satoru Gojo (Shinjuku Showdown Arc)") {
 		embed.setDescription("You were magnificent, Satoru Gojo. I shall never forget you for as long as I live.")
 		const userSettings = await getUserSettings(interaction.user.id)
-		if (!userSettings || userSettings.showSpoilers) {
+		if (userSettings?.showSpoilers === true) {
 			embed.setImage("https://storage.googleapis.com/jjk_bot_personal/ohmanohman.png")
 		}
 	}
