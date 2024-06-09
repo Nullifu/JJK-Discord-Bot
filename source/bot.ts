@@ -591,7 +591,6 @@ const commands = [
 					{ name: "Six Eyes", value: "Six Eyes" },
 					{ name: "Jogos (Fixed) Balls", value: "Jogos (Fixed) Balls" },
 					{ name: "Special-Grade Geo Locator", value: "Special-Grade Geo Locator" },
-					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" },
 					{ name: "Combined Disaster Curses Soul", value: "Combined Disaster Curses Soul" },
 					{ name: "Cursed Vote Chest", value: "Cursed Vote Chest" },
 					{ name: "Cursed Chest", value: "Cursed Chest" },

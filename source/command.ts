@@ -9241,6 +9241,25 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 	const opponentOption = interaction.options.get("opponent") || null
 	const opponent = opponentOption?.user
+	const userId = interaction.user.id
+
+	// Cooldown logic
+	const cooldownAmount = 10000
+	const now = Date.now()
+
+	if (cooldowns.has(userId)) {
+		const expirationTime = cooldowns.get(userId) + cooldownAmount
+		if (now < expirationTime) {
+			const timeLeft = (expirationTime - now) / 1000
+			await interaction.editReply({
+				content: `Please wait ${timeLeft.toFixed(1)} more seconds before using this command again.`
+			})
+			return
+		}
+	}
+
+	// Set the cooldown
+	cooldowns.set(userId, now)
 	if (!opponent) {
 		await interaction.editReply({ content: "Please mention a valid user to challenge." })
 		return
@@ -9872,9 +9891,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 			})
 		}
 	} catch (error) {
-		console.error("An error occurred:", error)
 		await interaction.editReply({
-			content: `An error occurred while waiting for ${opponent}'s response.`,
+			content: "The opponent did not respond in time. The challenge has been canceled.",
 			embeds: [],
 			components: []
 		})
