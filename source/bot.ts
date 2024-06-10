@@ -646,7 +646,14 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("technique")
 		.setDescription("Manage your techniques.")
-		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View your OWNED techniques."))
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("view")
+				.setDescription("View your OWNED techniques.")
+				.addUserOption(option =>
+					option.setName("user").setDescription("The user to display the techniques for").setRequired(false)
+				)
+		)
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName("unequip")
