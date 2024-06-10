@@ -129,6 +129,9 @@ export async function handleBossDeath(
 	if (opponent.name === "Dagon") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Dagon")
 	}
+	if (opponent.name === "Sukuna (Suppressed)") {
+		await addUserQuestProgress(interaction.user.id, "Training with Itadori", 1)
+	}
 	if (opponent.name === "Jogo") {
 		await addUserQuestProgress(interaction.user.id, "Disaster Curses", 1, "Defeat Jogo")
 	}
