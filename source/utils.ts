@@ -310,15 +310,13 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 
 	for (const participant of raidParty.participants) {
-		const { id, totalDamage: participantDamage } = participant
-		const damagePercentage = (participantDamage / totalDamage) * 100
+		const { id } = participant
 		const drops: RaidDrops[] = []
-		const raidTokens = Math.floor(damagePercentage * 0.35)
+		const raidTokens = 35 // Set a fixed amount of raid tokens
 		try {
 			const drop = getRaidBossDrop(raidBoss.name)
 			if (drop) {
-				const adjustedDropRate = Math.min(drop.dropRate * (1 + damagePercentage / 100), 0.5)
-				drops.push({ ...drop, dropRate: adjustedDropRate })
+				drops.push({ ...drop, dropRate: drop.dropRate })
 			}
 		} catch (error) {
 			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
@@ -329,8 +327,9 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 
 		for (const drop of drops) {
 			try {
+				const raidTokens = Math.floor(Math.random() * 50) + 1
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", 35)
+				await addItemToUserInventory(id, "Raid Token", raidTokens)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
