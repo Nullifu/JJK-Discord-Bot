@@ -437,7 +437,9 @@ const commands = [
 		.addBooleanOption(option => option.setName("showalerts").setDescription("Toggle alert notifications"))
 		.addBooleanOption(option => option.setName("acceptrades").setDescription("Toggle trade acceptance"))
 		.addBooleanOption(option => option.setName("showspoiler").setDescription("Toggle showing spoilers")),
-	new SlashCommandBuilder().setName("settingview").setDescription("Credits"),
+
+	new SlashCommandBuilder().setName("settingsview").setDescription("view settings"),
+
 	new SlashCommandBuilder()
 		.setName("pvp")
 		.setDescription("PvP related commands")
@@ -458,7 +460,7 @@ const commands = [
 
 	new SlashCommandBuilder()
 		.setName("tame")
-		.setDescription("Tame your shikigami!")
+		.setDescription("Tame a Shikigami")
 		.addStringOption(option =>
 			option
 				.setName("shikigami")
@@ -1012,7 +1014,7 @@ client.on("interactionCreate", async interaction => {
 			case "activeffects":
 				await handleViewEffectsCommand(chatInputInteraction)
 				break
-			case "settingview":
+			case "settingsview":
 				await handleViewSettingsCommand(chatInputInteraction)
 				break
 

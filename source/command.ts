@@ -5716,7 +5716,8 @@ export async function handleUnequipTechniqueCommand(interaction) {
 	}
 }
 export async function handleViewTechniquesCommand(interaction) {
-	const userId = interaction.user.id
+	const mentionedUser = interaction.options.getUser("user") || interaction.user
+	const userId = mentionedUser.id
 
 	try {
 		const userTechniques = await getUserTechniques(userId)
@@ -5724,42 +5725,87 @@ export async function handleViewTechniquesCommand(interaction) {
 		await updateUserCommandsUsed(interaction.user.id)
 
 		if (userTechniques.length === 0 && userHeavenlyTechniques.length === 0) {
-			return await interaction.reply({ content: "You do not own any techniques.", ephemeral: true })
+			return await interaction.reply({
+				content: `${mentionedUser.username} does not own any techniques.`,
+				ephemeral: true
+			})
 		}
 
-		const embed = new EmbedBuilder()
-			.setTitle("Your Owned Techniques")
-			.setDescription(
-				"These are the techniques you own. Use `/technique equip` to equip them, Owned techniques are shown in /jujutsustatus"
-			)
-			.setColor("#7289DA")
-			.setTimestamp()
-
 		const chunkSize = 10
-		const chunkedTechniques = chunkArray(userTechniques, chunkSize)
-		const chunkedHeavenlyTechniques = chunkArray(userHeavenlyTechniques, chunkSize)
+		const totalPages = Math.ceil((userTechniques.length + userHeavenlyTechniques.length) / chunkSize)
+		let currentPage = 0
 
-		chunkedTechniques.forEach((chunk, index) => {
-			const techniques = chunk.map((technique, i) => `${index * chunkSize + i + 1}. ${technique}`).join("\n")
-			embed.addFields({
-				name: `Normal Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
-				value: techniques
+		const generateEmbed = page => {
+			const embed = new EmbedBuilder()
+				.setTitle(`${mentionedUser.username}'s Owned Techniques`)
+				.setDescription(
+					"These are the techniques owned. Use `/technique equip` to equip them. Owned techniques are shown in `/jujutsustatus`."
+				)
+				.setColor("#7289DA")
+				.setTimestamp()
+
+			const allTechniques = [...userTechniques, ...userHeavenlyTechniques]
+			const chunkedTechniques = chunkArray(allTechniques, chunkSize)
+			const chunk = chunkedTechniques[page] || []
+
+			chunk.forEach((technique, i) => {
+				embed.addFields({
+					name: `${page * chunkSize + i + 1}. Technique`,
+					value: technique,
+					inline: false
+				})
+			})
+
+			embed.setFooter({ text: `Page ${page + 1} of ${totalPages}` })
+
+			return embed
+		}
+
+		const generateButtons = page => {
+			return new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId("previous")
+					.setLabel("Previous")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(page === 0),
+				new ButtonBuilder()
+					.setCustomId("next")
+					.setLabel("Next")
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(page === totalPages - 1)
+			)
+		}
+
+		const embedMessage = await interaction.reply({
+			embeds: [generateEmbed(currentPage)],
+			components: [generateButtons(currentPage)],
+			fetchReply: true
+		})
+
+		const filter = i => i.user.id === interaction.user.id
+		const collector = embedMessage.createMessageComponentCollector({ filter, time: 60000 })
+
+		collector.on("collect", async i => {
+			if (i.customId === "previous") {
+				currentPage = Math.max(currentPage - 1, 0)
+			} else if (i.customId === "next") {
+				currentPage = Math.min(currentPage + 1, totalPages - 1)
+			}
+
+			await i.update({
+				embeds: [generateEmbed(currentPage)],
+				components: [generateButtons(currentPage)]
 			})
 		})
 
-		chunkedHeavenlyTechniques.forEach((chunk, index) => {
-			const techniques = chunk.map((technique, i) => `${index * chunkSize + i + 1}. ${technique}`).join("\n")
-			embed.addFields({
-				name: `Heavenly Restriction Techniques (${index * chunkSize + 1}-${index * chunkSize + chunk.length})`,
-				value: techniques
-			})
+		collector.on("end", () => {
+			interaction.editReply({ components: [] })
 		})
 
-		await interaction.reply({ embeds: [embed] })
 		await postCommandMiddleware(interaction)
 	} catch (error) {
-		logger.error("Error fetching user techniques:", error)
-		await interaction.reply({ content: "An error occurred while fetching your techniques.", ephemeral: true })
+		console.error("Error fetching user techniques:", error)
+		await interaction.reply({ content: "An error occurred while fetching techniques.", ephemeral: true })
 	}
 }
 

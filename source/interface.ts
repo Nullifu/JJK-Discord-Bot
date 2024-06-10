@@ -42,6 +42,10 @@ export interface Quest {
 }
 
 export const gradeMappings = {
+	"special grade 1": 0,
+	"special grade 2": 0,
+	"special grade 3": 0,
+	"special grade 4": 0,
 	"special grade": 0,
 	"grade 1": 1,
 	"semi-grade 1": 1,

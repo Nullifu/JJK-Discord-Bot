@@ -80,6 +80,7 @@ export const items = [
 ]
 
 export const itemEffects = [
+	{ name: "Lucky Essence", description: "You're blessed by luck for the next 30 minutes! (1.25x drops)", time: 30 },
 	{ name: "Blessed", description: "**Blessed** Blessed by the gods!", time: 25 },
 	{ name: "Curse Repellent", description: "**Anti-Curse** Less likely to find curse spirit enemies!", time: 25 },
 	{
@@ -1630,7 +1631,9 @@ export const consumeables: Item1[] = [
 				const embedFinal = new EmbedBuilder()
 					.setColor("#006400")
 					.setTitle("Inate Essence")
-					.setDescription("You consume the essence.. Unleashing your Inate Power!")
+					.setDescription(
+						"You consume the essence.. Unleashing your Inate Power.. You've unlocked Realized Six Eyes transformation!"
+					)
 				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 			} catch (error) {
 				logger.error("Error applying item effect:", error)

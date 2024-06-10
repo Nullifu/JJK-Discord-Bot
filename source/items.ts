@@ -51,17 +51,16 @@ const weekendChances = {
 	grade1: 0.16,
 	specialGrade: 0.04
 }
+const regularItems = generateItems(defaultChances, weekendChances)
 
-//const regularItems = generateItems(defaultChances, weekendChances)
-
-const weekendItems = generateItems(defaultChances, weekendChances, true)
+//onst weekendItems = generateItems(defaultChances, weekendChances, true)
 
 export function getRandomItem() {
-	const totalChance = weekendItems.reduce((sum, item) => sum + item.chance, 0)
+	const totalChance = regularItems.reduce((sum, item) => sum + item.chance, 0)
 	const randomValue = Math.random() * totalChance
 
 	let cumulativeChance = 0
-	for (const item of weekendItems) {
+	for (const item of regularItems) {
 		cumulativeChance += item.chance
 		if (randomValue <= cumulativeChance) {
 			return item
