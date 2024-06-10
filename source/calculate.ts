@@ -297,7 +297,7 @@ export async function getBossDrops(userId, bossName) {
 
 	const userEffects = await getUserItemEffects(userId)
 	const luckyEffect = userEffects.find(effect => effect.effectName === "Lucky")
-	const dropIncreaseFactor = luckyEffect ? 0.1 : 0 // Increase drop probability by 10% if Lucky effect is active
+	const dropIncreaseFactor = luckyEffect ? 0.1 : 0
 
 	const obtainedDrops = []
 	const numberOfDrops = Math.floor(Math.random() * 3) + 1

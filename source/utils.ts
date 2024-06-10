@@ -312,7 +312,6 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 	for (const participant of raidParty.participants) {
 		const { id } = participant
 		const drops: RaidDrops[] = []
-		const raidTokens = 35 // Set a fixed amount of raid tokens
 		try {
 			const drop = getRaidBossDrop(raidBoss.name)
 			if (drop) {
@@ -322,7 +321,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
 		}
 
-		participantDrops[id] = { drops, raidTokens }
+		participantDrops[id] = { drops, raidTokens: Math.floor(Math.random() * 50) + 1 }
 		bossDrops.push(...drops)
 
 		for (const drop of drops) {
