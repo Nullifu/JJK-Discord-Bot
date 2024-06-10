@@ -214,7 +214,7 @@ export async function handleBossDeath(
 	await updateUserFightsWon(interaction.user.id)
 	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
-	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1, "Complete Task")
+	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Mission with Nobara", 1)

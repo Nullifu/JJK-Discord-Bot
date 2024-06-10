@@ -7866,7 +7866,7 @@ export async function handleShikigamiShop(interaction) {
 
 	try {
 		const embed = new EmbedBuilder()
-			.setColor("#FFD700") // Gold color
+			.setColor("#FFD700") 
 			.setTitle("✨ Shop Items ✨")
 			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
 			.setFooter({ text: "Use the buttons below to purchase items." })
@@ -8006,7 +8006,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 			;({ message, imageUrl, line } = getMentorDetails(mentor, hasAwakening))
 		}
 
-		// Additional comments from mentors based on user's clan
 		if (mentor === "Ryomen Sukuna" && userClanDetails.clan === "Limitless") {
 			line += "\n\nRyomen Sukuna: So, you are part of the Limitless clan? Interesting."
 		} else if (mentor === "Satoru Gojo" && userClanDetails.clan === "Demon Vessel") {
