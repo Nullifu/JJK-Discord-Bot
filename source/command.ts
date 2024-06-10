@@ -3499,7 +3499,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			const userState = idleDeathsGambleStates.get(collectedInteraction.user.id)
 			let jackpotMultiplier = 1
 			if (userState && userState.isJackpotMode) {
-				jackpotMultiplier = 1.5 // Increase the damage by 50% in Jackpot Mode
+				jackpotMultiplier = 1.5
 			}
 
 			const reducedDamage = damage * damageReduction * jackpotMultiplier

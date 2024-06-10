@@ -1618,7 +1618,7 @@ export const consumeables: Item1[] = [
 		}
 	},
 	{
-		itemName: "Inate Unleashed Essence",
+		itemName: "Unleashed Inate Essence",
 		description: "Luck Essence",
 		rarity: "Special",
 		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
