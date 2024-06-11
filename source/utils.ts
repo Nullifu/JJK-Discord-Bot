@@ -324,11 +324,12 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		participantDrops[id] = { drops, raidTokens: Math.floor(Math.random() * 50) + 1 }
 		bossDrops.push(...drops)
 
+		await addItemToUserInventory(id, "Raid Token", 50)
+
 		for (const drop of drops) {
 			try {
-				const raidTokens = Math.floor(Math.random() * 50) + 1
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", raidTokens)
+				await addItemToUserInventory(id, "Raid Token", 50)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)

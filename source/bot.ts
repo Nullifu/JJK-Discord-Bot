@@ -422,7 +422,6 @@ const commands = [
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the inventory for").setRequired(false)
 		),
-	new SlashCommandBuilder().setName("profileimage").setDescription("User Inventory"),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
 
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
