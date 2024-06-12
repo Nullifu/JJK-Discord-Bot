@@ -1496,6 +1496,12 @@ export const DOMAIN_INFORMATION = [
 
 export const TRANSFORMATIONS = [
 	{
+		name: "Strongest Will",
+		description: "**Satoru Gojo**.. Are you still here?.. I'm sorry.. I'm going to have to end this.",
+		image: "https://static1.srcdn.com/wordpress/wp-content/uploads/2024/05/yuta-in-gojo-s-body-as-seen-in-chapter-261-of-jujutsu-kaisen-1.jpg",
+		effects: "Return, 55% Damage Increase, 5% Damage Reduction"
+	},
+	{
 		name: "Curse King",
 		description: "AH I KNEW IT THE LIGHT FEELS BEST IN THE FLESH!",
 		image: "https://media1.tenor.com/m/qkbOyZZSWxAAAAAd/sukuna-laugh.gif",

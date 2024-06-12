@@ -1510,6 +1510,41 @@ export interface Item1 {
 
 export const consumeables: Item1[] = [
 	{
+		itemName: "Kenjaku's Brain",
+		description: "Kenjaku's Brain",
+		rarity: "Special",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("You stare at yourself in the mirror...")
+				.setDescription("You feel enlightened by the brain of Kenjaku...")
+			await interaction.followUp({ embeds: [embedFirst] })
+
+			await new Promise(resolve => setTimeout(resolve, 2000))
+
+			const embedSecond = new EmbedBuilder()
+				.setColor("#8b0000")
+				.setTitle("Power or Peril?")
+				.setDescription("With a decisive motion, you touch the brain..")
+			await interaction.editReply({ embeds: [embedSecond] })
+
+			await updateUserUnlockedTransformations(interaction.user.id, ["Strongest Will"])
+
+			await new Promise(resolve => setTimeout(resolve, 4000))
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Power Unleashed")
+				.setDescription(
+					"You consume the brain, It grants you the power of the Strongest Will Transformation, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - Strongest Will Transformation."
+				)
+				.setImage(embedFirst.data.image?.url)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
 		itemName: "Simple Domain Essence",
 		description: "Simple Domain Essence",
 		rarity: "Special",

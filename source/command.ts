@@ -5906,6 +5906,7 @@ function createTransformationSelectMenu(transformations) {
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
 	const raidShopItems = [
+		{ name: "Kenjaku's Brain", price: 150000, rarity: "Common", maxPurchases: 1 },
 		{ name: "Jogo's Testicle Torsion Technique", price: 1000, rarity: "Common", maxPurchases: 1 },
 		{ name: "Heian Era Awakening", price: 450, rarity: "Common", maxPurchases: 1 },
 		{ name: "Satoru Gojo's Ashy Remains", price: 100, rarity: "Rare" }
