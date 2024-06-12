@@ -316,6 +316,8 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 			const drop = getRaidBossDrop(raidBoss.name)
 			if (drop) {
 				drops.push({ ...drop, dropRate: drop.dropRate })
+			} else {
+				console.warn(`No drop returned for raid boss ${raidBoss.name}`)
 			}
 		} catch (error) {
 			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)

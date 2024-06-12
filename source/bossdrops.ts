@@ -302,7 +302,7 @@ export function getRaidBossDrop(bossName: string): RaidDrops {
 		throw new Error(`No drops found for raid boss "${bossName}"`)
 	}
 
-	const randomNumber = Math.random() * 100
+	const randomNumber = Math.random()
 	let cumulativeDropRate = 0
 
 	for (const drop of drops) {
