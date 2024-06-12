@@ -1313,13 +1313,13 @@ export const questsArray = [
 	{
 		name: "Mission with Nobara",
 		description:
-			"Nobara cant really see anymore so she needs your help to find her eyes. Defeat 10 foes and find her eyes!",
+			"Nobara cant really see anymore so she needs your help to find her eyes. Defeat 5 foes and find her eyes!",
 		coins: 20000,
 		experience: 320,
-		item: "Sacred Eye",
-		itemQuantity: 6,
-		task: "Defeat 10 foes and find Nobara's eyes!",
-		totalProgress: 10,
+		items: { "Sacred Eye": 1 },
+		itemQuantity: 2,
+		task: "Defeat 5 foes and find Nobara's eyes!",
+		totalProgress: 5,
 		instanceId: "uniqueInstanceId"
 	},
 	{
