@@ -80,7 +80,7 @@ export const items = [
 ]
 
 export const itemEffects = [
-	{ name: "Lucky Essence", description: "You're blessed by luck for the next 30 minutes! (1.25x drops)", time: 30 },
+	{ name: "Luck Essence", description: "You're blessed by luck for the next 30 minutes! (1.25x drops)", time: 30 },
 	{ name: "Blessed", description: "**Blessed** Blessed by the gods!", time: 25 },
 	{ name: "Curse Repellent", description: "**Anti-Curse** Less likely to find curse spirit enemies!", time: 25 },
 	{
