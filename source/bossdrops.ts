@@ -290,6 +290,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 const raidBossDrops: { [bossName: string]: RaidDrops[] } = {
 	"King Of Curses": [
 		{ name: "Sukuna Finger", rarity: "common", dropRate: 0.5 },
+		{ name: "Ryomen Sukuna's How to glaze Gege Guide", rarity: "common", dropRate: 0.2 },
 		{ name: "Heian Era Awakening Remnant", rarity: "rare", dropRate: 0.2 },
 		{ name: "Satoru Gojo's Ashy Remains", rarity: "rare", dropRate: 0.1 },
 		{ name: "Heian Era Awakening", rarity: "special grade", dropRate: 0.01 }
