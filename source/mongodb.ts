@@ -4961,6 +4961,18 @@ export async function handleTradeAcceptanceWithLock(tradeId, userId) {
 	}
 }
 
+// update owner logs
+export async function updateOwnerLogs(userId: string, logs: string[]): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		await usersCollection.updateOne({ id: userId }, { $set: { logs } })
+	} catch (error) {
+		console.error("Error updating owner logs:", error)
+		throw error
+	}
+}
+
 //await createDeveloperAlert("Sorry for all the bugs lately, I'm working on fixing them now. Thanks for your patience!")
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

@@ -100,13 +100,7 @@ import {
 	initializeDatabase,
 	updateBalance
 } from "./mongodb.js"
-import {
-	handleADDTECHNIQUE,
-	handleGiveItemCommand,
-	handleGiveItemCommand11,
-	handleREMOVE,
-	handleUpdateBalanceCommand
-} from "./owner.js"
+import { handleADDTECHNIQUE, handleGiveItemCommand, handleUpdateBalanceCommand } from "./owner.js"
 import { getRandomQuote } from "./shikigami.js"
 
 // Configure log4js
@@ -1049,10 +1043,6 @@ client.on("interactionCreate", async interaction => {
 			case "work":
 				await handleWorkCommand(chatInputInteraction)
 				break
-			case "owner-giveallitem":
-				await handleGiveItemCommand11(chatInputInteraction)
-				break
-
 			case "selectitle":
 				await handleTitleSelectCommand(chatInputInteraction)
 				break
@@ -1100,9 +1090,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "owner-givemoney":
 				await handleUpdateBalanceCommand(chatInputInteraction)
-				break
-			case "owner-removemoney":
-				await handleREMOVE(chatInputInteraction)
 				break
 			case "owner-addtechnique":
 				await handleADDTECHNIQUE(chatInputInteraction)

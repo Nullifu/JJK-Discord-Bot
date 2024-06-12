@@ -5901,58 +5901,7 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
-const userVoteTimestamps = {}
 
-export async function handleClaimVoteRewards(interaction) {
-	await updateUserCommandsUsed(interaction.user.id)
-	const Topgg = import("@top-gg/sdk")
-	const userId = interaction.user.id
-	const top = new (await Topgg).Api(process.env.TOPGG)
-
-	await interaction.deferReply()
-
-	const hasVoted = await top.hasVoted(userId)
-
-	if (!hasVoted) {
-		const voteEmbed = new EmbedBuilder()
-			.setTitle("Vote for Rewards!")
-			.setDescription("It seems you haven't voted yet. Support the bot and earn rewards by voting here:")
-		const voteButton = new ButtonBuilder()
-			.setLabel("Vote Now")
-			.setStyle(ButtonStyle.Link)
-			.setURL("https://top.gg/bot/991443928790335518/vote") // Replace with your bot's voting link
-		const row = new ActionRowBuilder().addComponents(voteButton)
-		await interaction.editReply({ embeds: [voteEmbed], components: [row] })
-		return
-	}
-
-	const lastVoteTime = userVoteTimestamps[userId]
-	const currentTime = Date.now()
-
-	if (lastVoteTime && currentTime - lastVoteTime < 12 * 60 * 60 * 1000) {
-		const timeLeft = (12 * 60 * 60 * 1000 - (currentTime - lastVoteTime)) / 3600000
-		const cooldownEmbed = new EmbedBuilder()
-			.setTitle("Vote Cooldown")
-			.setDescription(
-				`You have already claimed your vote rewards. Please wait ${timeLeft.toFixed(
-					1
-				)} hours before voting again.`
-			)
-		await interaction.editReply({ embeds: [cooldownEmbed] })
-		return
-	}
-
-	userVoteTimestamps[userId] = currentTime
-
-	const voteReward = 100000
-	await updateBalance(userId, voteReward)
-	await addItemToUserInventory(userId, "Cursed Vote Chest", 1)
-
-	const claimedEmbed = new EmbedBuilder()
-		.setTitle("Rewards Claimed!")
-		.setDescription(`You have claimed your vote rewards of ${voteReward} coins! + 1 Cursed Vote Chest`)
-	await interaction.followUp({ embeds: [claimedEmbed] })
-}
 
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
@@ -5966,8 +5915,8 @@ export async function handleShopCommand(interaction) {
 		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
 	]
 	const essenceShopItems = [
-		{ name: "RCT Essence", price: 350000000, rarity: "Special Grade" },
-		{ name: "Simple Domain Essence", price: 550000000, rarity: "Special Grade" },
+		{ name: "RCT Essence", price: 225000000, rarity: "Special Grade" },
+		{ name: "Simple Domain Essence", price: 350000000, rarity: "Special Grade" },
 		{ name: "Luck Essence", price: 12500000, rarity: "Special Grade" }
 	]
 
