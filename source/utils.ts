@@ -305,7 +305,7 @@ export async function createRaidEmbed(
 }
 export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
 	const bossDrops: RaidDrops[] = []
-	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number } } = {}
+	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number; coins: number } } = {}
 
 	const totalDamage = raidParty.participants.reduce((sum, participant) => sum + participant.totalDamage, 0)
 
@@ -323,7 +323,11 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
 		}
 
-		participantDrops[id] = { drops, raidTokens: Math.floor(Math.random() * 50) + 1 }
+		participantDrops[id] = {
+			drops,
+			raidTokens: Math.floor(Math.random() * 50) + 1,
+			coins: Math.floor(Math.random() * 70000) + 20000
+		}
 		bossDrops.push(...drops)
 
 		await addItemToUserInventory(id, "Raid Token", 50)
@@ -395,7 +399,7 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		.setDescription("The raid has ended. Here are the results:")
 
 	for (const participant of raidParty.participants) {
-		const { drops, raidTokens } = participantDrops[participant.id]
+		const { drops, raidTokens, coins } = participantDrops[participant.id]
 
 		// Group drops by rarity
 		const groupedDrops: { [rarity: string]: RaidDrops[] } = {}
@@ -428,6 +432,11 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 			{
 				name: "Raid Tokens Earned",
 				value: `${raidTokens}`,
+				inline: true
+			},
+			{
+				name: "Coins Earned",
+				value: `${coins}`,
 				inline: true
 			}
 		)
