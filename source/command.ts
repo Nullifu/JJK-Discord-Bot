@@ -8840,7 +8840,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				logger.debug("Executing pending actions")
 				for (const action of updatedRaidParty.pendingActions) {
 					console.debug("Processing action:", action)
-					if (action.technique === "World Cutting Slash") {
+					if (action.technique === "World Cutting Slash skibidi rizz tester mode oh yeah gyatt boy") {
 						const damage = await executeSpecialRaidBossTechnique({
 							collectedInteraction: interaction,
 							techniqueName: action.technique,
