@@ -1538,7 +1538,7 @@ export const consumeables: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Power Unleashed")
 				.setDescription(
-					"You consume the brain, It grants you the power of the Strongest Will Transformation, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - Strongest Will Transformation."
+					"You consume the brain, It grants you the power of the Strongest Will Transformation, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - Strongest Will Transformation.\n\n**This transformation may leed to spoilers from the manga, be aware of this.**"
 				)
 				.setImage(embedFirst.data.image?.url)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
