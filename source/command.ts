@@ -5901,8 +5901,6 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
-
-
 export async function handleShopCommand(interaction) {
 	const shopItems = await getAllShopItems()
 	const raidShopItems = [
@@ -5919,6 +5917,10 @@ export async function handleShopCommand(interaction) {
 		{ name: "RCT Essence", price: 225000000, rarity: "Special Grade" },
 		{ name: "Simple Domain Essence", price: 350000000, rarity: "Special Grade" },
 		{ name: "Luck Essence", price: 12500000, rarity: "Special Grade" }
+	]
+	const boosterShopItems = [
+		{ name: "Basic Booster Bundle", price: 1, rarity: "Special Grade" },
+		{ name: "Booster Shikigami Essence", price: 2, rarity: "Special Grade" }
 	]
 
 	const balance = await getBalance(interaction.user.id)
@@ -5979,6 +5981,12 @@ export async function handleShopCommand(interaction) {
 					description: "View items in the essence shop",
 					value: "essence_shop",
 					emoji: "✨"
+				},
+				{
+					label: "Booster Shop",
+					description: "View items in the booster shop",
+					value: "booster_shop",
+					emoji: "🚀"
 				}
 			])
 
@@ -6023,6 +6031,9 @@ export async function handleShopCommand(interaction) {
 			} else if (selectedShop === "essence_shop") {
 				selectedShopItems = essenceShopItems
 				formattedShopName = "Essence Shop"
+			} else if (selectedShop === "booster_shop") {
+				selectedShopItems = boosterShopItems
+				formattedShopName = "Booster Shop"
 			}
 
 			const itemsField = selectedShopItems
@@ -6102,6 +6113,8 @@ export async function handleShopCommand(interaction) {
 				selectedShopItems = shikigamiShopItems
 			} else if (shopType === "essence") {
 				selectedShopItems = essenceShopItems
+			} else if (shopType === "booster") {
+				selectedShopItems = boosterShopItems
 			}
 
 			if (itemIndex >= 0 && itemIndex < selectedShopItems.length) {
@@ -6146,6 +6159,20 @@ export async function handleShopCommand(interaction) {
 					}
 
 					await removeItemFromUserInventory(userId, "Raid Token", itemToBuy.price)
+				} else if (shopType === "booster") {
+					const userInventory = await getUserInventory(userId)
+					const raidTokenItem = userInventory.find(item => item.name === "Booster Token")
+					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
+
+					if (raidTokens < itemToBuy.price) {
+						await i.followUp({
+							content: `You do not have enough Booster Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price.toLocaleString("en-US")}, You have: ${raidTokens.toLocaleString("en-US")}`,
+							ephemeral: true
+						})
+						return
+					}
+
+					await removeItemFromUserInventory(userId, "Booster Token", itemToBuy.price)
 				} else {
 					const balance = await getBalance(userId)
 
@@ -7816,7 +7843,7 @@ export async function handleShikigamiShop(interaction) {
 
 	try {
 		const embed = new EmbedBuilder()
-			.setColor("#FFD700") 
+			.setColor("#FFD700")
 			.setTitle("✨ Shop Items ✨")
 			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
 			.setFooter({ text: "Use the buttons below to purchase items." })
