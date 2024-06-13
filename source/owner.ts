@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, InteractionResponse } from "discord.js"
+import { ChatInputCommandInteraction, InteractionResponse, TextChannel } from "discord.js"
 import logger, { createClient } from "./bot.js"
 import { addItemToUserInventory, updateBalance, updateOwnerLogs, updateUserActiveTechniques } from "./mongodb.js"
 
@@ -33,12 +33,55 @@ export async function handleGiveItemCommand(
 	}
 }
 
+const authorizedUserId = ["292385626773258240", "723198209979187291"]
+const commandUsage = {
+	count: 0,
+	lastReset: Date.now()
+}
+const MAX_USAGE = 10
+const RESET_INTERVAL = 60000
+const LOCK_DURATION = 60000
+let isLocked = false
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let lockTimeout: NodeJS.Timeout
+
+const LOG_CHANNEL_ID = "1250839808452984912"
+
 export async function handleUpdateBalanceCommand(
 	interaction: ChatInputCommandInteraction
 ): Promise<InteractionResponse<boolean>> {
-	const authorizedUserId = "292385626773258240"
+	const currentTime = Date.now()
 
-	if (interaction.user.id !== authorizedUserId) {
+	if (isLocked) {
+		return interaction.reply({
+			content: "This command is currently locked due to excessive use. Please try again later.",
+			ephemeral: true
+		})
+	}
+
+	if (currentTime - commandUsage.lastReset > RESET_INTERVAL) {
+		commandUsage.count = 0
+		commandUsage.lastReset = currentTime
+	}
+
+	commandUsage.count++
+
+	if (commandUsage.count > MAX_USAGE) {
+		isLocked = true
+		lockTimeout = setTimeout(() => {
+			isLocked = false
+			commandUsage.count = 0
+			commandUsage.lastReset = Date.now()
+		}, LOCK_DURATION)
+
+		await updateOwnerLogs(interaction.user.id, ["Command locked due to excessive use"])
+		return interaction.reply({
+			content: "Command locked due to excessive use. Please try again later.",
+			ephemeral: true
+		})
+	}
+
+	if (!authorizedUserId.includes(interaction.user.id)) {
 		await updateOwnerLogs(interaction.user.id, ["Unauthorized attempt to use updateBalance command"])
 		return interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true })
 	}
@@ -49,7 +92,7 @@ export async function handleUpdateBalanceCommand(
 	// Validate input parameters
 	if (!targetUserId || !amount) {
 		await updateOwnerLogs(interaction.user.id, ["Invalid parameters provided for updateBalance command"])
-		return await interaction.reply({
+		return interaction.reply({
 			content: "Please provide a valid target user ID and the amount to adjust.",
 			ephemeral: true
 		})
@@ -72,6 +115,15 @@ export async function handleUpdateBalanceCommand(
 		await updateOwnerLogs(interaction.user.id, [
 			`Successfully adjusted balance for user ${targetUserId} by ${amount}`
 		])
+
+		// Log the command use
+		const logChannel = (await client1.channels.fetch(LOG_CHANNEL_ID)) as TextChannel
+		if (logChannel) {
+			await logChannel.send(
+				`Command used by <@${interaction.user.id}> to adjust balance for user ${targetUserId} by ${amount}.`
+			)
+		}
+
 		return interaction.reply({
 			content: `Successfully adjusted balance for user ${targetUserId} by ${amount}.`,
 			ephemeral: true
