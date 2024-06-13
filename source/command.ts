@@ -211,7 +211,6 @@ import {
 	updateUserInateClan,
 	updateUserJob,
 	updateUserMentor,
-	updateUserReverseCursedTechniqueExperience,
 	updateUserReverseCursedTechniqueStats,
 	updateUserSettings,
 	updateUserShikigami,
@@ -2484,6 +2483,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					})
 					return
 				}
+
 				const rctLevel = rctStats.level
 				let healthRegeneration = rctLevel * 10
 				if (rctLevel === 0) {
@@ -2501,11 +2501,14 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 				// Gain RCT experience
 				const rctExperience = Math.floor(Math.random() * (60 - 10 + 1) + 10)
-				await updateUserReverseCursedTechniqueExperience(interaction.user.id, rctExperience)
+				rctStats.experience += rctExperience
+				await updateUserReverseCursedTechniqueStats(interaction.user.id, rctStats)
 
-				// Check if RCT experience is 100 and level up
-				if (rctExperience >= 100) {
+				// Check if RCT experience is enough to level up
+				const experienceRequired = 100 * Math.pow(1.1, rctLevel)
+				if (rctStats.experience >= experienceRequired) {
 					rctStats.level += 1
+					rctStats.experience -= experienceRequired
 					await updateUserReverseCursedTechniqueStats(interaction.user.id, rctStats)
 				}
 
@@ -2518,7 +2521,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					.setDescription(`You have regenerated ${healthRegeneration} health`)
 					.addFields({ name: "New Health", value: `:blue_heart: ${newHealth.toString()}`, inline: true })
 					.setImage("https://storage.googleapis.com/jjk_bot_personal/ezgif-5-5cfb8a9651.gif")
-					.setFooter({ text: `RCT Level: ${rctLevel}` })
+					.setFooter({ text: `RCT Level: ${rctStats.level}` })
 
 				await collectedInteraction.editReply({ embeds: [embed], components: [] })
 
