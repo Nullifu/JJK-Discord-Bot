@@ -707,14 +707,7 @@ const commands = [
 			option.setName("userid").setDescription("ID of the user to give the money to").setRequired(true)
 		)
 		.addIntegerOption(option => option.setName("amount").setDescription("Amount to give").setRequired(true)),
-	new SlashCommandBuilder()
-		.setName("owner-removemoney")
-		.setDescription("Remove moneys (Restricted to Bot Owner)")
-		.setDefaultMemberPermissions(0)
-		.addStringOption(option =>
-			option.setName("userid").setDescription("ID of the user to REMOVE the money to").setRequired(true)
-		)
-		.addIntegerOption(option => option.setName("amount").setDescription("amount to remove").setRequired(true)),
+
 	new SlashCommandBuilder()
 		.setName("owner-addtechnique")
 		.setDescription("Add or update a user's active techniques")

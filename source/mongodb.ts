@@ -12,7 +12,16 @@ import { v4 as uuidv4 } from "uuid"
 import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
 import logger, { createClient } from "./bot.js"
 import { handleGiveawayEnd } from "./command.js"
-import { BossData, ItemEffect, TradeRequest, User, UserProfile, healthMultipliersByGrade } from "./interface.js"
+import {
+	BossData,
+	ItemEffect,
+	LogEntry,
+	TradeRequest,
+	User,
+	UserLog,
+	UserProfile,
+	healthMultipliersByGrade
+} from "./interface.js"
 import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
 
 const client1 = createClient()
@@ -4962,11 +4971,17 @@ export async function handleTradeAcceptanceWithLock(tradeId, userId) {
 }
 
 // update owner logs
-export async function updateOwnerLogs(userId: string, logs: string[]): Promise<void> {
+export async function updateOwnerLogs(userId: string, logData: LogEntry): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection("ownerLogs")
-		await usersCollection.updateOne({ id: userId }, { $set: { logs } })
+		const usersCollection = database.collection<UserLog>("ownerLogs")
+
+		// Use $push to append the new log entry to the logs array
+		await usersCollection.updateOne(
+			{ id: userId },
+			{ $push: { logs: logData } },
+			{ upsert: true } // Create a new document if one doesn't exist
+		)
 	} catch (error) {
 		console.error("Error updating owner logs:", error)
 		throw error

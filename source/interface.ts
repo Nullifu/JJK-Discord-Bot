@@ -41,6 +41,25 @@ export interface Quest {
 	instanceId: string
 }
 
+export interface LogEntry {
+	guildId: string
+	channelId: string
+	messageId: string
+	command: string
+	item?: string
+	quantity?: number
+	reason?: string
+	user: string
+	userId: string
+	targetUserId?: string
+	time: string
+}
+
+export interface UserLog {
+	id: string
+	logs: LogEntry[]
+}
+
 export const gradeMappings = {
 	"special grade 1": 0,
 	"special grade 2": 0,
