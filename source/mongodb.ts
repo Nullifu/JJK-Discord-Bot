@@ -4965,7 +4965,7 @@ export async function handleTradeAcceptanceWithLock(tradeId, userId) {
 export async function updateOwnerLogs(userId: string, logs: string[]): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
+		const usersCollection = database.collection("ownerLogs")
 		await usersCollection.updateOne({ id: userId }, { $set: { logs } })
 	} catch (error) {
 		console.error("Error updating owner logs:", error)

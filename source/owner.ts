@@ -38,13 +38,11 @@ export async function handleUpdateBalanceCommand(
 ): Promise<InteractionResponse<boolean>> {
 	const authorizedUserId = "292385626773258240"
 
-	// Authorization check
 	if (interaction.user.id !== authorizedUserId) {
 		await updateOwnerLogs(interaction.user.id, ["Unauthorized attempt to use updateBalance command"])
 		return interaction.reply({ content: "You are not authorized to use this command.", ephemeral: true })
 	}
 
-	// Get the target user ID and amount from interaction options
 	const targetUserId = interaction.options.getString("userid")
 	const amount = interaction.options.getInteger("amount")
 
@@ -79,7 +77,6 @@ export async function handleUpdateBalanceCommand(
 			ephemeral: true
 		})
 	} catch (error) {
-		// Log and report the error
 		logger.error("Error in updateBalance command", error)
 		await updateOwnerLogs(interaction.user.id, [`Error in updateBalance command: ${error.message}`])
 		return interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
