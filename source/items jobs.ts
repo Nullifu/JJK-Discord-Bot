@@ -2178,6 +2178,27 @@ export const items1: Item1[] = [
 		}
 	},
 	{
+		itemName: "Basic Booster Bundle",
+		description: "Basic Booster Bundle",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addItemToUserInventory(interaction.user.id, "Sukuna Finger", 12)
+			await updateBalance(interaction.user.id, 2000000)
+			await updateUserUnlockedTitles(interaction.user.id, ["Booster!"])
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Opening...")
+				.setDescription(
+					"You open the Basic Booster Bundle and get! 12x Sukuna Finger, + 2,000,000 Coins! And a free title! [ Booster! ]"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
 		itemName: "Starter Bundle",
 		description: "Starter Bundle",
 		rarity: "Special",

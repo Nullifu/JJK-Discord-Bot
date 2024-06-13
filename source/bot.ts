@@ -582,7 +582,8 @@ const commands = [
 					{ name: "Blessful Charm", value: "Blessful Charm" },
 					{ name: "Normal Box", value: "Normal Box" },
 					{ name: "Extreme Box", value: "Extreme Box" },
-					{ name: "Special Grade Box", value: "Special Grade Box" }
+					{ name: "Special Grade Box", value: "Special Grade Box" },
+					{ name: "Basic Booster Bundle", value: "Basic Booster Bundle" }
 				)
 		)
 		.addStringOption(option =>
