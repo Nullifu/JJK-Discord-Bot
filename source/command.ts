@@ -7931,7 +7931,17 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 	try {
 		const userId = interaction.user.id
 		const mentor = await getUserMentor(userId)
+
+		// Check if the user has a mentor
+		if (!mentor) {
+			await interaction.reply({
+				content: "You currently have no mentor assigned.",
+				ephemeral: true
+			})
+			return
+		}
 		const awakening = await getUserAwakening(userId)
+
 		const hasAwakening = awakening !== null
 
 		const currentQuest = await getCurrentCommunityQuest()
