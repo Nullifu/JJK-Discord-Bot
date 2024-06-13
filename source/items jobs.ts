@@ -1576,7 +1576,7 @@ export const consumeables: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Power Unleashed")
 				.setDescription(
-					"You consume the essence, It grants you the power of the Simple Domain Technique, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - RCT, Level One."
+					"You consume the essence, It grants you the power of the Simple Domain Technique, You've used a forbidden essence. Skipping the process of learning the technique...\nGained: - Simple Domain Technique."
 				)
 				.setImage(embedFirst.data.image?.url)
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
