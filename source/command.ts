@@ -6094,7 +6094,7 @@ export async function handleShopCommand(interaction) {
 			await i.deferUpdate()
 
 			const userId = i.user.id
-			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence)_shop_(\d+)$/)
+			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence|booster)_shop_(\d+)$/)
 
 			if (!customIdMatch) {
 				logger.error("Invalid custom ID format:", i.customId)
