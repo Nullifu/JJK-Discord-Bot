@@ -5937,6 +5937,7 @@ export async function handleShopCommand(interaction) {
 		const userInventory = await getUserInventory(interaction.user.id)
 		const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
 		const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
+		const boosterTokens = userInventory.find(item => item.name === "Booster Token")?.quantity || 0
 
 		const embed = new EmbedBuilder()
 			.setColor("#FFD700")
@@ -6055,6 +6056,10 @@ export async function handleShopCommand(interaction) {
 			if (selectedShop === "raid_shop") {
 				embed.setDescription(
 					`\n💰 Your balance: **${balance2}**\n🎟️ Your Raid Tokens: **${raidTokens}**\nCheck out these limited-time offers:`
+				)
+			} else if (selectedShop === "booster_shop") {
+				embed.setDescription(
+					`\n💰 Your balance: **${balance2}**\n🎟️ Your Booster Tokens: **${boosterTokens}**\nCheck out these limited-time offers:`
 				)
 			} else {
 				embed.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
@@ -7932,7 +7937,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		const userId = interaction.user.id
 		const mentor = await getUserMentor(userId)
 
-		// Check if the user has a mentor
 		if (!mentor) {
 			await interaction.reply({
 				content: "You currently have no mentor assigned.",
