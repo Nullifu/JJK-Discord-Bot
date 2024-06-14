@@ -1510,6 +1510,35 @@ export interface Item1 {
 
 export const consumeables: Item1[] = [
 	{
+		itemName: "Booster Shikigami Essence",
+		description: "Booster Shikigami Essence",
+		rarity: "Special",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			const newShikigami: UserShikigami = {
+				name: "Booster Buddy",
+				experience: 0,
+				tier: 1,
+				tamedAt: new Date(),
+				hygiene: 100,
+				hunger: 100,
+				friendship: 100
+			}
+			await updateUserShikigami(interaction.user.id, newShikigami)
+			await updateUserUnlockedTitles(interaction.user.id, ["Booster Shikigami Tamer"])
+			await updateBalance(interaction.user.id, 25000000)
+
+			const embedFirst = new EmbedBuilder()
+				.setColor("#4b0082")
+				.setTitle("Booster Essence")
+				.setDescription(
+					"You consume the booster essence.. Giving you a new shikigami and 25M coins + A new title!"
+				)
+			await interaction.followUp({ embeds: [embedFirst] })
+		}
+	},
+	{
 		itemName: "Kenjaku's Brain",
 		description: "Kenjaku's Brain",
 		rarity: "Special",
