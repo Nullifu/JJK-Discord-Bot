@@ -8489,6 +8489,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 20000 })
 
 	const specialUserId = "292385626773258240"
+	const partyCreatorId = interaction.user.id
 
 	const raidParty: RaidParty = {
 		raidBossId: currentRaidBoss._id,
