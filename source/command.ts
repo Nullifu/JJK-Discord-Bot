@@ -575,8 +575,8 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 				.setTitle(isTutorial ? "Tutorial Dig Results" : "Digging Results")
 				.setDescription(
 					isTutorial
-						? `You  \`⌬${coinsFound.toLocaleString}\` coins! **You also found a ${itemFound.name}, Handy!**`
-						: `You unearthed \`⌬${coinsFound.toLocaleString}\` coins! **You also found a ${itemFound.name}!**`
+						? `You  \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}, Handy!**`
+						: `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`
 				)
 				.setTimestamp()
 				.setFooter({ text: getRandomQuote() })
@@ -2126,7 +2126,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 
 	const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
 
-	// Create embed
 	const primaryEmbed = new EmbedBuilder()
 		.setColor(cursedEnergyPurple)
 		.setTitle("Cursed Battle!")
@@ -6308,7 +6307,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		{
 			label: "Domain Expansion",
 			value: "domain",
-			description: domainname || "🔒 Domain Not Unlocked", // Default value if undefined
+			description: domainname || "🔒 Domain Not Unlocked", 
 			emoji: {
 				name: "1564maskedgojode",
 				id: "1220626413141622794"
@@ -6317,7 +6316,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		{
 			label: "Transform",
 			value: "transform",
-			description: transformname || "No transformation available", // Default value if undefined
+			description: transformname || "No transformation available", 
 			emoji: {
 				name: "a:blueflame",
 				id: "990539090418098246"
@@ -6327,7 +6326,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	]
 
 	const selectMenu = new SelectMenuBuilder()
-		.setCustomId("select-battle-option")
+		.setCustomId("select-battle-option-tame")
 		.setPlaceholder("Choose your technique")
 		.addOptions(battleOptions)
 
@@ -6379,7 +6378,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 
 	// Handle user selection
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
-		filter: inter => inter.customId === "select-battle-option" && inter.message.interaction.id === interaction.id,
+		filter: inter => inter.customId === "select-battle-option-tame" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
 		time: 300000 // 60 seconds
 	})
