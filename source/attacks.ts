@@ -1568,6 +1568,12 @@ export const TRANSFORMATIONS = [
 		effects: "Rubber, 35% Damage Increase, 20% Damage Reduction"
 	},
 	{
+		name: "SSJ4 Limit Breaker",
+		description: "I'll break through my limits.. And go even further beyond!",
+		image: "https://media1.tenor.com/m/EQwPjqc7vdUAAAAd/goku-dragon-ball.gif",
+		effects: "Limit Breaker, 35% Damage Increase, 20% Damage Reduction"
+	},
+	{
 		name: "Realized Six Eyes",
 		description: "Throughout heaven and earth, I alone am the honored one.",
 		image: "https://media1.tenor.com/m/-MHQstj5j68AAAAC/jujutsu-kaisen-gojo.gif",

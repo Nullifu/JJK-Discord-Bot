@@ -1533,7 +1533,7 @@ export const consumeables: Item1[] = [
 				.setColor("#4b0082")
 				.setTitle("Booster Essence")
 				.setDescription(
-					"You consume the booster essence.. Giving you a new shikigami and 25M coins + A new title!"
+					"You consume the booster essence.. Giving you a new shikigami and 25M coins + A new title.. Snazzy!"
 				)
 			await interaction.followUp({ embeds: [embedFirst] })
 		}

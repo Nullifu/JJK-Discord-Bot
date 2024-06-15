@@ -398,7 +398,6 @@ const commands = [
 		.addUserOption(option =>
 			option.setName("user").setDescription("The user to display the profile for").setRequired(false)
 		),
-	new SlashCommandBuilder().setName("achievements").setDescription("Displays your achievements."),
 	new SlashCommandBuilder().setName("shop").setDescription("Daily Shop"),
 	new SlashCommandBuilder().setName("ping").setDescription("Latency Check"),
 	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
@@ -409,7 +408,6 @@ const commands = [
 	new SlashCommandBuilder().setName("update").setDescription("Recent bot updates!"),
 	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
-	new SlashCommandBuilder().setName("selectitle").setDescription("Choose a Title"),
 	new SlashCommandBuilder()
 		.setName("inventory")
 		.setDescription("User Inventory")

@@ -18,6 +18,7 @@ import {
 	getUserTutorialState,
 	getUserUnlockedTransformations,
 	markSpecialDropAsClaimed,
+	updateBalance,
 	updateRaidBossCurrentHealth,
 	updateRaidBossPhase,
 	updateUserUnlockedTransformations
@@ -330,12 +331,13 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 		}
 		bossDrops.push(...drops)
 
-		await addItemToUserInventory(id, "Raid Token", 50)
+		await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
 
 		for (const drop of drops) {
 			try {
+				await updateBalance(id, participantDrops[id].coins)
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", 50)
+				await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
