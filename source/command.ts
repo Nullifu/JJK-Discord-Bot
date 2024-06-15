@@ -2750,6 +2750,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "NBA Technique: Dunked On") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 28,
+					imageUrl: "https://media1.tenor.com/m/qEOBXVHe_0EAAAAd/skating-basketball.gif",
+					description: "I'm gonna dunk on you!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			} else if (selectedValue === "Prayer Song") {
 				damage = await executeSpecialTechnique({
 					collectedInteraction,
@@ -6307,7 +6319,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		{
 			label: "Domain Expansion",
 			value: "domain",
-			description: domainname || "🔒 Domain Not Unlocked", 
+			description: domainname || "🔒 Domain Not Unlocked",
 			emoji: {
 				name: "1564maskedgojode",
 				id: "1220626413141622794"
@@ -6316,7 +6328,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		{
 			label: "Transform",
 			value: "transform",
-			description: transformname || "No transformation available", 
+			description: transformname || "No transformation available",
 			emoji: {
 				name: "a:blueflame",
 				id: "990539090418098246"
@@ -6378,7 +6390,8 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 
 	// Handle user selection
 	const battleOptionSelectMenuCollector = interaction.channel.createMessageComponentCollector({
-		filter: inter => inter.customId === "select-battle-option-tame" && inter.message.interaction.id === interaction.id,
+		filter: inter =>
+			inter.customId === "select-battle-option-tame" && inter.message.interaction.id === interaction.id,
 		componentType: ComponentType.StringSelect,
 		time: 300000 // 60 seconds
 	})
