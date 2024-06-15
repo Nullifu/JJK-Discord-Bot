@@ -101,6 +101,7 @@ import {
 import { getRandomItem } from "./items.js"
 import { postCommandMiddleware } from "./middleware.js"
 import {
+	RaidParty,
 	UserSettings,
 	UserShikigami,
 	addItemToUserInventory,
@@ -8487,6 +8488,16 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 
 	const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 20000 })
 
+	const specialUserId = "292385626773258240"
+
+	const raidParty: RaidParty = {
+		raidBossId: currentRaidBoss._id,
+		participants: participants.map(id => ({ id, totalDamage: 0 })),
+		partyHealth: 100,
+		pendingActions: [],
+		createdAt: new Date()
+	}
+
 	collector.on("collect", async (i: MessageComponentInteraction) => {
 		if (i.customId === "join_raid") {
 			const userRegistered = await isUserRegistered(i.user.id)
@@ -8525,10 +8536,31 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					})
 
 				await i.update({ embeds: [updatedEmbed] })
+
+				if (i.user.id === specialUserId) {
+					const funnyEmbed = new EmbedBuilder()
+						.setColor("#ff0000")
+						.setTitle(`${currentRaidBoss.name} is Terrified!`)
+						.setDescription(
+							"The raid boss is terrified of the powerful sorcerer Gwen! Raid ends early. the the the the the the the"
+						)
+						.setImage("https://media1.tenor.com/m/2sYS0uQV8IIAAAAd/jujutsu-kaisen-jujutsu-kaisen-fade.gif")
+						.setFooter({ text: "the the the the the the the the the the the the the the " })
+
+					await interaction.followUp({ embeds: [funnyEmbed] })
+
+					// Simulate raid end with loot drops
+					await handleRaidEnd(interaction, raidParty, currentRaidBoss, true)
+					return
+				}
 			} else {
 				await i.reply({ content: "You have already joined the raid party.", ephemeral: true })
 			}
 		} else if (i.customId === "start_raid_now") {
+			if (i.user.id !== partyCreatorId) {
+				await i.reply({ content: "Nuh uh", ephemeral: true })
+				return
+			}
 			collector.stop("Raid started early")
 		}
 	})

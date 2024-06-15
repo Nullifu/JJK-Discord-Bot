@@ -304,7 +304,13 @@ export async function createRaidEmbed(
 
 	return primaryEmbed
 }
-export async function handleRaidEnd(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
+export async function handleRaidEnd(
+	interaction: CommandInteraction,
+	raidParty: RaidParty,
+	raidBoss: RaidBoss,
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	instantEnd = false
+) {
 	const bossDrops: RaidDrops[] = []
 	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number; coins: number } } = {}
 
@@ -450,6 +456,138 @@ export async function handleRaidEnd(interaction: CommandInteraction, raidParty: 
 export async function getUserTutorialMessageId(userId) {
 	const userState = await getUserTutorialState(userId)
 	return userState.tutorialMessageId
+}
+
+export async function handleRaidBossDefeat(interaction: CommandInteraction, raidParty: RaidParty, raidBoss: RaidBoss) {
+	const bossDrops: RaidDrops[] = []
+	const participantDrops: { [participantId: string]: { drops: RaidDrops[]; raidTokens: number; coins: number } } = {}
+
+	for (const participant of raidParty.participants) {
+		const { id } = participant
+		const drops: RaidDrops[] = []
+		try {
+			const drop = getRaidBossDrop(raidBoss.name)
+			if (drop) {
+				drops.push({ ...drop, dropRate: drop.dropRate * 2 }) // Increase drop rate
+			} else {
+				console.warn(`No drop returned for raid boss ${raidBoss.name}`)
+			}
+		} catch (error) {
+			console.error(`Error getting drop for raid boss ${raidBoss.name}:`, error)
+		}
+
+		participantDrops[id] = {
+			drops,
+			raidTokens: Math.floor(Math.random() * 50) + 25, // Increase raid tokens
+			coins: Math.floor(Math.random() * 140000) + 40000 // Increase coins
+		}
+		bossDrops.push(...drops)
+
+		await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
+
+		for (const drop of drops) {
+			try {
+				await updateBalance(id, participantDrops[id].coins)
+				await addItemToUserInventory(id, drop.name, 1)
+				await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
+
+				if (drop.name === "Heian Era Awakening") {
+					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
+					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
+					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+				}
+			} catch (error) {
+				console.error(`Error adding item to user inventory for user ${id}:`, error)
+			}
+		}
+	}
+
+	const specialDropClaimed = await checkSpecialDropClaimed(raidBoss.name)
+
+	if (!specialDropClaimed) {
+		const randomNumber = Math.random()
+		const specialDropChance = 0.0002 // Increase special drop chance
+
+		if (randomNumber <= specialDropChance) {
+			const luckyParticipant = raidParty.participants[Math.floor(Math.random() * raidParty.participants.length)]
+			const specialDrop = "Nah I'd Lose"
+
+			try {
+				await addUserTechnique(luckyParticipant.id, specialDrop)
+				await markSpecialDropAsClaimed(raidBoss.name)
+
+				participantDrops[luckyParticipant.id].drops.push({
+					name: specialDrop,
+					rarity: "Special",
+					dropRate: 0.02
+				})
+				bossDrops.push({ name: specialDrop, rarity: "Special", dropRate: 0.02 })
+
+				const luckyUser = await client.users.fetch(luckyParticipant.id)
+				const channelId = "1239327615379308677"
+				const channel = await client.channels.fetch(channelId)
+				if (channel && channel.isTextBased()) {
+					await channel.send(
+						`Congratulations! ${luckyUser.toString()} has obtained the special drop "Nah I'd Lose"!`
+					)
+				}
+			} catch (error) {
+				console.error(`Error adding special drop to user techniques for user ${luckyParticipant.id}:`, error)
+			}
+		}
+	}
+
+	const raidEndEmbed = new EmbedBuilder()
+		.setColor("#ff0000")
+		.setTitle(`Raid Boss Defeated - ${raidBoss.name}`)
+		.setDescription("The raid boss has been defeated. Here are the results:")
+
+	for (const participant of raidParty.participants) {
+		const { drops, raidTokens, coins } = participantDrops[participant.id]
+
+		// Group drops by rarity
+		const groupedDrops: { [rarity: string]: RaidDrops[] } = {}
+		for (const drop of drops) {
+			if (!groupedDrops[drop.rarity]) {
+				groupedDrops[drop.rarity] = []
+			}
+			groupedDrops[drop.rarity].push(drop)
+		}
+
+		const user = await client.users.fetch(participant.id)
+		const userMention = `${user.username}#${user.discriminator}`
+
+		const fieldValue =
+			Object.entries(groupedDrops)
+				.map(([rarity, drops]) => {
+					const dropsString = drops
+						.map(drop => `${drop.name} (${(drop.dropRate * 100).toFixed(2)}%)`)
+						.join(", ")
+					return `${rarity}: ${dropsString}`
+				})
+				.join("\n") || "No drops"
+
+		raidEndEmbed.addFields(
+			{
+				name: `Drops for ${userMention}`,
+				value: fieldValue,
+				inline: false
+			},
+			{
+				name: "Raid Tokens Earned",
+				value: `${raidTokens}`,
+				inline: true
+			},
+			{
+				name: "Coins Earned",
+				value: `${coins}`,
+				inline: true
+			}
+		)
+	}
+
+	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
+	await handleRaidEnd(interaction, raidParty, raidBoss)
 }
 
 export function getEmojiForClan(clan) {
