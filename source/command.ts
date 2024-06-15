@@ -547,7 +547,7 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 					)}:R>.`
 				)
 				.setFooter({ text: getRandomQuote() })
-			await interaction.editReply({ embeds: [digCooldownEmbed] })
+			await interaction.followUp({ embeds: [digCooldownEmbed], ephemeral: true })
 			return
 		}
 	}
@@ -575,8 +575,8 @@ export async function handleDigCommand(interaction: ChatInputCommandInteraction)
 				.setTitle(isTutorial ? "Tutorial Dig Results" : "Digging Results")
 				.setDescription(
 					isTutorial
-						? `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}, Handy!**`
-						: `You unearthed \`⌬${coinsFound}\` coins! **You also found a ${itemFound.name}!**`
+						? `You  \`⌬${coinsFound.toLocaleString}\` coins! **You also found a ${itemFound.name}, Handy!**`
+						: `You unearthed \`⌬${coinsFound.toLocaleString}\` coins! **You also found a ${itemFound.name}!**`
 				)
 				.setTimestamp()
 				.setFooter({ text: getRandomQuote() })
@@ -1627,52 +1627,28 @@ export const handleAchievementsCommand = async (interaction: ChatInputCommandInt
 export async function handleUpdateCommand(interaction) {
 	const recentUpdates = [
 		{
-			version: "UPDATE 9.0, Part One of the PvP Update!",
-			date: "08/06/24",
+			version: "Update 9.2.5 **Mini Update**",
+			date: "15/06/24",
 			changes: [
 				{
-					name: "Enter a fierce fight with your destined enemy with the new pvp features!",
-					value: "\u200b"
-				},
-				{
-					name: "ADDED",
-					value: "- PVP\n- USER SETTINGS (Show Alerts, Ispvpable, Trades, showSpoiler)\n- Semi-Reworked Quests.. Again!\n- New Grades! Special Grade 4-1.\n- Daily Streaks, The more dailys you claim the bigger streak you have, Which equals to a bigger box reward!\n- New Skill Under, The Strongest!\n- New Way Skills Work, Some skills now require a Inate Clan tier requirement. Especially the new strongest skill!\n- Semi-Reworked Trading. Accounting in QoL Changes and user friendly features.\n- Fully RE-WORKED Alert System. you can disable this any time in settings, Developer alerts shall bypass this though.\n- New /consume Command, Skip your way through jujutsu using these Cursed Essences!\n- Updated Mentor. Gives new quest!"
-				},
-				{
-					name: "New Techniques",
-					value: "- The Strongest, Six Point Palm < First skill with some special features!\n- Yuta Okkotsu (Manifested Rika) FULL SKILLSET.\n- Zenin Toji (Honored Arc) FULL SKILLSET."
-				},
-				{
-					name: "Changes",
-					value: "- Made it so you there's a chance you can get multiple drops from fight.\n- Fixed Abandon Quests.\n- Fixed Ping Command.\n- Fixed Satoru Gojo Mentor Bug.\n- Fixed Raid Tokens.\n- When there's no alerts in /alert, a secret message is there!\n- Changed Boss Death Handling.\n- Changed Bot Status Embed.\n- Updated True And Mutal Love.\n- Made it so you can mention a user's inventory to look at.\n- Fixed spelling mistake when using Six Eyes.\n- Fixed The Shoko Gif Bugging.\n- If a trade is left pending for 24 hours it will become ignored.\n- Bot no longer dms you when you recieve a trade request instead you will get a alert.\n- Removed Shikigami Shop.\n- Gamble Limit 25M > 20M\n- Added \"Nuh Uh\" if another user tries to use your button/menu.\n- Fixed some stuff when claiming quests.\n- Changed useitem > use.\n- Fixed dupe techniques, Bot will also now tell you when using /fight etc.\n- Nerfed cost of Gambler Fever (Jackpot)\n- Fixed Abandon Quest... There was a rare chance it errored telling you to abandon a quest.."
+					name: "RAID SEMI-REWORK IS OUT.",
+					value: "+ QoL Changes\n+ Bug Fixes"
 				},
 				{
 					name: "REMOVED",
-					value: "Update Profile Avatar/Header. All current user's with it will still keep it. I didn't really see it being used that much. If user's would like me to add it back i will."
+					value: "Achievements < REWORK\nTitle Selection < REWORK\n^^^ Not sure when these will be out. Hopefully Soon."
 				},
 				{
-					name: "BUFFED",
-					value: "- HEAVENLY RESTRICTION BIG BUFF, Heavenly Restriction now ignores dmg reduction\n- Jogos Ball Twister Technique\n- Imaginary Technique: Purple\n- Nah I'd Lose\n- Hollow Nuke"
+					name: "FIXES",
+					value: "Fixed numerous interaction failed bugs.\nFixed viewing shikigami.\nFixed heian sukuna breaking the bot ( i think )"
 				},
 				{
-					name: "New Shop Items",
-					value: "- Six Eyes\n- Heian Era Scraps\n- Sukuna Finger Bundle\n- Heian Era Awakening Remnant"
+					name: "ADDED",
+					value: "+ Raid Rework"
 				},
 				{
-					name: "User's who got skills in this wave",
-					value: "Simon = Cry About It!\nShoko = The Shoko:\nfreaky(KAI/donut) = Ultimate Donut Strike"
-				},
-				{
-					name: "Not so needed information",
-					value: "This is part one of the pvp update, there's still quite alot missing i'm working best i can but i released this update as quickly as i could due to the fact i'm going on holiday soon, and i wanted you guys to have the pvp update atleast! i'm writing this as of the 6/6/24 hoping to get this update out on saturday, so expect over the coming week for me to update it as much as i can with new features skills etc. thank you <3\nI've also made a buy me a coffee as a way to support me if anyone would like to. https://www.buymeacoffee.com/nullifu <3\nALL TECHNIQUES IN THE GAME ARE INCLUDED IN PVP, BALANCING IS NOT FINAL ON ANYTHING. I WILL MONITOR IT OVER THE WEEK AND MAKE CHANGES IF NEEDED."
-				},
-				{
-					name: "Added All quotes from jjk bot quote event. + 350 of my own!",
-					value: "\u200b"
-				},
-				{
-					name: "Default Settings",
-					value: "Show Spoilers: False\nAccept Trades: True\nShow Alerts: True\npvpable: True"
+					name: "INFORMATION",
+					value: "hi im gonna rework hr again probably next upd so bare with me on adding new techs to it etc, same with dmg reduc i know i promised it but dw let me cook on hr 🙏"
 				}
 			]
 		}
@@ -8268,7 +8244,7 @@ export async function handleGiveawayCommand(interaction) {
 		} else {
 			embed.addFields(
 				{ name: "💰 Prize Type", value: "Other", inline: true },
-				{ name: "💵 Prize Amount", value: `$${prizeAmount?.toString() || "0"}`, inline: true }
+				{ name: "💵 Prize Amount", value: `$${prizeAmount?.toLocaleString() || "0"}`, inline: true }
 			)
 		}
 

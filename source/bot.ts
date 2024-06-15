@@ -297,7 +297,7 @@ async function updateDynamicActivities() {
 		{ name: "Shinjuku Showdown Arc", type: ActivityType.Playing },
 		{ name: "Cursed Clash", type: ActivityType.Competing },
 		{ name: "/register | /help", type: ActivityType.Listening },
-		{ name: "/guide | /fight", type: ActivityType.Listening }
+		{ name: "/trello | /fight", type: ActivityType.Listening }
 	]
 }
 
@@ -319,7 +319,7 @@ client.on("guildCreate", guild => {
 			.addFields(
 				{ name: "Getting Started", value: "Please use `/register` to start!" },
 				{ name: "Need Help?", value: "Proceed with `/help` to explore all the features." },
-				{ name: "Stuck?", value: "Use /guide if your ever stuck!" },
+				{ name: "Stuck?", value: "Use /trello if your ever stuck!" },
 				{
 					name: "Don't miss out on our giveaways and special events!",
 					value: "Hope to see you there!"
@@ -387,6 +387,7 @@ export const randomdig2 = [
 	"Dug up",
 	"Dug out",
 	"I can dig that",
+	"Who'd have thought that strontium and barium, properly oxidized, could make the night sky so beautiful?",
 	"Exhumed"
 ]
 
@@ -512,7 +513,7 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("toggleheavenlyrestriction")
 		.setDescription("Toggles your Heavenly Restriction status."),
-	new SlashCommandBuilder().setName("guide").setDescription("Get guides on various topics."),
+	new SlashCommandBuilder().setName("trello").setDescription("Get a link to the Trello board!"),
 	new SlashCommandBuilder()
 		.setName("trade")
 		.setDescription("Trading Command.")
@@ -789,7 +790,7 @@ client.on("interactionCreate", async interaction => {
 			.addFields(
 				{
 					name: "**General Commands**",
-					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `Guide`, `Tutorial`"
+					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `Trello`, `Tutorial`"
 				},
 				{
 					name: "**Economy Commands**",
@@ -849,7 +850,7 @@ client.on("interactionCreate", async interaction => {
 		return
 	}
 
-	if (commandName === "guide") {
+	if (commandName === "trello") {
 		await handleGuideCommand(chatInputInteraction)
 		return
 	}
