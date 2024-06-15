@@ -3657,13 +3657,21 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					} else {
 						await updateUserHealth(interaction.user.id, clampedPlayerHealth)
 						const statusEffectsValue = await fetchAndFormatStatusEffects(collectedInteraction.user.id)
-						const bossAttackMessage = `${randomOpponent.name} dealt ${chosenAttack.baseDamage(
-							playerGrade
-						)} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
-						primaryEmbed.addFields({ name: "Enemy Technique", value: bossAttackMessage })
-						primaryEmbed.addFields([
+						const bossAttackMessage = `${randomOpponent.name} dealt ${chosenAttack.baseDamage(playerGrade)} damage to you with ${chosenAttack.name}! You have ${clampedPlayerHealth} health remaining.`
+
+						const fieldsToAdd = [
+							{ name: "Enemy Technique", value: bossAttackMessage },
 							{ name: "Status Effect Player", value: statusEffectsValue, inline: true }
-						])
+						]
+
+						if (primaryEmbed.data.fields && primaryEmbed.data.fields.length + fieldsToAdd.length <= 25) {
+							primaryEmbed.addFields(fieldsToAdd)
+						} else {
+							logger.error(
+								"Too many fields in the embed. Consider creating a new embed or managing fields."
+							)
+						}
+
 						await collectedInteraction.editReply({ embeds: [primaryEmbed], components: [row] })
 					}
 				}

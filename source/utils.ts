@@ -401,10 +401,13 @@ export async function handleRaidEnd(
 		await updateRaidBossPhase(raidBoss._id.toString(), currentPhase)
 	}
 
-	const raidEndEmbed = new EmbedBuilder()
+	const raidEndEmbeds: EmbedBuilder[] = []
+
+	const initialEmbed = new EmbedBuilder()
 		.setColor("#0099ff")
 		.setTitle(`Raid Ended - ${raidBoss.name}`)
 		.setDescription("The raid has ended. Here are the results:")
+	raidEndEmbeds.push(initialEmbed)
 
 	for (const participant of raidParty.participants) {
 		const { drops, raidTokens, coins } = participantDrops[participant.id]
@@ -431,7 +434,7 @@ export async function handleRaidEnd(
 				})
 				.join("\n") || "No drops"
 
-		raidEndEmbed.addFields(
+		const participantEmbed = new EmbedBuilder().setColor("#0099ff").addFields(
 			{
 				name: `Drops for ${userMention}`,
 				value: fieldValue,
@@ -448,9 +451,11 @@ export async function handleRaidEnd(
 				inline: true
 			}
 		)
+
+		raidEndEmbeds.push(participantEmbed)
 	}
 
-	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
+	await interaction.editReply({ embeds: raidEndEmbeds, components: [] })
 }
 
 export async function getUserTutorialMessageId(userId) {
@@ -537,10 +542,13 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 		}
 	}
 
-	const raidEndEmbed = new EmbedBuilder()
+	const raidEndEmbeds: EmbedBuilder[] = []
+
+	const initialEmbed = new EmbedBuilder()
 		.setColor("#ff0000")
 		.setTitle(`Raid Boss Defeated - ${raidBoss.name}`)
 		.setDescription("The raid boss has been defeated. Here are the results:")
+	raidEndEmbeds.push(initialEmbed)
 
 	for (const participant of raidParty.participants) {
 		const { drops, raidTokens, coins } = participantDrops[participant.id]
@@ -567,7 +575,7 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 				})
 				.join("\n") || "No drops"
 
-		raidEndEmbed.addFields(
+		const participantEmbed = new EmbedBuilder().setColor("#ff0000").addFields(
 			{
 				name: `Drops for ${userMention}`,
 				value: fieldValue,
@@ -584,9 +592,11 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 				inline: true
 			}
 		)
+
+		raidEndEmbeds.push(participantEmbed)
 	}
 
-	await interaction.editReply({ embeds: [raidEndEmbed], components: [] })
+	await interaction.editReply({ embeds: raidEndEmbeds, components: [] })
 	await handleRaidEnd(interaction, raidParty, raidBoss)
 }
 

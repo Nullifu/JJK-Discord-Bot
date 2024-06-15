@@ -852,7 +852,7 @@ export async function executeSpecialTechniquePvp({
 	return { damage, imageUrl, description }
 }
 
-export function generateHealthBar(current, max) {
+export function generateHealthBar(current: number, max: number): string {
 	const totalBars = 10
 	const filledBars = Math.round((current / max) * totalBars)
 	const emptyBars = totalBars - filledBars
