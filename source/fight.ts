@@ -11,7 +11,6 @@ import {
 	addUserQuestProgress,
 	getUserGrade,
 	getUserMaxHealth,
-	getUserQuests,
 	getUserSettings,
 	getUserShikigami,
 	getUserTutorialState,
@@ -60,46 +59,6 @@ export async function handleBossDeath(
 
 	const experienceGain = getRandomXPGain()
 	const coinsGained = getrandommoney()
-
-	const questProgressions = {
-		"Hakari Kinji": [
-			{ quest: "Gamblers Fever", amount: 1 },
-			{ quest: "Kashimo's Task", amount: 1, condition: "Defeat Hakari Kinji" }
-		],
-		"Satoru Gojo": [
-			{ quest: "Satoru Gojo's Mission", amount: 1, condition: "Defeat Gojo" },
-			{ quest: "Kashimo's Task", amount: 1, condition: "Defeat Gojo" },
-			{ quest: "Mentor: The Strongest", amount: 1 }
-		],
-		"Sukuna": [
-			{ quest: "Satoru Gojo's Mission", amount: 1, condition: "Defeat Sukuna" },
-			{ quest: "Awakening", amount: 1, condition: "Defeat Ryomen Sukuna" },
-			{ quest: "Mentor: Curse King", amount: 1 },
-			{ quest: "Kashimo's Task", amount: 1, condition: "Defeat Sukuna" }
-		],
-		"Itadori": [{ quest: "Training with Itadori", amount: 1 }],
-		"Mahito Instant Spirit Body of Distorted Killing": [{ quest: "Nature of Curses", amount: 1 }],
-		"Hakari (Jackpot)": [
-			{ quest: "Gamblers Fever", amount: 1 },
-			{ quest: "Kashimo's Task", amount: 1, condition: "Defeat Hakari Kinji" }
-		],
-		"Dagon": [{ quest: "Disaster Curses", amount: 1, condition: "Defeat Dagon" }],
-		"Jogo": [{ quest: "Disaster Curses", amount: 1, condition: "Defeat Jogo" }],
-		"Hanami": [{ quest: "Disaster Curses", amount: 1, condition: "Defeat Hanami" }],
-		"Yuji Itadori (Awoken)": [
-			{ quest: "Awakening", amount: 1, condition: "Defeat Yuji Itadori (Awoken)" },
-			{ quest: "Stage Three Unleashed", amount: 1, condition: "Defeat Yuji Itadori (Awoken)" },
-			{ quest: "Stage Three Unleashed", amount: 1, condition: "Yuji Itadori (Awoken)" }
-		],
-		"Satoru Gojo (Shinjuku Showdown Arc)": [
-			{ quest: "Stage Three Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" },
-			{ quest: "Stage Three Unleashed", amount: 1, condition: "Satoru Gojo (Shinjuku Showdown Arc)" },
-			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo (Shinjuku Showdown Arc)" }
-		],
-		"Satoru Gojo Limit-Broken": [
-			{ quest: "Limitless Unleashed", amount: 1, condition: "Defeat Satoru Gojo Limit-Broken" }
-		]
-	}
 
 	if (opponent.name === "Hakari Kinji") {
 		await addUserQuestProgress(interaction.user.id, "Gamblers Fever", 1)
@@ -162,49 +121,6 @@ export async function handleBossDeath(
 		)
 	}
 
-	const userQuestsData = await getUserQuests(interaction.user.id)
-	const activeQuests = userQuestsData.quests.map(quest => quest.id)
-
-	const updatedQuests = []
-
-	if (questProgressions[opponent.name]) {
-		for (const questProgress of questProgressions[opponent.name]) {
-			if (activeQuests.includes(questProgress.quest)) {
-				await addUserQuestProgress(
-					interaction.user.id,
-					questProgress.quest,
-					questProgress.amount,
-					questProgress.condition || null
-				)
-			}
-		}
-	}
-
-	const generalQuests = [
-		{ quest: "Awakening", amount: 1, description: "Defeat Foes" },
-		{ quest: "Satoru Gojo's Mission", amount: 1, description: "Training" },
-		{ quest: "Nanami's Task", amount: 1, description: "Complete Task" },
-		{ quest: "Kashimo's Task", amount: 1, description: "Defeat Foes" },
-		{ quest: "Limitless Unleashed", amount: 1, description: "Defeat Foes" },
-		{ quest: "Mission with Nobara", amount: 1, description: "Defeat 20 foes and find Nobara's eyes!" }
-	]
-
-	// Process general quests
-	for (const generalQuest of generalQuests) {
-		if (activeQuests.includes(generalQuest.quest)) {
-			await addUserQuestProgress(
-				interaction.user.id,
-				generalQuest.quest,
-				generalQuest.amount,
-				generalQuest.description
-			)
-		}
-	}
-
-	logger.info(
-		`Updated Quests: ${updatedQuests.map(q => `${q.questId} - ${q.taskDescription} (${q.amount})`).join(", ")}`
-	)
-
 	activeCollectors.delete(interaction.user.id)
 	await updateUserExperience(interaction.user.id, experienceGain)
 	await updatePlayerGrade(interaction.user.id)
@@ -266,11 +182,6 @@ export async function handleBossDeath(
 			name: "Loot Drop",
 			value: "No items were found."
 		})
-	}
-
-	if (updatedQuests.length > 0) {
-		const questUpdates = updatedQuests.map(q => `**${q.questId}**\n- ${q.taskDescription}: +${q.amount}`).join("\n")
-		privateEmbed.addFields({ name: "Quests Updated", value: `The following quests were updated:\n${questUpdates}` })
 	}
 
 	await interaction.followUp({ embeds: [privateEmbed], ephemeral: true })

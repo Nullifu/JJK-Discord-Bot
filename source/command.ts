@@ -3462,6 +3462,18 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Jigsaw Technique: Final Challenge") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 24,
+					imageUrl: "https://media1.tenor.com/m/ZCHC5pqHlPMAAAAC/jigsaw-bih.gif",
+					description: "oh hell na yo ass tweakin jigsaw",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
