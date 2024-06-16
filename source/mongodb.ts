@@ -1701,14 +1701,14 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 			updateResult = await usersCollection.updateOne(
 				{
 					"id": userId,
-					"quests.id": questId, // Make sure this matches the id field in the quests objects in the database.
+					"quests.id": questId,
 					"quests.tasks.description": taskDescription
 				},
 				{
-					$inc: { "quests.$.tasks.$[task].progress": increment }
+					$inc: { "quests.$[quest].tasks.$[task].progress": increment }
 				},
 				{
-					arrayFilters: [{ "task.description": taskDescription }]
+					arrayFilters: [{ "task.description": taskDescription }, { "quest.id": questId }]
 				}
 			)
 		} else {
@@ -1723,13 +1723,14 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 			)
 		}
 
-		// Error handling and logging
 		if (updateResult.matchedCount === 0) {
-			logger.error("Quest not found for user:", userId)
+			logger.error(`Quest '${questId}' not found for user: ${userId}`)
+			const user = await usersCollection.findOne({ id: userId })
+			logger.error("Current user quest data:", JSON.stringify(user.quests, null, 2))
 		} else if (updateResult.modifiedCount === 0) {
-			logger.error("Quest progress was not updated for user:", userId)
+			logger.error(`Quest progress for '${questId}' was not updated for user: ${userId}`)
 		} else {
-			logger.log("Quest progress updated successfully for user:", userId)
+			logger.info(`Quest progress updated successfully for user: ${userId}`)
 		}
 	} catch (error) {
 		logger.error("Error updating user quest progress:", error)

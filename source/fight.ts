@@ -128,12 +128,14 @@ export async function handleBossDeath(
 	await updateUserInateClanExperience(interaction.user.id, 125, "Limitless")
 	await updatePlayerClanTier(interaction.user.id)
 	await updateUserFightsWon(interaction.user.id)
+
 	await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Training")
 	await addUserQuestProgress(interaction.user.id, "Nanami's Task", 1)
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Mission with Nobara", 1)
+
 	await updateMonthlyFightsWon(interaction.user.id)
 
 	const drops = await getBossDrops(interaction.user.id, opponent.name)
