@@ -342,8 +342,8 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const channelId = "1250839808452984912"
-const statsMessageId = "1252405088127942759"
+const channelId = "1222537263523696785"
+const statsMessageId = "1222537329378594951"
 export const MODERATION_CHANNEL_ID = "1233723111619166329"
 
 cron.schedule("*/30 * * * * *", async () => {
