@@ -383,7 +383,6 @@ export const randomdig2 = [
 	"Dug up",
 	"Dug out",
 	"I can dig that",
-	"Who'd have thought that strontium and barium, properly oxidized, could make the night sky so beautiful?",
 	"Exhumed"
 ]
 
