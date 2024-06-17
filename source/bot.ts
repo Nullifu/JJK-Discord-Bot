@@ -29,8 +29,7 @@ import {
 	abandonQuestCommand,
 	claimQuestsCommand,
 	eventCommandHandler,
-	generateShopEmbed,
-	generateStatsEmbed,
+	generateCombinedEmbed,
 	handleAcceptTrade,
 	handleAchievementsCommand,
 	handleActiveTradesCommand,
@@ -343,34 +342,31 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const channelId = "1222537263523696785"
-const statsMessageId = "1222537329378594951"
-
+const channelId = "1250839808452984912"
+const statsMessageId = "1252405088127942759"
 export const MODERATION_CHANNEL_ID = "1233723111619166329"
 
-const channelId2 = "1228378327769808926"
-const shomessageId = "1228380084851703922"
+cron.schedule("*/30 * * * * *", async () => {
+	try {
+		const channel = await client.channels.fetch(channelId).catch(logger.error)
+		if (channel && channel.isTextBased()) {
+			const message = await channel.messages.fetch(statsMessageId).catch(logger.error)
+			if (message) {
+				const lastResetTime = await getShopLastReset().catch(logger.error)
+				if (lastResetTime instanceof Date) {
+					const resetIntervalMs = 1000 * 60 * 60 * 24
+					const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+					const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
-cron.schedule("*/5 * * * *", async () => {
-	const channel = await client.channels.fetch(channelId)
-	if (channel.isTextBased()) {
-		const message = await channel.messages.fetch(statsMessageId)
-		const lastResetTime = await getShopLastReset()
-		const resetIntervalMs = 1000 * 60 * 60 * 24
-		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
-		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
-		const statsEmbed = await generateStatsEmbed(client, discordTimestamp)
-		await message.edit({ embeds: [statsEmbed] }).catch(logger.error)
-	}
-})
-cron.schedule("*/30 * * * *", async () => {
-	const channel = await client.channels.fetch(channelId2)
-	if (channel.isTextBased()) {
-		const message = await channel.messages.fetch(shomessageId)
-
-		const embed = await generateShopEmbed()
-
-		await message.edit({ embeds: [embed] }).catch(logger.error)
+					const embed = await generateCombinedEmbed(client, discordTimestamp)
+					await message.edit({ embeds: [embed] }).catch(logger.error)
+				} else {
+					logger.error("Failed to get the last shop reset time.")
+				}
+			}
+		}
+	} catch (error) {
+		logger.error("Error in scheduled job:", error)
 	}
 })
 
