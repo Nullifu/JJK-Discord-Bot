@@ -9274,7 +9274,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 	const now = Date.now()
 
 	if (cooldowns.has(userId)) {
-		const expirationTime = cooldowns.get(userId) + cooldownAmount
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const expirationTime = cooldowns.get(userId)! + cooldownAmount
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000
 			await interaction.editReply({
@@ -9286,23 +9287,13 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 	// Set the cooldown
 	cooldowns.set(userId, now)
+	setTimeout(() => cooldowns.delete(userId), cooldownAmount)
+
 	if (!opponent) {
 		await interaction.editReply({ content: "Please mention a valid user to challenge." })
 		return
 	}
 
-	if (cooldowns.has(interaction.user.id)) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const remainingTime = cooldowns.get(interaction.user.id)! - Date.now()
-		if (remainingTime > 0) {
-			const seconds = Math.ceil(remainingTime / 1000)
-			await interaction.reply({
-				content: `You're on cooldown. Please wait ${seconds} second(s) before using the PvP command again.`,
-				ephemeral: true
-			})
-			return
-		}
-	}
 	if (opponent.id === interaction.user.id) {
 		const wittyResponses = [
 			"You can't fight yourself! Try challenging someone else.",
@@ -9407,11 +9398,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 					)
 			}
 
-			cooldowns.set(interaction.user.id, Date.now() + cooldownDuration)
-			setTimeout(() => {
-				cooldowns.delete(interaction.user.id)
-			}, cooldownDuration)
-
 			const updateComponents = (techniques: string[], attacker: User, pvpData) => {
 				const techniqueOptions = techniques.map(techniqueName => ({
 					label: techniqueName,
@@ -9455,8 +9441,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 				const pvpData = await client.db(mongoDatabase).collection("pvp").findOne({ pvpId })
 				const attacker = pvpData.currentTurn === interaction.user.id ? interaction.user : opponent
 				const defender = pvpData.currentTurn === interaction.user.id ? opponent : interaction.user
-
-				console.debug(`Updating battle display before interaction turn for ${attacker.id}`)
 
 				const techniques = await getUserActiveTechniques(attacker.id)
 				const primaryEmbed = createEmbed(attacker, pvpData)
@@ -9542,26 +9526,18 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 						await collectedInteraction.update({ embeds: [domainEmbed], components: [] })
 
-						// Apply status effect if applicable
 						if (domainObject.statusEffect) {
 							await applyStatusEffect(attacker.id, domainObject.statusEffect)
 						}
 
 						await new Promise(resolve => setTimeout(resolve, 3000))
 
-						// Update current turn to defender
 						pvpData.currentTurn = defender.id
 						await client
 							.db(mongoDatabase)
 							.collection("pvp")
-							.updateOne(
-								{ pvpId },
-								{
-									$set: { currentTurn: pvpData.currentTurn }
-								}
-							)
+							.updateOne({ pvpId }, { $set: { currentTurn: pvpData.currentTurn } })
 
-						// Offer the opponent the chance to initiate a domain clash or defend
 						const clashButton = new ButtonBuilder()
 							.setCustomId("clash")
 							.setLabel("Domain Clash")
@@ -9587,7 +9563,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						const clashDefendCollector = interaction.channel.createMessageComponentCollector({
 							filter: (inter: MessageComponentInteraction) => inter.user.id === defender.id,
 							componentType: ComponentType.Button,
-							time: 5000
+							time: 60000
 						})
 
 						let opponentResponded = false
@@ -9668,8 +9644,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 								await clashDefendInteraction.update({ embeds: [defendEmbed], components: [] })
 
-								//
-
 								await new Promise(resolve => setTimeout(resolve, 3000))
 
 								await clashDefendInteraction.editReply({
@@ -9684,19 +9658,13 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 							await client
 								.db(mongoDatabase)
 								.collection("pvp")
-								.updateOne(
-									{ pvpId },
-									{
-										$set: { currentTurn: pvpData.currentTurn }
-									}
-								)
+								.updateOne({ pvpId }, { $set: { currentTurn: pvpData.currentTurn } })
 							await updateBattleState()
 						})
 
 						clashDefendCollector.on("end", async (collected, reason) => {
 							if (!opponentResponded) {
-								// Defender didn't respond in time
-								const unleashedDamage = 150 // Example value for damage when domain is fully unleashed
+								const unleashedDamage = 150
 								pvpData.player2Health = Math.max(0, pvpData.player2Health - unleashedDamage)
 
 								const unleashedEmbed = new EmbedBuilder()
@@ -9758,7 +9726,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 								return
 							}
 							transformationState.set(contextKey, true)
-							// embed here
+
 							const transformationEmbed = new EmbedBuilder()
 								.setColor("Blue")
 								.setTitle("Transformation!")
@@ -9775,11 +9743,10 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 								components: []
 							})
 
-							// Apply transformation effects
 							if (transformationObject.effects === "damageIncrease") {
-								pvpData.damageMultiplier = 1.5 // Example value
+								pvpData.damageMultiplier = 1.5
 							} else if (transformationObject.effects === "damageReduction") {
-								pvpData.damageReduction = 0.5 // Example value
+								pvpData.damageReduction = 0.5
 							}
 
 							await new Promise(resolve => setTimeout(resolve, 3000))
@@ -9789,12 +9756,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 							await client
 								.db(mongoDatabase)
 								.collection("pvp")
-								.updateOne(
-									{ pvpId },
-									{
-										$set: { currentTurn: pvpData.currentTurn }
-									}
-								)
+								.updateOne({ pvpId }, { $set: { currentTurn: pvpData.currentTurn } })
 							await updateBattleState()
 						} catch (error) {
 							console.error("An error occurred during transformation:", error)
@@ -9815,8 +9777,8 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 
 				techniqueCollector.on("collect", async collectedInteraction => {
 					const selectedValue = collectedInteraction.values[0]
-
 					const usertechniquespvp = new Map()
+
 					const { damage, imageUrl, description } = await executeSpecialTechniquePvp({
 						collectedInteraction,
 						techniqueName: selectedValue,
@@ -9826,9 +9788,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						primaryEmbed,
 						rows: components
 					})
-
-					console.debug(`Damage dealt: ${damage}`)
-					console.debug("Embed after executing technique:", primaryEmbed.toJSON())
 
 					if (pvpData.currentTurn === interaction.user.id) {
 						pvpData.player2Health = Math.max(0, pvpData.player2Health - damage)
@@ -9840,26 +9799,25 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						pvpData.player2TransformationProgress += 5
 					}
 
-					// Update the same embed with new values and image
 					primaryEmbed.setImage(imageUrl)
 					primaryEmbed.setDescription(description)
 					primaryEmbed.setFields(
 						{
 							name: `${attacker.username}'s Stats`,
 							value: `
-								**Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player1Health : pvpData.player2Health} :blue_heart:
-								**Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1DomainProgress : pvpData.player2DomainProgress, 100)}
-								**Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1TransformationProgress : pvpData.player2TransformationProgress, 100)}
-							`,
+                                **Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player1Health : pvpData.player2Health} :blue_heart:
+                                **Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1DomainProgress : pvpData.player2DomainProgress, 100)}
+                                **Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player1TransformationProgress : pvpData.player2TransformationProgress, 100)}
+                            `,
 							inline: true
 						},
 						{
 							name: `${pvpData.currentTurn === interaction.user.id ? opponent.username : interaction.user.username}'s Stats`,
 							value: `
-								**Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player2Health : pvpData.player1Health} :blue_heart:
-								**Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2DomainProgress : pvpData.player1DomainProgress, 100)}
-								**Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2TransformationProgress : pvpData.player1TransformationProgress, 100)}
-							`,
+                                **Health**: ${pvpData.currentTurn === interaction.user.id ? pvpData.player2Health : pvpData.player1Health} :blue_heart:
+                                **Domain Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2DomainProgress : pvpData.player1DomainProgress, 100)}
+                                **Transformation Progress**: ${generateProgressBar(pvpData.currentTurn === interaction.user.id ? pvpData.player2TransformationProgress : pvpData.player1TransformationProgress, 100)}
+                            `,
 							inline: true
 						}
 					)
@@ -9898,12 +9856,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 					await client
 						.db(mongoDatabase)
 						.collection("pvp")
-						.updateOne(
-							{ pvpId },
-							{
-								$set: { currentTurn: pvpData.currentTurn }
-							}
-						)
+						.updateOne({ pvpId }, { $set: { currentTurn: pvpData.currentTurn } })
 					await updateBattleState()
 				})
 			}
@@ -9924,7 +9877,6 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 		})
 	}
 }
-
 export async function handleSettingsCommand(interaction: CommandInteraction) {
 	const userId = interaction.user.id
 
