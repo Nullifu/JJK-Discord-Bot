@@ -409,12 +409,6 @@ const commands = [
 			option.setName("user").setDescription("The user to display the inventory for").setRequired(false)
 		),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
-	new SlashCommandBuilder()
-		.setName("testachievement")
-		.setDescription("Test unlocking an achievement")
-		.addStringOption(option =>
-			option.setName("achievement").setDescription("The name of the achievement to unlock").setRequired(true)
-		),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
