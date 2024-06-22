@@ -369,69 +369,13 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		await addLevelToUsers()
 		logger.debug("Database initialization complete.")
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
 }
 
-async function addLevelToUsers() {
-	try {
-		await client.connect()
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
 
-		// Update users where heavenlyrestriction is null or does not exist
-		const updateNullResult = await usersCollection.updateMany(
-			{
-				$or: [{ heavenlyrestriction: null }, { heavenlyrestriction: { $exists: false } }]
-			},
-			{
-				$set: {
-					heavenlyrestriction: {
-						unlocked: false,
-						active: false
-					}
-				}
-			}
-		)
-
-		// Update users where heavenlyrestriction is boolean true
-		const updateBooleanTrueResult = await usersCollection.updateMany(
-			{ heavenlyrestriction: true },
-			{
-				$set: {
-					heavenlyrestriction: {
-						unlocked: true,
-						active: false
-					}
-				}
-			}
-		)
-
-		// Update users where heavenlyrestriction is boolean false
-		const updateBooleanFalseResult = await usersCollection.updateMany(
-			{ heavenlyrestriction: false },
-			{
-				$set: {
-					heavenlyrestriction: {
-						unlocked: false,
-						active: false
-					}
-				}
-			}
-		)
-
-		logger.info(`Updated ${updateNullResult.modifiedCount} users with heavenlyrestriction as null or not set.`)
-		logger.info(`Updated ${updateBooleanTrueResult.modifiedCount} users with heavenlyrestriction as boolean true.`)
-		logger.info(
-			`Updated ${updateBooleanFalseResult.modifiedCount} users with heavenlyrestriction as boolean false.`
-		)
-	} catch (error) {
-		logger.error("Error adding level to users:", error)
-	}
-}
 
 export async function getBalance(id: string): Promise<number> {
 	try {
