@@ -366,53 +366,25 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		await addInitialAchievementsToUsers()
-		await addInitialTitlesToUsers()
+		await addLevelToUsers()
 		logger.debug("Database initialization complete.")
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
 }
 
-// add initialachievements to users replacing the old achievements
-async function addInitialAchievementsToUsers() {
+// add level field to all users
+export async function addLevelToUsers() {
 	try {
+		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const updateResult = await usersCollection.updateMany(
-			{},
-			{
-				$set: {
-					achievements: initialAchievements
-				}
-			}
-		)
+		const updateResult = await usersCollection.updateMany({}, { $set: { level: 1 } })
 
-		logger.info(`Added initial achievements to ${updateResult.modifiedCount} users`)
+		logger.info(`Added level field to ${updateResult.modifiedCount} users`)
 	} catch (error) {
-		logger.error("Error adding initial achievements to users:", error)
-	}
-}
-
-// add initial titles to users replacing the old titles
-async function addInitialTitlesToUsers() {
-	try {
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		const updateResult = await usersCollection.updateMany(
-			{},
-			{
-				$set: {
-					titles: initialTitles
-				}
-			}
-		)
-
-		logger.info(`Added initial titles to ${updateResult.modifiedCount} users`)
-	} catch (error) {
-		logger.error("Error adding initial titles to users:", error)
+		logger.error("Error adding level to users:", error)
 	}
 }
 export async function getBalance(id: string): Promise<number> {
