@@ -1493,7 +1493,6 @@ export async function getUserHeavenlyTechniques(userId: string): Promise<string[
 	}
 }
 
-// toggle heavenly restriction if unlocked is true but active is false, change active to true
 export async function toggleHeavenlyRestriction(userId: string): Promise<boolean> {
 	try {
 		await client.connect()
@@ -1508,7 +1507,6 @@ export async function toggleHeavenlyRestriction(userId: string): Promise<boolean
 		}
 
 		if (user.heavenlyrestriction && user.heavenlyrestriction.unlocked) {
-			// Toggle the active state
 			const newActiveState = !user.heavenlyrestriction.active
 			await usersCollection.updateOne({ id: userId }, { $set: { "heavenlyrestriction.active": newActiveState } })
 			return newActiveState

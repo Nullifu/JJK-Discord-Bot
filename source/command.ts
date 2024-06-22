@@ -3556,6 +3556,42 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Straw Doll: Resonance") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 18,
+					imageUrl: "https://media1.tenor.com/m/ZD-JkhB3btwAAAAd/nobara-nobara-kugisaki.gif",
+					description: "Heh, my eye's may be closed but I can still see you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Strawdoll: Voodoo") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 16,
+					imageUrl: "https://media1.tenor.com/m/yAiceqoH5q8AAAAd/jjk-nobara.gif",
+					description: "With this straw doll.. I bring my eye's to you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Strawdoll: Curse") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 12,
+					imageUrl: "https://media1.tenor.com/m/kLudvhuZ7ccAAAAC/jjk-jujutsu-kaisen.gif",
+					description: "With this straw doll.. I curse you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
