@@ -901,6 +901,29 @@ export const CLAN_SKILLS = {
 		}
 	],
 
+	"Straw Doll": [
+		{
+			name: "Straw Doll: Resonance",
+			cost: "528000",
+			clan: "Straw Doll",
+			items: [
+				{ name: "Nobara's Right Eye", quantity: 6 },
+				{ name: "Nobara's Left Eye", quantity: 6 }
+			]
+		},
+		{
+			name: "Strawdoll: Voodoo",
+			cost: "120000",
+			clan: "Straw Doll",
+			items: [{ name: "Nobara's Left Eye", quantity: 1 }]
+		},
+		{
+			name: "Strawdoll: Curse",
+			cost: "45000",
+			clan: "Straw Doll",
+			items: [{ name: "Nobara's Right Eye", quantity: 1 }]
+		}
+	],
 	"God of Lightning (Heian Era)": [
 		{
 			name: "Mythical Beast Amber",

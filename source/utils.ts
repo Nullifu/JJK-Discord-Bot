@@ -935,10 +935,7 @@ export async function createAchievementsEmbed(userId: string, page: number, inte
 	const pageAchievements = initialAchievements.slice(start, end)
 	pageAchievements.forEach(ach => {
 		const userAch = userAchievements.find(a => a.name === ach.name) || {}
-		const progress =
-			userAch.progress !== undefined
-				? `${userAch.progress as number}/${(ach.target as number).toLocaleString()}`
-				: ""
+		const progress = userAch.progress !== undefined ? `${userAch.progress as number}/${ach.target as number}` : ""
 
 		let progressText = ""
 		if (ach.target !== undefined) {

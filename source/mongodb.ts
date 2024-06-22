@@ -382,35 +382,57 @@ async function addLevelToUsers() {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const updateTrueResult = await usersCollection.updateMany(
+		// Update users where heavenlyrestriction is null or does not exist
+		const updateNullResult = await usersCollection.updateMany(
+			{
+				$or: [{ heavenlyrestriction: null }, { heavenlyrestriction: { $exists: false } }]
+			},
+			{
+				$set: {
+					heavenlyrestriction: {
+						unlocked: false,
+						active: false
+					}
+				}
+			}
+		)
+
+		// Update users where heavenlyrestriction is boolean true
+		const updateBooleanTrueResult = await usersCollection.updateMany(
 			{ heavenlyrestriction: true },
 			{
 				$set: {
-					"heavenlyrestriction.unlocked": true,
-					"heavenlyrestriction.active": false
+					heavenlyrestriction: {
+						unlocked: true,
+						active: false
+					}
 				}
 			}
 		)
 
-		// Update users with heavenlyrestriction false or null
-		const updateFalseResult = await usersCollection.updateMany(
-			{ heavenlyrestriction: { $in: [false, null] } },
+		// Update users where heavenlyrestriction is boolean false
+		const updateBooleanFalseResult = await usersCollection.updateMany(
+			{ heavenlyrestriction: false },
 			{
 				$set: {
-					"heavenlyrestriction.unlocked": false,
-					"heavenlyrestriction.active": false
+					heavenlyrestriction: {
+						unlocked: false,
+						active: false
+					}
 				}
 			}
 		)
 
-		logger.info(`Updated ${updateTrueResult.modifiedCount} users with heavenlyrestriction true.`)
-		logger.info(`Updated ${updateFalseResult.modifiedCount} users with heavenlyrestriction false or null.`)
+		logger.info(`Updated ${updateNullResult.modifiedCount} users with heavenlyrestriction as null or not set.`)
+		logger.info(`Updated ${updateBooleanTrueResult.modifiedCount} users with heavenlyrestriction as boolean true.`)
+		logger.info(
+			`Updated ${updateBooleanFalseResult.modifiedCount} users with heavenlyrestriction as boolean false.`
+		)
 	} catch (error) {
 		logger.error("Error adding level to users:", error)
-	} finally {
-		await client.close()
 	}
 }
+
 export async function getBalance(id: string): Promise<number> {
 	try {
 		await client.connect()
@@ -2289,6 +2311,7 @@ export async function getUserUnlockedBosses(userId: string): Promise<string[]> {
 // get users transformation
 export async function getUserTransformation(userId: string): Promise<string> {
 	try {
+		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
@@ -5240,4 +5263,5 @@ export async function unlockTitle(userId: string, titleName: string): Promise<vo
 		throw error
 	}
 }
+
 client1.login(process.env["DISCORD_BOT_TOKEN"])
