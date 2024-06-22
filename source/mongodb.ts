@@ -22,7 +22,7 @@ import {
 	UserProfile,
 	healthMultipliersByGrade
 } from "./interface.js"
-import { jobs, questsArray, shopItems, titles } from "./items jobs.js"
+import { jobs, questsArray, shopItems } from "./items jobs.js"
 
 const client1 = createClient()
 
@@ -121,6 +121,121 @@ cron.schedule("0 * * * *", () => {
 
 // ----------------------------------------------------------------------------
 
+export const initialAchievements = [
+	{
+		name: "Satoru Gojo's Killer",
+		unlocked: false,
+		unlockMethod: "Defeat Satoru Gojo in a raid",
+		rewards: {
+			coins: 250000,
+			items: { "Special Grade Box": 1 },
+			rewardTitle: "Satoru Gojo's Killer"
+		}
+	},
+	{
+		name: "King of Frauds",
+		unlocked: false,
+		unlockMethod: "Defeat Sukuna in a raid",
+		rewards: {
+			coins: 1,
+			items: { "Sukuna Finger": 30 },
+			rewardTitle: "Fraud King"
+		}
+	},
+	{
+		name: "Sorcerer Killer",
+		unlocked: false,
+		unlockMethod: "Defeat The Honored One",
+		rewards: {
+			coins: 100000
+		}
+	},
+	{
+		name: "The Strongest In History",
+		unlocked: false,
+		unlockMethod: "Reach level 100",
+		rewards: {
+			coins: 5000,
+			items: { "Special Grade Box": 1 },
+			rewardTitle: "Strongest in History"
+		}
+	},
+	{
+		name: "Jackpot",
+		unlocked: false,
+		unlockMethod: "Win a jackpot in the slot machine",
+		rewards: {
+			coins: 10000,
+			rewardTitle: "Jackpot Winner"
+		}
+	},
+	{
+		name: "No Life",
+		unlocked: false,
+		unlockMethod: "Earn 1 Trillion Coins!",
+		progress: 0,
+		target: 1000000000000,
+		rewards: {
+			coins: 1000000,
+			rewardTitle: "No Life"
+		}
+	},
+	{
+		name: "Domain Master",
+		unlocked: false,
+		unlockMethod: "Master your Domain Expansion",
+		rewards: {
+			items: { "Six Eyes": 1 },
+			rewardTitle: "Master of Domains"
+		}
+	},
+	{
+		name: "Heavenly Restriction",
+		unlocked: false,
+		unlockMethod: "Unlock Heavenly Restriction",
+		rewards: {
+			coins: 3000,
+			rewardTitle: "Heavenly Warrior"
+		}
+	},
+	{
+		name: "Raid Champion",
+		unlocked: false,
+		unlockMethod: "Win 10 raids",
+		rewards: {
+			coins: 2000,
+			rewardTitle: "Raid Leader"
+		}
+	},
+	{
+		name: "Curse Breaker",
+		unlocked: false,
+		unlockMethod: "Defeat 500 curses",
+		progress: 0,
+		target: 500,
+		rewards: {
+			coins: 2500,
+			rewardTitle: "Cursed King"
+		}
+	}
+]
+
+const initialTitles = [
+	{ name: "Cursed King", unlocked: false, active: false },
+	{ name: "Gojo's Successor", unlocked: false, active: false },
+	{ name: "Raid Leader", unlocked: false, active: false },
+	{ name: "Master of Domains", unlocked: false, active: false },
+	{ name: "Heavenly Warrior", unlocked: false, active: false },
+	{ name: "Shikigami Master", unlocked: false, active: false },
+	{ name: "Technique Prodigy", unlocked: false, active: false },
+	{ name: "Jackpot Winner", unlocked: false, active: false },
+	{ name: "No Life", unlocked: false, active: false },
+	{ name: "Fate's Favorite", unlocked: false, active: false },
+	{ name: "Fraud King", unlocked: false, active: false },
+	{ name: "Crashout King", unlocked: false, active: false },
+	{ name: "Strongest in History", unlocked: false, active: false }
+]
+
 export async function userExists(discordId: string): Promise<boolean> {
 	await client.connect()
 	const database = client.db(mongoDatabase)
@@ -157,10 +272,9 @@ export async function addUser(
 			maxhealth: initialmaxhealth,
 			owneddomains: [],
 			domain: null,
-			activeTitle: null,
-			unlockedTitles: [],
+			titles: initialTitles,
 			inventory: [],
-			achievements: [],
+			achievements: initialAchievements,
 			heavenlyrestriction: null,
 			cursedEnergy: 100,
 			clan: null,
@@ -173,6 +287,7 @@ export async function addUser(
 			activeheavenlytechniques: [],
 			inateclan: {},
 			activeinateclan: null,
+			level: 1,
 			quests: [],
 			permEffects: [],
 			statusEffects: [],
@@ -251,108 +366,55 @@ export async function initializeDatabase() {
 		await client.connect()
 
 		logger.info("Initializing database...")
-		// await addSettingsToUsers(client.db(mongoDatabase))
+		await addInitialAchievementsToUsers()
+		await addInitialTitlesToUsers()
+		logger.debug("Database initialization complete.")
 	} catch (error) {
 		logger.fatal("Database initialization failed:", error)
 	}
 }
 
-///
-///
-///
-
-async function updateInateclanField(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
+// add initialachievements to users replacing the old achievements
+async function addInitialAchievementsToUsers() {
 	try {
-		// Update documents where 'inateclan' is an array
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
 		const updateResult = await usersCollection.updateMany(
-			{ cooldowns: { $exists: true, $type: "object" } },
-			{ $set: { cooldowns: [] } }
+			{},
+			{
+				$set: {
+					achievements: initialAchievements
+				}
+			}
 		)
 
-		if (updateResult.matchedCount > 0) {
-			logger.info(`Converted cooldown from object to array in ${updateResult.matchedCount} user documents`)
-		} else {
-			logger.info("No user documents found with 'inateclan' as an array")
-		}
+		logger.info(`Added initial achievements to ${updateResult.modifiedCount} users`)
 	} catch (error) {
-		logger.error("Error updating 'inateclan' fields:", error)
+		logger.error("Error adding initial achievements to users:", error)
 	}
 }
 
-async function ensureUserDocumentsHaveActiveTechniquesAndStatusEffects(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
+// add initial titles to users replacing the old titles
+async function addInitialTitlesToUsers() {
 	try {
-		// Query to find all documents with the incorrect awakening value
-		const incorrectDocuments = await usersCollection.find({ awakening: "Stgae Zero" }).toArray()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
 
-		if (incorrectDocuments.length > 0) {
-			// Update the incorrect awakening values to the correct one
-			await usersCollection.updateMany({ awakening: "Stgae Zero" }, { $set: { awakening: "Stage Zero" } })
-
-			logger.info(`Updated ${incorrectDocuments.length} documents to fix awakening values.`)
-		} else {
-			logger.info("No documents need updating.")
-		}
-	} catch (error) {
-		logger.error("Error correcting awakening field:", error)
-	}
-}
-
-async function resetAllUsersQuests(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
-	try {
-		// Update all users' quests to an empty array
-		const updateResult = await usersCollection.updateMany({}, { $set: { quests: [] } })
-
-		logger.info(`Updated ${updateResult.modifiedCount} user(s) to reset quests.`)
-	} catch (error) {
-		logger.error("Error resetting users' quests:", error)
-	}
-}
-
-async function renameUserDocumentFields(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
-	try {
 		const updateResult = await usersCollection.updateMany(
-			{ honours: { $exists: true } },
-			{ $rename: { honours: "Honours" } }
+			{},
+			{
+				$set: {
+					titles: initialTitles
+				}
+			}
 		)
 
-		if (updateResult.matchedCount > 0) {
-			logger.info(`Renamed 'honours' to 'Honours' in ${updateResult.matchedCount} user documents`)
-		} else {
-			logger.info("No user documents found with 'honours' field")
-		}
+		logger.info(`Added initial titles to ${updateResult.modifiedCount} users`)
 	} catch (error) {
-		logger.error("Error renaming fields:", error)
+		logger.error("Error adding initial titles to users:", error)
 	}
 }
-
-// add settings object to existing users
-async function addSettingsToUsers(database) {
-	const usersCollection = database.collection(usersCollectionName)
-
-	try {
-		const updateResult = await usersCollection.updateMany(
-			{ settings: { $exists: false } },
-			{ $set: { settings: { pvpable: true, acceptTrades: true, showAlerts: true, showSpoilers: false } } }
-		)
-
-		if (updateResult.matchedCount > 0) {
-			logger.info(`Added 'settings' object to ${updateResult.matchedCount} user documents`)
-		} else {
-			logger.info("No user documents found without 'settings' field")
-		}
-	} catch (error) {
-		logger.error("Error adding settings object:", error)
-	}
-}
-
 export async function getBalance(id: string): Promise<number> {
 	try {
 		await client.connect()
@@ -389,6 +451,8 @@ export async function updateBalance(id: string, amount: number, options?: any): 
 				{ ...options }
 			)
 			logger.log(`Updated balance for user with ID: ${id}`)
+
+			await trackAchievementsAndQuests(id, amount)
 		} else {
 			logger.log("Balance update prevented: would have resulted in negative balance")
 		}
@@ -413,10 +477,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 					grade: 1,
 					domain: 1,
 					job: 1,
-					activeTitle: 1,
+					titles: 1,
 					heavenlyrestriction: 1,
 					inateclan: 1,
-					shikigami: 1
+					shikigami: 1,
+					level: 1
 				}
 			}
 		)
@@ -432,10 +497,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 			grade: userDocument.grade,
 			domain: userDocument.domain || null,
 			job: userDocument.job || "Non-Sorcerer",
-			activeTitle: userDocument.activeTitle || null,
+			titles: userDocument.titles || [],
 			heavenlyrestriction: userDocument.heavenlyrestriction || null,
 			inateclan: userDocument.clan || "None",
-			shikigami: userDocument.shikigami || [] // Initialize with an empty array if shikigami is not present
+			shikigami: userDocument.shikigami || [],
+			level: userDocument.level || 1
 		}
 
 		logger.log(`User profile found for ID: ${userId}`, userProfile)
@@ -580,21 +646,46 @@ export async function updateUserExperience(userId: string, experienceToAdd: numb
 
 		logger.log(`Attempting to update experience for user ID: ${userId}`)
 
-		const updateResult = await usersCollection.updateOne({ id: userId }, { $inc: { experience: experienceToAdd } })
+		const user = await usersCollection.findOne({ id: userId })
+		if (!user) {
+			logger.log(`No user found with the specified ID: ${userId}`)
+			return
+		}
+
+		const currentExperience = user.experience || 0
+		const currentLevel = user.level || 1
+
+		const newExperience = currentExperience + experienceToAdd
+		let newLevel = currentLevel
+		let experienceForNextLevel = calculateExperienceForLevel(newLevel)
+
+		while (newExperience >= experienceForNextLevel) {
+			newLevel += 1
+			experienceForNextLevel = calculateExperienceForLevel(newLevel)
+		}
+
+		const updateResult = await usersCollection.updateOne(
+			{ id: userId },
+			{
+				$set: { experience: newExperience, level: newLevel }
+			}
+		)
 
 		logger.log(`Matched Count: ${updateResult.matchedCount}`)
 		logger.log(`Modified Count: ${updateResult.modifiedCount}`)
-
-		if (updateResult.matchedCount === 0) {
-			logger.log(`No user found with the specified ID: ${userId}`)
-		}
 	} catch (error) {
 		logger.error("Error updating user experience:", error)
 		throw error
 	}
 }
 
-// update user title
+export function calculateExperienceForLevel(level: number): number {
+	const baseExperience = 100
+	const polynomialGrowth = Math.pow(level, 1.2)
+	const logarithmicGrowth = Math.log2(level + 1) * 50
+	return Math.floor(baseExperience + polynomialGrowth + logarithmicGrowth)
+}
+
 export async function updateUserTitle(userId: string, newTitle: string): Promise<boolean> {
 	try {
 		await client.connect()
@@ -947,19 +1038,9 @@ export async function updatePlayerClanTier(userId) {
 			} else {
 				logger.log(`Clan tier updated to ${newTier} for user ${userId}.`)
 
-				if (newTier === 4 && player.inateclan.clan === "Limitless") {
-					await createAlert(
-						userId,
-						"Congratulations! You've reached tier 2 in the Limitless clan, Unlocking new abilities!"
-					)
+				if (newTier === 2 && player.inateclan.clan === "Limitless") {
 					await addUserQuest(userId, "Limitless Unleashed")
 					logger.debug(`Added Limitless Unleashed quest for user ${userId}`)
-				}
-				if (newTier === 1 && player.inateclan.clan === "Limitless") {
-					await createAlert(
-						userId,
-						"Congratulations! You've reached tier 1 in the limitless clan.. Your true potential has been unlocked!\n- New Quest: Limitless Unleashed"
-					)
 				}
 			}
 		} else {
@@ -1026,16 +1107,39 @@ export async function getUserClanDetails(userId: string): Promise<{ tier: number
 }
 
 // add achivements function
-export async function updateUserAchievements(userId, achievementId) {
+export async function updateUserAchievements(userId: string, achievementName: string): Promise<void> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const updateResult = await usersCollection.updateOne(
-			{ id: userId },
-			{ $addToSet: { achievements: achievementId } }
-		)
+		// Retrieve the current user data
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			logger.info("User not found.")
+			return
+		}
+
+		// Check if the achievement already exists and is unlocked
+		const achievements = user.achievements || initialAchievements
+		const achievementIndex = achievements.findIndex(ach => ach.name === achievementName)
+
+		if (achievementIndex === -1) {
+			logger.error(`Achievement with name ${achievementName} not found in initial achievements.`)
+			return
+		}
+
+		if (achievements[achievementIndex].unlocked) {
+			logger.info("Achievement was already unlocked.")
+			return
+		}
+
+		// Update the achievement to unlocked
+		achievements[achievementIndex].unlocked = true
+
+		// Update the user's achievements in the database
+		const updateResult = await usersCollection.updateOne({ id: userId }, { $set: { achievements: achievements } })
 
 		if (updateResult.matchedCount === 0) {
 			logger.info("User not found.")
@@ -1051,7 +1155,7 @@ export async function updateUserAchievements(userId, achievementId) {
 }
 
 // get all achivements from a user
-export async function getUserAchievements(userId: string): Promise<string[]> {
+export async function getUserAchievements(userId: string): Promise<any[]> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
@@ -1059,40 +1163,10 @@ export async function getUserAchievements(userId: string): Promise<string[]> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user && Array.isArray(user.achievements) ? user.achievements : []
+		return user && Array.isArray(user.achievements) ? user.achievements : initialAchievements
 	} catch (error) {
 		logger.error(`Error when retrieving achievements for user with ID: ${userId}`, error)
 		throw error
-	}
-}
-
-export async function awardTitlesForAchievements(userId: string): Promise<void> {
-	try {
-		await client.connect()
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		const user = await usersCollection.findOne({ id: userId })
-		if (!user) {
-			logger.log("User not found")
-			return
-		}
-
-		const unlockedTitles = user.unlockedTitles || []
-		titles.forEach(title => {
-			if (
-				title.achievementId &&
-				user.achievements.includes(title.achievementId) &&
-				!unlockedTitles.includes(title.name)
-			) {
-				unlockedTitles.push(title.name)
-				logger.log(`User ${userId} has unlocked the title: ${title.name}`)
-			}
-		})
-
-		await usersCollection.updateOne({ id: userId }, { $set: { unlockedTitles: unlockedTitles } })
-	} catch (error) {
-		logger.error("Error awarding titles based on achievements:", error)
 	}
 }
 
@@ -1725,8 +1799,6 @@ export async function addUserQuestProgress(userId, questId, increment, taskDescr
 
 		if (updateResult.matchedCount === 0) {
 			logger.error(`Quest '${questId}' not found for user: ${userId}`)
-			const user = await usersCollection.findOne({ id: userId })
-			logger.error("Current user quest data:", JSON.stringify(user.quests, null, 2))
 		} else if (updateResult.modifiedCount === 0) {
 			logger.error(`Quest progress for '${questId}' was not updated for user: ${userId}`)
 		} else {
@@ -2539,7 +2611,6 @@ export async function getAllShopItems() {
 		const shopDocuments = await shopsCollection.find({}).toArray()
 		const allShopItems = shopDocuments.map(doc => doc.shopItems).flat()
 
-		logger.info("Retrieved shop items:", allShopItems)
 		return allShopItems
 	} catch (error) {
 		logger.error("Error retrieving shop items:", error)
@@ -3454,6 +3525,7 @@ export async function getUserIdByImageUrl(imageUrl: string): Promise<string | nu
 // update cooldowns array add new object
 export async function updateUserCooldowns(userId: string, operation: string, jobName?: string): Promise<void> {
 	try {
+		client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection<User>(usersCollectionName)
 
@@ -3560,6 +3632,32 @@ export async function updateUserCooldowns(userId: string, operation: string, job
 					)
 				}
 			}
+		} else if (operation === "searchCooldown") {
+			const user = await usersCollection.findOne({ id: userId })
+
+			if (user) {
+				const cooldown = user.cooldowns.find(cd => cd.type === "searchCooldown")
+
+				if (cooldown) {
+					await usersCollection.updateOne(
+						{ "id": userId, "cooldowns.type": "searchCooldown" },
+						{ $set: { "cooldowns.$.lastUsed": new Date() } }
+					)
+				} else {
+					await usersCollection.updateOne(
+						{ id: userId },
+						{
+							$push: {
+								cooldowns: {
+									type: "searchCooldown",
+									lastUsed: new Date(),
+									duration: 60000
+								}
+							}
+						}
+					)
+				}
+			}
 		}
 	} catch (error) {
 		logger.error("Error updating user cooldowns:", error)
@@ -3583,7 +3681,7 @@ export async function resetProfileChangeCooldown(): Promise<void> {
 	}
 }
 
-let nextDailyResetTimestamp = getTimestampForTodayAt4PM() // Or for tomorrow if it's already past 4 PM today
+let nextDailyResetTimestamp = getTimestampForTodayAt4PM()
 
 function getTimestampForTodayAt4PM() {
 	const now = new Date()
@@ -3996,6 +4094,9 @@ export interface RaidBoss {
 	imageUrl: string
 	startDate: Date
 	endDate: Date
+	levelRequirement: number
+	description: string
+	fugaThreshold: number // Health threshold for triggering Fuga
 	phases: {
 		name: string
 		health: number
@@ -4543,6 +4644,7 @@ export interface UserSettings {
 	acceptTrades: boolean
 	showAlerts: boolean
 	showSpoilers: boolean
+	trademessage: boolean
 }
 
 // Get user settings
@@ -4988,7 +5090,170 @@ export async function updateOwnerLogs(userId: string, logData: LogEntry): Promis
 		throw error
 	}
 }
+// Fetch all raid bosses from the database
+export async function getRaidBosses(): Promise<RaidBoss[]> {
+	try {
+		const database = client.db(mongoDatabase)
+		const raidBossesCollection = database.collection<RaidBoss>(raidBossesCollectionName)
+		return await raidBossesCollection.find().toArray()
+	} catch (error) {
+		console.error("Error fetching raid bosses:", error)
+		throw error
+	}
+}
 
-//await createDeveloperAlert("Sorry for all the bugs lately, I'm working on fixing them now. Thanks for your patience!")
+// get user level
+export async function getUserLevel(userId: string): Promise<number> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+		return user ? user.level : 1
+	} catch (error) {
+		console.error("Error getting user level:", error)
+		throw error
+	}
+}
 
+export async function getUserCooldown(userId: string, cooldownType: string): Promise<Date | null> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<User>(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId })
+		if (user && user.cooldowns) {
+			const cooldown = user.cooldowns.find(cd => cd.type === cooldownType)
+			if (cooldown) {
+				return cooldown.lastUsed
+			}
+		}
+		return null
+	} catch (error) {
+		console.error("Error retrieving user cooldown:", error)
+		throw error
+	} finally {
+		await client.close()
+	}
+}
+
+export async function trackAchievementsAndQuests(userId: string, amount: number): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const user = await usersCollection.findOne({ id: userId })
+
+		if (!user) {
+			throw new Error(`No user found with ID: ${userId}`)
+		}
+
+		const achievements = user.achievements || []
+		const quests = user.quests || []
+
+		// Track achievements
+		for (const achievement of initialAchievements) {
+			const userAchievement = achievements.find(a => a.name === achievement.name)
+			if (!userAchievement) continue
+
+			if (!userAchievement.unlocked) {
+				let progress = userAchievement.progress || 0
+
+				if (achievement.name === "No Life" || achievement.name === "Raid Champion") {
+					progress += amount
+					if (progress >= achievement.target) {
+						await unlockAchievement(userId, achievement.name)
+					} else {
+						await updateAchievementProgress(userId, achievement.name, progress)
+					}
+				}
+			}
+		}
+
+		// Track quests
+		for (const quest of quests) {
+			for (const task of quest.tasks) {
+				if (task.description === "Earn Coins") {
+					await addUserQuestProgress(userId, quest.instanceId, amount, "Earn Coins")
+				}
+			}
+		}
+	} catch (error) {
+		logger.error("Error tracking achievements and quests:", error)
+		throw error
+	}
+}
+
+export async function unlockAchievement(userId: string, achievementName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const achievement = initialAchievements.find(a => a.name === achievementName)
+		if (!achievement) {
+			throw new Error(`Achievement '${achievementName}' not found in initialAchievements.`)
+		}
+
+		await usersCollection.updateOne(
+			{ "id": userId, "achievements.name": achievementName },
+			{ $set: { "achievements.$.unlocked": true } }
+		)
+
+		const rewards = achievement.rewards
+		if (rewards) {
+			if (rewards.coins) {
+				await updateBalance(userId, rewards.coins)
+			}
+			if (rewards.items) {
+				for (const [item, quantity] of Object.entries(rewards.items)) {
+					await addItemToUserInventory(userId, item, quantity)
+				}
+			}
+			if (rewards.rewardTitle) {
+				await unlockTitle(userId, rewards.rewardTitle)
+			}
+		}
+
+		logger.info(`Achievement '${achievementName}' unlocked for user: ${userId}`)
+	} catch (error) {
+		logger.error("Error unlocking achievement:", error)
+		throw error
+	}
+}
+
+export async function updateAchievementProgress(
+	userId: string,
+	achievementName: string,
+	progress: number
+): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne(
+			{ "id": userId, "achievements.name": achievementName },
+			{ $set: { "achievements.$.progress": progress } }
+		)
+
+		logger.info(`Achievement progress for '${achievementName}' updated for user: ${userId}`)
+	} catch (error) {
+		logger.error("Error updating achievement progress:", error)
+		throw error
+	}
+}
+export async function unlockTitle(userId: string, titleName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		await usersCollection.updateOne(
+			{ "id": userId, "titles.name": titleName },
+			{ $set: { "titles.$.unlocked": true } }
+		)
+
+		logger.info(`Title '${titleName}' unlocked for user: ${userId}`)
+	} catch (error) {
+		logger.error("Error unlocking title:", error)
+		throw error
+	}
+}
 client1.login(process.env["DISCORD_BOT_TOKEN"])

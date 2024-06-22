@@ -17,6 +17,7 @@ import {
 	getUserUnlockedTransformations,
 	removeAllStatusEffects,
 	setUserTutorialState,
+	updateAchievementProgress,
 	updateBalance,
 	updateMonthlyFightsWon,
 	updatePlayerClanTier,
@@ -69,6 +70,9 @@ export async function handleBossDeath(
 		await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Gojo")
 		await addUserQuestProgress(interaction.user.id, "Mentor: The Strongest", 1)
 	}
+	if (opponent.name === "Zenin Toji") {
+		await addUserQuestProgress(interaction.user.id, "Mentor: Sorcerer Killer", 1)
+	}
 	if (opponent.name === "Sukuna") {
 		await addUserQuestProgress(interaction.user.id, "Satoru Gojo's Mission", 1, "Defeat Sukuna")
 		await addUserQuestProgress(interaction.user.id, "Awakening", 1, "Defeat Ryomen Sukuna")
@@ -112,7 +116,12 @@ export async function handleBossDeath(
 			1,
 			"Defeat Satoru Gojo (Shinjuku Showdown Arc)"
 		)
-		await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Satoru Gojo (Shinjuku Showdown Arc)")
+		await addUserQuestProgress(
+			interaction.user.id,
+			"Limitless Unleashed",
+			1,
+			"Defeat Satoru Gojo (Shinjuku Showdown Arc)"
+		)
 		await addUserQuestProgress(
 			interaction.user.id,
 			"Stage Three Unleashed",
@@ -135,6 +144,7 @@ export async function handleBossDeath(
 	await addUserQuestProgress(interaction.user.id, "Kashimo's Task", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Limitless Unleashed", 1, "Defeat Foes")
 	await addUserQuestProgress(interaction.user.id, "Mission with Nobara", 1)
+	await updateAchievementProgress(interaction.user.id, "Curse Breaker", 1)
 
 	await updateMonthlyFightsWon(interaction.user.id)
 
@@ -355,22 +365,22 @@ export async function executeSpecialTechniquePvp({
 		case "Ten Shadows Technique: Divergent Sila Divine General Mahoraga":
 			imageUrl = "https://media1.tenor.com/m/SSY_DQmpNykAAAAC/gojo-vs-sukuna-satoru-gojo.gif"
 			description = "You summon the Divergent Sila Divine General Mahoraga!"
-			damage = calculateDamage(playerGradeString, userId, true) * 30
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 		case "Ten Shadows Technique: Divine Dogs":
 			imageUrl = "https://media1.tenor.com/m/SSY_DQmpNykAAAAC/gojo-vs-sukuna-satoru-gojo.gif"
 			description = "You unleash the power of the Divine Dogs!"
-			damage = calculateDamage(playerGradeString, userId, true) * 20
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 		case "Ten Shadows Technique: Nue":
 			imageUrl = "https://media1.tenor.com/m/-I0E2FViCOsAAAAC/gojo-satoru.gif"
 			description = "You summon the Nue, a powerful shikigami!"
-			damage = calculateDamage(playerGradeString, userId, true) * 15
+			damage = calculateDamage(playerGradeString, userId, true) * 4
 			break
 		case "Atomic":
 			imageUrl = "https://media1.tenor.com/m/Y5S-OJqsydUAAAAd/test.gif"
 			description = "I...AM....ATOMIC"
-			damage = calculateDamage(playerGradeString, userId, true) * 40
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 		case "Fist of the Cursed":
 			imageUrl = "https://media1.tenor.com/m/Hx77RI9lzY4AAAAC/hollow-nuke-hollow-purple.gif"
@@ -385,97 +395,97 @@ export async function executeSpecialTechniquePvp({
 		case "Imaginary Technique: White":
 			imageUrl = "https://media1.tenor.com/m/jG4ODQWzWG0AAAAC/jidion-guy-milk-in-car.gif"
 			description = "Guys.."
-			damage = calculateDamage(playerGradeString, userId, true) * 18
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 		case "Wonder Of U":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-35ad74a53c.gif"
 			description = "Wonder of U: I am the calamity."
-			damage = calculateDamage(playerGradeString, userId, true) * 18
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 		case "Nah I'd Lose":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/maxresdefault.jpg"
 			description = "Don't worry, I'll lose."
-			damage = calculateDamage(playerGradeString, userId, true) * 40
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 		case "Hollow Purple":
 			imageUrl = "https://media1.tenor.com/m/ZdRh7cZgkGIAAAAC/hollow-purple.gif"
 			description = "I guess I can play a little rough."
-			damage = calculateDamage(playerGradeString, userId, true) * 10
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 		case "Star Rage: Virtual Mass":
 			imageUrl = "https://staticg.sportskeeda.com/editor/2023/12/73a1e-17035028644330-1920.jpg"
 			description = "That's my technique! It's mass <3"
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 		case "Disaster Curses: Full Flux":
 			imageUrl = "https://media1.tenor.com/m/QHLZohdZiXsAAAAd/geto-suguru.gif"
 			description = "Open the gate between the worlds... Lend me your power. Disaster Curses: Full Flux."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 		case "Lapse Blue X Red: Combo":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-7-99cec3f18d.gif"
 			description = "I'll have to finish this quickly.."
-			damage = calculateDamage(playerGradeString, userId, true) * 16
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 		case "Close-up Reversal Red":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/6fcda5f38ec5cd37e6d16e4428ce927f.jpg"
 			description = "I'm down here now."
-			damage = calculateDamage(playerGradeString, userId, true) * 14
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 		case "World Cutting Slash":
 			imageUrl = "https://media1.tenor.com/m/MXakTMh3R60AAAAC/sukuna-vs-maho-sukuna-slice.gif"
 			description = "Begone."
-			damage = calculateDamage(playerGradeString, userId, true) * 16
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 
 		case "Vengance Blade: Executioners Blade":
 			imageUrl = "https://media1.tenor.com/m/wmZxEiKZRXgAAAAd/yuta-cursed-energy.gif"
 			description = "I don't like people who hurt my friends..."
-			damage = calculateDamage(playerGradeString, userId, true) * 8
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 
 		case "Maximum Technique: Blue":
 			imageUrl = "https://media1.tenor.com/m/LXmbPm21NagAAAAC/gojo-starou-satoru-gojo.gif"
 			description = "Cursed Technique Lapse, Maximum Output.. BLUE!"
-			damage = calculateDamage(playerGradeString, userId, true) * 8
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 
 		case "Maximum Technique: Red":
 			imageUrl = "https://media1.tenor.com/m/iyzTuWFxU2cAAAAd/gojo-gojo-satoru.gif"
 			description = "Reversal.. Red"
-			damage = calculateDamage(playerGradeString, userId, true) * 7
+			damage = calculateDamage(playerGradeString, userId, true) * 4
 			break
 
 		case "Maximum Technique: Purple":
 			imageUrl = "https://media1.tenor.com/m/uxzlDwND2RkAAAAd/roxo-hollow-purple.gif"
 			description = "Hidden technique, Awoken through the power of the Six Eyes. Maximum Technique: Purple."
-			damage = calculateDamage(playerGradeString, userId, true) * 9
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Hollow Purple: Nuke":
 			imageUrl = "https://media1.tenor.com/m/Hx77RI9lzY4AAAAC/hollow-nuke-hollow-purple.gif"
 			description = "Polarized Light.. Crow "
-			damage = calculateDamage(playerGradeString, userId, true) * 8
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Prayer Song":
 			imageUrl =
 				"https://cdn.discordapp.com/attachments/1094302755960664255/1225688422551785544/image.png?ex=66220a4c&is=660f954c&hm=df32c017b95d2a118b22ff2999990e6ab413e14acbe354b059bee5ced017db16&"
 			description = "**You synchronize with your opponent's movements... it's absolutely chilling.**"
-			damage = calculateDamage(playerGradeString, userId, true) * 6
+			damage = calculateDamage(playerGradeString, userId, true) * 5
 			break
 
 		case "Re-imagined BLACK FLASH":
 			imageUrl =
 				"https://storage.googleapis.com/jjk_bot_personal/yuji-lands-black-flash-on-sukuna-jujutsu-kaisen-jjk-256%20%5BMConverter.eu%5D.png"
 			description = "KOKU..SEN!"
-			damage = calculateDamage(playerGradeString, userId, true) * 10
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 
 		case "Piercing Blood":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/Yuji_using_Piercing_Blood.png"
 			description = "Wow you're really strong.. I'm gonna have to go all out."
-			damage = calculateDamage(playerGradeString, userId, true) * 8
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Maximum: METEOR":
@@ -488,7 +498,7 @@ export async function executeSpecialTechniquePvp({
 			imageUrl =
 				"https://64.media.tumblr.com/bf4c7320f2fcc0743c911ea174a3a7f2/8b2aaf7d220d5701-c0/s1280x1920/57858721add8c560100397b818093bc8a45d85da.jpg"
 			description = "A forbidden technique that can only be used by a single person. Solo Forbidden Area."
-			damage = calculateDamage(playerGradeString, userId, true) * 15
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Zenin Style: Playful Cloud: STRIKE":
@@ -515,7 +525,7 @@ export async function executeSpecialTechniquePvp({
 			imageUrl = "https://media1.tenor.com/m/gTzL4bykSakAAAAC/jujutsu-kaisen0-battle.gif"
 			description =
 				"You're six eyes begin to glow.. You're not sure what's happening.. **Unleashed Technique: Six Point Palm**"
-			damage = calculateDamage(playerGradeString, userId, true) * 35
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 
 			break
 
@@ -542,7 +552,7 @@ export async function executeSpecialTechniquePvp({
 		case "The Shoko":
 			imageUrl = "https://media1.tenor.com/m/2sYS0uQV8IIAAAAd/jujutsu-kaisen-jujutsu-kaisen-fade.gif"
 			description = "Please the:"
-			damage = calculateDamage(playerGradeString, userId, true) * 14
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "MAXIMUM: BLACK FLASH":
@@ -566,13 +576,13 @@ export async function executeSpecialTechniquePvp({
 		case "Essence of the Soul: KOKUSEN":
 			imageUrl = "https://media1.tenor.com/m/0EERvw7z2aEAAAAC/jjk-jjk-s2.gif"
 			description = "AHHH I TRULY AM.. A CURSED SPIRIT!"
-			damage = calculateDamage(playerGradeString, userId, true) * 14
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Transfiguration: Soul Touch":
 			imageUrl = "https://media1.tenor.com/m/vuHtrhYou2MAAAAC/nobara-face-jujutsu-kaisen.gif"
 			description = "Now you're in for it.."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Transfiguration: Decay":
@@ -584,13 +594,13 @@ export async function executeSpecialTechniquePvp({
 		case "Copy: Cleave":
 			imageUrl = "https://static1.srcdn.com/wordpress/wp-content/uploads/2024/02/image0-15.jpeg"
 			description = "Copy: Cleave...."
-			damage = calculateDamage(playerGradeString, userId, true) * 19
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Copy: Cursed Speech: Die":
 			imageUrl = "https://media1.tenor.com/m/07LI2_CcWlsAAAAC/jujutsu-kaisen-mang%C3%A1-jujutsu-mang%C3%A1.gif"
 			description = "DIE.."
-			damage = calculateDamage(playerGradeString, userId, true) * 18
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Close Quarters 2-4 Combo":
@@ -614,7 +624,7 @@ export async function executeSpecialTechniquePvp({
 		case "Split Soul: Blitz":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/Maki_stabs_Naoya_from_behind.png"
 			description = "Didn't even notice me.."
-			damage = calculateDamage(playerGradeString, userId, true) * 14.5
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "0.2 Second Strike":
@@ -651,7 +661,7 @@ export async function executeSpecialTechniquePvp({
 		case "Mythical Beast Amber":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/Mythical_Beast_Amber(1).png"
 			description = "I'm not going to let you get away with this.."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Lightning Discharge":
@@ -661,7 +671,7 @@ export async function executeSpecialTechniquePvp({
 			break
 
 		case "Divine Flames":
-			damageMultiplier = 7
+			damageMultiplier = 1
 			imageUrl =
 				"https://storage.googleapis.com/jjk_bot_personal/sukuna-holding-out-his-arm-in-front-of-him-engulfed-with-flames-as-he-uses-his-fire-technique-in-jujutsu-kaisen%20%5BMConverter.eu%5D.png"
 			description = "I'll burn you to a crisp.."
@@ -670,7 +680,7 @@ export async function executeSpecialTechniquePvp({
 			break
 
 		case "Pure Dismantle":
-			damageMultiplier = 7
+			damageMultiplier = 3
 			imageUrl = "https://media1.tenor.com/m/4cSNEQWHARAAAAAC/cleave-dismantle.gif"
 			description = "shing shing.."
 
@@ -681,31 +691,31 @@ export async function executeSpecialTechniquePvp({
 			imageUrl =
 				"https://storage.googleapis.com/jjk_bot_personal/who-winning-this-clash-of-techniques-v0-r97dr3o8a5kb1.png"
 			description = "You throw a fire extinguisher at the opponent...? "
-			damage = calculateDamage(playerGradeString, userId, true) * 6
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Split Second Slice":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/toji-toji-fushiguro.gif"
 			description = "You can't dodge this one.."
-			damage = calculateDamage(playerGradeString, userId, true) * 4
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Playful Cloud: Rushing Resolute":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/toji-fushiguro-shibuya-arc-60fps.gif"
 			description = "Who do you think you are?"
-			damage = calculateDamage(playerGradeString, userId, true) * 17
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Bloodlusted: Skull Crush":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-4-14fc7970f5.gif"
 			description = "I'm going to crush your skull.."
-			damage = calculateDamage(playerGradeString, userId, true) * 13
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Split Slap":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/megumi-fushiguro-fushiguro-megumi.gif"
 			description = "Stay down!"
-			damage = calculateDamage(playerGradeString, userId, true) * 10
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Supernova":
@@ -718,37 +728,37 @@ export async function executeSpecialTechniquePvp({
 			imageUrl =
 				"https://cdn.discordapp.com/attachments/1232829104378871839/1239800650187931708/ezgif-2-1a5fda8aad.png?ex=66443dd5&is=6642ec55&hm=11b8e9103190532406894213ca6bce3d91f34a5b6815059a59f9661d0f46178e&"
 			description = "Gambling is my life.."
-			damage = calculateDamage(playerGradeString, userId, true) * 16
+			damage = calculateDamage(playerGradeString, userId, true) * 1
 			break
 
 		case "Jackpot: Full House Kick":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-03d1d5eb78.png"
 			description = "Gambling i love it.."
-			damage = calculateDamage(playerGradeString, userId, true) * 14
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Jackpot: Shutter Doors":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-3-6b5c52f9c2.png"
 			description = "Gambling really is my life.."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Tusk: Lesson Five..":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-5-99dcb0b244.gif"
 			description = "Arigato.. Gyro."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 3
 			break
 
 		case "D4C: Love Train":
 			imageUrl = "https://media1.tenor.com/m/DsrNAu39v5sAAAAC/d4c-erixander.gif"
 			description = "I'm going to have to use my ultimate technique.."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		case "Maximum Muscle: Purple":
 			imageUrl = "https://storage.googleapis.com/jjk_bot_personal/ezgif-5-3fce776712.gif"
 			description = "You know who else is the honored one? Me.."
-			damage = calculateDamage(playerGradeString, userId, true) * 12
+			damage = calculateDamage(playerGradeString, userId, true) * 2
 			break
 
 		default:

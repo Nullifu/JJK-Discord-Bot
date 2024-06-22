@@ -20,15 +20,12 @@ import {
 	User
 } from "discord.js"
 import { config as dotenv } from "dotenv"
-
 import express from "express"
 import log4js from "log4js"
 import cron from "node-cron"
-import { AutoPoster } from "topgg-autoposter"
 import {
 	abandonQuestCommand,
 	claimQuestsCommand,
-	eventCommandHandler,
 	generateCombinedEmbed,
 	handleAcceptTrade,
 	handleAchievementsCommand,
@@ -45,6 +42,7 @@ import {
 	handleDonateCommand,
 	handleEquipInateClanCommand,
 	handleEquipTechniqueCommand,
+	handleEquipTitleCommand,
 	handleEquipTransformationCommand,
 	handleFightCommand,
 	handleGambleCommand,
@@ -59,7 +57,6 @@ import {
 	handlePingCommand,
 	handlePreviousTradesCommand,
 	handleProfileCommand,
-	handlePurchaseHistoryCommand,
 	handlePvpCommand,
 	handleQuestCommand,
 	handleRaidCommand,
@@ -72,7 +69,7 @@ import {
 	handleSupportCommand,
 	handleTame,
 	handleTechniqueShopCommand,
-	handleTitleSelectCommand,
+	handleTestAchievementCommand,
 	handleTradeCommand,
 	handleTutorialCommand,
 	handleUnequipTechniqueCommand,
@@ -101,6 +98,7 @@ import {
 } from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleUpdateBalanceCommand } from "./owner.js"
 import { getRandomQuote } from "./shikigami.js"
+import { AutoPoster } from "topgg-autoposter"
 
 // Configure log4js
 log4js.configure({
@@ -386,7 +384,6 @@ export const randomdig2 = [
 	"Exhumed"
 ]
 
-// Slash Commands
 const commands = [
 	new SlashCommandBuilder()
 		.setName("profile")
@@ -399,6 +396,7 @@ const commands = [
 	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
+	new SlashCommandBuilder().setName("achievements").setDescription("View Achievements"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("alert").setDescription("Bot Alerts"),
 	new SlashCommandBuilder().setName("update").setDescription("Recent bot updates!"),
@@ -411,18 +409,28 @@ const commands = [
 			option.setName("user").setDescription("The user to display the inventory for").setRequired(false)
 		),
 	new SlashCommandBuilder().setName("work").setDescription("Work For Money!"),
-
+	new SlashCommandBuilder()
+		.setName("testachievement")
+		.setDescription("Test unlocking an achievement")
+		.addStringOption(option =>
+			option.setName("achievement").setDescription("The name of the achievement to unlock").setRequired(true)
+		),
 	new SlashCommandBuilder().setName("dig").setDescription("Dig For Items!"),
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
-	new SlashCommandBuilder().setName("event").setDescription("Get information about the ongoing global event"),
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
 	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
+	new SlashCommandBuilder().setName("equiptitle").setDescription("Equip a title from your unlocked titles"),
 	new SlashCommandBuilder()
 		.setName("settings")
 		.setDescription("Update your user settings")
 		.addBooleanOption(option => option.setName("pvpable").setDescription("Toggle PvP availability"))
 		.addBooleanOption(option => option.setName("showalerts").setDescription("Toggle alert notifications"))
 		.addBooleanOption(option => option.setName("acceptrades").setDescription("Toggle trade acceptance"))
+		.addBooleanOption(option =>
+			option
+				.setName("trademessage")
+				.setDescription("Toggle wether the bot sends a message to you if someone initiates a trade")
+		)
 		.addBooleanOption(option => option.setName("showspoiler").setDescription("Toggle showing spoilers")),
 
 	new SlashCommandBuilder().setName("settingsview").setDescription("view settings"),
@@ -540,7 +548,12 @@ const commands = [
 				.setName("game")
 				.setDescription("The game you want to play")
 				.setRequired(true)
-				.addChoices({ name: "Slot Machine", value: "slot" }, { name: "Coin Flip", value: "coinflip" })
+				.addChoices(
+					{ name: "Slot Machine", value: "slot" },
+					{ name: "Coin Flip", value: "coinflip" },
+					{ name: "Black Jack", value: "blackjack" },
+					{ name: "High Stakes", value: "highstakes" }
+				)
 		)
 		.addIntegerOption(option =>
 			option.setName("amount").setDescription("The amount of coins to gamble").setRequired(true)
@@ -577,7 +590,10 @@ const commands = [
 					{ name: "Normal Box", value: "Normal Box" },
 					{ name: "Extreme Box", value: "Extreme Box" },
 					{ name: "Special Grade Box", value: "Special Grade Box" },
-					{ name: "Basic Booster Bundle", value: "Basic Booster Bundle" }
+					{ name: "Basic Booster Bundle", value: "Basic Booster Bundle" },
+					{ name: "Voidless Infusion", value: "Voidless Infusion" },
+					{ name: "Vessel's Rebuke", value: "Vessel's Rebuke" },
+					{ name: "Pact of the Cursed", value: "Pact of the Cursed" }
 				)
 		)
 		.addStringOption(option =>
@@ -602,8 +618,9 @@ const commands = [
 					{ name: "Simple Domain Essence", value: "Simple Domain Essence" },
 					{ name: "RCT Essence", value: "RCT Essence" },
 					{ name: "Luck Essence", value: "Luck Essence" },
-					{ name: "Unleashed Inate Essence", value: "Unleashed Inate Essence" },
-					{ name: "Kenjaku's Brain", value: "Kenjaku's Brain" }
+					{ name: "Divine Essence", value: "Divine Essence" },
+					{ name: "Sorcerer's Essence", value: "Sorcerer's Essence" },
+					{ name: "Unleashed Inate Essence", value: "Unleashed Inate Essence" }
 				)
 		),
 
@@ -785,19 +802,19 @@ client.on("interactionCreate", async interaction => {
 			.addFields(
 				{
 					name: "**General Commands**",
-					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `Trello`, `Tutorial`"
+					value: "`Register`, `Profile`, `Inventory`, `Balance`, `Leaderboard`, `Achievements`, `Support`, `Help`, `Vote`, `Trello`, `Tutorial`, `Settings`, `SettingsView`, `JujutsuStatus`"
 				},
 				{
 					name: "**Economy Commands**",
-					value: "`Work`, `Dig`, `Gamble`, `Beg`, `Donate`, `Daily`, `Shop`, `Sell`, `UseItem`, `Craft`"
+					value: "`Work`, `Dig`, `Gamble`, `Beg`, `Donate`, `Daily`, `Shop`, `Sell`, `Use`, `Craft`, `Consume`"
 				},
 				{
 					name: "**Battle Commands**",
-					value: "`Fight`, `Tame`, `View Shikigami`, `Technique View/Equip`, `Quests`, `Event`, `Raid`, `ActiveEffects`, `Mentor`"
+					value: "`Fight`, `Tame`, `Shikigami`, `Technique`, `Quests`, `Event`, `Raid`, `ActiveEffects`, `Mentor`, `PvP`, `ToggleHeavenlyRestriction`"
 				},
 				{
 					name: "**Other Commands**",
-					value: "`Alert`, `Update`, `Search`, `SelectJob`, `SelectTitle`, `Bug`"
+					value: "`Alert`, `Update`, `Search`, `SelectJob`, `EquipTitle`, `EquipClan`, `Bug`, `Trade`"
 				}
 			)
 			.setTimestamp()
@@ -962,7 +979,6 @@ client.on("interactionCreate", async interaction => {
 			case "shop":
 				await handleShopCommand(chatInputInteraction)
 				break
-
 			case "equipclan":
 				await handleEquipInateClanCommand(chatInputInteraction)
 				break
@@ -978,12 +994,8 @@ client.on("interactionCreate", async interaction => {
 			case "profile":
 				await handleProfileCommand(chatInputInteraction)
 				break
-
 			case "inventory":
 				await handleInventoryCommand(chatInputInteraction)
-				break
-			case "event":
-				await eventCommandHandler(chatInputInteraction)
 				break
 			case "settings":
 				await handleSettingsCommand(chatInputInteraction)
@@ -1006,23 +1018,21 @@ client.on("interactionCreate", async interaction => {
 			case "settingsview":
 				await handleViewSettingsCommand(chatInputInteraction)
 				break
-
 			case "fight":
 				await handleFightCommand(chatInputInteraction)
 				break
-
 			case "tame":
 				await handleTame(chatInputInteraction)
 				break
-
 			case "raid":
 				await handleRaidCommand(chatInputInteraction)
 				break
-
 			case "consume":
 				await handleConsumeItem(chatInputInteraction)
 				break
-
+			case "testachievement":
+				await handleTestAchievementCommand(chatInputInteraction)
+				break
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
 				break
@@ -1031,9 +1041,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "work":
 				await handleWorkCommand(chatInputInteraction)
-				break
-			case "selectitle":
-				await handleTitleSelectCommand(chatInputInteraction)
 				break
 			case "search":
 				await handleSearchCommand(chatInputInteraction)
@@ -1065,8 +1072,8 @@ client.on("interactionCreate", async interaction => {
 			case "beg":
 				await handleBegCommand(chatInputInteraction)
 				break
-			case "purchasehistory":
-				await handlePurchaseHistoryCommand(chatInputInteraction)
+			case "equiptitle":
+				await handleEquipTitleCommand(chatInputInteraction)
 				break
 			case "stats":
 				await handleViewStats(chatInputInteraction)

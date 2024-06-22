@@ -82,8 +82,6 @@ import {
 	DOMAIN_EXPANSIONS,
 	INVENTORY_CLAN,
 	MiniGameResult,
-	allAchievements,
-	benefactors,
 	consumeables,
 	craftingRecipes,
 	dailyitems,
@@ -101,7 +99,6 @@ import {
 import { getRandomItem } from "./items.js"
 import { postCommandMiddleware } from "./middleware.js"
 import {
-	RaidParty,
 	UserSettings,
 	UserShikigami,
 	addItemToUserInventory,
@@ -109,6 +106,7 @@ import {
 	addUserPurchases,
 	addUserQuest,
 	addUserTechnique,
+	calculateExperienceForLevel,
 	checkForNewAlerts,
 	checkStageMessaged,
 	checkUserHasHeavenlyRestriction,
@@ -129,20 +127,18 @@ import {
 	getBlacklistedUsers,
 	getBosses,
 	getCurrentCommunityQuest,
-	getCurrentRaidBoss,
 	getMonthlyFightsWonLeaderboard,
 	getNextAwakeningStage,
 	getPreviousTrades,
 	getRaidBossDetails,
-	getRaidPartyById,
+	getRaidBosses,
 	getShikigami,
-	getShopLastReset,
-	getUserAchievements,
 	getUserActiveDefenseTechnique,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
 	getUserAwakening,
 	getUserClanDetails,
+	getUserCooldown,
 	getUserDailyData,
 	getUserDomain,
 	getUserFavouriteCommand,
@@ -153,6 +149,7 @@ import {
 	getUserHonours,
 	getUserInventory,
 	getUserItemEffects,
+	getUserLevel,
 	getUserMaxHealth,
 	getUserMentor,
 	getUserOwnedInateClan,
@@ -178,22 +175,21 @@ import {
 	handleRaidBossDefeat,
 	handleTradeAcceptance,
 	healShikigami,
+	initialAchievements,
 	isUserRegistered,
 	markStageAsMessaged,
 	mongoDatabase,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
-	removeRaidPartyPendingActions,
 	removeUserQuest,
 	setUserTutorialMessageId,
 	setUserTutorialState,
 	startNewSession,
+	unlockAchievement,
 	updateBalance,
 	updateGamblersData,
 	updatePlayerGrade,
 	updateRaidBossCurrentHealth,
-	updateRaidParty,
-	updateRaidPartyPendingActions,
 	updateUserAchievements,
 	updateUserActiveHeavenlyTechniques,
 	updateUserActiveTechniques,
@@ -220,9 +216,9 @@ import {
 	updateUserUnlockedTransformations,
 	updateUserWorked,
 	userExists,
+	usersCollectionName,
 	viewTradeRequests
 } from "./mongodb.js"
-import { applyBossDamage, dualTechniqueCombinations, executeDualTechnique1 } from "./raids.js"
 import {
 	activeShikigami,
 	createShikigamiEmbed,
@@ -245,12 +241,22 @@ import {
 	fetchAndFormatStatusEffects
 } from "./statuseffects.js"
 import {
+	calculateHandValue,
+	checkWin,
+	createAchievementsEmbed,
 	createFeverMeterBar,
+	createProgressBar,
 	createRaidEmbed,
 	createTechniqueSelectMenu,
+	drawCard,
+	endBlackjackGame,
+	formatNumberWithCommas,
+	getApiLatency,
 	getAwakeningDialogue,
 	getEmojiForClan,
+	getLatencyEmoji,
 	getMentorDetails,
+	getRandomBenefactor,
 	getYujiItadoriEventLine,
 	getYujiItadoriImageUrl,
 	getYujiItadoriLine,
@@ -258,7 +264,11 @@ import {
 	hasRequiredClanDetails,
 	jjkbotdevqutoes,
 	mentorDetails,
-	rareChance
+	pageSize,
+	raidShops,
+	rareChance,
+	spinSlots,
+	updateBlackjackDisplay
 } from "./utils.js"
 
 const domainActivationState = new Map()
@@ -336,7 +346,7 @@ export async function handleRegisterCommand(interaction: ChatInputCommandInterac
 				.setColor(0x5d2e8c)
 				.setTitle("Jujutsu Registration Complete!")
 				.setDescription(
-					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /guide for the trello link, with all Information.\nYou've also got a free Starter Bundle in your inventory!`
+					`Welcome, ${interaction.user.toString()}! You can use /help if your ever stuck, Or /trello for the trello link, with all Information.\nYou've also got a free Starter Bundle in your inventory!`
 				)
 				.setImage(imageURL)
 				.setTimestamp()
@@ -397,16 +407,19 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 			: formatDomainExpansion(userProfile.domain)
 		const shikigamiEmojis = userProfile.shikigami.map(shiki => getShikigamiEmoji(shiki.name))
 
+		const activeTitle = userProfile.titles.find(title => title.active)?.name || "None"
+
 		const embed = new EmbedBuilder()
 			.setColor(0x1f6b4e)
 			.setTitle(`Jujutsu Profile: ${user.username} 🌀`)
 			.setImage(profileHeader || user.displayAvatarURL())
 			.setThumbnail(await profileImage)
 			.addFields(
-				{ name: "**Title** 🏆", value: userProfile.activeTitle || "None", inline: true },
+				{ name: "**Title** 🏆", value: activeTitle, inline: true },
 				{ name: "**Sorcerer Grade** 🏅", value: userProfile.grade || "Unranked", inline: true },
 				{ name: "**Balance** 💰", value: `\`${userProfile.balance.toLocaleString()}\``, inline: false },
 				{ name: "**Experience** ✨", value: userProfile.experience.toLocaleString(), inline: false },
+				{ name: "**Level** 🏆", value: userProfile.level.toString() || "1", inline: true },
 				{ name: "**Job** 💼", value: userProfile.job || "None", inline: false },
 				{ name: "**Domain Expansion** 🌀", value: domainExpansionValue, inline: false },
 				{ name: "**Heavenly Restriction** ⛔", value: hasHeavenlyRestriction ? "Yes" : "No", inline: false },
@@ -414,10 +427,20 @@ export async function handleProfileCommand(interaction: ChatInputCommandInteract
 			)
 			.setFooter({ text: getRandomQuote() })
 
+		// Adding the experience progress bar to the embed
+		const currentExperience = userProfile.experience
+		const currentLevel = userProfile.level
+		const experienceForNextLevel = calculateExperienceForLevel(currentLevel)
+		const progressBar = createProgressBar(currentExperience, experienceForNextLevel)
+
+		embed.addFields({
+			name: "**Progress to Next Level** 📈",
+			value: `${progressBar} ${currentExperience}/${experienceForNextLevel}`,
+			inline: false
+		})
+
 		if (user.id === "292385626773258240") {
 			embed.setColor("LuminousVividPink")
-			embed.addFields({ name: "**All-Knowing**", value: "This user is all knowing! 🤔", inline: false })
-			embed.addFields({ name: "**Special Status**", value: "This user is special! ✨", inline: false })
 		}
 
 		return embed
@@ -1317,6 +1340,7 @@ export async function handleDomainSelection(interaction) {
 					await updateUserAchievements(interaction.user.id, "unlockedDomain")
 					await removeItemFromUserInventory(interaction.user.id, selectedDomain.requirement, 1)
 					await updateUserDomainExpansion(interaction.user.id, selectedDomainName)
+					await unlockAchievement(interaction.user.id, "Domain Master")
 
 					await collectedInteraction.followUp({
 						embeds: [
@@ -1357,7 +1381,7 @@ export async function handleDomainSelection(interaction) {
 		logger.info(`Collected ${collected.size} items`)
 	})
 }
-
+const searchCooldownDuration = 60000
 const userSearching = new Map<
 	string,
 	{
@@ -1368,20 +1392,19 @@ const userSearching = new Map<
 	}
 >()
 
-export async function handleSearchCommand(interaction: ChatInputCommandInteraction<CacheType>) {
+export async function handleSearchCommand(interaction: CommandInteraction<CacheType>) {
 	logger.info(`Received search command from ${interaction.user.tag}.`)
 	await interaction.deferReply()
+
 	const currentTime = Date.now()
 	const authorId = interaction.user.id
-	const timestamp = searchCooldowns.get(authorId)
+	const timestamp = await getUserCooldown(authorId, "searchCooldown")
 
-	// Check cooldown, incorporating a themed message
 	if (timestamp) {
-		const expirationTime = timestamp + searchCooldown
-		if (currentTime < expirationTime && !searchCooldownBypassIDs.includes(authorId)) {
-			// User is on cooldown, send a themed message
+		const expirationTime = new Date(timestamp).getTime() + searchCooldownDuration
+		if (currentTime < expirationTime) {
 			const searchCooldownEmbed = new EmbedBuilder()
-				.setColor(0x4b0082) // Red color for alert
+				.setColor(0x4b0082)
 				.setTitle("Energy Recharge Needed")
 				.setTimestamp()
 				.setDescription(
@@ -1390,14 +1413,13 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 					)}:R>.`
 				)
 			await interaction.editReply({ embeds: [searchCooldownEmbed] })
-			return // Stop further execution to prevent cooldown reset
+			return
 		}
 	}
 
-	// User is not on cooldown, or has bypassed it; update the cooldown
-	searchCooldowns.set(authorId, currentTime)
+	// Update the cooldown
+	await updateUserCooldowns(authorId, "searchCooldown")
 
-	// Reset risk at the start of each new search session
 	userSearching.set(interaction.user.id, {
 		searchCount: 0,
 		riskFactor: 0,
@@ -1405,13 +1427,13 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 		itemFound: ""
 	})
 
-	const searchLocation = getRandomLocation() // Assuming this function returns a string describing the location
+	const searchLocation = getRandomLocation()
 
 	const searchEmbed = new EmbedBuilder()
 		.setColor(0x00ff00)
 		.setTitle("Search Begins")
 		.setDescription(`Beginning your search in ${searchLocation}. The air grows heavier...`)
-		.setFooter({ text: "Risk of encountering a cursed spirit increases with each search.  +20%" })
+		.setFooter({ text: "Risk of encountering a cursed spirit increases with each search. +20%" })
 
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setCustomId("continue_search").setLabel("Continue Searching").setStyle(ButtonStyle.Success),
@@ -1422,205 +1444,201 @@ export async function handleSearchCommand(interaction: ChatInputCommandInteracti
 
 	const collector = interaction.channel.createMessageComponentCollector({
 		filter: inter => inter.user.id === interaction.user.id,
+		componentType: ComponentType.Button,
 		time: 60000
 	})
 
 	collector.on("collect", async inter => {
-		logger.info(`Button clicked by ${inter.user.tag}: ${inter.customId}`)
-		await inter.deferUpdate()
+		try {
+			logger.info(`Button clicked by ${inter.user.tag}: ${inter.customId}`)
 
-		if (inter.customId === "continue_search") {
-			const coinsFoundThisSearch = Math.floor(Math.random() * 20000) + 1
+			if (inter.customId === "continue_search") {
+				const coinsFoundThisSearch = Math.floor(Math.random() * 20000) + 1
 
-			userSearching.set(inter.user.id, {
-				...userSearching.get(inter.user.id),
-				coinsFound: userSearching.get(inter.user.id).coinsFound + coinsFoundThisSearch
-			})
-
-			// Calculate the chance of finding a cursed spirit
-			const encounterChance = Math.random() < userSearching.get(interaction.user.id).riskFactor
-			if (encounterChance) {
-				logger.info(`Cursed spirit encountered. Attempting to respond to ${interaction.user.tag}.`)
-
-				const spiritEmbed = new EmbedBuilder()
-					.setColor("DarkRed")
-					.setTitle("You have perished!")
-					.setDescription("While searching, you encounter a powerful cursed spirit and meet a grim fate...")
-					.setFooter({ text: "You've lost everything you found! Better luck next time." })
-
-				await interaction.editReply({
-					embeds: [spiritEmbed],
-					components: [] // Remove buttons
-				})
-
-				userSearching.delete(interaction.user.id)
-				return
-			}
-
-			const theirSearchCount = userSearching.get(inter.user.id).searchCount
-			logger.info(`Search count for ${inter.user.tag}: ${theirSearchCount}`)
-
-			if (theirSearchCount < 2) {
 				userSearching.set(inter.user.id, {
 					...userSearching.get(inter.user.id),
-					searchCount: theirSearchCount + 1,
-					riskFactor: userSearching.get(inter.user.id).riskFactor + 0.2
+					coinsFound: userSearching.get(inter.user.id).coinsFound + coinsFoundThisSearch
 				})
 
-				// Embed for search results
-				const searchEmbed = new EmbedBuilder()
-					.setColor(0x00ff00)
-					.setTitle("Search Continues")
-					.setDescription(
-						`Continuing your search in ${searchLocation}, you find \`⌬${coinsFoundThisSearch}\` coins. The air grows heavier...`
-					)
-					.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
+				const encounterChance = Math.random() < userSearching.get(interaction.user.id).riskFactor
+				if (encounterChance) {
+					logger.info(`Cursed spirit encountered. Attempting to respond to ${interaction.user.tag}.`)
 
-				await interaction.editReply({ embeds: [searchEmbed], components: [row] })
-			} else {
-				const coinsFound = userSearching.get(inter.user.id)?.coinsFound ?? 0
-				const itemFound = getRandomItem()
+					const spiritEmbed = new EmbedBuilder()
+						.setColor("DarkRed")
+						.setTitle("You have perished!")
+						.setDescription(
+							"While searching, you encounter a powerful cursed spirit and meet a grim fate..."
+						)
+						.setFooter({ text: "You've lost everything you found! Better luck next time." })
 
-				// Embed description handling
-				let itemDescription = "You've finished your searching. You gathered a total of "
-				itemDescription += `${coinsFound} coins`
+					await inter.update({
+						embeds: [spiritEmbed],
+						components: []
+					})
 
-				if (itemFound) {
-					itemDescription += `, You also found a ${itemFound.name}!`
-				} else {
-					itemDescription += ", but you didn't find any items this time."
+					userSearching.delete(interaction.user.id)
+					collector.stop()
+					return
 				}
+
+				const theirSearchCount = userSearching.get(inter.user.id).searchCount
+				logger.info(`Search count for ${inter.user.tag}: ${theirSearchCount}`)
+
+				if (theirSearchCount < 2) {
+					userSearching.set(inter.user.id, {
+						...userSearching.get(inter.user.id),
+						searchCount: theirSearchCount + 1,
+						riskFactor: userSearching.get(inter.user.id).riskFactor + 0.2
+					})
+
+					// Embed for search results
+					const searchEmbed = new EmbedBuilder()
+						.setColor(0x00ff00)
+						.setTitle("Search Continues")
+						.setDescription(
+							`Continuing your search in ${searchLocation}, you find \`⌬${coinsFoundThisSearch}\` coins. The air grows heavier...`
+						)
+						.setFooter({ text: "Risk of encountering a cursed spirit increases with each search." })
+
+					await inter.update({ embeds: [searchEmbed], components: [row] })
+				} else {
+					const coinsFound = userSearching.get(inter.user.id)?.coinsFound ?? 0
+					const itemFound = getRandomItem()
+
+					let itemDescription = "You've finished your searching. You gathered a total of "
+					itemDescription += `${coinsFound} coins`
+
+					if (itemFound) {
+						itemDescription += `, You also found a ${itemFound.name}!`
+					} else {
+						itemDescription += ", but you didn't find any items this time."
+					}
+
+					const finalEmbed = new EmbedBuilder()
+						.setColor("#0099ff")
+						.setTitle("Search Completed")
+						.setDescription(itemDescription)
+						.setTimestamp()
+
+					await updateBalance(inter.user.id, coinsFound)
+					if (itemFound) {
+						await addItemToUserInventory(inter.user.id, itemFound.name, 1)
+					}
+
+					await inter.update({
+						content: "Your search has concluded.",
+						embeds: [finalEmbed],
+						components: []
+					})
+
+					userSearching.delete(inter.user.id)
+					collector.stop()
+				}
+			} else if (inter.customId === "end_search") {
+				logger.info(`End search button clicked by ${inter.user.tag}`)
+
+				const coinsFoundInTheEnd = userSearching.get(inter.user.id).coinsFound
+				await updateBalance(inter.user.id, coinsFoundInTheEnd)
 
 				const finalEmbed = new EmbedBuilder()
 					.setColor("#0099ff")
-					.setTitle("Search Completed")
-					.setDescription(itemDescription)
+					.setTitle("Search Ended")
+					.setDescription("You end your search, returning with your findings. Wise choice.")
+					.setFooter({ text: `Total coins found: **${coinsFoundInTheEnd}**` })
 					.setTimestamp()
 
-				updateBalance(inter.user.id, coinsFound)
-				if (itemFound) {
-					addItemToUserInventory(inter.user.id, itemFound.name, 1) // Only add if the item exists
-				}
-
-				await inter.editReply({
-					content: "Your search has concluded.",
+				await inter.update({
+					content: null,
 					embeds: [finalEmbed],
 					components: []
 				})
 
+				userSearching.delete(inter.user.id)
 				collector.stop()
-				collector.on("end", collected => {
-					logger.info(`Collected ${collected.size} items`)
-				})
 			}
-		} else if (inter.customId === "end_search") {
-			logger.info(`End search button clicked by ${inter.user.tag}`)
+		} catch (error) {
+			logger.error("Error handling search command:", error)
+			try {
+				await interaction.editReply({
+					content: "An error occurred while processing your search. Please try again later.",
+					embeds: [],
+					components: []
+				})
+			} catch (err) {
+				logger.error("Error replying with error message:", err)
+			}
+		}
+	})
 
-			const coinsFoundInTheEnd = userSearching.get(inter.user.id).coinsFound
-			updateBalance(inter.user.id, coinsFoundInTheEnd)
+	collector.on("end", (collected, reason) => {
+		if (reason !== "user" && userSearching.has(interaction.user.id)) {
+			const coinsFoundInTheEnd = userSearching.get(interaction.user.id).coinsFound
+			updateBalance(interaction.user.id, coinsFoundInTheEnd)
 
-			// embed 2
 			const finalEmbed = new EmbedBuilder()
 				.setColor("#0099ff")
-				.setTitle("Search Ended")
-				.setDescription("You end your search, returning with your findings. Wise choice.")
-				.setFooter({ text: `Total coins found: **${coinsFoundInTheEnd}**` }) // Reflect the total coins found
+				.setTitle("Search Timed Out")
+				.setDescription("Your search timed out, but you still return with your findings.")
+				.setFooter({ text: `Total coins found: **${coinsFoundInTheEnd}**` })
 				.setTimestamp()
 
-			await inter.editReply({
+			interaction.editReply({
 				content: null,
 				embeds: [finalEmbed],
 				components: []
 			})
 
-			userSearching.delete(inter.user.id) // Remove the user from the search map
-
-			collector.stop()
+			userSearching.delete(interaction.user.id)
 		}
-	})
-	collector.on("end", collected => {
-		logger.info(`Collected ${collected.size} items`)
+		logger.info("Search collector ended.")
 	})
 }
 
-const checkmarkEmoji = "✅" // Use custom emojis if you have them
-const crossEmoji = "❌" // Use custom emojis if you have them
+export async function handleAchievementsCommand(interaction) {
+	let page = 0
 
-export const handleAchievementsCommand = async (interaction: ChatInputCommandInteraction) => {
-	await interaction.deferReply()
-	const userId = interaction.user.id
-	const userAchievements = await getUserAchievements(userId) // This should be an array of achievement IDs
-	let currentPage = 0
+	const embed = await createAchievementsEmbed(interaction.user.id, page, interaction)
 
-	const itemsPerPage = 10 // Set the number of items per page
+	const nextButton = new ButtonBuilder()
+		.setCustomId("next_achievements")
+		.setLabel("Next")
+		.setStyle(ButtonStyle.Primary)
 
-	const sendAchievementsEmbed = async (page: number) => {
-		const pageStart = page * itemsPerPage
-		const pageEnd = pageStart + itemsPerPage
+	const prevButton = new ButtonBuilder()
+		.setCustomId("prev_achievements")
+		.setLabel("Previous")
+		.setStyle(ButtonStyle.Secondary)
+		.setDisabled(page === 0)
 
-		const embed = new EmbedBuilder().setTitle(`${interaction.user.username}'s Achievements`).setColor("#0099ff")
+	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(prevButton, nextButton)
 
-		// Sort achievements by whether they've been unlocked and their name
-		const sortedAchievements = Object.entries(allAchievements).sort(([id1, ach1], [id2, ach2]) => {
-			const hasFirst = userAchievements.includes(id1)
-			const hasSecond = userAchievements.includes(id2)
-			if (hasFirst === hasSecond) {
-				return ach1.name.localeCompare(ach2.name)
-			}
-			return hasFirst ? -1 : 1
-		})
+	const message = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true })
 
-		// Generate fields for the paginated achievements
-		sortedAchievements.slice(pageStart, pageEnd).forEach(([achievementId, { name, description, reward }]) => {
-			const hasAchievement = userAchievements.includes(achievementId)
-			embed.addFields({
-				name: `${hasAchievement ? checkmarkEmoji : crossEmoji} ${name}`,
-				value: `${description}\nReward: ${reward || "No reward."}`,
-				inline: false
-			})
-		})
-
-		// Check if there are no achievements to display
-		if (sortedAchievements.length === 0) {
-			embed.setDescription("No achievements found.")
-		}
-
-		const components = [
-			new ActionRowBuilder<ButtonBuilder>().addComponents(
-				new ButtonBuilder()
-					.setCustomId("previous_page")
-					.setLabel("Previous")
-					.setStyle(ButtonStyle.Primary)
-					.setDisabled(page === 0),
-				new ButtonBuilder()
-					.setCustomId("next_page")
-					.setLabel("Next")
-					.setStyle(ButtonStyle.Primary)
-					.setDisabled(pageEnd >= Object.keys(allAchievements).length)
-			)
-		]
-
-		await interaction.editReply({ embeds: [embed], components })
-	}
-
-	// Initial call to send the first page of achievements
-	await sendAchievementsEmbed(currentPage)
-
-	const filter = (i: { user: { id: string }; customId: string }) => i.user.id === userId
-	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 120000 })
+	const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 })
 
 	collector.on("collect", async i => {
-		if (i.customId === "previous_page" && currentPage > 0) {
-			currentPage -= 1 // Decrement currentPage if not the first page
-		} else if (
-			i.customId === "next_page" &&
-			(currentPage + 1) * itemsPerPage < Object.keys(allAchievements).length
-		) {
-			currentPage += 1 // Increment currentPage if not the last page
+		if (i.customId === "next_achievements") {
+			page++
+		} else if (i.customId === "prev_achievements") {
+			page--
 		}
 
-		await sendAchievementsEmbed(currentPage)
-		await i.update({ embeds: [i.message.embeds[0]], components: i.message.components })
+		const newEmbed = await createAchievementsEmbed(interaction.user.id, page, interaction)
+
+		const newPrevButton = ButtonBuilder.from(prevButton).setDisabled(page === 0)
+
+		const newNextButton = ButtonBuilder.from(nextButton).setDisabled(
+			(page + 1) * pageSize >= initialAchievements.length
+		)
+
+		const newRow = new ActionRowBuilder<ButtonBuilder>().addComponents(newPrevButton, newNextButton)
+
+		await i.update({ embeds: [newEmbed], components: [newRow] })
+	})
+
+	collector.on("end", () => {
+		message.edit({ components: [] })
 	})
 }
 
@@ -1985,6 +2003,8 @@ const specialBosses = ["Yuta Okkotsu", "Disaster Curses", "Satoru Gojo Limit-Bro
 
 export async function handleFightCommand(interaction: ChatInputCommandInteraction) {
 	const playerHealth1 = await getUserMaxHealth(interaction.user.id)
+
+	const transformationMap = new Map()
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let userTechniquesFight = new Map<string, any>()
@@ -2357,13 +2377,27 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 			}
 
 			try {
+				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 				const transformationInfo = await getUserTransformation(interaction.user.id)
+
 				if (!transformationInfo) {
 					await collectedInteraction.followUp({
 						content: "You do not have a transformation unlocked yet.",
 						ephemeral: true
 					})
 					return
+				}
+
+				if (hasHeavenlyRestriction && transformationInfo !== "Heavenly Pact") {
+					await collectedInteraction.followUp({
+						content: "Your Heavenly Restriction negates the use of domain expansion.",
+						ephemeral: true
+					})
+					return
+				}
+
+				if (transformationInfo === "Heavenly Pact") {
+					transformationMap.set(interaction.user.id, transformationInfo)
 				}
 
 				const transformationObject = TRANSFORMATIONS.find(
@@ -2381,10 +2415,10 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					.setDescription(`Transformation: ${transformationInfo}`)
 					.addFields({
 						name: `${interaction.user.username}`,
-						value: "USES THERE TRANSFORMATION!",
+						value: "USES THEIR TRANSFORMATION!",
 						inline: false
 					})
-					//add image
+					// add image
 					.setImage(transformationObject.image)
 				await collectedInteraction.editReply({ embeds: [transformationEmbed], components: [] })
 				//
@@ -2407,7 +2441,6 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 						},
 						{ name: "Player Health", value: `:blue_heart: ${playerHealth.toString()}`, inline: true },
 						{ name: "Transformation: ", value: `${transformationInfo}`, inline: true },
-
 						{
 							name: "Boss Health Status",
 							value: generateHealthBar(randomOpponent.current_health, randomOpponent.max_health)
@@ -3474,22 +3507,77 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					userId: collectedInteraction.user.id,
 					primaryEmbed
 				})
+			} else if (selectedValue === "Infinity Slam") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 80,
+					imageUrl: "https://media1.tenor.com/m/Nke4fPaNfL8AAAAd/jjk-jujutsu-kaisen.gif",
+					description: "Hehehehe.. The more you try to hit me.. The more i'll expand my **Infinity**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Vessel's Requiem") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 82,
+					imageUrl:
+						"https://cdn.discordapp.com/attachments/681985000521990179/1253954388784058368/image.png?ex=6677bb87&is=66766a07&hm=29e064f09a503e4aeb441bfcba91793d17f7c14ce0f5fa422e3d985bfe4c4a0d&",
+					description: "His heart.. I'VE GOT TO CRUSH HIS HEART.. SUKUNA YOU'LL PAY FOR THIS..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Limitless Black Flash") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 92,
+					imageUrl: "https://media1.tenor.com/m/EswGmu2Auz0AAAAC/gojo-satoru-sukuna.gif",
+					description: "...KOKU...SEN!",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Foretold Speed Blitz") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 60,
+					imageUrl: "https://media1.tenor.com/m/wxIt00U3vlMAAAAC/jujutsu-kaisen-jjk.gif",
+					description: "Ohh is that all you got. **Foretold Speed Blitz**",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
 			}
 
 			await updateUserFavouriteTechnique(interaction.user.id, selectedValue)
 
 			let damageReduction = 1
 
-			if (randomOpponent.awakeningStage === "Stage One") {
-				damageReduction = 1.0
-			} else if (randomOpponent.awakeningStage === "Stage Two") {
-				damageReduction = 0.8
-			} else if (randomOpponent.awakeningStage === "Stage Three") {
-				damageReduction = 0.7
-			} else if (randomOpponent.awakeningStage === "Stage Four") {
-				damageReduction = 0.6
-			} else if (randomOpponent.awakeningStage === "Stage Five") {
-				damageReduction = 0.3
+			// Check if the user has "Heavenly Pact" transformation in the map
+			const userTransformation = transformationMap.get(collectedInteraction.user.id)
+			const ignoreDamageReduction = userTransformation === "Heavenly Pact"
+
+			if (!ignoreDamageReduction) {
+				if (randomOpponent.awakeningStage === "Stage One") {
+					damageReduction = 1.0
+				} else if (randomOpponent.awakeningStage === "Stage Two") {
+					damageReduction = 0.8
+				} else if (randomOpponent.awakeningStage === "Stage Three") {
+					damageReduction = 0.7
+				} else if (randomOpponent.awakeningStage === "Stage Four") {
+					damageReduction = 0.6
+				} else if (randomOpponent.awakeningStage === "Stage Five") {
+					damageReduction = 0.3
+				}
 			}
 
 			const userState = idleDeathsGambleStates.get(collectedInteraction.user.id)
@@ -4047,48 +4135,20 @@ export async function generateCombinedEmbed(client: Client, nextResetTimestamp: 
 		throw error
 	}
 }
-function getLatencyEmoji(latency: number): string {
-	if (latency < 0) {
-		return "❓"
-	} else if (latency < 200) {
-		return "🟢"
-	} else if (latency < 400) {
-		return "🟡"
-	} else {
-		return "🔴"
-	}
-}
-
-async function getApiLatency(): Promise<number> {
-	const start = Date.now()
-	try {
-		await fetch("https://api.nullifu.dev")
-		const end = Date.now()
-		return end - start
-	} catch (error) {
-		console.error("Error fetching Nullifu API latency:", error)
-		return -1
-	}
-}
-
-const slotSymbols = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓"]
-function spinSlots(): string[] {
-	return Array.from({ length: 3 }, () => slotSymbols[Math.floor(Math.random() * slotSymbols.length)])
-}
-
-function formatNumberWithCommas(number) {
-	return number.toLocaleString("en-US")
-}
-
-function checkWin(spinResults: string[]): boolean {
-	return new Set(spinResults).size === 1
-}
 
 const userBetCounts = {}
 const userLastBetTimes = {}
 const cooldownPeriod = 15 * 1000
-const maxBetLimit = 20000000
 const dailyBetLimit = 20
+
+const specialUserId = "SPECIAL_USER_ID"
+
+const gameLimits = {
+	coinflip: 5000000,
+	slot: 25000000,
+	blackjack: 50000000,
+	highstakes: 100000000
+}
 
 export async function handleGambleCommand(interaction: ChatInputCommandInteraction) {
 	const userId = interaction.user.id
@@ -4102,10 +4162,9 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 
 	const currentBalance = await getBalance(userId)
-
 	const { betCount } = await getUserGambleInfo(userId)
 
-	if (now - userLastBetTimes[userId] < cooldownPeriod) {
+	if (now - userLastBetTimes[userId] < cooldownPeriod && userId !== specialUserId) {
 		const cooldownEnd = new Date(userLastBetTimes[userId] + cooldownPeriod)
 		const cooldownEndTimestamp = Math.floor(cooldownEnd.getTime() / 1000)
 
@@ -4113,11 +4172,10 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 			content: `You're betting too quickly. Please wait until <t:${cooldownEndTimestamp}:R> before trying again.`,
 			ephemeral: true
 		})
-
 		return
 	}
 
-	if (betCount >= dailyBetLimit) {
+	if (betCount >= dailyBetLimit && userId !== specialUserId) {
 		await interaction.reply("You've reached your daily gamble limit of 20. Please try again tomorrow.")
 		return
 	}
@@ -4130,107 +4188,22 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 		return
 	}
 
-	if (betAmount > maxBetLimit) {
+	if (betAmount > gameLimits[gameType] && userId !== specialUserId) {
 		await interaction.reply({
-			content: `Your maximum bet limit is ${formatNumberWithCommas(maxBetLimit)} coins.`,
+			content: `The maximum bet limit for ${gameType} is ${formatNumberWithCommas(gameLimits[gameType])} coins.`,
 			ephemeral: true
 		})
 		return
 	}
 
 	if (gameType === "slot") {
-		const spinResults = spinSlots()
-		const didWin = checkWin(spinResults)
-		let resultMessage = ""
-		let jackpotGIF = ""
-
-		if (didWin) {
-			const isJackpot = spinResults.every(symbol => symbol === "🍓")
-			if (isJackpot) {
-				jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif"
-				await updateBalance(userId, betAmount * 5)
-				resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${formatNumberWithCommas(
-					betAmount * 2
-				)} coins!`
-			} else {
-				await updateBalance(userId, betAmount * 2)
-				resultMessage = `🎉 Congratulations, you won ${formatNumberWithCommas(betAmount * 2)} coins!`
-			}
-		} else {
-			await updateBalance(userId, -betAmount)
-			resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount)} coins.`
-		}
-
-		const resultEmbed = new EmbedBuilder()
-			.setTitle("🎰 Slot Machine 🎰")
-			.setDescription(`${spinResults.join(" | ")}\n${resultMessage}`)
-			.setColor(didWin ? "#00FF00" : "#FF0000")
-			.setTimestamp()
-
-		if (jackpotGIF) {
-			resultEmbed.setImage(jackpotGIF)
-		}
-
-		await interaction.reply({ embeds: [resultEmbed] })
+		handleSlotGame(interaction, userId, betAmount)
 	} else if (gameType === "coinflip") {
-		const coinSides = ["Heads", "Tails"]
-		const result = coinSides[Math.floor(Math.random() * coinSides.length)]
-		const didWin = Math.random() < 0.5
-		const technique = Math.random() < 0.1
-		const supatechnique = Math.random() < 0.01
-
-		let resultMessage = ""
-		if (didWin) {
-			const winnings = betAmount * 2
-
-			await updateBalance(userId, winnings)
-			await updateGamblersData(userId, betAmount, winnings, 0, 0)
-			resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${formatNumberWithCommas(
-				winnings
-			)} coins!`
-		} else {
-			const losses = betAmount
-			await updateBalance(userId, -losses)
-			await updateGamblersData(userId, betAmount, 0, losses, 0)
-			resultMessage = `🪙 It landed on ${
-				result === "Heads" ? "Tails" : "Heads"
-			}! You lost ${formatNumberWithCommas(losses)} coins.`
-		}
-
-		const resultEmbed = new EmbedBuilder()
-			.setTitle("🪙 Coin Flip 🪙")
-			.setDescription(resultMessage)
-			.setColor(didWin ? "#00FF00" : "#FF0000")
-			.setTimestamp()
-
-		await interaction.reply({ embeds: [resultEmbed] })
-
-		const userTechniques = await getUserTechniques(userId)
-
-		if (technique && !userTechniques.includes("Private Pure Love Train: Jackpot")) {
-			await addUserTechnique(userId, "Private Pure Love Train: Jackpot")
-			const techniqueEmbed = new EmbedBuilder()
-				.setColor("#FFD700")
-				.setTitle("🌟 Technique Acquired! 🌟")
-				.setDescription(
-					"Luck seems to be on your side! You've acquired Hakari Kinji's Private Pure Love Train: Jackpot technique."
-				)
-				.setThumbnail("https://i.imgur.com/zCP3OWc.png")
-
-			await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
-		}
-		if (supatechnique && !userTechniques.includes("Prayer Song")) {
-			await addUserTechnique(userId, "Prayer Song")
-			const techniqueEmbed = new EmbedBuilder()
-				.setColor("#FFD700")
-				.setTitle("🌟 Technique Acquired! 🌟")
-				.setDescription(
-					"You move with the grace of a god! You've acquired Prayer Song.. This is the power of JUJUTSU!"
-				)
-				.setThumbnail("https://i.imgur.com/zCP3OWc.png")
-
-			await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
-		}
+		handleCoinFlipGame(interaction, userId, betAmount)
+	} else if (gameType === "blackjack") {
+		handleAdvancedBlackjackGame(interaction, userId, betAmount)
+	} else if (gameType === "highstakes") {
+		handleHighStakesGame(interaction, userId, betAmount)
 	}
 
 	userBetCounts[userId]++
@@ -4238,33 +4211,157 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	await updateUserGambleInfo(userId)
 }
 
-function getRandomBenefactor() {
-	const totalWeight = benefactors.reduce((sum, benefactor) => sum + benefactor.weight, 0)
-	let randomWeight = Math.random() * totalWeight
+async function handleSlotGame(interaction, userId, betAmount) {
+	const spinResults = spinSlots()
+	const didWin = checkWin(spinResults)
+	let resultMessage = ""
+	let jackpotGIF = ""
 
-	for (const benefactor of benefactors) {
-		randomWeight -= benefactor.weight
-		if (randomWeight <= 0) {
-			const coins =
-				benefactor.coinsMin && benefactor.coinsMax
-					? Math.floor(Math.random() * (benefactor.coinsMax - benefactor.coinsMin + 1)) + benefactor.coinsMin
-					: 0
-
-			const items = benefactor.items
-				.map(item => ({
-					name: item,
-					quantity:
-						benefactor.itemQuantityMin && benefactor.itemQuantityMax
-							? Math.floor(
-									Math.random() * (benefactor.itemQuantityMax - benefactor.itemQuantityMin + 1)
-								) + benefactor.itemQuantityMin
-							: 0
-				}))
-				.filter(item => item.quantity > 0)
-
-			return { ...benefactor, coins, items }
+	if (didWin) {
+		const isJackpot = spinResults.every(symbol => symbol === "🍓")
+		if (isJackpot) {
+			jackpotGIF = "https://media1.tenor.com/m/qz4d7FBNft4AAAAC/hakari-hakari-kinji.gif"
+			await updateBalance(userId, betAmount * 5)
+			resultMessage = `🎉 Congratulations, you hit the Jackpot and won ${formatNumberWithCommas(
+				betAmount * 2
+			)} coins!`
+		} else {
+			await updateBalance(userId, betAmount * 2)
+			resultMessage = `🎉 Congratulations, you won ${formatNumberWithCommas(betAmount * 2)} coins!`
 		}
+	} else {
+		await updateBalance(userId, -betAmount)
+		resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount)} coins.`
 	}
+
+	const resultEmbed = new EmbedBuilder()
+		.setTitle("🎰 Slot Machine 🎰")
+		.setDescription(`${spinResults.join(" | ")}\n${resultMessage}`)
+		.setColor(didWin ? "#00FF00" : "#FF0000")
+		.setTimestamp()
+
+	if (jackpotGIF) {
+		resultEmbed.setImage(jackpotGIF)
+	}
+
+	await interaction.reply({ embeds: [resultEmbed] })
+}
+
+async function handleCoinFlipGame(interaction, userId, betAmount) {
+	const coinSides = ["Heads", "Tails"]
+	const result = coinSides[Math.floor(Math.random() * coinSides.length)]
+	const didWin = Math.random() < 0.5
+	const technique = Math.random() < 0.1
+	const supatechnique = Math.random() < 0.001
+
+	let resultMessage = ""
+	if (didWin) {
+		const winnings = betAmount * 2
+
+		await updateBalance(userId, winnings)
+		await updateGamblersData(userId, betAmount, winnings, 0, 0)
+		resultMessage = `🪙 It landed on ${result}! You've doubled your bet and won ${formatNumberWithCommas(
+			winnings
+		)} coins!`
+	} else {
+		const losses = betAmount
+		await updateBalance(userId, -losses)
+		await updateGamblersData(userId, betAmount, 0, losses, 0)
+		resultMessage = `🪙 It landed on ${
+			result === "Heads" ? "Tails" : "Heads"
+		}! You lost ${formatNumberWithCommas(losses)} coins.`
+	}
+
+	const resultEmbed = new EmbedBuilder()
+		.setTitle("🪙 Coin Flip 🪙")
+		.setDescription(resultMessage)
+		.setColor(didWin ? "#00FF00" : "#FF0000")
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [resultEmbed] })
+
+	const userTechniques = await getUserTechniques(userId)
+
+	if (technique && !userTechniques.includes("Private Pure Love Train: Jackpot")) {
+		await addUserTechnique(userId, "Private Pure Love Train: Jackpot")
+		const techniqueEmbed = new EmbedBuilder()
+			.setColor("#FFD700")
+			.setTitle("🌟 Technique Acquired! 🌟")
+			.setDescription(
+				"Luck seems to be on your side! You've acquired Hakari Kinji's Private Pure Love Train: Jackpot technique."
+			)
+			.setThumbnail("https://i.imgur.com/zCP3OWc.png")
+
+		await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
+	} else if (supatechnique && !userTechniques.includes("Thukuna")) {
+		await addUserTechnique(userId, "Thukuna")
+		const techniqueEmbed = new EmbedBuilder()
+			.setColor("#FFD700")
+			.setTitle("🌟 Thukuna Acquired! 🌟")
+			.setDescription("hey boogie woogie bam bam! You've acquired Thukuna technique.")
+			.setThumbnail("https://media1.tenor.com/m/f3NFmUlY-tUAAAAC/thukuna-king-of-curtheth-sukuna.gif")
+
+		await interaction.followUp({ embeds: [techniqueEmbed], ephemeral: true })
+	}
+}
+
+async function handleAdvancedBlackjackGame(interaction, userId, betAmount) {
+	const dealerHand = [drawCard(), drawCard()]
+	const playerHand = [drawCard(), drawCard()]
+
+	await updateBlackjackDisplay(interaction, dealerHand, playerHand, betAmount)
+
+	const filter = i => i.user.id === userId
+	const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 })
+
+	collector.on("collect", async i => {
+		if (i.customId === "hit") {
+			playerHand.push(drawCard())
+			const playerTotal = calculateHandValue(playerHand)
+			if (playerTotal > 21) {
+				await endBlackjackGame(interaction, dealerHand, playerHand, betAmount, userId, "lose")
+				collector.stop()
+			} else {
+				await updateBlackjackDisplay(interaction, dealerHand, playerHand, betAmount, true)
+			}
+		} else if (i.customId === "stand") {
+			collector.stop()
+			while (calculateHandValue(dealerHand) < 17) {
+				dealerHand.push(drawCard())
+			}
+			const dealerTotal = calculateHandValue(dealerHand)
+			const playerTotal = calculateHandValue(playerHand)
+			if (dealerTotal > 21 || playerTotal > dealerTotal) {
+				await endBlackjackGame(interaction, dealerHand, playerHand, betAmount, userId, "win")
+			} else if (dealerTotal === playerTotal) {
+				await endBlackjackGame(interaction, dealerHand, playerHand, betAmount, userId, "tie")
+			} else {
+				await endBlackjackGame(interaction, dealerHand, playerHand, betAmount, userId, "lose")
+			}
+		}
+	})
+}
+
+async function handleHighStakesGame(interaction, userId, betAmount) {
+	const didWin = Math.random() < 0.01
+	let resultMessage = ""
+
+	if (didWin) {
+		const winnings = betAmount * 10
+		await updateBalance(userId, winnings)
+		resultMessage = `🎉 Unbelievable! You won ${formatNumberWithCommas(winnings)} coins!`
+	} else {
+		await updateBalance(userId, -betAmount)
+		resultMessage = `😢 Better luck next time! You lost ${formatNumberWithCommas(betAmount)} coins.`
+	}
+
+	const resultEmbed = new EmbedBuilder()
+		.setTitle("💎 High Stakes 💎")
+		.setDescription(resultMessage)
+		.setColor(didWin ? "#00FF00" : "#FF0000")
+		.setTimestamp()
+
+	await interaction.reply({ embeds: [resultEmbed] })
 }
 
 const begcooldown = new Map<string, number>()
@@ -4550,6 +4647,7 @@ export async function claimQuestsCommand(interaction) {
 			let claimedMentorSukuna = false
 			let claimedstage3 = false
 			let claimedkashimo = false
+			let claimedtoji = false
 
 			for (const completedQuest of completedQuests) {
 				const questDetails = questsArray.find(quest => quest.name === completedQuest.id)
@@ -4581,6 +4679,8 @@ export async function claimQuestsCommand(interaction) {
 							claimedstage3 = true
 						} else if (itemName === "Kashimo's Token") {
 							claimedkashimo = true
+						} else if (itemName === "Sorcerer Killer Medal") {
+							claimedtoji = true
 						}
 					}
 				}
@@ -4588,7 +4688,6 @@ export async function claimQuestsCommand(interaction) {
 				await updatePlayerGrade(userId)
 			}
 
-			// Remove the completed quests after all rewards have been granted
 			for (const completedQuest of completedQuests) {
 				await removeUserQuest(userId, completedQuest.instanceId)
 			}
@@ -4733,6 +4832,17 @@ export async function claimQuestsCommand(interaction) {
 						name: "New Power",
 						value: "Kashimo has taught you how to use the **Maximum Output** Transformation!"
 					})
+
+				specialEmbeds.push(curseking)
+			}
+
+			if (claimedtoji) {
+				await updateUserMentor(userId, "Toji Fushiguro")
+				const curseking = new EmbedBuilder()
+					.setColor(0xff0000)
+					.setTitle("Mentor!")
+					.setDescription("Alright.. I'll mentor you.. but don't get too cocky kid")
+					.setImage("https://media1.tenor.com/m/dzmGTQKmhGEAAAAC/toji-toji-zenin.gif")
 
 				specialEmbeds.push(curseking)
 			}
@@ -5168,9 +5278,33 @@ export async function handleTradeCommand(interaction) {
 		const alertMessage = `You have received a trade request from ${interaction.user.username}.\nItem: ${quantity} x ${item}\nNote: Trading does not allow items to be taken from you; it only allows users to give items.\n\nTo accept the trade, use /trade accept. To ignore it, just leave it and it'll go away. You can disable trading in settings.`
 		await createAlert(targetUser.id, alertMessage)
 
+		if (targetUserSettings && targetUserSettings.trademessage) {
+			const tradeEmbed = new EmbedBuilder()
+				.setColor("#0099ff")
+				.setTitle("Trade Request")
+				.setDescription(`You have received a trade request from ${interaction.user.username}.`)
+				.addFields(
+					{ name: "Item", value: `${quantity} x ${item}`, inline: true },
+					{
+						name: "Note",
+						value: "Trading does not allow items to be taken from you; it only allows users to give items."
+					},
+					{ name: "To accept the trade", value: "Use /trade accept." },
+					{ name: "To ignore it", value: "Just leave it and it'll go away." },
+					{ name: "Disable trading", value: "You can disable trading in settings." }
+				)
+				.setTimestamp()
+
+			try {
+				await targetUser.send({ embeds: [tradeEmbed] })
+			} catch (dmError) {
+				console.error(`Failed to send DM to user ${targetUser.id}:`, dmError)
+			}
+		}
+
 		await interaction.reply({ content: "Trade request sent!", ephemeral: true })
 	} catch (error) {
-		logger.error("Error occurred while processing the trade command:", error)
+		console.error("Error occurred while processing the trade command:", error)
 		await interaction.reply({
 			content: "An error occurred while processing your trade request. Please try again later.",
 			ephemeral: true
@@ -5896,219 +6030,226 @@ function createTransformationSelectMenu(transformations) {
 	return selectMenu
 }
 
-export async function handleShopCommand(interaction) {
-	const shopItems = await getAllShopItems()
-	const raidShopItems = [
-		{ name: "Kenjaku's Brain", price: 150000, rarity: "Common", maxPurchases: 1 },
-		{ name: "Jogo's Testicle Torsion Technique", price: 1000, rarity: "Common", maxPurchases: 1 },
-		{ name: "Heian Era Awakening", price: 450, rarity: "Common", maxPurchases: 1 },
-		{ name: "Satoru Gojo's Ashy Remains", price: 100, rarity: "Rare" }
-	]
+export async function handleShopCommand(interaction: CommandInteraction) {
 	const shikigamiShopItems = [
 		{ name: "Shikigami food", price: 50000, rarity: "Common" },
 		{ name: "Special-Grade Medicine", price: 85000, rarity: "Rare" }
 	]
+
 	const essenceShopItems = [
 		{ name: "RCT Essence", price: 225000000, rarity: "Special Grade" },
 		{ name: "Simple Domain Essence", price: 350000000, rarity: "Special Grade" },
 		{ name: "Luck Essence", price: 12500000, rarity: "Special Grade" }
 	]
+
 	const boosterShopItems = [
 		{ name: "Basic Booster Bundle", price: 1, rarity: "Special Grade" },
 		{ name: "Booster Shikigami Essence", price: 2, rarity: "Special Grade" }
 	]
 
+	const shopItems = await getAllShopItems()
 	const balance = await getBalance(interaction.user.id)
-	const balance2 = balance.toLocaleString("en-US")
+	const balanceFormatted = balance.toLocaleString("en-US")
 
-	try {
-		const lastResetTime = await getShopLastReset()
-		const resetIntervalMs = 1000 * 60 * 60 * 24
-		const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
-		const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
-		const userInventory = await getUserInventory(interaction.user.id)
-		const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
-		const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
-		const boosterTokens = userInventory.find(item => item.name === "Booster Token")?.quantity || 0
+	let currentRaidShop = 0
+	const raidBosses = Object.keys(raidShops)
+	const userInventory = await getUserInventory(interaction.user.id)
+	const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
+	const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
+	const boosterTokens = userInventory.find(item => item.name === "Booster Token")?.quantity || 0
 
-		const embed = new EmbedBuilder()
-			.setColor("#FFD700")
-			.setTitle("✨ Shop Items ✨")
-			.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
-			.addFields([{ name: "Resets In", value: `<t:${discordTimestamp}:R>`, inline: false }])
+	let selectedShop = "main_shop"
+	let selectedShopItems = shopItems
+	let formattedShopName = "Main Shop"
 
-		const mainShopItemsField = shopItems
+	const embed = new EmbedBuilder()
+		.setColor("#FFD700")
+		.setTitle("✨ Shop Items ✨")
+		.setDescription(`\n💰 Your balance: **${balanceFormatted}**\nCheck out these limited-time offers:`)
+		.addFields({
+			name: `Items in ${formattedShopName}`,
+			value: selectedShopItems
+				.map(item => {
+					return (
+						`**${item.name}** - ${item.rarity} Rarity\n` +
+						`Price: **${item.price.toLocaleString("en-US") || "None"}** coins\n` +
+						`Max Purchases: **${item.maxPurchases || "None"}**\n` +
+						"--------------------"
+					)
+				})
+				.join("\n")
+		})
+
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("shop_select")
+		.setPlaceholder("Select a shop")
+		.addOptions([
+			{
+				label: "Main Shop",
+				description: "View items in the main shop",
+				value: "main_shop",
+				emoji: "💰"
+			},
+			{
+				label: "Shikigami Shop",
+				description: "View items in the shikigami shop",
+				value: "shikigami_shop",
+				emoji: "🐺"
+			},
+			{
+				label: "Raid Shop",
+				description: "View items in the raid shop",
+				value: "raid_shop",
+				emoji: "⚔️"
+			},
+			{
+				label: "Essence Shop",
+				description: "View items in the essence shop",
+				value: "essence_shop",
+				emoji: "✨"
+			},
+			{
+				label: "Booster Shop",
+				description: "View items in the booster shop",
+				value: "booster_shop",
+				emoji: "🚀"
+			}
+		])
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+	const raidButtonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("previous_raid").setLabel("◀️").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("next_raid").setLabel("▶️").setStyle(ButtonStyle.Primary)
+	)
+
+	const buttonRow = new ActionRowBuilder<ButtonBuilder>()
+	selectedShopItems.forEach((item, index) => {
+		if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
+			const button = new ButtonBuilder()
+				.setCustomId(`buy_${selectedShop}_${index}`)
+				.setLabel(item.name)
+				.setStyle(ButtonStyle.Primary)
+			buttonRow.addComponents(button)
+		}
+	})
+
+	const message = await interaction.reply({ embeds: [embed], components: [row, buttonRow], fetchReply: true })
+
+	const updateShopDisplay = async () => {
+		if (selectedShop === "main_shop") {
+			selectedShopItems = shopItems
+			formattedShopName = "Main Shop"
+		} else if (selectedShop === "raid_shop") {
+			const currentRaidBoss = raidBosses[currentRaidShop]
+			selectedShopItems = raidShops[currentRaidBoss]
+			formattedShopName = `Raid Shop - ${currentRaidBoss}`
+		} else if (selectedShop === "shikigami_shop") {
+			selectedShopItems = shikigamiShopItems
+			formattedShopName = "Shikigami Shop"
+		} else if (selectedShop === "essence_shop") {
+			selectedShopItems = essenceShopItems
+			formattedShopName = "Essence Shop"
+		} else if (selectedShop === "booster_shop") {
+			selectedShopItems = boosterShopItems
+			formattedShopName = "Booster Shop"
+		}
+
+		const itemsField = selectedShopItems
 			.map(item => {
 				return (
 					`**${item.name}** - ${item.rarity} Rarity\n` +
-					`Price: **${item.price.toLocaleString("en-US") || "None"}** coins\n` +
+					`Price: **${item.price.toLocaleString("en-US") || "None"}** ${selectedShop === "raid_shop" ? "Raid Tokens" : "coins"}\n` +
 					`Max Purchases: **${item.maxPurchases || "None"}**\n` +
 					"--------------------"
 				)
 			})
 			.join("\n")
 
-		embed.addFields([{ name: "Items in Main Shop", value: mainShopItemsField }])
+		embed.spliceFields(0, 1, { name: `Items in ${formattedShopName}`, value: itemsField })
 
-		const selectMenu = new StringSelectMenuBuilder()
-			.setCustomId("shop_select")
-			.setPlaceholder("Select a shop")
-			.addOptions([
-				{
-					label: "Main Shop",
-					description: "View items in the main shop",
-					value: "main_shop",
-					emoji: "💰"
-				},
-				{
-					label: "Shikigami Shop",
-					description: "View items in the shikigami shop",
-					value: "shikigami_shop",
-					emoji: "🐺"
-				},
-				{
-					label: "Raid Shop",
-					description: "View items in the raid shop",
-					value: "raid_shop",
-					emoji: "⚔️"
-				},
-				{
-					label: "Essence Shop",
-					description: "View items in the essence shop",
-					value: "essence_shop",
-					emoji: "✨"
-				},
-				{
-					label: "Booster Shop",
-					description: "View items in the booster shop",
-					value: "booster_shop",
-					emoji: "🚀"
-				}
-			])
+		if (selectedShop === "raid_shop") {
+			embed.setDescription(
+				`\n💰 Your balance: **${balanceFormatted}**\n🎟️ Your Raid Tokens: **${raidTokens}**\nCheck out these limited-time offers:`
+			)
+		} else if (selectedShop === "booster_shop") {
+			embed.setDescription(
+				`\n💰 Your balance: **${balanceFormatted}**\n🎟️ Your Booster Tokens: **${boosterTokens}**\nCheck out these limited-time offers:`
+			)
+		} else {
+			embed.setDescription(`\n💰 Your balance: **${balanceFormatted}**\nCheck out these limited-time offers:`)
+		}
 
-		const row = new ActionRowBuilder().addComponents(selectMenu)
-
-		const buttonRow = new ActionRowBuilder()
-		shopItems.forEach((item, index) => {
+		const newButtonRow = new ActionRowBuilder<ButtonBuilder>()
+		selectedShopItems.forEach((item, index) => {
 			if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
 				const button = new ButtonBuilder()
-					.setCustomId(`buy_main_shop_${index}`)
+					.setCustomId(`buy_${selectedShop}_${index}`)
 					.setLabel(item.name)
 					.setStyle(ButtonStyle.Primary)
-				buttonRow.addComponents(button)
+				newButtonRow.addComponents(button)
 			}
 		})
 
-		let selectedShop = "main_shop"
+		if (selectedShop === "raid_shop") {
+			await message.edit({ embeds: [embed], components: [row, raidButtonRow, newButtonRow] })
+		} else {
+			await message.edit({ embeds: [embed], components: [row, newButtonRow] })
+		}
+	}
 
-		const message = await interaction.reply({ embeds: [embed], components: [row, buttonRow], fetchReply: true })
+	const collector = message.createMessageComponentCollector({
+		componentType: ComponentType.StringSelect,
+		time: 60000
+	})
 
-		const collector = message.createMessageComponentCollector({
-			componentType: ComponentType.StringSelect
-		})
+	collector.on("collect", async (i: SelectMenuInteraction) => {
+		if (!i.isStringSelectMenu()) return
+		await i.deferUpdate()
 
-		collector.on("collect", async i => {
-			if (!i.isStringSelectMenu()) return
+		selectedShop = i.values[0]
+		await updateShopDisplay()
+	})
+
+	const buttonCollector = message.createMessageComponentCollector({
+		componentType: ComponentType.Button,
+		time: 60000
+	})
+
+	buttonCollector.on("collect", async (i: MessageComponentInteraction) => {
+		if (!i.isButton()) return
+
+		// Defer update only for valid button interactions
+		if (["previous_raid", "next_raid"].includes(i.customId) || i.customId.startsWith("buy_")) {
 			await i.deferUpdate()
+		}
 
-			selectedShop = i.values[0]
-			let selectedShopItems = []
-			let formattedShopName = ""
-
-			if (selectedShop === "main_shop") {
-				selectedShopItems = shopItems
-				formattedShopName = "Main Shop"
-			} else if (selectedShop === "raid_shop") {
-				selectedShopItems = raidShopItems
-				formattedShopName = "Raid Shop"
-			} else if (selectedShop === "shikigami_shop") {
-				selectedShopItems = shikigamiShopItems
-				formattedShopName = "Shikigami Shop"
-			} else if (selectedShop === "essence_shop") {
-				selectedShopItems = essenceShopItems
-				formattedShopName = "Essence Shop"
-			} else if (selectedShop === "booster_shop") {
-				selectedShopItems = boosterShopItems
-				formattedShopName = "Booster Shop"
-			}
-
-			const itemsField = selectedShopItems
-				.map(item => {
-					return (
-						`**${item.name}** - ${item.rarity} Rarity\n` +
-						`Price: **${item.price.toLocaleString("en-US") || "None"}** ${selectedShop === "raid_shop" ? "Raid Tokens" : "coins"}\n` +
-						`Max Purchases: **${item.maxPurchases || "None"}**\n` +
-						"--------------------"
-					)
-				})
-				.join("\n")
-
-			embed.spliceFields(1, 1, { name: `Items in ${formattedShopName}`, value: itemsField })
-
-			if (selectedShop === "raid_shop") {
-				embed.setDescription(
-					`\n💰 Your balance: **${balance2}**\n🎟️ Your Raid Tokens: **${raidTokens}**\nCheck out these limited-time offers:`
-				)
-			} else if (selectedShop === "booster_shop") {
-				embed.setDescription(
-					`\n💰 Your balance: **${balance2}**\n🎟️ Your Booster Tokens: **${boosterTokens}**\nCheck out these limited-time offers:`
-				)
-			} else {
-				embed.setDescription(`\n💰 Your balance: **${balance2}**\nCheck out these limited-time offers:`)
-			}
-
-			const buttonRow = new ActionRowBuilder()
-			selectedShopItems.forEach((item, index) => {
-				if (item && item.name && typeof item.price !== "undefined" && item.rarity) {
-					const button = new ButtonBuilder()
-						.setCustomId(`buy_${selectedShop}_${index}`)
-						.setLabel(item.name)
-						.setStyle(ButtonStyle.Primary)
-					buttonRow.addComponents(button)
-				}
-				logger.debug("Custom ID:", `buy_${selectedShop}_${index}`)
-			})
-
-			await i.editReply({ embeds: [embed], components: [row, buttonRow] })
-		})
-
-		collector.on("end", collected => {
-			logger.info(`Collected ${collected.size} interactions.`)
-		})
-
-		const buttonCollector = message.createMessageComponentCollector({
-			componentType: ComponentType.Button,
-			time: 15000
-		})
-
-		buttonCollector.on("collect", async i => {
-			if (!i.isButton()) return
-			await i.deferUpdate()
-
+		if (i.customId === "previous_raid") {
+			currentRaidShop = (currentRaidShop - 1 + raidBosses.length) % raidBosses.length
+			await updateShopDisplay()
+		} else if (i.customId === "next_raid") {
+			currentRaidShop = (currentRaidShop + 1) % raidBosses.length
+			await updateShopDisplay()
+		} else if (i.customId.startsWith("buy_")) {
 			const userId = i.user.id
-			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence|booster)_shop_(\d+)$/)
+			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence|booster)_(\d+)$/)
 
 			if (!customIdMatch) {
-				logger.error("Invalid custom ID format:", i.customId)
+				console.error("Invalid custom ID format:", i.customId)
 				await i.followUp({ content: "Invalid custom ID format.", ephemeral: true })
 				return
 			}
 
 			const [_, shopType, itemIndexStr] = customIdMatch
-
-			logger.debug("Shop Type:", shopType)
-			logger.debug("Item Index Str:", itemIndexStr)
-
 			const itemIndex = parseInt(itemIndexStr, 10)
-
-			logger.debug("Parsed Item Index:", itemIndex)
 
 			let selectedShopItems = []
 
 			if (shopType === "main") {
 				selectedShopItems = shopItems
 			} else if (shopType === "raid") {
-				selectedShopItems = raidShopItems
+				const currentRaidBoss = raidBosses[currentRaidShop]
+				selectedShopItems = raidShops[currentRaidBoss]
 			} else if (shopType === "shikigami") {
 				selectedShopItems = shikigamiShopItems
 			} else if (shopType === "essence") {
@@ -6119,7 +6260,6 @@ export async function handleShopCommand(interaction) {
 
 			if (itemIndex >= 0 && itemIndex < selectedShopItems.length) {
 				const itemToBuy = selectedShopItems[itemIndex]
-				logger.debug("Item to Buy:", itemToBuy)
 
 				const userPurchases = await getUserPurchases(userId)
 				const userItemPurchase = userPurchases.find(p => p.itemName === itemToBuy.name) || {
@@ -6135,18 +6275,7 @@ export async function handleShopCommand(interaction) {
 					return
 				}
 
-				if (itemToBuy.name === "Heian Era Awakening") {
-					const userUnlockedTransformations = await getUserUnlockedTransformations(userId)
-					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
-					await updateUserUnlockedTransformations(userId, updatedUnlockedTransformations)
-				}
-
-				if (itemToBuy.name === "Jogo's Testicle Torsion Technique") {
-					await addUserTechnique(userId, "Jogo's Testicle Torsion Technique")
-				}
-
 				if (shopType === "raid") {
-					const userInventory = await getUserInventory(userId)
 					const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
 					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
 
@@ -6160,13 +6289,12 @@ export async function handleShopCommand(interaction) {
 
 					await removeItemFromUserInventory(userId, "Raid Token", itemToBuy.price)
 				} else if (shopType === "booster") {
-					const userInventory = await getUserInventory(userId)
-					const raidTokenItem = userInventory.find(item => item.name === "Booster Token")
-					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
+					const boosterTokenItem = userInventory.find(item => item.name === "Booster Token")
+					const boosterTokens = boosterTokenItem ? boosterTokenItem.quantity : 0
 
-					if (raidTokens < itemToBuy.price) {
+					if (boosterTokens < itemToBuy.price) {
 						await i.followUp({
-							content: `You do not have enough Booster Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price.toLocaleString("en-US")}, You have: ${raidTokens.toLocaleString("en-US")}`,
+							content: `You do not have enough Booster Tokens to purchase ${itemToBuy.name}. Required: ${itemToBuy.price.toLocaleString("en-US")}, You have: ${boosterTokens.toLocaleString("en-US")}`,
 							ephemeral: true
 						})
 						return
@@ -6190,26 +6318,16 @@ export async function handleShopCommand(interaction) {
 				await addItemToUserInventory(userId, itemToBuy.name, 1)
 				await addUserPurchases(userId, itemToBuy.name, 1)
 				await i.followUp({
-					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price.toLocaleString("en-US")} ${shopType === "raid" ? "Raid Tokens" : "coins"}.`,
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price.toLocaleString("en-US")} ${shopType === "raid" ? "Raid Tokens" : shopType === "booster" ? "Booster Tokens" : "coins"}.`,
 					ephemeral: true
 				})
 			} else {
-				logger.error("Invalid item index:", itemIndex)
+				console.error("Invalid item index:", itemIndex)
 				await i.followUp({ content: "This item does not exist in the shop.", ephemeral: true })
 			}
-		})
-
-		buttonCollector.on("end", collected => {
-			logger.info(`Collected ${collected.size} interactions.`)
-		})
-
-		buttonCollector.stop
-	} catch (error) {
-		logger.error("Error fetching shop items:", error)
-		await interaction.reply({ content: "An error occurred while fetching shop items.", ephemeral: true })
-	}
+		}
+	})
 }
-
 // equip inate clan use getuserownedinateclan
 export async function handleEquipInateClanCommand(interaction) {
 	await updateUserCommandsUsed(interaction.user.id)
@@ -8131,46 +8249,6 @@ export async function mentorNPCCommand(interaction: CommandInteraction) {
 		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
 	}
 }
-export async function eventCommandHandler(interaction: CommandInteraction) {
-	try {
-		const currentQuest = await getCurrentCommunityQuest()
-
-		if (currentQuest) {
-			const timestampSeconds = Math.floor(currentQuest.endDate.getTime() / 1000)
-
-			const embed = new EmbedBuilder()
-				.setColor(0x0099ff)
-				.setTitle("Global Event: Satoru Gojo's Sealing")
-				.setImage("https://media1.tenor.com/m/L02DzK8mP78AAAAC/gojo-satoru-prison-realm-gojo.gif")
-				.setDescription(
-					"The strongest Jujutsu sorcerer, Satoru Gojo, has been sealed! The community must come together to unlock the secrets and break the seal."
-				)
-				.addFields([
-					{ name: "Event Quest Name", value: currentQuest.questName, inline: false },
-					{ name: "Event Task", value: currentQuest.task, inline: false },
-					{
-						name: "Task Progress",
-						value: `${currentQuest.currentProgress} / ${currentQuest.taskAmount}`,
-						inline: false
-					},
-					{ name: "Event End Time", value: `<t:${timestampSeconds}:f>`, inline: false },
-					{
-						name: "Participation",
-						value: "To participate in the event, complete the event quest and contribute to the community's progress",
-						inline: false
-					}
-				])
-				.setFooter({ text: "Stay up to date with the event by joining the discord server!" })
-
-			await interaction.reply({ embeds: [embed] })
-		} else {
-			await interaction.reply("There is no ongoing global event at the moment.")
-		}
-	} catch (error) {
-		logger.error("Error handling /event command:", error)
-		await interaction.reply({ content: "An error occurred while processing your request.", ephemeral: true })
-	}
-}
 
 export async function handleGiveawayCommand(interaction) {
 	const userId = interaction.user.id
@@ -8443,217 +8521,332 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 		logger.error("Error handling giveaway end:", error)
 	}
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const userTechniquesFight2 = new Map<string, any>()
-const RAID_DURATION = 180000
-const TECHNIQUE_SELECTION_DURATION = 45000
+const RAID_DURATION = 5 * 60 * 1000 // 5 minutes
+const TECHNIQUE_SELECTION_DURATION = 30 * 1000 // 30 seconds for selecting techniques
 
 export async function handleRaidCommand(interaction: CommandInteraction) {
 	try {
-		const currentRaidBoss = await getCurrentRaidBoss()
+		const raidBosses = await getRaidBosses()
+		const userLevel = await getUserLevel(interaction.user.id)
 
-		if (!currentRaidBoss) {
-			await interaction.reply({ content: "There is no active raid boss at the moment.", ephemeral: true })
+		if (!raidBosses || raidBosses.length === 0) {
+			await interaction.reply({
+				content: "There are no raid bosses available at the moment.",
+				ephemeral: true
+			})
 			return
 		}
 
-		const joinButton = new ButtonBuilder()
-			.setCustomId("join_raid")
-			.setLabel("Join Raid")
-			.setStyle(ButtonStyle.Primary)
-		const startNowButton = new ButtonBuilder()
-			.setCustomId("start_raid_now")
-			.setLabel("START NOW?")
-			.setStyle(ButtonStyle.Danger)
-
-		const partyCloseTime = Date.now() + 20000
-		const participants: string[] = [interaction.user.id] // Automatically add the party creator
-
-		const initialEmbed = new EmbedBuilder()
-			.setColor("#0099ff")
-			.setTitle(`Raid Party - ${currentRaidBoss.name}`)
-			.setDescription(
-				"Click the button below to join the raid party!\n\n**Participants:**\n" +
-					participants.map(p => `<@${p}>`).join(", ")
-			)
-			.addFields({
-				name: "Party Closes In",
-				value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`,
-				inline: true
-			})
-			.setFooter({ text: "Tip: Ensure you have active techniques to maximize your impact in the raid." })
-
-		const initialMessage = await interaction.reply({
-			embeds: [initialEmbed],
-			components: [new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, startNowButton)],
-			fetchReply: true
-		})
-
-		const collector = initialMessage.createMessageComponentCollector({ max: 5, time: 20000 })
-
-		const specialUserId = "292385626773258240"
-		const partyCreatorId = interaction.user.id
-
-		const raidParty: RaidParty = {
-			raidBossId: currentRaidBoss._id,
-			participants: participants.map(id => ({ id, totalDamage: 0 })),
-			partyHealth: 100,
-			pendingActions: [],
-			createdAt: new Date()
-		}
-
-		collector.on("collect", async (i: MessageComponentInteraction) => {
-			try {
-				if (i.customId === "join_raid") {
-					const userRegistered = await isUserRegistered(i.user.id)
-					const userActiveTechniques = await getUserActiveTechniques(i.user.id)
-
-					if (!userRegistered) {
-						await i.reply({
-							content: "You need to be registered on the bot to join the raid party.",
-							ephemeral: true
-						})
-						return
-					}
-
-					if (userActiveTechniques.length === 0) {
-						await i.reply({
-							content: "You need to have active techniques to join the raid party.",
-							ephemeral: true
-						})
-						return
-					}
-
-					if (!participants.includes(i.user.id)) {
-						participants.push(i.user.id)
-						const participantsString = participants.map(p => `<@${p}>`).join(", ")
-
-						const updatedEmbed = new EmbedBuilder()
-							.setColor("#0099ff")
-							.setTitle(`Raid Party - ${currentRaidBoss.name}`)
-							.setDescription(
-								`Participants:\n${participantsString}\n\nTip: Ensure you have active techniques to maximize your impact in the raid.`
-							)
-							.addFields({
-								name: "Party Closes In",
-								value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`,
-								inline: true
-							})
-
-						await i.update({ embeds: [updatedEmbed] })
-
-						if (i.user.id === specialUserId) {
-							const funnyEmbed = new EmbedBuilder()
-								.setColor("#ff0000")
-								.setTitle(`${currentRaidBoss.name} is Terrified!`)
-								.setDescription(
-									"The raid boss is terrified of the powerful sorcerer Gwen! Raid ends early. the the the the the the the"
-								)
-								.setImage(
-									"https://media1.tenor.com/m/2sYS0uQV8IIAAAAd/jujutsu-kaisen-jujutsu-kaisen-fade.gif"
-								)
-								.setFooter({ text: "the the the the the the the the the the the the the the " })
-
-							await interaction.followUp({ embeds: [funnyEmbed] })
-
-							// Simulate raid end with loot drops
-							await handleRaidEnd(interaction, raidParty, currentRaidBoss, true)
-							return
-						}
-					} else {
-						await i.reply({ content: "You have already joined the raid party.", ephemeral: true })
-					}
-				} else if (i.customId === "start_raid_now") {
-					if (i.user.id !== partyCreatorId) {
-						await i.reply({ content: "Nuh uh", ephemeral: true })
-						return
-					}
-					collector.stop("Raid started early")
-				}
-			} catch (error) {
-				console.error("Error during component interaction:", error)
-				await i.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
+		const raidBossOptions = raidBosses.map(boss => {
+			const isLocked = userLevel < boss.levelRequirement
+			return {
+				label: boss.name,
+				description: isLocked ? `🔒 Level ${boss.levelRequirement} required` : boss.description,
+				value: boss._id.toString(),
+				emoji: isLocked ? { name: "🔒" } : undefined,
+				locked: isLocked
 			}
 		})
 
-		collector.on("end", async (collected, reason) => {
+		raidBossOptions.sort((a, b) => Number(a.locked) - Number(b.locked))
+
+		const finalRaidBossOptions = raidBossOptions.map(({ locked, ...option }) => option)
+
+		const selectMenu = new SelectMenuBuilder()
+			.setCustomId("select_raid_boss")
+			.setPlaceholder("Choose a Raid Boss")
+			.addOptions(finalRaidBossOptions)
+
+		const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(selectMenu)
+
+		await interaction.reply({
+			content: "Select a raid boss to fight against:",
+			components: [row],
+			ephemeral: true
+		})
+
+		const filter = (i: MessageComponentInteraction) =>
+			i.customId === "select_raid_boss" && i.user.id === interaction.user.id
+
+		const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 60000 })
+
+		collector?.on("collect", async (i: SelectMenuInteraction<CacheType>) => {
+			const selectedRaidBossId = i.values[0]
+			const currentRaidBoss = raidBosses.find(boss => boss._id.toString() === selectedRaidBossId)
+
+			if (!currentRaidBoss) {
+				await i.reply({
+					content: "Failed to retrieve the selected raid boss. Please try again.",
+					ephemeral: true
+				})
+				return
+			}
+
+			if (userLevel < currentRaidBoss.levelRequirement) {
+				await i.reply({
+					content: `You need to be at least level ${currentRaidBoss.levelRequirement} to challenge this boss.`,
+					ephemeral: true
+				})
+				return
+			}
+
+			await i.deferUpdate()
+
+			await setupRaidParty(interaction, currentRaidBoss)
+		})
+
+		collector?.on("end", async collected => {
+			if (collected.size === 0) {
+				await interaction.editReply({ content: "You did not select any raid boss.", components: [] })
+			}
+		})
+	} catch (error) {
+		console.error("Error handling raid command:", error)
+		await interaction.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
+	}
+}
+
+async function setupRaidParty(interaction: CommandInteraction, currentRaidBoss: any) {
+	const joinButton = new ButtonBuilder().setCustomId("join_raid").setLabel("Join Raid").setStyle(ButtonStyle.Primary)
+	const startNowButton = new ButtonBuilder()
+		.setCustomId("start_raid_now")
+		.setLabel("START NOW?")
+		.setStyle(ButtonStyle.Danger)
+		.setDisabled(false) // Initially enabled for the raid creator
+	const cancelButton = new ButtonBuilder()
+		.setCustomId("cancel_raid")
+		.setLabel("CANCEL PARTY")
+		.setStyle(ButtonStyle.Secondary)
+
+	const partyCloseTime = Date.now() + 60000
+	const participants: { id: string; level: number }[] = [
+		{ id: interaction.user.id, level: await getUserLevel(interaction.user.id) }
+	]
+
+	const initialEmbed = new EmbedBuilder()
+		.setColor("#0099ff")
+		.setTitle(`Raid Party - ${currentRaidBoss.name}`)
+		.setDescription(
+			"Click the button below to join the raid party!\n\n**Participants:**\n" +
+				participants.map(p => `<@${p.id}> (Level ${p.level})`).join(", ")
+		)
+		.addFields({ name: "Party Closes In", value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`, inline: true })
+		.setFooter({ text: "Tip: Ensure you have active techniques to maximize your impact in the raid." })
+
+	const initialMessage = await interaction.followUp({
+		embeds: [initialEmbed],
+		components: [new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, startNowButton, cancelButton)],
+		fetchReply: true
+	})
+
+	const collector = initialMessage.createMessageComponentCollector({ time: 60000 })
+
+	const partyCreatorId = interaction.user.id
+	let raidStarted = false
+
+	collector.on("collect", async (i: MessageComponentInteraction) => {
+		try {
+			if (i.customId === "join_raid") {
+				const userRegistered = await isUserRegistered(i.user.id)
+				const userActiveTechniques = await getUserActiveTechniques(i.user.id)
+				const userLevel = await getUserLevel(i.user.id)
+
+				if (!userRegistered) {
+					await i.reply({
+						content: "You need to be registered on the bot to join the raid party.",
+						ephemeral: true
+					})
+					return
+				}
+
+				if (userActiveTechniques.length === 0) {
+					await i.reply({
+						content: "You need to have active techniques to join the raid party.",
+						ephemeral: true
+					})
+					return
+				}
+
+				if (!participants.some(p => p.id === i.user.id)) {
+					participants.push({ id: i.user.id, level: userLevel })
+					const participantsString = participants.map(p => `<@${p.id}> (Level ${p.level})`).join(", ")
+
+					const updatedEmbed = new EmbedBuilder()
+						.setColor("#0099ff")
+						.setTitle(`Raid Party - ${currentRaidBoss.name}`)
+						.setDescription(
+							`Participants:\n${participantsString}\n\nTip: Ensure you have active techniques to maximize your impact in the raid.`
+						)
+						.addFields({
+							name: "Party Closes In",
+							value: `<t:${Math.floor(partyCloseTime / 1000)}:R>`,
+							inline: true
+						})
+
+					await i.update({ embeds: [updatedEmbed] })
+
+					// No need to enable the startNowButton as it should already be enabled for the party creator
+				} else {
+					await i.reply({ content: "You have already joined the raid party.", ephemeral: true })
+				}
+			} else if (i.customId === "start_raid_now") {
+				if (i.user.id !== partyCreatorId) {
+					await i.reply({ content: "Only the party creator can start the raid.", ephemeral: true })
+					return
+				}
+				collector.stop("Raid started early")
+			} else if (i.customId === "cancel_raid") {
+				if (i.user.id !== partyCreatorId) {
+					await i.reply({ content: "Only the party creator can cancel the raid.", ephemeral: true })
+					return
+				}
+				collector.stop("Raid cancelled")
+
+				const cancelEmbed = new EmbedBuilder()
+					.setColor("#FF0000")
+					.setTitle("Raid Party Cancelled")
+					.setDescription("The raid party has been cancelled by the party creator.")
+
+				await initialMessage.edit({ embeds: [cancelEmbed], components: [] })
+
+				return
+			}
+		} catch (error) {
+			console.error("Error during component interaction:", error)
+			await i.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
+		}
+	})
+
+	collector.on("end", async (collected, reason) => {
+		if (raidStarted) return // Prevent sending the message twice
+
+		if (reason === "Raid cancelled") {
+			return
+		}
+
+		if (participants.length < 1) {
+			const updatedEmbed = new EmbedBuilder()
+				.setColor("#FF0000")
+				.setTitle(`Raid Party - ${currentRaidBoss.name}`)
+				.setDescription(
+					"Not enough participants to start a raid party.\n\n**Participants:**\n" +
+						participants.map(p => `<@${p.id}> (Level ${p.level})`).join(", ")
+				)
+				.addFields({ name: "Party Closed", value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true })
+
+			await initialMessage.edit({ embeds: [updatedEmbed], components: [] })
+			return
+		}
+
+		raidStarted = true
+
+		const raidParty = await createRaidParty(
+			currentRaidBoss.name,
+			participants.map(p => p.id)
+		)
+
+		if (!raidParty) {
+			await initialMessage.edit({ content: "Failed to create raid party.", embeds: [] })
+			return
+		}
+
+		const raidBossDetails = await getRaidBossDetails(currentRaidBoss.name)
+
+		if (!raidBossDetails) {
+			await initialMessage.edit({ content: "Failed to retrieve raid boss details.", embeds: [] })
+			return
+		}
+
+		for (const participant of raidParty.participants) {
 			try {
-				if (participants.length < 1) {
-					await interaction.editReply({
-						content: "Not enough participants to start a raid party.",
-						embeds: [],
-						components: []
-					})
-					return
-				}
+				const usermaxhealth = await getUserMaxHealth(participant.id)
+				await updateUserHealth(participant.id, usermaxhealth)
+			} catch (error) {
+				console.error(`Error resetting health for participant ${participant.id}:`, error)
+			}
+		}
 
-				const raidParty = await createRaidParty(currentRaidBoss.name, participants)
+		const raidEndTime = Math.floor((Date.now() + RAID_DURATION) / 1000)
 
-				if (!raidParty) {
-					await interaction.editReply({ content: "Failed to create raid party.", embeds: [] })
-					return
-				}
+		const primaryEmbed = await createRaidEmbed(
+			raidBossDetails,
+			raidParty.participants,
+			interaction,
+			"",
+			raidEndTime,
+			raidParty.partyHealth
+		)
 
-				const raidBossDetails = await getRaidBossDetails(currentRaidBoss.name)
+		const rows = await createTechniqueSelectMenu(
+			raidParty.participants,
+			raidParty.deadParticipants || [],
+			RAID_DURATION / 1000
+		)
 
-				if (!raidBossDetails) {
-					await interaction.editReply({ content: "Failed to retrieve raid boss details.", embeds: [] })
-					return
-				}
+		await initialMessage.edit({ embeds: [primaryEmbed], components: [...rows] })
 
-				for (const participant of raidParty.participants) {
-					try {
-						const usermaxhealth = await getUserMaxHealth(participant.id)
-						await updateUserHealth(participant.id, usermaxhealth)
-					} catch (error) {
-						console.error(`Error resetting health for participant ${participant.id}:`, error)
-					}
-				}
+		const lastUsedTechniques: string[] = []
+		let updatedEmbed: APIEmbed
 
-				const raidEndTime = Math.floor((Date.now() + RAID_DURATION) / 1000)
+		const startCollector = async (interaction, raidParty, lastUsedTechniques, remainingTime) => {
+			if (remainingTime <= 0) {
+				await handleRaidEnd(interaction, raidParty, raidBossDetails)
+				return
+			}
 
-				const primaryEmbed = await createRaidEmbed(
-					raidBossDetails,
-					raidParty.participants,
-					interaction,
-					"",
-					raidEndTime,
-					raidParty.partyHealth
-				)
+			const battleOptionSelectMenuCollectorRaid = interaction.channel.createMessageComponentCollector({
+				filter: i => {
+					const participantId = i.customId.split("-")[3]
+					return raidParty.participants.some(p => p.id === participantId) && i.user.id === participantId
+				},
+				componentType: ComponentType.StringSelect,
+				time: Math.min(TECHNIQUE_SELECTION_DURATION, remainingTime)
+			})
 
-				const rows = await createTechniqueSelectMenu(
-					raidParty.participants,
-					raidParty.deadParticipants || [],
-					RAID_DURATION / 1000
-				)
+			const techniqueSelectionEndTimestamp = Math.floor((Date.now() + TECHNIQUE_SELECTION_DURATION) / 1000)
 
-				await interaction.editReply({ embeds: [primaryEmbed], components: [...rows] })
+			let updatedEmbedBuilder = await createRaidEmbed(
+				raidBossDetails,
+				raidParty.participants,
+				interaction,
+				lastUsedTechniques.join("\n"),
+				raidEndTime,
+				raidParty.partyHealth
+			)
 
-				const lastUsedTechniques: string[] = []
-				let updatedEmbed: APIEmbed
+			updatedEmbedBuilder.addFields({
+				name: "Technique Selection Ends",
+				value: `<t:${techniqueSelectionEndTimestamp}:R>`,
+				inline: true
+			})
+			updatedEmbed = updatedEmbedBuilder.toJSON()
 
-				const startCollector = async (interaction, raidParty, lastUsedTechniques, remainingTime) => {
-					if (remainingTime <= 0) {
-						await handleRaidEnd(interaction, raidParty, raidBossDetails)
-						return
-					}
+			battleOptionSelectMenuCollectorRaid.on("collect", async i => {
+				try {
+					console.debug("Collected interaction:", i.customId)
+					const selectedTechnique = i.values[0]
+					const userId = i.user.id
+					const user = await client1.users.fetch(userId)
 
-					const battleOptionSelectMenuCollectorRaid = interaction.channel.createMessageComponentCollector({
-						filter: i => {
-							const participantId = i.customId.split("-")[3]
-							return (
-								raidParty.participants.some(p => p.id === participantId) && i.user.id === participantId
-							)
-						},
-						componentType: ComponentType.StringSelect,
-						time: Math.min(TECHNIQUE_SELECTION_DURATION, remainingTime)
-					})
-
-					const techniqueSelectionEndTimestamp = Math.floor(
-						(Date.now() + TECHNIQUE_SELECTION_DURATION) / 1000
+					const updatedComponents = i.message.components.filter(
+						row =>
+							!row.components.some(component => component.customId === `select-battle-option-${userId}`)
 					)
 
-					let updatedEmbedBuilder = await createRaidEmbed(
+					lastUsedTechniques.push(`${user.username}: ${selectedTechnique}`)
+
+					const damage = calculateDamage(selectedTechnique, userId)
+					const participantIndex = raidParty.participants.findIndex(p => p.id === userId)
+
+					if (participantIndex !== -1) {
+						raidParty.participants[participantIndex].totalDamage += damage
+						raidBossDetails.globalHealth = Math.max(0, raidBossDetails.globalHealth - damage)
+						raidBossDetails.current_health = Math.max(0, raidBossDetails.current_health - damage)
+					}
+
+					await updateRaidBossCurrentHealth(raidBossDetails._id.toString(), raidBossDetails.current_health)
+
+					updatedEmbedBuilder = await createRaidEmbed(
 						raidBossDetails,
 						raidParty.participants,
 						interaction,
@@ -8669,324 +8862,52 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 					})
 					updatedEmbed = updatedEmbedBuilder.toJSON()
 
-					battleOptionSelectMenuCollectorRaid.on("collect", async i => {
-						try {
-							console.debug("Collected interaction:", i.customId)
-							const selectedTechnique = i.values[0]
-							const userId = i.user.id
-							const user = await client1.users.fetch(userId)
+					await i.update({ embeds: [updatedEmbed], components: updatedComponents })
 
-							const updatedComponents = i.message.components.filter(
-								row =>
-									!row.components.some(
-										component => component.customId === `select-battle-option-${userId}`
-									)
-							)
+					if (raidBossDetails.current_health <= 0) {
+						await handleRaidBossDefeat(interaction, raidParty, raidBossDetails)
+						return
+					}
 
-							lastUsedTechniques.push(`${user.username}: ${selectedTechnique}`)
-
-							const damage = calculateDamage(selectedTechnique, userId)
-							const participantIndex = raidParty.participants.findIndex(p => p.id === userId)
-
-							if (participantIndex !== -1) {
-								raidParty.participants[participantIndex].totalDamage += damage
-								raidBossDetails.globalHealth = Math.max(0, raidBossDetails.globalHealth - damage)
-								raidBossDetails.current_health = Math.max(0, raidBossDetails.current_health - damage)
-							}
-
-							await updateRaidBossCurrentHealth(
-								raidBossDetails._id.toString(),
-								raidBossDetails.current_health
-							)
-
-							updatedEmbedBuilder = await createRaidEmbed(
-								raidBossDetails,
-								raidParty.participants,
-								interaction,
-								lastUsedTechniques.join("\n"),
-								raidEndTime,
-								raidParty.partyHealth
-							)
-
-							updatedEmbedBuilder.addFields({
-								name: "Technique Selection Ends",
-								value: `<t:${techniqueSelectionEndTimestamp}:R>`,
-								inline: true
-							})
-							updatedEmbed = updatedEmbedBuilder.toJSON()
-
-							await i.update({ embeds: [updatedEmbed], components: updatedComponents })
-
-							if (raidBossDetails.current_health <= 0) {
-								await handleRaidBossDefeat(interaction, raidParty, raidBossDetails)
-								return
-							}
-
-							// Check if all users have selected a technique
-							if (raidParty.participants.every(p => lastUsedTechniques.some(t => t.includes(p.id)))) {
-								battleOptionSelectMenuCollectorRaid.stop()
-							}
-						} catch (error) {
-							console.error("Error processing technique selection:", error)
-							await i.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
-						}
-					})
-
-					battleOptionSelectMenuCollectorRaid.on("end", async collected => {
-						try {
-							logger.info("Collector ended with", collected.size, "interactions")
-
-							const updatedRaidParty = await getRaidPartyById(raidParty._id.toString())
-							const updatedRaidBoss = await getRaidBossDetails(updatedRaidParty.raidBossId)
-
-							if (!updatedRaidBoss) {
-								await interaction.editReply({
-									content: "Failed to retrieve updated raid boss details.",
-									embeds: []
-								})
-								return
-							}
-
-							const lastUsedTechniques = []
-
-							for (const combination of dualTechniqueCombinations) {
-								const usersWithTechnique1 = updatedRaidParty.pendingActions.filter(
-									action => action.technique === combination.technique1
-								)
-								const usersWithTechnique2 = updatedRaidParty.pendingActions.filter(
-									action => action.technique === combination.technique2
-								)
-
-								if (usersWithTechnique1.length === 1 && usersWithTechnique2.length === 1) {
-									const user1 = usersWithTechnique1[0]
-									const user2 = usersWithTechnique2[0]
-									const fetchedUser1 = await client1.users.fetch(user1.userId)
-									const fetchedUser2 = await client1.users.fetch(user2.userId)
-									const technique1 = user1.technique
-									const technique2 = user2.technique
-
-									const damage = await executeDualTechnique1({
-										interaction: interaction,
-										technique1: technique1,
-										technique2: technique2,
-										damageMultiplier: combination.damageMultiplier,
-										imageUrl: combination.imageUrl,
-										description: combination.description(
-											fetchedUser1,
-											fetchedUser2,
-											technique1,
-											technique2
-										),
-										fieldValue: combination.fieldValue,
-										userId1: user1.userId,
-										userId2: user2.userId,
-										primaryEmbed: updatedEmbed,
-										updateEmbed: true,
-										rows: rows,
-										dualTechniqueCombinations: dualTechniqueCombinations
-									})
-
-									lastUsedTechniques.push(combination.fieldValue)
-
-									const participantIndex1 = updatedRaidParty.participants.findIndex(
-										p => p.id === user1.userId
-									)
-									const participantIndex2 = updatedRaidParty.participants.findIndex(
-										p => p.id === user2.userId
-									)
-
-									if (participantIndex1 !== -1) {
-										updatedRaidParty.participants[participantIndex1].totalDamage += damage
-									}
-
-									if (participantIndex2 !== -1) {
-										updatedRaidParty.participants[participantIndex2].totalDamage += damage
-									}
-
-									updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
-									updatedRaidBoss.current_health = Math.max(
-										0,
-										updatedRaidBoss.current_health - damage
-									)
-
-									await updateRaidBossCurrentHealth(
-										updatedRaidBoss._id.toString(),
-										updatedRaidBoss.current_health
-									)
-
-									updatedRaidParty.partyHealth = Math.max(0, updatedRaidParty.partyHealth - damage)
-									await updateRaidParty({
-										...updatedRaidParty,
-										partyHealth: updatedRaidParty.partyHealth
-									})
-
-									if (updatedRaidParty.partyHealth <= 0) {
-										const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
-										await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
-										return
-									}
-
-									await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
-
-									raidParty.pendingActions = []
-									await updateRaidPartyPendingActions(
-										raidParty._id.toString(),
-										raidParty.pendingActions
-									)
-
-									const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
-
-									const updatedEmbedBuilder = await createRaidEmbed(
-										updatedRaidBoss,
-										latestRaidParty.participants,
-										interaction,
-										lastUsedTechniques.join("\n"),
-										raidEndTime,
-										latestRaidParty.partyHealth
-									)
-									updatedEmbed = updatedEmbedBuilder.toJSON()
-
-									if (updatedRaidParty.partyHealth <= 0) {
-										const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
-										await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
-										return
-									}
-								}
-							}
-
-							logger.debug("Executing pending actions")
-							for (const action of updatedRaidParty.pendingActions) {
-								console.debug("Processing action:", action)
-								const damage = calculateDamage(action.technique, action.userId)
-								const participantIndex = updatedRaidParty.participants.findIndex(
-									p => p.id === action.userId
-								)
-
-								if (participantIndex !== -1) {
-									updatedRaidParty.participants[participantIndex].totalDamage += damage
-									updatedRaidBoss.globalHealth -= damage
-									updatedRaidBoss.current_health -= damage
-								}
-							}
-
-							const totalDamage = raidParty.participants.reduce(
-								(sum, participant) => sum + participant.totalDamage,
-								0
-							)
-
-							await updateRaidBossCurrentHealth(
-								updatedRaidBoss._id.toString(),
-								updatedRaidBoss.current_health
-							)
-							await updateRaidParty({
-								...updatedRaidParty,
-								partyHealth: updatedRaidParty.partyHealth - totalDamage
-							})
-
-							for (const action of updatedRaidParty.pendingActions) {
-								const participantIndex = updatedRaidParty.participants.findIndex(
-									p => p.id === action.userId
-								)
-								if (participantIndex !== -1) {
-									updatedRaidParty.participants[participantIndex].totalDamage += action.damage
-								}
-							}
-
-							updatedRaidParty.pendingActions = []
-							await updateRaidPartyPendingActions(
-								raidParty._id.toString(),
-								updatedRaidParty.pendingActions
-							)
-
-							const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
-							const updatedEmbedBuilder = await createRaidEmbed(
-								updatedRaidBoss,
-								latestRaidParty.participants,
-								interaction,
-								lastUsedTechniques.join("\n"),
-								raidEndTime,
-								latestRaidParty.partyHealth
-							)
-							updatedEmbed = updatedEmbedBuilder.toJSON()
-
-							const attackDetails = await applyBossDamage(
-								updatedRaidBoss,
-								updatedRaidParty.participants,
-								interaction
-							)
-							for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
-								const participantUser = await client1.users.fetch(participant)
-								const participantName = participantUser.username
-
-								updatedEmbed.fields.push({
-									name: `${updatedRaidBoss.name} Attacks ${participantName}!`,
-									value: `Used ${attackName} and dealt ${damage} damage. ${remainingHealth} health remaining.`
-								})
-
-								if (remainingHealth <= 0) {
-									const deadParticipants = updatedRaidParty.deadParticipants || []
-									await updateRaidParty({
-										...updatedRaidParty,
-										deadParticipants: [...deadParticipants, participant]
-									})
-
-									if (latestRaidParty.participants.length === 1) {
-										await handleRaidEnd(interaction, updatedRaidParty, updatedRaidBoss)
-										return
-									}
-								}
-							}
-
-							const updatedRows = await createTechniqueSelectMenu(
-								updatedRaidParty.participants,
-								updatedRaidParty.deadParticipants || [],
-								remainingTime / 1000
-							)
-
-							await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedRows] })
-
-							if (updatedRaidBoss.current_health <= 0) {
-								await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
-							} else if (raidParty.partyHealth <= 0) {
-								raidParty.partyHealth = 0
-								await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
-							} else {
-								const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION
-								startCollector(interaction, raidParty, lastUsedTechniques, newRemainingTime)
-							}
-						} catch (error) {
-							console.error("Error during technique selection end processing:", error)
-							await interaction.editReply({
-								content: "An error occurred. Please try again later.",
-								embeds: []
-							})
-						}
-					})
-
-					setTimeout(
-						() => {
-							if (!battleOptionSelectMenuCollectorRaid.ended) {
-								battleOptionSelectMenuCollectorRaid.stop()
-							}
-						},
-						Math.min(TECHNIQUE_SELECTION_DURATION, remainingTime)
-					)
+					if (raidParty.participants.every(p => lastUsedTechniques.some(t => t.includes(p.id)))) {
+						battleOptionSelectMenuCollectorRaid.stop()
+					}
+				} catch (error) {
+					console.error("Error processing technique selection:", error)
+					await i.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
 				}
+			})
 
-				startCollector(interaction, raidParty, lastUsedTechniques, RAID_DURATION)
-			} catch (error) {
-				console.error("Error during collector end:", error)
-				await interaction.editReply({
-					content: "An error occurred. Please try again later.",
-					embeds: [],
-					components: []
-				})
-			}
-		})
-	} catch (error) {
-		console.error("Error handling raid command:", error)
-		await interaction.reply({ content: "An error occurred. Please try again later.", ephemeral: true })
-	}
+			battleOptionSelectMenuCollectorRaid.on("end", async collected => {
+				try {
+					if (raidParty.partyHealth <= 0) {
+						await handleRaidEnd(interaction, raidParty, raidBossDetails)
+						return
+					}
+
+					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION
+					startCollector(interaction, raidParty, lastUsedTechniques, newRemainingTime)
+				} catch (error) {
+					console.error("Error during technique selection end processing:", error)
+					await interaction.channel?.send({
+						content: "An error occurred. Please try again later.",
+						embeds: []
+					})
+				}
+			})
+
+			setTimeout(
+				() => {
+					if (!battleOptionSelectMenuCollectorRaid.ended) {
+						battleOptionSelectMenuCollectorRaid.stop()
+					}
+				},
+				Math.min(TECHNIQUE_SELECTION_DURATION, remainingTime)
+			)
+		}
+
+		startCollector(interaction, raidParty, lastUsedTechniques, RAID_DURATION)
+	})
 }
 
 export async function handleBugReport(interaction: ChatInputCommandInteraction) {
@@ -9254,13 +9175,26 @@ const challengeMessages = [
 ]
 
 const cooldowns = new Map<string, number>()
-const cooldownDuration = 30000
 
 const getRandomChallengeMessage = (challenger, opponent) => {
 	const randomIndex = Math.floor(Math.random() * challengeMessages.length)
 	return challengeMessages[randomIndex]
 		.replace("{challenger}", challenger.username)
 		.replace("{opponent}", opponent.username)
+}
+
+const endFightGracefully = async (winner, loser, interaction, pvpId) => {
+	const endEmbed = new EmbedBuilder()
+		.setColor("Green")
+		.setTitle("Fight Over")
+		.setDescription(`${winner.username} has defeated ${loser.username}!`)
+		.setTimestamp()
+
+	await interaction.editReply({
+		embeds: [endEmbed],
+		components: []
+	})
+	await client.db(mongoDatabase).collection("pvp").deleteOne({ pvpId })
 }
 export async function handlePvpCommand(interaction: CommandInteraction) {
 	await interaction.deferReply()
@@ -9274,8 +9208,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 	const now = Date.now()
 
 	if (cooldowns.has(userId)) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const expirationTime = cooldowns.get(userId)! + cooldownAmount
+		const expirationTime = cooldowns.get(userId) + cooldownAmount
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000
 			await interaction.editReply({
@@ -9594,7 +9527,7 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 										.setDescription(
 											"Both players have activated their domains! A clash is imminent!"
 										)
-										.setImage("CLASH_IMAGE_URL")
+										.setImage("https://i.ytimg.com/vi/1kI5Qdlc8Rw/maxresdefault.jpg")
 								}
 
 								await clashDefendInteraction.update({
@@ -9693,6 +9626,14 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 											}
 										}
 									)
+								if (pvpData.player1Health <= 0 || pvpData.player2Health <= 0) {
+									const winner = pvpData.player1Health > 0 ? interaction.user : opponent
+									const loser = pvpData.player1Health <= 0 ? interaction.user : opponent
+									await endFightGracefully(winner, loser, interaction, pvpId)
+									return
+								}
+
+								await updateBattleState()
 
 								await updateBattleState()
 							}
@@ -9845,6 +9786,12 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 								}
 							}
 						)
+					if (pvpData.player1Health <= 0 || pvpData.player2Health <= 0) {
+						const winner = pvpData.player1Health > 0 ? interaction.user : opponent
+						const loser = pvpData.player1Health <= 0 ? interaction.user : opponent
+						await endFightGracefully(winner, loser, interaction, pvpId)
+						return
+					}
 
 					await interaction.editReply({
 						embeds: [primaryEmbed],
@@ -9882,7 +9829,7 @@ export async function handleSettingsCommand(interaction: CommandInteraction) {
 
 	let settings = (await getUserSettings(userId)) as UserSettings
 	if (!settings) {
-		settings = { pvpable: true, acceptTrades: true, showAlerts: true, showSpoilers: true }
+		settings = { pvpable: true, acceptTrades: true, showAlerts: true, showSpoilers: true, trademessage: true }
 	}
 
 	const updatedFields = []
@@ -9914,6 +9861,13 @@ export async function handleSettingsCommand(interaction: CommandInteraction) {
 		updatedFields.push({ name: "Show Spoiler", value: showSpoiler ? "Enabled" : "Disabled", inline: true })
 	}
 
+	const trademessageOption = interaction.options.get("trademessage")
+	const trademessage = trademessageOption ? Boolean(trademessageOption.value) : null
+	if (trademessage !== null) {
+		settings.trademessage = trademessage
+		updatedFields.push({ name: "Trade Message", value: trademessage ? "Enabled" : "Disabled", inline: true })
+	}
+
 	await updateUserSettings(userId, settings)
 
 	const embed = new EmbedBuilder()
@@ -9932,7 +9886,8 @@ export async function handleViewSettingsCommand(interaction: CommandInteraction)
 		pvpable: true,
 		acceptTrades: true,
 		showAlerts: true,
-		showSpoilers: false
+		showSpoilers: false,
+		trademessage: false
 	}
 
 	const embed = new EmbedBuilder()
@@ -9978,11 +9933,111 @@ export async function handleViewSettingsCommand(interaction: CommandInteraction)
 				name: "Show Spoilers Description",
 				value: "Toggle whether you want to see spoilers in the bot.",
 				inline: false
+			},
+			{
+				name: "Trade Message",
+				value: settings.trademessage ? "✅" : "❌",
+				inline: true
 			}
 		)
 		.setTimestamp()
 
 	await interaction.reply({ embeds: [embed], ephemeral: true })
+}
+
+export async function handleTestAchievementCommand(interaction: ChatInputCommandInteraction) {
+	try {
+		const achievementName = interaction.options.getString("achievement", true)
+		await unlockAchievement(interaction.user.id, achievementName)
+
+		const successEmbed = new EmbedBuilder()
+			.setColor(0x00ff00)
+			.setTitle("Achievement Unlocked")
+			.setDescription(`Successfully unlocked achievement: **${achievementName}**`)
+			.setTimestamp()
+
+		await interaction.reply({ embeds: [successEmbed] })
+	} catch (error) {
+		const errorEmbed = new EmbedBuilder()
+			.setColor(0xff0000)
+			.setTitle("Error")
+			.setDescription(`Failed to unlock achievement: **${error.message}**`)
+			.setTimestamp()
+
+		await interaction.reply({ embeds: [errorEmbed], ephemeral: true })
+	}
+}
+
+export async function handleEquipTitleCommand(interaction: ChatInputCommandInteraction) {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+		const userId = interaction.user.id
+
+		const user = await usersCollection.findOne({ id: userId })
+		if (!user) {
+			await interaction.reply({ content: "User not found.", ephemeral: true })
+			return
+		}
+
+		const unlockedTitles = user.titles.filter(title => title.unlocked)
+
+		if (unlockedTitles.length === 0) {
+			await interaction.reply({ content: "You have no unlocked titles.", ephemeral: true })
+			return
+		}
+
+		const options = unlockedTitles.map(title => ({
+			label: title.name,
+			value: title.name,
+			description: `Equip the title: ${title.name}`
+		}))
+
+		const selectMenu = new StringSelectMenuBuilder()
+			.setCustomId("select_title")
+			.setPlaceholder("Select a title to equip")
+			.addOptions(options)
+
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu)
+
+		await interaction.reply({
+			content: "Choose a title to equip:",
+			components: [row],
+			ephemeral: true
+		})
+
+		const collector = interaction.channel?.createMessageComponentCollector({
+			filter: i => i.user.id === interaction.user.id && i.customId === "select_title",
+			componentType: ComponentType.StringSelect,
+			time: 60000
+		})
+
+		collector?.on("collect", async i => {
+			if (i.isStringSelectMenu()) {
+				await i.deferUpdate()
+				const selectedTitle = i.values[0]
+
+				const titles = user.titles.map(title => ({
+					...title,
+					active: title.name === selectedTitle
+				}))
+
+				await usersCollection.updateOne({ id: userId }, { $set: { titles } })
+
+				await i.followUp({ content: `You have equipped the title: **${selectedTitle}**`, ephemeral: true })
+				collector.stop()
+			}
+		})
+
+		collector?.on("end", collected => {
+			if (collected.size === 0) {
+				interaction.followUp({ content: "No title was selected.", ephemeral: true })
+			}
+		})
+	} catch (error) {
+		logger.error("Error equipping title:", error)
+		await interaction.reply({ content: "An error occurred while equipping the title.", ephemeral: true })
+	}
 }
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

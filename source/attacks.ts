@@ -369,7 +369,6 @@ export const attacks: Record<string, Attack[]> = {
 			}
 		}
 	],
-	// Mahito
 	"The Honored One": [
 		{
 			name: "Awakened: Lapse Blue",
@@ -1386,6 +1385,58 @@ export const attacks: Record<string, Attack[]> = {
 			}
 		}
 	],
+	"Sukuna (Shibuya)": [
+		{
+			name: "Cleave",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Dismantle",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Flame Arrow",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
+	],
+	"Sorcerer Killer": [
+		{
+			name: "Backshot Blitz",
+			probability: 50,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 35 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Heavenly Chain Snare",
+			probability: 30,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 30 * gradeDamageBonus
+			}
+		},
+		{
+			name: "Blitz Strike",
+			probability: 20,
+			baseDamage: (playerGrade: string) => {
+				const gradeDamageBonus = getGradeDamageBonus(playerGrade)
+				return 60 * gradeDamageBonus
+			}
+		}
+	],
 	"Gege Akutami": [
 		{
 			name: "Satoru Gojo's Bottom Half",
@@ -1562,6 +1613,19 @@ export const TRANSFORMATIONS = [
 		effects: "Sanity Lost, 50% Damage Increase, 20% Damage Reduction"
 	},
 	{
+		name: "Realized Six Eyes",
+		description: "Throughout heaven and earth, I alone am the honored one.",
+		image: "https://media1.tenor.com/m/-MHQstj5j68AAAAC/jujutsu-kaisen-gojo.gif",
+		effects: "Strongest Sorcerer, 40% Damage Increase, 25% Damage Reduction.. You also come back after death..."
+	},
+	{
+		name: "Heavenly Pact",
+		description: "The one cursed since birth..",
+		image: "https://media1.tenor.com/m/_QC8SRPZtAMAAAAC/toji-fushiguro-fushiguro-toji.gif",
+		effects: "Pact, 35% Damage Increase, 20% Damage Reduction"
+	},
+	// Owner
+	{
 		name: "Gear Fifth",
 		description: "My heartbeat sounds funny! This is my PEAK.. GEAR FIFTH!",
 		image: "https://i.pinimg.com/originals/33/7a/f3/337af398877b856f25624144420a5230.gif",
@@ -1573,13 +1637,6 @@ export const TRANSFORMATIONS = [
 		image: "https://media1.tenor.com/m/EQwPjqc7vdUAAAAd/goku-dragon-ball.gif",
 		effects: "Limit Breaker, 35% Damage Increase, 20% Damage Reduction"
 	},
-	{
-		name: "Realized Six Eyes",
-		description: "Throughout heaven and earth, I alone am the honored one.",
-		image: "https://media1.tenor.com/m/-MHQstj5j68AAAAC/jujutsu-kaisen-gojo.gif",
-		effects: "Strongest Sorcerer, 40% Damage Increase, 25% Damage Reduction.. You also come back after death..."
-	},
-	// Owner
 	{
 		name: "Mugetsu",
 		description:

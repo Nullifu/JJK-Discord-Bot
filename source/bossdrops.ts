@@ -201,17 +201,20 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	],
 	"Aoi Todo": [
 		{ name: "Brotherly Bracelet", rarity: "rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Takada-Chan Autograph", rarity: "rare" }
 	],
 	"Maki Zenin": [
 		{ name: "(Broken) Playful Cloud", rarity: "rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Special-Grade Glasses", rarity: "rare" }
 	],
 	"Kento Nanami": [
 		{ name: "Nanami", rarity: "rare" },
 		{ name: "Special-Grade Medicine", rarity: "rare" },
-		{ name: "(Shattered) Overtime Watch", rarity: "rare" }
+		{ name: "(Shattered) Overtime Watch", rarity: "rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" }
 	],
 	"Inumaki": [
 		{ name: "Cough Medicine", rarity: "rare" },
@@ -221,6 +224,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 	"Panda": [
 		{ name: "Bamboo", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Junpei", rarity: "rare" }
 	],
 	"Yuki Tsukumo": [
@@ -235,6 +239,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Rikugan Eye", rarity: "ultra rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" },
 		{ name: "Six Eyes", rarity: "ultra rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
 		{ name: "Special-Grade Medicine", rarity: "rare" },
 		{ name: "Sacred Eye", rarity: "ultra rare" }
@@ -243,11 +248,13 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Cursed Womb Death Painting", rarity: "rare" },
 		{ name: "(Shattered) Domain Remnants", rarity: "ultra rare" },
 		{ name: "Rikugan Eye", rarity: "ultra rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" }
 	],
 	"Yuji Itadori (Awoken)": [
 		{ name: "Heian Era Scraps", rarity: "rare" },
 		{ name: "Split Shard", rarity: "ultra rare" },
+		{ name: "Special-Grade Cursed Object", rarity: "rare" },
 		{ name: "Heian Era Scraps", rarity: "ultra rare" },
 		{ name: "Awakening Remnant", rarity: "ultra rare" },
 		{ name: "Sukuna Finger", rarity: "ultra rare" }
@@ -290,10 +297,20 @@ export const bossDrops: Record<string, BossDrop[]> = {
 const raidBossDrops: { [bossName: string]: RaidDrops[] } = {
 	"King Of Curses": [
 		{ name: "Sukuna Finger", rarity: "common", dropRate: 0.5 },
-		{ name: "Ryomen Sukuna's How to glaze Gege Guide", rarity: "common", dropRate: 0.2 },
 		{ name: "Heian Era Awakening Remnant", rarity: "rare", dropRate: 0.2 },
-		{ name: "Satoru Gojo's Ashy Remains", rarity: "rare", dropRate: 0.1 },
+		{ name: "King's Token", rarity: "rare", dropRate: 0.1 },
 		{ name: "Heian Era Awakening", rarity: "special grade", dropRate: 0.01 }
+	],
+	"The Honored One": [
+		{ name: "Rikugan Eye", rarity: "common", dropRate: 0.5 },
+		{ name: "Six Eyes", rarity: "common", dropRate: 0.2 },
+		{ name: "Strongest Sorcerer's Token", rarity: "rare", dropRate: 0.1 },
+		{ name: "The Strongest's Decree", rarity: "special grade", dropRate: 0.01 }
+	],
+	"Sorcerer Killer": [
+		{ name: "Zenin Toji's Blood", rarity: "common", dropRate: 0.5 },
+		{ name: "Sorcerer Killer's Token", rarity: "rare", dropRate: 0.1 },
+		{ name: "Cursed Defect", rarity: "special grade", dropRate: 0.01 }
 	]
 }
 

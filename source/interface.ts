@@ -21,10 +21,11 @@ export interface UserProfile {
 	grade: string
 	domain?: string | null
 	job: string
-	activeTitle: string
+	titles: { name: string; unlocked: boolean; active: boolean }[]
 	heavenlyrestriction: string | null
 	inateclan: string
 	shikigami: Shikigami[]
+	level: number
 }
 
 export interface Quest {
@@ -131,6 +132,7 @@ export interface User {
 	grade: string
 	domain?: string | null
 	job: string
+	titles: { name: string; unlocked: boolean; active: boolean }[]
 	activeTitle: string
 	lastAlertedVersion: string
 	heavenlyrestriction: string
@@ -149,6 +151,7 @@ export interface User {
 		amountLost: number
 	}
 	shikigami: []
+	level: number
 }
 
 interface Stat {

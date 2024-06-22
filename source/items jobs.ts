@@ -23,9 +23,9 @@ import {
 	updatePlayerClanTier,
 	updateUserAchievements,
 	updateUserAwakening,
-	updateUserClan,
 	updateUserExperience,
 	updateUserHeavenlyRestriction,
+	updateUserHeavenlyTechniques,
 	updateUserInateClan,
 	updateUserInateClanExperience,
 	updateUserItemEffects,
@@ -109,6 +109,30 @@ export const craftingRecipes = {
 		],
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
+	},
+	heavenly_pact: {
+		requiredItems: [
+			{ name: "Cursed Defect", quantity: 1 },
+			{ name: "Sorcerer Killer's Token", quantity: 1 },
+			{ name: "Zenin Toji's Blood", quantity: 6 }
+		],
+		craftedItemName: "Pact of the Cursed",
+		emoji: "<:pact:1253948464870588416>"
+	},
+	vessel_req: {
+		requiredItems: [
+			{ name: "King's Token", quantity: 1 },
+			{ name: "Sukuna Finger", quantity: 100 }
+		],
+		craftedItemName: "Vessel's Rebuke"
+	},
+	inf: {
+		requiredItems: [
+			{ name: "The Strongest's Decree", quantity: 1 },
+			{ name: "Strongest Sorcerer's Token", quantity: 1 },
+			{ name: "Satoru Gojo's Respect", quantity: 1 }
+		],
+		craftedItemName: "Voidless Infusion"
 	},
 	shadow_token: {
 		requiredItems: [
@@ -1150,7 +1174,18 @@ export const questsArray = [
 		],
 		totalProgress: 1,
 		instanceId: "uniqueInstanceId",
-		specia: true
+		special: true
+	},
+	{
+		name: "Mentor: Sorcerer Killer",
+		description: "Mentor: Sorcerer Killer",
+		coins: 0,
+		experience: 0,
+		items: { "Sorcerer Killer Medal": 1 },
+		itemQuantity: 1,
+		task: "Defeat Zenin Toji",
+		totalProgress: 1,
+		instanceId: "uniqueInstanceId"
 	},
 	{
 		name: "Mentor: Curse King",
@@ -1704,6 +1739,52 @@ export const consumeables: Item1[] = [
 				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
 			}
 		}
+	},
+	{
+		itemName: "Divine Essence",
+		description: "Divine Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			try {
+				await addUserTechnique(interaction.user.id, "Limitless Black Flash")
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Divine Essence")
+					.setDescription(
+						"You consume the essence.. Unleashing your Inate Power.. You've unlocked Limitless Black Flash technique!"
+					)
+				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
+	},
+	{
+		itemName: "Sorcerer's Essence",
+		description: "Sorcerer's Essence",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			try {
+				await updateUserHeavenlyTechniques(interaction.user.id, "Foretold Speed Blitz")
+				const embedFinal = new EmbedBuilder()
+					.setColor("#006400")
+					.setTitle("Sorcerer's Essence")
+					.setDescription(
+						"You consume the essence.. Unleashing your Inate Power.. You've unlocked Foretold Speed Blitz technique!"
+					)
+				await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+			} catch (error) {
+				logger.error("Error applying item effect:", error)
+				await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+			}
+		}
 	}
 ]
 export const items1: Item1[] = [
@@ -1967,67 +2048,7 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedFinal] })
 		}
 	},
-	{
-		itemName: "Sacred Eye",
-		description: "? ? ?",
-		rarity: "Special",
-		imageUrl:
-			"https://media.discordapp.net/attachments/1094302755960664255/1222646394712494233/Six_Eyes.png?ex=6616f930&is=66048430&hm=1fbf6d80da6ec411ed12995d2c44feeb9f276bc51c9d33121671cc6473600697&=&format=webp&quality=lossless",
-		effect: async interaction => {
-			await interaction.deferReply()
 
-			const embedFirst = new EmbedBuilder()
-				.setColor("#4b0082")
-				.setTitle("A Mystical Choice...")
-				.setDescription(
-					"Following your recent encounter with the Six Eyes, you find yourself drawn to a new power... The Sacred Eye."
-				)
-
-			await interaction.followUp({ embeds: [embedFirst] })
-
-			const randomNumber = Math.floor(Math.random() * 100) + 1
-			let isLimitless = false
-
-			if (randomNumber <= 30) {
-				await updateUserClan(interaction.user.id, "Limitless")
-				await addUserTechnique(interaction.user.id, "Hollow Purple: Nuke")
-				await addUserTechnique(interaction.user.id, "Prayer Song")
-				isLimitless = true
-			}
-
-			await new Promise(resolve => setTimeout(resolve, 2000))
-
-			const embedSecond = new EmbedBuilder()
-				.setColor("#8b0000")
-				.setTitle("Power or Peril?")
-				.setDescription(
-					"Your commitment to the Sacred Eye is unwavering. You feel an overwhelming power surge within... The uneasy feeling of limitless thoughts.."
-				)
-				.setImage("https://media1.tenor.com/m/LsBSgRXRgZ4AAAAd/jjk-jujutsu.gif")
-			await interaction.editReply({ embeds: [embedSecond] })
-
-			await new Promise(resolve => setTimeout(resolve, 4000))
-
-			let embedFinal
-			if (isLimitless) {
-				const gains = "You have gained:\n" + "• Technique: Hollow Purple: Nuke\n" + "• Technique: Prayer Song\n"
-				embedFinal = new EmbedBuilder()
-					.setColor("#4b0082")
-					.setTitle("Holy Power")
-					.setDescription(`Unleash the destructive potential of your Six Eyes... \n\n${gains}`)
-					.setImage("https://media1.tenor.com/m/k3X53-jym4sAAAAC/gojo-gojo-satoru.gif")
-			} else {
-				embedFinal = new EmbedBuilder()
-					.setColor("#006400")
-					.setTitle("A Mystical Power... Or Not?")
-					.setDescription(
-						"The Six Eyes arent ready to be improved, but you gain 125 experience. Perhaps if you were stronger? (Limitless Inate Clan Required)"
-					)
-					.setImage("https://media1.tenor.com/m/PdBdd7PZg7AAAAAd/jjk-jujutsu-kaisen.gif")
-			}
-			await interaction.editReply({ embeds: [embedFinal] })
-		}
-	},
 	{
 		itemName: "Special-Grade Geo Locator",
 		description: "A mystical device used to locate cursed objects and individuals.",
@@ -2111,7 +2132,6 @@ export const items1: Item1[] = [
 			})
 		}
 	},
-
 	{
 		itemName: "Jogos (Fixed) Balls",
 		description: "Jogos (Fixed) Balls",
@@ -2126,12 +2146,63 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("BALLS!")
 				.setDescription(
-					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!  [ MORE STUFF TO COME ]\n+Disaster Flames: Full Fire Formation"
+					"You munch on the balls.. They don't really do much.. but they're shiny! You got a free technique!\n+Disaster Flames: Full Fire Formation"
 				)
-			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error) // Adding catch to handle any potential errors
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},
+	{
+		itemName: "Pact of the Cursed",
+		description: "Pact of the Cursed",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
 
+			await updateUserUnlockedTransformations(interaction.user.id, ["Heavenly Pact"])
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Pact of the Cursed")
+				.setDescription(
+					"You agree to the pact.. You've unlocked the Heavenly Pact Transformation! [ ONLY AVAILABLE TO HEAVENLY RESTRICTION ]"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Vessel's Rebuke",
+		description: "Pact of the Cursed",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addUserTechnique(interaction.user.id, "Vessel's Requiem")
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Vessel's Rebuke")
+				.setDescription(
+					"After everything you've been through.. You tap into your true power of a Vessel.. You've unlocked the Vessel's Requiem Technique!"
+				)
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
+		itemName: "Voidless Infusion",
+		description: "Voidless Infusion",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await addUserTechnique(interaction.user.id, "Infinity Slam")
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Gaze into the Void...")
+				.setDescription("The void calls to you.. You've unlocked the Infinity Slam Technique!")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
 	{
 		itemName: "Cursed Vote Chest",
 		description: "Cursed Vote Chest",

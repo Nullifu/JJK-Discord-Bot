@@ -1,9 +1,18 @@
+/* eslint-disable indent */
 import { StringSelectMenuBuilder } from "@discordjs/builders"
 import { randomInt } from "crypto"
-import { ActionRowBuilder, CommandInteraction, EmbedBuilder, SelectMenuBuilder } from "discord.js"
+import {
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	CommandInteraction,
+	EmbedBuilder,
+	SelectMenuBuilder
+} from "discord.js"
 import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
 import { createClient } from "./bot.js"
 import { generateHealthBar } from "./fight.js"
+import { benefactors } from "./items jobs.js"
 import {
 	RaidBoss,
 	RaidParty,
@@ -11,13 +20,17 @@ import {
 	addUserTechnique,
 	checkSpecialDropClaimed,
 	getCurrentPhase,
+	getUserAchievements,
 	getUserActiveTechniques,
 	getUserClanDetails,
 	getUserClanTier,
 	getUserHealth,
 	getUserTutorialState,
 	getUserUnlockedTransformations,
+	initialAchievements,
 	markSpecialDropAsClaimed,
+	trackAchievementsAndQuests,
+	updateAchievementProgress,
 	updateBalance,
 	updateRaidBossCurrentHealth,
 	updateRaidBossPhase,
@@ -87,6 +100,11 @@ export const mentorDetails: {
 			"Satoru Gojo's been sealed, huh? This could be fun.",
 			"Brat, You better not aid in unsealing Gojo, or you'll regret it."
 		]
+	},
+	"Toji Fushiguro": {
+		message: "Toji Fushiguro, the Sorcerer Killer, is your mentor.",
+		imageUrl: "https://media1.tenor.com/m/dzmGTQKmhGEAAAAC/toji-toji-zenin.gif",
+		lines: ["I'm not here to be your friend.", "I'll teach you how to survive.", "Don't disappoint me."]
 	}
 }
 
@@ -344,6 +362,7 @@ export async function handleRaidEnd(
 				await updateBalance(id, participantDrops[id].coins)
 				await addItemToUserInventory(id, drop.name, 1)
 				await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
+				await updateAchievementProgress(id, "Raid Champion", 1)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
@@ -353,6 +372,12 @@ export async function handleRaidEnd(
 			} catch (error) {
 				console.error(`Error adding item to user inventory for user ${id}:`, error)
 			}
+		}
+
+		try {
+			await trackAchievementsAndQuests(id, participantDrops[id].coins)
+		} catch (error) {
+			console.error(`Error tracking achievements and quests for user ${id}:`, error)
 		}
 	}
 
@@ -364,7 +389,7 @@ export async function handleRaidEnd(
 
 		if (randomNumber <= specialDropChance) {
 			const luckyParticipant = raidParty.participants[Math.floor(Math.random() * raidParty.participants.length)]
-			const specialDrop = "Nah I'd Lose"
+			const specialDrop = getSpecialDropForBoss(raidBoss.name)
 
 			try {
 				await addUserTechnique(luckyParticipant.id, specialDrop)
@@ -382,7 +407,7 @@ export async function handleRaidEnd(
 				const channel = await client.channels.fetch(channelId)
 				if (channel && channel.isTextBased()) {
 					await channel.send(
-						`Congratulations! ${luckyUser.toString()} has obtained the special drop "Nah I'd Lose"!`
+						`Congratulations! ${luckyUser.toString()} has obtained the special drop "${specialDrop}"!`
 					)
 				}
 			} catch (error) {
@@ -458,6 +483,14 @@ export async function handleRaidEnd(
 	await interaction.editReply({ embeds: raidEndEmbeds, components: [] })
 }
 
+function getSpecialDropForBoss(bossName: string): string {
+	const specialDrops: { [bossName: string]: string } = {
+		"The Honored One": "Divine Essence",
+		"Sorcerer Killer": "Sorcerer's Essence"
+	}
+	return specialDrops[bossName]
+}
+
 export async function getUserTutorialMessageId(userId) {
 	const userState = await getUserTutorialState(userId)
 	return userState.tutorialMessageId
@@ -471,9 +504,9 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 		const { id } = participant
 		const drops: RaidDrops[] = []
 		try {
-			const drop = getRaidBossDrop(raidBoss.name)
+			const drop = await getRaidBossDrop(raidBoss.name)
 			if (drop) {
-				drops.push({ ...drop, dropRate: drop.dropRate * 2 }) // Increase drop rate
+				drops.push({ ...drop, dropRate: drop.dropRate * 2 })
 			} else {
 				console.warn(`No drop returned for raid boss ${raidBoss.name}`)
 			}
@@ -494,7 +527,6 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 			try {
 				await updateBalance(id, participantDrops[id].coins)
 				await addItemToUserInventory(id, drop.name, 1)
-				await addItemToUserInventory(id, "Raid Token", participantDrops[id].raidTokens)
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
@@ -511,7 +543,7 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 
 	if (!specialDropClaimed) {
 		const randomNumber = Math.random()
-		const specialDropChance = 0.0002 // Increase special drop chance
+		const specialDropChance = 0.0002
 
 		if (randomNumber <= specialDropChance) {
 			const luckyParticipant = raidParty.participants[Math.floor(Math.random() * raidParty.participants.length)]
@@ -716,6 +748,211 @@ export const getRandomChallengeMessage = (challenger, opponent) => {
 	return challengeMessages[randomIndex]
 		.replace("{challenger}", challenger.username)
 		.replace("{opponent}", opponent.username)
+}
+
+export const raidShops = {
+	"Curse King": [
+		{ name: "Heian Era Awakening", price: 50000, rarity: "Common", maxPurchases: 1 },
+		{ name: "Sukuna Finger", price: 20, rarity: "Common", maxPurchases: 1000 }
+	],
+	"The Honored One": [
+		{ name: "Divine Essence", price: 100000, rarity: "Common", maxPurchases: 1 },
+		{ name: "Kenjaku's Brain", price: 50000, rarity: "Common", maxPurchases: 1 },
+		{ name: "Six Eyes", price: 125, rarity: "Common", maxPurchases: 1000 }
+	],
+	"Sorcerer Killer": [
+		{ name: "Sorcerer's Essence", price: 100000, rarity: "Common", maxPurchases: 1 },
+		{ name: "Heavenly Restricted Blood", price: 100, rarity: "Common" },
+		{ name: "Zenin Toji's Blood", price: 20, rarity: "Rare" }
+	]
+}
+
+export function getRandomBenefactor() {
+	const totalWeight = benefactors.reduce((sum, benefactor) => sum + benefactor.weight, 0)
+	let randomWeight = Math.random() * totalWeight
+
+	for (const benefactor of benefactors) {
+		randomWeight -= benefactor.weight
+		if (randomWeight <= 0) {
+			const coins =
+				benefactor.coinsMin && benefactor.coinsMax
+					? Math.floor(Math.random() * (benefactor.coinsMax - benefactor.coinsMin + 1)) + benefactor.coinsMin
+					: 0
+
+			const items = benefactor.items
+				.map(item => ({
+					name: item,
+					quantity:
+						benefactor.itemQuantityMin && benefactor.itemQuantityMax
+							? Math.floor(
+									Math.random() * (benefactor.itemQuantityMax - benefactor.itemQuantityMin + 1)
+								) + benefactor.itemQuantityMin
+							: 0
+				}))
+				.filter(item => item.quantity > 0)
+
+			return { ...benefactor, coins, items }
+		}
+	}
+}
+
+export function drawCard() {
+	const cards = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+	return cards[Math.floor(Math.random() * cards.length)]
+}
+
+export function calculateHandValue(hand) {
+	let value = 0
+	let aces = 0
+
+	for (const card of hand) {
+		if (card === "A") {
+			aces++
+			value += 11
+		} else if (["K", "Q", "J"].includes(card)) {
+			value += 10
+		} else {
+			value += parseInt(card)
+		}
+	}
+
+	while (value > 21 && aces > 0) {
+		value -= 10
+		aces--
+	}
+
+	return value
+}
+
+export async function updateBlackjackDisplay(interaction, dealerHand, playerHand, betAmount, update = false) {
+	const dealerDisplay = `${dealerHand[0]}, ?`
+	const playerDisplay = playerHand.join(", ")
+
+	const embed = new EmbedBuilder()
+		.setTitle("♦️ Blackjack ♦️")
+		.setDescription(
+			`Your bet: ${formatNumberWithCommas(betAmount)} coins\n\nDealer's Hand: ${dealerDisplay}\nYour Hand: ${playerDisplay}`
+		)
+		.setColor("#FFFF00")
+		.setTimestamp()
+
+	const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("hit").setLabel("Hit").setStyle(ButtonStyle.Primary),
+		new ButtonBuilder().setCustomId("stand").setLabel("Stand").setStyle(ButtonStyle.Secondary)
+	)
+
+	if (update) {
+		await interaction.editReply({ embeds: [embed], components: [actionRow] })
+	} else {
+		await interaction.reply({ embeds: [embed], components: [actionRow] })
+	}
+}
+
+export async function endBlackjackGame(interaction, dealerHand, playerHand, betAmount, userId, result) {
+	const dealerDisplay = dealerHand.join(", ")
+	const playerDisplay = playerHand.join(", ")
+	let resultMessage = ""
+
+	if (result === "win") {
+		resultMessage = `You win! You won ${formatNumberWithCommas(betAmount * 2)} coins.`
+		await updateBalance(userId, betAmount * 2)
+	} else if (result === "lose") {
+		resultMessage = `You lost ${formatNumberWithCommas(betAmount)} coins.`
+		await updateBalance(userId, -betAmount)
+	} else if (result === "tie") {
+		resultMessage = "It's a tie! You get your bet back."
+	}
+
+	const embed = new EmbedBuilder()
+		.setTitle("♦️ Blackjack ♦️")
+		.setDescription(`${resultMessage}\n\nDealer's Hand: ${dealerDisplay}\nYour Hand: ${playerDisplay}`)
+		.setColor(result === "win" ? "#00FF00" : result === "tie" ? "#FFFF00" : "#FF0000")
+		.setTimestamp()
+
+	await interaction.editReply({ embeds: [embed], components: [] })
+}
+
+export function createProgressBar(current: number, max: number, length = 20): string {
+	const filledLength = Math.round((current / max) * length)
+	const emptyLength = length - filledLength
+	const bar = "█".repeat(filledLength) + "░".repeat(emptyLength)
+	return bar
+}
+
+export const slotSymbols = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓"]
+
+export function spinSlots(): string[] {
+	return Array.from({ length: 3 }, () => slotSymbols[Math.floor(Math.random() * slotSymbols.length)])
+}
+
+export function formatNumberWithCommas(number) {
+	return number.toLocaleString("en-US")
+}
+
+export function checkWin(spinResults: string[]): boolean {
+	return new Set(spinResults).size === 1
+}
+
+export function getLatencyEmoji(latency: number): string {
+	if (latency < 0) {
+		return "❓"
+	} else if (latency < 200) {
+		return "🟢"
+	} else if (latency < 400) {
+		return "🟡"
+	} else {
+		return "🔴"
+	}
+}
+
+export const pageSize = 10
+
+export async function createAchievementsEmbed(userId: string, page: number, interaction) {
+	const start = page * pageSize
+	const end = start + pageSize
+
+	const userAchievements = await getUserAchievements(userId)
+	const totalPages = Math.ceil(initialAchievements.length / pageSize)
+
+	const embed = new EmbedBuilder()
+		.setColor(0x1f6b4e)
+		.setTitle(`${interaction.user.username}'s Achievements 🏆`)
+		.setFooter({ text: `Page ${page + 1} of ${totalPages}` })
+		.setTimestamp()
+
+	const pageAchievements = initialAchievements.slice(start, end)
+	pageAchievements.forEach(ach => {
+		const userAch = userAchievements.find(a => a.name === ach.name) || {}
+		const progress =
+			userAch.progress !== undefined
+				? `${(userAch.progress as number).toLocaleString()}/${(ach.target as number).toLocaleString()}`
+				: ""
+
+		let progressText = ""
+		if (ach.target !== undefined) {
+			progressText = `\nProgress: ${progress}`
+		}
+
+		embed.addFields({
+			name: ach.name,
+			value: `${userAch.unlocked ? "✅" : "❌"} ${ach.unlockMethod || ""}${progressText}`,
+			inline: false
+		})
+	})
+
+	return embed
+}
+
+export async function getApiLatency(): Promise<number> {
+	const start = Date.now()
+	try {
+		await fetch("https://api.nullifu.dev")
+		const end = Date.now()
+		return end - start
+	} catch (error) {
+		console.error("Error fetching Nullifu API latency:", error)
+		return -1
+	}
 }
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

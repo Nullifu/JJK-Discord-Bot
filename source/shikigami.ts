@@ -18,10 +18,8 @@ export function updateShikigamiField(primaryEmbed, activeShikigami, userId) {
 	const userShikigami = activeShikigami ? activeShikigami.get(userId) : []
 
 	if (userShikigami && userShikigami.length > 0) {
-		// Ensure that each shikigami is properly converted to a string
 		const shikigamiValue = userShikigami
 			.map(shikigami => {
-				// Assuming each shikigami has a name property for example
 				return typeof shikigami === "object" ? shikigami.name || JSON.stringify(shikigami) : String(shikigami)
 			})
 			.join("\n")
@@ -37,7 +35,6 @@ export function updateShikigamiField(primaryEmbed, activeShikigami, userId) {
 		}
 	}
 
-	// Ensure there's only one "Shikigami" field
 	const shikigamiFields = primaryEmbed.fields.filter(field => field.name === "Shikigami")
 	if (shikigamiFields.length > 1) {
 		primaryEmbed.fields = primaryEmbed.fields.filter(field => field.name !== "Shikigami")
