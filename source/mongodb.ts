@@ -375,8 +375,6 @@ export async function initializeDatabase() {
 	}
 }
 
-
-
 export async function getBalance(id: string): Promise<number> {
 	try {
 		await client.connect()
