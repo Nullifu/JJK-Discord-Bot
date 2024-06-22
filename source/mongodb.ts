@@ -1271,8 +1271,6 @@ export async function updateUserHeavenlyRestriction(userId: string): Promise<voi
 	} catch (error) {
 		logger.error("Error updating heavenly restriction:", error)
 		throw error
-	} finally {
-		await client.close()
 	}
 }
 
@@ -1292,8 +1290,6 @@ export async function checkUserHasHeavenlyRestriction(userId: string): Promise<b
 	} catch (error) {
 		logger.error("Error checking Heavenly Restriction:", error)
 		throw error
-	} finally {
-		await client.close()
 	}
 }
 
@@ -5088,8 +5084,6 @@ export async function getUserCooldown(userId: string, cooldownType: string): Pro
 	} catch (error) {
 		console.error("Error retrieving user cooldown:", error)
 		throw error
-	} finally {
-		await client.close()
 	}
 }
 
@@ -5203,5 +5197,7 @@ export async function unlockTitle(userId: string, titleName: string): Promise<vo
 		throw error
 	}
 }
+
+await client.connect()
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])
