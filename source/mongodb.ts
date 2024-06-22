@@ -275,7 +275,10 @@ export async function addUser(
 			titles: initialTitles,
 			inventory: [],
 			achievements: initialAchievements,
-			heavenlyrestriction: null,
+			heavenlyrestriction: {
+				unlocked: false,
+				active: false
+			},
 			cursedEnergy: 100,
 			clan: null,
 			techniques: [],
@@ -373,18 +376,39 @@ export async function initializeDatabase() {
 	}
 }
 
-// add level field to all users
-export async function addLevelToUsers() {
+async function addLevelToUsers() {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const updateResult = await usersCollection.updateMany({}, { $set: { level: 1 } })
+		const updateTrueResult = await usersCollection.updateMany(
+			{ heavenlyrestriction: true },
+			{
+				$set: {
+					"heavenlyrestriction.unlocked": true,
+					"heavenlyrestriction.active": false
+				}
+			}
+		)
 
-		logger.info(`Added level field to ${updateResult.modifiedCount} users`)
+		// Update users with heavenlyrestriction false or null
+		const updateFalseResult = await usersCollection.updateMany(
+			{ heavenlyrestriction: { $in: [false, null] } },
+			{
+				$set: {
+					"heavenlyrestriction.unlocked": false,
+					"heavenlyrestriction.active": false
+				}
+			}
+		)
+
+		logger.info(`Updated ${updateTrueResult.modifiedCount} users with heavenlyrestriction true.`)
+		logger.info(`Updated ${updateFalseResult.modifiedCount} users with heavenlyrestriction false or null.`)
 	} catch (error) {
 		logger.error("Error adding level to users:", error)
+	} finally {
+		await client.close()
 	}
 }
 export async function getBalance(id: string): Promise<number> {
@@ -1273,28 +1297,30 @@ export async function updateUserDailyData(userId: string, lastDaily: number, str
 	}
 }
 
-// function to update heavenlyrestriction in database from null to yes
 export async function updateUserHeavenlyRestriction(userId: string): Promise<void> {
-	try {
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		await usersCollection.updateOne({ id: userId }, { $set: { heavenlyrestriction: true } })
-	} catch (error) {
-		logger.error("Error updating heavenly restriction:", error)
-		throw error
-	}
-}
-
-export async function checkUserHasHeavenlyRestriction(userId) {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		const user = await usersCollection.findOne({ id: userId }, { projection: { heavenlyrestriction: 1 } })
+		await usersCollection.updateOne({ id: userId }, { $set: { "heavenlyrestriction.unlocked": true } })
+	} catch (error) {
+		logger.error("Error updating heavenly restriction:", error)
+		throw error
+	} finally {
+		await client.close()
+	}
+}
 
-		if (user && user.heavenlyrestriction === true) {
+export async function checkUserHasHeavenlyRestriction(userId: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { "heavenlyrestriction.active": 1 } })
+
+		if (user && user.heavenlyrestriction && user.heavenlyrestriction.active) {
 			return true
 		} else {
 			return false
@@ -1302,6 +1328,8 @@ export async function checkUserHasHeavenlyRestriction(userId) {
 	} catch (error) {
 		logger.error("Error checking Heavenly Restriction:", error)
 		throw error
+	} finally {
+		await client.close()
 	}
 }
 
@@ -1443,37 +1471,30 @@ export async function getUserHeavenlyTechniques(userId: string): Promise<string[
 	}
 }
 
-export async function toggleHeavenlyRestriction(userId) {
+// toggle heavenly restriction if unlocked is true but active is false, change active to true
+export async function toggleHeavenlyRestriction(userId: string): Promise<boolean> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		// Get user achievements to check if they have unlocked Heavenly Restriction
-		const userAchievements = await getUserAchievements(userId)
+		const user = await usersCollection.findOne({ id: userId })
 
-		// Check if the user has the 'unlockHeavenlyRestriction' achievement
-		if (!userAchievements.includes("unlockHeavenlyRestriction")) {
-			logger.info(`User with ID: ${userId} has not unlocked Heavenly Restriction.`)
-			return false // User has not unlocked this feature, so don't toggle
-		}
-
-		// Proceed with toggling if the user has the achievement
-		const updateResult = await usersCollection.updateOne(
-			{ id: userId },
-			[{ $set: { heavenlyrestriction: { $not: "$heavenlyrestriction" } } }],
-			{ upsert: true }
-		)
-
-		if (updateResult.matchedCount === 0) {
-			logger.info(`No user found with ID: ${userId}`)
+		if (!user) {
+			logger.info("No user found with the specified ID")
 			return false
 		}
 
-		logger.info(`Toggled Heavenly Restriction for user with ID: ${userId}`)
-		return true
+		if (user.heavenlyrestriction && user.heavenlyrestriction.unlocked) {
+			// Toggle the active state
+			const newActiveState = !user.heavenlyrestriction.active
+			await usersCollection.updateOne({ id: userId }, { $set: { "heavenlyrestriction.active": newActiveState } })
+			return newActiveState
+		}
+
+		return false
 	} catch (error) {
-		logger.error(`Error when toggling Heavenly Restriction for user with ID: ${userId}`, error)
+		logger.error("Error toggling Heavenly Restriction:", error)
 		throw error
 	}
 }

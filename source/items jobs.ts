@@ -1813,7 +1813,7 @@ export const items1: Item1[] = [
 			await interaction.editReply({ embeds: [embedSecond] })
 
 			await updateUserHeavenlyRestriction(interaction.user.id)
-			await updateUserAchievements(interaction.user.id, "unlockHeavenlyRestriction")
+			await updateUserAchievements(interaction.user.id, "Heavenly Restricted")
 
 			await new Promise(resolve => setTimeout(resolve, 4000))
 

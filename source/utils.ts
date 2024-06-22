@@ -873,8 +873,20 @@ export async function endBlackjackGame(interaction, dealerHand, playerHand, betA
 }
 
 export function createProgressBar(current: number, max: number, length = 20): string {
-	const filledLength = Math.round((current / max) * length)
+	if (max <= 0) {
+		throw new Error("Max value must be greater than zero.")
+	}
+
+	// Calculate filled and empty lengths
+	let filledLength = Math.round((current / max) * length)
+	if (filledLength < 0) {
+		filledLength = 0
+	} else if (filledLength > length) {
+		filledLength = length
+	}
+
 	const emptyLength = length - filledLength
+
 	const bar = "█".repeat(filledLength) + "░".repeat(emptyLength)
 	return bar
 }
@@ -925,7 +937,7 @@ export async function createAchievementsEmbed(userId: string, page: number, inte
 		const userAch = userAchievements.find(a => a.name === ach.name) || {}
 		const progress =
 			userAch.progress !== undefined
-				? `${(userAch.progress as number).toLocaleString()}/${(ach.target as number).toLocaleString()}`
+				? `${userAch.progress as number}/${(ach.target as number).toLocaleString()}`
 				: ""
 
 		let progressText = ""
