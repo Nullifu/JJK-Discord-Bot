@@ -6268,7 +6268,9 @@ export async function handleShopCommand(interaction: CommandInteraction) {
 			await updateShopDisplay()
 		} else if (i.customId.startsWith("buy_")) {
 			const userId = i.user.id
-			const customIdMatch = i.customId.match(/^buy_(main|raid|shikigami|essence|booster)_(\d+)$/)
+			const customIdMatch = i.customId.match(
+				/^buy_(main_shop|raid_shop|shikigami_shop|essence_shop|booster_shop)_(\d+)$/
+			)
 
 			if (!customIdMatch) {
 				console.error("Invalid custom ID format:", i.customId)
@@ -6281,16 +6283,16 @@ export async function handleShopCommand(interaction: CommandInteraction) {
 
 			let selectedShopItems = []
 
-			if (shopType === "main") {
+			if (shopType === "main_shop") {
 				selectedShopItems = shopItems
-			} else if (shopType === "raid") {
+			} else if (shopType === "raid_shop") {
 				const currentRaidBoss = raidBosses[currentRaidShop]
 				selectedShopItems = raidShops[currentRaidBoss]
-			} else if (shopType === "shikigami") {
+			} else if (shopType === "shikigami_shop") {
 				selectedShopItems = shikigamiShopItems
-			} else if (shopType === "essence") {
+			} else if (shopType === "essence_shop") {
 				selectedShopItems = essenceShopItems
-			} else if (shopType === "booster") {
+			} else if (shopType === "booster_shop") {
 				selectedShopItems = boosterShopItems
 			}
 
@@ -6311,7 +6313,7 @@ export async function handleShopCommand(interaction: CommandInteraction) {
 					return
 				}
 
-				if (shopType === "raid") {
+				if (shopType === "raid_shop") {
 					const raidTokenItem = userInventory.find(item => item.name === "Raid Token")
 					const raidTokens = raidTokenItem ? raidTokenItem.quantity : 0
 
@@ -6324,7 +6326,7 @@ export async function handleShopCommand(interaction: CommandInteraction) {
 					}
 
 					await removeItemFromUserInventory(userId, "Raid Token", itemToBuy.price)
-				} else if (shopType === "booster") {
+				} else if (shopType === "booster_shop") {
 					const boosterTokenItem = userInventory.find(item => item.name === "Booster Token")
 					const boosterTokens = boosterTokenItem ? boosterTokenItem.quantity : 0
 
@@ -6354,7 +6356,7 @@ export async function handleShopCommand(interaction: CommandInteraction) {
 				await addItemToUserInventory(userId, itemToBuy.name, 1)
 				await addUserPurchases(userId, itemToBuy.name, 1)
 				await i.followUp({
-					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price.toLocaleString("en-US")} ${shopType === "raid" ? "Raid Tokens" : shopType === "booster" ? "Booster Tokens" : "coins"}.`,
+					content: `You have purchased ${itemToBuy.name} for ${itemToBuy.price.toLocaleString("en-US")} ${shopType === "raid_shop" ? "Raid Tokens" : shopType === "booster_shop" ? "Booster Tokens" : "coins"}.`,
 					ephemeral: true
 				})
 			} else {
