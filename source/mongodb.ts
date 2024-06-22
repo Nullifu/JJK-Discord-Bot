@@ -5140,15 +5140,6 @@ export async function trackAchievementsAndQuests(userId: string, amount: number)
 				}
 			}
 		}
-
-		// Track quests
-		for (const quest of quests) {
-			for (const task of quest.tasks) {
-				if (task.description === "Earn Coins") {
-					await addUserQuestProgress(userId, quest.instanceId, amount, "Earn Coins")
-				}
-			}
-		}
 	} catch (error) {
 		logger.error("Error tracking achievements and quests:", error)
 		throw error
