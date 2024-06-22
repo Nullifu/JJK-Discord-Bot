@@ -4141,7 +4141,7 @@ const userLastBetTimes = {}
 const cooldownPeriod = 15 * 1000
 const dailyBetLimit = 20
 
-const specialUserId = "SPECIAL_USER_ID"
+const specialUserId = "292385626773258240"
 
 const gameLimits = {
 	coinflip: 5000000,
