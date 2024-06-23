@@ -132,6 +132,7 @@ import {
 	getPreviousTrades,
 	getRaidBossDetails,
 	getRaidBosses,
+	getRaidPartyById,
 	getShikigami,
 	getUserActiveDefenseTechnique,
 	getUserActiveHeavenlyTechniques,
@@ -181,6 +182,7 @@ import {
 	mongoDatabase,
 	removeAllStatusEffects,
 	removeItemFromUserInventory,
+	removeRaidPartyPendingActions,
 	removeUserQuest,
 	setUserTutorialMessageId,
 	setUserTutorialState,
@@ -190,6 +192,8 @@ import {
 	updateGamblersData,
 	updatePlayerGrade,
 	updateRaidBossCurrentHealth,
+	updateRaidParty,
+	updateRaidPartyPendingActions,
 	updateUserAchievements,
 	updateUserActiveHeavenlyTechniques,
 	updateUserActiveTechniques,
@@ -219,6 +223,7 @@ import {
 	usersCollectionName,
 	viewTradeRequests
 } from "./mongodb.js"
+import { applyBossDamage, dualTechniqueCombinations, executeDualTechnique1 } from "./raids.js"
 import {
 	activeShikigami,
 	createShikigamiEmbed,
@@ -3587,6 +3592,42 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					damageMultiplier: 12,
 					imageUrl: "https://media1.tenor.com/m/kLudvhuZ7ccAAAAC/jjk-jujutsu-kaisen.gif",
 					description: "With this straw doll.. I curse you..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Backshot Bandit Blitz") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 82,
+					imageUrl: "https://media1.tenor.com/m/NnPufMhIF9QAAAAC/mou-shindeiru-jujutsu-kaisen.gif",
+					description: "My sword will go where the sun don't shine..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Worm Spirit: Aided Strike") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 65,
+					imageUrl: "https://media1.tenor.com/m/vPFUk2ZALWYAAAAd/toji-toji-fushiguro.gif",
+					description: "This worm spirit may be zesty.. But it's going to help me out..",
+					fieldValue: selectedValue,
+					userTechniques: userTechniquesFight,
+					userId: collectedInteraction.user.id,
+					primaryEmbed
+				})
+			} else if (selectedValue === "Oncoming Force: Cursed Blade") {
+				damage = await executeSpecialTechnique({
+					collectedInteraction,
+					techniqueName: selectedValue,
+					damageMultiplier: 40,
+					imageUrl: "https://media1.tenor.com/m/e5niwcpbdEQAAAAd/toji-fushiguro-satoru-gojo.gif",
+					description: "You can't keep up can you? I'll end this before you even know it..",
 					fieldValue: selectedValue,
 					userTechniques: userTechniquesFight,
 					userId: collectedInteraction.user.id,
@@ -8559,8 +8600,10 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 		logger.error("Error handling giveaway end:", error)
 	}
 }
-const RAID_DURATION = 5 * 60 * 1000 // 5 minutes
-const TECHNIQUE_SELECTION_DURATION = 30 * 1000 // 30 seconds for selecting techniques
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const userTechniquesFight2 = new Map<string, any>()
+const RAID_DURATION = 180000 // 3 minutes
+const TECHNIQUE_SELECTION_DURATION = 45000 // 45 seconds
 
 export async function handleRaidCommand(interaction: CommandInteraction) {
 	try {
@@ -8587,7 +8630,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 		})
 
 		raidBossOptions.sort((a, b) => Number(a.locked) - Number(b.locked))
-
 		const finalRaidBossOptions = raidBossOptions.map(({ locked, ...option }) => option)
 
 		const selectMenu = new SelectMenuBuilder()
@@ -8629,7 +8671,6 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 			}
 
 			await i.deferUpdate()
-
 			await setupRaidParty(interaction, currentRaidBoss)
 		})
 
@@ -8650,15 +8691,15 @@ async function setupRaidParty(interaction: CommandInteraction, currentRaidBoss: 
 		.setCustomId("start_raid_now")
 		.setLabel("START NOW?")
 		.setStyle(ButtonStyle.Danger)
-		.setDisabled(false) // Initially enabled for the raid creator
+		.setDisabled(false)
 	const cancelButton = new ButtonBuilder()
 		.setCustomId("cancel_raid")
 		.setLabel("CANCEL PARTY")
 		.setStyle(ButtonStyle.Secondary)
 
 	const partyCloseTime = Date.now() + 60000
-	const participants: { id: string; level: number }[] = [
-		{ id: interaction.user.id, level: await getUserLevel(interaction.user.id) }
+	const participants: { id: string; level: number; totalDamage: number }[] = [
+		{ id: interaction.user.id, level: await getUserLevel(interaction.user.id), totalDamage: 0 }
 	]
 
 	const initialEmbed = new EmbedBuilder()
@@ -8706,7 +8747,7 @@ async function setupRaidParty(interaction: CommandInteraction, currentRaidBoss: 
 				}
 
 				if (!participants.some(p => p.id === i.user.id)) {
-					participants.push({ id: i.user.id, level: userLevel })
+					participants.push({ id: i.user.id, level: userLevel, totalDamage: 0 })
 					const participantsString = participants.map(p => `<@${p.id}> (Level ${p.level})`).join(", ")
 
 					const updatedEmbed = new EmbedBuilder()
@@ -8917,20 +8958,179 @@ async function setupRaidParty(interaction: CommandInteraction, currentRaidBoss: 
 			})
 
 			battleOptionSelectMenuCollectorRaid.on("end", async collected => {
-				try {
-					if (raidParty.partyHealth <= 0) {
-						await handleRaidEnd(interaction, raidParty, raidBossDetails)
-						return
-					}
+				console.info("Collector ended with", collected.size, "interactions")
 
-					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION
-					startCollector(interaction, raidParty, lastUsedTechniques, newRemainingTime)
-				} catch (error) {
-					console.error("Error during technique selection end processing:", error)
-					await interaction.channel?.send({
-						content: "An error occurred. Please try again later.",
+				const updatedRaidParty = await getRaidPartyById(raidParty._id.toString())
+				const updatedRaidBoss = await getRaidBossDetails(updatedRaidParty.raidBossId)
+
+				if (!updatedRaidBoss) {
+					await interaction.editReply({
+						content: "Failed to retrieve updated raid boss details.",
 						embeds: []
 					})
+					return
+				}
+
+				const pendingActions = updatedRaidParty.pendingActions
+				const lastUsedTechniques = []
+
+				for (const combination of dualTechniqueCombinations) {
+					const usersWithTechnique1 = pendingActions.filter(
+						action => action.technique === combination.technique1
+					)
+					const usersWithTechnique2 = pendingActions.filter(
+						action => action.technique === combination.technique2
+					)
+
+					if (usersWithTechnique1.length === 1 && usersWithTechnique2.length === 1) {
+						const user1 = usersWithTechnique1[0]
+						const user2 = usersWithTechnique2[0]
+						const fetchedUser1 = await client1.users.fetch(user1.userId)
+						const fetchedUser2 = await client1.users.fetch(user2.userId)
+						const technique1 = user1.technique
+						const technique2 = user2.technique
+
+						const damage = await executeDualTechnique1({
+							interaction: interaction,
+							technique1: technique1,
+							technique2: technique2,
+							damageMultiplier: combination.damageMultiplier,
+							imageUrl: combination.imageUrl,
+							description: combination.description(fetchedUser1, fetchedUser2, technique1, technique2),
+							fieldValue: combination.fieldValue,
+							userId1: user1.userId,
+							userId2: user2.userId,
+							primaryEmbed: updatedEmbed,
+							updateEmbed: true,
+							rows: rows,
+							dualTechniqueCombinations: dualTechniqueCombinations
+						})
+
+						lastUsedTechniques.push(combination.fieldValue)
+
+						const participantIndex1 = updatedRaidParty.participants.findIndex(p => p.id === user1.userId)
+						const participantIndex2 = updatedRaidParty.participants.findIndex(p => p.id === user2.userId)
+
+						if (participantIndex1 !== -1) {
+							updatedRaidParty.participants[participantIndex1].totalDamage += damage
+						}
+
+						if (participantIndex2 !== -1) {
+							updatedRaidParty.participants[participantIndex2].totalDamage += damage
+						}
+
+						updatedRaidBoss.globalHealth = Math.max(0, updatedRaidBoss.globalHealth - damage)
+						updatedRaidBoss.current_health = Math.max(0, updatedRaidBoss.current_health - damage)
+
+						await updateRaidBossCurrentHealth(
+							updatedRaidBoss._id.toString(),
+							updatedRaidBoss.current_health
+						)
+
+						updatedRaidParty.partyHealth = Math.max(0, updatedRaidParty.partyHealth - damage)
+						await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
+
+						if (updatedRaidParty.partyHealth <= 0) {
+							const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
+							return
+						}
+
+						await removeRaidPartyPendingActions(updatedRaidParty._id.toString())
+
+						updatedRaidParty.pendingActions = []
+						await updateRaidPartyPendingActions(raidParty._id.toString(), updatedRaidParty.pendingActions)
+
+						const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
+
+						const updatedEmbedBuilder = await createRaidEmbed(
+							updatedRaidBoss,
+							latestRaidParty.participants,
+							interaction,
+							lastUsedTechniques.join("\n"),
+							raidEndTime,
+							latestRaidParty.partyHealth
+						)
+						updatedEmbed = updatedEmbedBuilder.toJSON()
+
+						if (updatedRaidParty.partyHealth <= 0) {
+							const latestRaidBoss = await getRaidBossDetails(updatedRaidBoss._id.toString())
+							await handleRaidBossDefeat(interaction, updatedRaidParty, latestRaidBoss)
+							return
+						}
+					}
+				}
+
+				console.debug("Executing pending actions")
+				for (const action of pendingActions) {
+					console.debug("Processing action:", action)
+					const damage = calculateDamage(action.technique, action.userId)
+					const participantIndex = updatedRaidParty.participants.findIndex(p => p.id === action.userId)
+
+					if (participantIndex !== -1) {
+						updatedRaidParty.participants[participantIndex].totalDamage += damage
+						updatedRaidBoss.globalHealth -= damage
+						updatedRaidBoss.current_health -= damage
+					}
+				}
+
+				await updateRaidBossCurrentHealth(updatedRaidBoss._id.toString(), updatedRaidBoss.current_health)
+				await updateRaidParty({ ...updatedRaidParty, partyHealth: updatedRaidParty.partyHealth })
+
+				updatedRaidParty.pendingActions = []
+				await updateRaidPartyPendingActions(raidParty._id.toString(), updatedRaidParty.pendingActions)
+
+				const latestRaidParty = await getRaidPartyById(updatedRaidParty._id.toString())
+				const updatedEmbedBuilder = await createRaidEmbed(
+					updatedRaidBoss,
+					latestRaidParty.participants,
+					interaction,
+					lastUsedTechniques.join("\n"),
+					raidEndTime,
+					latestRaidParty.partyHealth
+				)
+				updatedEmbed = updatedEmbedBuilder.toJSON()
+
+				const attackDetails = await applyBossDamage(updatedRaidBoss, updatedRaidParty.participants, interaction)
+				for (const { participant, attackName, damage, remainingHealth } of attackDetails) {
+					const participantUser = await client1.users.fetch(participant)
+					const participantName = participantUser.username
+
+					updatedEmbed.fields.push({
+						name: `${updatedRaidBoss.name} Attacks ${participantName}!`,
+						value: `Used ${attackName} and dealt ${damage} damage. ${remainingHealth} health remaining.`
+					})
+
+					if (remainingHealth <= 0) {
+						const deadParticipants = updatedRaidParty.deadParticipants || []
+						await updateRaidParty({
+							...updatedRaidParty,
+							deadParticipants: [...deadParticipants, participant]
+						})
+
+						if (latestRaidParty.participants.length === 1) {
+							await handleRaidEnd(interaction, updatedRaidParty, updatedRaidBoss)
+							return
+						}
+					}
+				}
+
+				const updatedRows = await createTechniqueSelectMenu(
+					updatedRaidParty.participants,
+					updatedRaidParty.deadParticipants || [],
+					remainingTime / 1000
+				)
+
+				await interaction.editReply({ embeds: [updatedEmbed], components: [...updatedRows] })
+
+				if (updatedRaidBoss.current_health <= 0) {
+					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
+				} else if (raidParty.partyHealth <= 0) {
+					raidParty.partyHealth = 0
+					await handleRaidBossDefeat(interaction, updatedRaidParty, updatedRaidBoss)
+				} else {
+					const newRemainingTime = remainingTime - TECHNIQUE_SELECTION_DURATION
+					startCollector(interaction, raidParty, lastUsedTechniques, newRemainingTime)
 				}
 			})
 
@@ -8973,38 +9173,6 @@ export async function handleBugReport(interaction: ChatInputCommandInteraction) 
 			"Thank you for reporting the bug! We will look into it. If the bug has caused you to lose items, please join the support server. `/support`",
 		ephemeral: true
 	})
-}
-
-export async function handlePurchaseHistoryCommand(interaction: ChatInputCommandInteraction) {
-	await interaction.deferReply({ ephemeral: true })
-
-	const entitlements = await interaction.client.application.entitlements.fetch({ user: interaction.user })
-	logger.debug("Entitlements:", entitlements.toJSON())
-
-	const skus = await interaction.client.application.fetchSKUs()
-	logger.debug("SKUs:", skus.toJSON())
-
-	const embed = new EmbedBuilder().setTitle("Purchase History").setColor("#0099ff").setTimestamp()
-	const validEntiltements = entitlements.filter(entitlement => entitlement.deleted === false)
-
-	if (validEntiltements.size === 0) {
-		embed.setDescription("You have not made any purchases yet.")
-	} else {
-		const entitlementFields = validEntiltements.map(entitlement => {
-			const purchaseDate = entitlement.startsTimestamp
-			const expiresDate = entitlement.endsAt?.toLocaleString()
-			const sku = skus.find(sku => sku.id === entitlement.skuId)
-
-			return {
-				name: `${sku.name}: ${purchaseDate} - ${expiresDate}`,
-				value: `Type: ${sku.type.toString()} `
-			}
-		})
-
-		embed.addFields(entitlementFields)
-	}
-
-	await interaction.editReply({ embeds: [embed] })
 }
 
 export const tutorialPages = [

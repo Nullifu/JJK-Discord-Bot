@@ -22,11 +22,10 @@ import {
 import { config as dotenv } from "dotenv"
 import express from "express"
 import log4js from "log4js"
-import cron from "node-cron"
+import { AutoPoster } from "topgg-autoposter"
 import {
 	abandonQuestCommand,
 	claimQuestsCommand,
-	generateCombinedEmbed,
 	handleAcceptTrade,
 	handleAchievementsCommand,
 	handleActiveTradesCommand,
@@ -90,7 +89,6 @@ import {
 import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
-	getShopLastReset,
 	getUserInventory,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
@@ -98,7 +96,6 @@ import {
 } from "./mongodb.js"
 import { handleADDTECHNIQUE, handleGiveItemCommand, handleUpdateBalanceCommand } from "./owner.js"
 import { getRandomQuote } from "./shikigami.js"
-import { AutoPoster } from "topgg-autoposter"
 
 // Configure log4js
 log4js.configure({
@@ -344,29 +341,29 @@ const channelId = "1222537263523696785"
 const statsMessageId = "1222537329378594951"
 export const MODERATION_CHANNEL_ID = "1233723111619166329"
 
-cron.schedule("*/30 * * * * *", async () => {
-	try {
-		const channel = await client.channels.fetch(channelId).catch(logger.error)
-		if (channel && channel.isTextBased()) {
-			const message = await channel.messages.fetch(statsMessageId).catch(logger.error)
-			if (message) {
-				const lastResetTime = await getShopLastReset().catch(logger.error)
-				if (lastResetTime instanceof Date) {
-					const resetIntervalMs = 1000 * 60 * 60 * 24
-					const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
-					const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+// cron.schedule("*/30 * * * * *", async () => {
+// 	try {
+// 		const channel = await client.channels.fetch(channelId).catch(logger.error)
+// 		if (channel && channel.isTextBased()) {
+// 			const message = await channel.messages.fetch(statsMessageId).catch(logger.error)
+// 			if (message) {
+// 				const lastResetTime = await getShopLastReset().catch(logger.error)
+// 				if (lastResetTime instanceof Date) {
+// 					const resetIntervalMs = 1000 * 60 * 60 * 24
+// 					const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+// 					const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
-					const embed = await generateCombinedEmbed(client, discordTimestamp)
-					await message.edit({ embeds: [embed] }).catch(logger.error)
-				} else {
-					logger.error("Failed to get the last shop reset time.")
-				}
-			}
-		}
-	} catch (error) {
-		logger.error("Error in scheduled job:", error)
-	}
-})
+// 					const embed = await generateCombinedEmbed(client, discordTimestamp)
+// 					await message.edit({ embeds: [embed] }).catch(logger.error)
+// 				} else {
+// 					logger.error("Failed to get the last shop reset time.")
+// 				}
+// 			}
+// 		}
+// 	} catch (error) {
+// 		logger.error("Error in scheduled job:", error)
+// 	}
+// })
 
 client.setMaxListeners(1000)
 export const digCooldowns = new Map<string, number>()

@@ -1710,6 +1710,33 @@ export const heavenlyrestrictionskills = {
 			stage: "Stage Four"
 		}
 	],
+	"Zenin Toji (Hidden Inventory)": [
+		{
+			name: "Backshot Bandit Blitz",
+			cost: "10000000",
+			clan: "Zenin Toji (Hidden Inventory)",
+			items: [
+				{ name: "Sukuna Finger", quantity: 26 },
+				{ name: "Heavenly Restricted Blood", quantity: 2 },
+				{ name: "Zenin Toji's Blood", quantity: 1 }
+			],
+			stage: "Stage Five"
+		},
+		{
+			name: "Worm Spirit: Aided Strike",
+			cost: "5000000",
+			clan: "Zenin Toji (Hidden Inventory)",
+			items: [{ name: "Awakening Remnant", quantity: 12 }],
+			stage: "Stage Five"
+		},
+		{
+			name: "Oncoming Force: Cursed Blade",
+			cost: "2500000",
+			clan: "Zenin Toji (Hidden Inventory)",
+			items: [{ name: "Awakening Remnant", quantity: 6 }],
+			stage: "Stage Five"
+		}
+	],
 	"Zenin Toji (Reincarnation)": [
 		{
 			name: "Playful Cloud: Rushing Resolute",
