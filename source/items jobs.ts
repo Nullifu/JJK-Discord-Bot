@@ -1568,6 +1568,23 @@ export interface Item1 {
 
 export const consumeables: Item1[] = [
 	{
+		itemName: "Cursed Energy Vial",
+		description: "Cursed Energy Vial",
+		rarity: "Special",
+		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
+		effect: async interaction => {
+			await interaction.deferReply()
+
+			await updateUserMaxHealth(interaction.user.id, 30)
+
+			const embedFinal = new EmbedBuilder()
+				.setColor("#006400")
+				.setTitle("Vial of Cursed Energy")
+				.setDescription("You drink the contents and gain a health increase! + 30")
+			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+		}
+	},
+	{
 		itemName: "Booster Shikigami Essence",
 		description: "Booster Shikigami Essence",
 		rarity: "Special",
@@ -2121,38 +2138,55 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			const startTime = new Date()
-			const endTime = new Date(startTime.getTime() + 60 * 60000)
+			// Generate a random number between 0 and 1
+			const chance = Math.random()
 
-			const itemEffect = {
-				itemName: "Hakari Kinji's Token",
-				effectName: "Gambler Fever",
-				effectTime: 25,
-				startTime: startTime.toISOString(),
-				endTime: endTime.toISOString()
-			}
-			const itemEffectsArray = [itemEffect]
-			getGamblersData(interaction.user.id).then(async gamblersData => {
-				const limit = gamblersData.limit
+			// Set the chance threshold (e.g., 10% chance)
+			const threshold = 0.1
 
-				const INCREASE_PERCENT = 10
+			// Check if the random number is less than the threshold
+			if (chance < threshold) {
+				const startTime = new Date()
+				const endTime = new Date(startTime.getTime() + 60 * 60000)
 
-				try {
-					await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
-					await resetBetLimit(interaction.user.id)
-					await updateGamblersData(interaction.user.id, 0, 0, 0, limit, INCREASE_PERCENT)
-					const embedFinal = new EmbedBuilder()
-						.setColor("#006400")
-						.setTitle("Gamblers Potential")
-						.setDescription(
-							"As the coin flips.. YOU HIT BIG GAINS\n+15% Bet Limit INC, + Reset Bet Limit **SOME STUFF MAY BE BROKEN OR NOT ADDED THIS IS VERY WIP**"
-						)
-					await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
-				} catch (error) {
-					logger.error("Error applying item effect:", error)
-					await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+				const itemEffect = {
+					itemName: "Hakari Kinji's Token",
+					effectName: "Gambler Fever",
+					effectTime: 25,
+					startTime: startTime.toISOString(),
+					endTime: endTime.toISOString()
 				}
-			})
+				const itemEffectsArray = [itemEffect]
+
+				getGamblersData(interaction.user.id).then(async gamblersData => {
+					const limit = gamblersData.limit
+
+					const INCREASE_PERCENT = 10
+
+					try {
+						await updateUserItemEffects(interaction.user.id, itemEffectsArray[0])
+						await resetBetLimit(interaction.user.id)
+						await updateGamblersData(interaction.user.id, 0, 0, 0, limit, INCREASE_PERCENT)
+						const embedFinal = new EmbedBuilder()
+							.setColor("#006400")
+							.setTitle("Gamblers Potential")
+							.setDescription(
+								"As the coin flips.. YOU HIT BIG GAINS\n+15% Bet Limit INC, + Reset Bet Limit **SOME STUFF MAY BE BROKEN OR NOT ADDED THIS IS VERY WIP**"
+							)
+						await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
+					} catch (error) {
+						logger.error("Error applying item effect:", error)
+						await interaction.editReply({ content: "Failed to apply the curse effect. Please try again." })
+					}
+				})
+			} else {
+				// Handle the case where the effect is not applied
+				const embedFailure = new EmbedBuilder()
+					.setColor("#FF0000")
+					.setTitle("Gamblers Potential")
+					.setDescription("The gamble didn't pay off this time. Better luck next time!")
+				await interaction.editReply({ embeds: [embedFailure] }).catch(logger.error)
+			}
 		}
 	},
 	{
@@ -2413,23 +2447,6 @@ export const items1: Item1[] = [
 				.setColor("#006400")
 				.setTitle("Opening...")
 				.setDescription("You opened the box and received: 26x Sukuna Finger, 12x Six Eyes, + 200,000 Coins!")
-			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
-		}
-	},
-	{
-		itemName: "Cursed Energy Vial",
-		description: "Cursed Energy Vial",
-		rarity: "Special",
-		imageUrl: "https://i1.sndcdn.com/artworks-z10vyMXnr9n7OGj4-FyRAxQ-t500x500.jpg",
-		effect: async interaction => {
-			await interaction.deferReply()
-
-			await updateUserMaxHealth(interaction.user.id, 30)
-
-			const embedFinal = new EmbedBuilder()
-				.setColor("#006400")
-				.setTitle("Vial of Cursed Energy")
-				.setDescription("You drink the contents and gain a health increase! + 30")
 			await interaction.editReply({ embeds: [embedFinal] }).catch(logger.error)
 		}
 	},

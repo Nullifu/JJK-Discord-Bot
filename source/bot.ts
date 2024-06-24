@@ -588,7 +588,8 @@ const commands = [
 					{ name: "Basic Booster Bundle", value: "Basic Booster Bundle" },
 					{ name: "Voidless Infusion", value: "Voidless Infusion" },
 					{ name: "Vessel's Rebuke", value: "Vessel's Rebuke" },
-					{ name: "Pact of the Cursed", value: "Pact of the Cursed" }
+					{ name: "Pact of the Cursed", value: "Pact of the Cursed" },
+					{ name: "Hakari Kinji's Token", value: "Hakari Kinji's Token" }
 				)
 		)
 		.addStringOption(option =>
