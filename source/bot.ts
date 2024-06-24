@@ -615,7 +615,8 @@ const commands = [
 					{ name: "Luck Essence", value: "Luck Essence" },
 					{ name: "Divine Essence", value: "Divine Essence" },
 					{ name: "Sorcerer's Essence", value: "Sorcerer's Essence" },
-					{ name: "Unleashed Inate Essence", value: "Unleashed Inate Essence" }
+					{ name: "Unleashed Inate Essence", value: "Unleashed Inate Essence" },
+					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" }
 				)
 		),
 
