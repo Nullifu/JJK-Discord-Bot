@@ -578,7 +578,6 @@ const commands = [
 					{ name: "Special-Grade Anti Effect Spray", value: "Special-Grade Anti Effect Spray" },
 					{ name: "Special-Grade Cursed Object", value: "Special-Grade Cursed Object" },
 					{ name: "Cleaning Sponge", value: "Cleaning Sponge" },
-					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
 					{ name: "Heian Era Awakening Remnant", value: "Heian Era Awakening Remnant" },
 					{ name: "Unknown Substance", value: "Unknown Substance" },
 					{ name: "Blessful Charm", value: "Blessful Charm" },
