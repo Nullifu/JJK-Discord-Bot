@@ -5199,10 +5199,16 @@ export async function unlockTitle(userId: string, titleName: string): Promise<vo
 	}
 }
 
+interface Title {
+	name: string
+	unlocked: boolean
+	active: boolean
+}
+
 export async function addAndUnlockTitle(userId: string, titleName: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
+		const usersCollection: Collection<User> = database.collection(usersCollectionName)
 
 		// Check if the title already exists for the user
 		const user = await usersCollection.findOne({ "id": userId, "titles.name": titleName })
@@ -5215,7 +5221,10 @@ export async function addAndUnlockTitle(userId: string, titleName: string): Prom
 			)
 		} else {
 			// If the title doesn't exist, add it and unlock it
-			await usersCollection.updateOne({ id: userId }, { $push: { titles: { name: titleName, unlocked: true } } })
+			await usersCollection.updateOne(
+				{ id: userId },
+				{ $push: { titles: { name: titleName, unlocked: true } as Title } }
+			)
 		}
 
 		logger.info(`Title '${titleName}' added and unlocked for user: ${userId}`)
