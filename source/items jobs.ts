@@ -3,6 +3,7 @@ import logger from "./bot.js"
 import { dirtyToCleanItemMap } from "./interface.js"
 import {
 	UserShikigami,
+	addAndUnlockTitle,
 	addItemToUserInventory,
 	addUserQuest,
 	addUserQuestProgress,
@@ -18,6 +19,7 @@ import {
 	removeAllItemEffects,
 	removeItemFromUserInventory,
 	resetBetLimit,
+	unlockTitle,
 	updateBalance,
 	updateGamblersData,
 	updatePlayerClanTier,
@@ -1954,6 +1956,7 @@ export const items1: Item1[] = [
 				} else {
 					logger.info("Quest Not Found")
 					await addUserQuest(interaction.user.id, "Curse King's Task")
+					await addAndUnlockTitle(interaction.user.id, "Cursed Vessel")
 					const embedAlreadyDemonVessel = new EmbedBuilder()
 						.setColor("#8b0000")
 						.setTitle("Already Cursed..")
@@ -1977,17 +1980,16 @@ export const items1: Item1[] = [
 
 				await interaction.editReply({ embeds: [embedSecond] })
 
-				await new Promise(resolve => setTimeout(resolve, 4000)) // Delay
+				await new Promise(resolve => setTimeout(resolve, 4000))
 
 				if (randomNumber <= 20) {
 					await updateUserInateClan(interaction.user.id, "Demon Vessel")
-					await updateUserAchievements(interaction.user.id, "becursedDemonVessel")
+					await unlockTitle(interaction.user.id, "Cursed Vessel")
 					await addUserTechnique(interaction.user.id, "World Cutting Slash")
 					await addUserQuestProgress(interaction.user.id, "Curse King", 1)
 
-					const gains =
-						"You have gained:\n" +
-						"• Inate Clan: Demon Vessel\n" +
+					const gains = "You have gained:\n" + "• Title: Cursed Vessel"
+					"• Inate Clan: Demon Vessel\n" +
 						"• Technique: World Cutting Slash\n" +
 						"• Quest Progress: Curse King +1\n"
 					//
@@ -2180,7 +2182,6 @@ export const items1: Item1[] = [
 					}
 				})
 			} else {
-				// Handle the case where the effect is not applied
 				const embedFailure = new EmbedBuilder()
 					.setColor("#FF0000")
 					.setTitle("Gamblers Potential")

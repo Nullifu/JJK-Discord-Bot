@@ -362,11 +362,6 @@ export async function executeSpecialTechniquePvp({
 	const fieldValue = techniqueName
 
 	switch (techniqueName) {
-		case "Ten Shadows Technique: Divergent Sila Divine General Mahoraga":
-			imageUrl = "https://media1.tenor.com/m/SSY_DQmpNykAAAAC/gojo-vs-sukuna-satoru-gojo.gif"
-			description = "You summon the Divergent Sila Divine General Mahoraga!"
-			damage = calculateDamage(playerGradeString, userId, true) * 1
-			break
 		case "Ten Shadows Technique: Divine Dogs":
 			imageUrl = "https://media1.tenor.com/m/SSY_DQmpNykAAAAC/gojo-vs-sukuna-satoru-gojo.gif"
 			description = "You unleash the power of the Divine Dogs!"

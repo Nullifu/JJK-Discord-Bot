@@ -5202,6 +5202,28 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		return
 	}
 
+	const itemEffects = await getUserItemEffects(userId)
+	const hasBlessedEffect = itemEffects.some(effect => effect.effectName === "blessed")
+	const hasCursedEffect = itemEffects.some(effect => effect.effectName === "cursed")
+
+	if (itemName === "" && hasBlessedEffect) {
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Conflicting Effect")
+			.setDescription("You cannot use a Cursed Object while under the effect of a Blessed item, \nYou can use the special-grade cleaning spray to get rid of all effects!")
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
+	if (itemName === "Blessful Charm" && hasCursedEffect) {
+		const embed = new EmbedBuilder()
+			.setColor("#FF0000")
+			.setTitle("Conflicting Effect")
+			.setDescription("You cannot use a Blessed Item while under the effect of a Cursed object, \nYou can use the special-grade cleaning spray to get rid of all effects!")
+		await interaction.reply({ embeds: [embed], ephemeral: true })
+		return
+	}
+
 	if (itemName === "Unknown Substance") {
 		const mentor = await getUserMentor(userId)
 		const grade = await getUserGrade(userId)
@@ -5260,6 +5282,7 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		await interaction.reply("Uh oh, something unexpected went wrong!")
 	}
 }
+
 export async function handleConsumeItem(interaction: ChatInputCommandInteraction): Promise<void> {
 	await updateUserCommandsUsed(interaction.user.id)
 

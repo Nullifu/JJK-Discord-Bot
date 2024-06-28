@@ -2441,6 +2441,7 @@ export async function updateLastAlertedVersion(userId: string, version: string):
 }
 
 // get user item effects
+
 export async function getUserItemEffects(
 	userId: string
 ): Promise<{ itemName: string; effectName: string; startTime: string; endTime: string }[]> {
@@ -5194,6 +5195,32 @@ export async function unlockTitle(userId: string, titleName: string): Promise<vo
 		logger.info(`Title '${titleName}' unlocked for user: ${userId}`)
 	} catch (error) {
 		logger.error("Error unlocking title:", error)
+		throw error
+	}
+}
+
+export async function addAndUnlockTitle(userId: string, titleName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Check if the title already exists for the user
+		const user = await usersCollection.findOne({ "id": userId, "titles.name": titleName })
+
+		if (user) {
+			// If the title exists, just unlock it
+			await usersCollection.updateOne(
+				{ "id": userId, "titles.name": titleName },
+				{ $set: { "titles.$.unlocked": true } }
+			)
+		} else {
+			// If the title doesn't exist, add it and unlock it
+			await usersCollection.updateOne({ id: userId }, { $push: { titles: { name: titleName, unlocked: true } } })
+		}
+
+		logger.info(`Title '${titleName}' added and unlocked for user: ${userId}`)
+	} catch (error) {
+		logger.error("Error adding and unlocking title:", error)
 		throw error
 	}
 }
