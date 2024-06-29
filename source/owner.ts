@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, InteractionResponse, TextChannel } from "discord.js"
 import logger, { createClient } from "./bot.js"
 import { LogEntry } from "./interface.js"
-import { addItemToUserInventory, updateBalance, updateOwnerLogs, updateUserActiveTechniques } from "./mongodb.js"
+import { addItemToUserInventory, addUserTechnique, updateBalance, updateOwnerLogs } from "./mongodb.js"
 
 const authorizedUserId = ["292385626773258240", "723198209979187291"]
 const LOG_CHANNEL_ID = "1250839808452984912"
@@ -295,7 +295,10 @@ export async function handleADDTECHNIQUE(interaction: ChatInputCommandInteractio
 	}
 
 	try {
-		await updateUserActiveTechniques(targetUserId, newTechniques)
+		for (const technique of newTechniques) {
+			await addUserTechnique(targetUserId, technique)
+		}
+
 		await interaction.reply({
 			content: `Successfully updated active techniques for user ${targetUserId}.`,
 			ephemeral: true
@@ -305,5 +308,4 @@ export async function handleADDTECHNIQUE(interaction: ChatInputCommandInteractio
 		await interaction.reply({ content: "An error occurred. Please check logs.", ephemeral: true })
 	}
 }
-
 client1.login(process.env["DISCORD_BOT_TOKEN"])

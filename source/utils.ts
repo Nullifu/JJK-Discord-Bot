@@ -1005,4 +1005,35 @@ export async function getApiLatency(): Promise<number> {
 	}
 }
 
+export function parseBetAmount(amountString: string, currentBalance: number, maxLimit: number): number {
+	if (amountString.toLowerCase() === "all") {
+		return Math.min(currentBalance, maxLimit)
+	}
+
+	const match = amountString.match(/^(\d+)([kKmMbB]?)$/)
+	if (!match) {
+		throw new Error("Invalid bet amount format.")
+	}
+
+	const amount = parseInt(match[1])
+	const unit = match[2].toLowerCase()
+
+	let betAmount
+	switch (unit) {
+		case "k":
+			betAmount = amount * 1_000
+			break
+		case "m":
+			betAmount = amount * 1_000_000
+			break
+		case "b":
+			betAmount = amount * 1_000_000_000
+			break
+		default:
+			betAmount = amount
+	}
+
+	return Math.min(betAmount, maxLimit)
+}
+
 client.login(process.env["DISCORD_BOT_TOKEN"])

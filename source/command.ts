@@ -273,6 +273,7 @@ import {
 	mentorDetails,
 	pageSize,
 	parseAmount,
+	parseBetAmount,
 	raidShops,
 	rareChance,
 	spinSlots,
@@ -4261,7 +4262,8 @@ export async function handleGambleCommand(interaction: ChatInputCommandInteracti
 	}
 
 	const gameType = interaction.options.getString("game")
-	const betAmount = interaction.options.getInteger("amount", true)
+	const betAmountString = interaction.options.getString("amount", true)
+	const betAmount = parseBetAmount(betAmountString, currentBalance, gameLimits[gameType])
 
 	if (betAmount > currentBalance) {
 		await interaction.reply("You don't have enough coins to make this bet.")
@@ -5752,7 +5754,7 @@ export async function handleDonateCommand(interaction) {
 			return
 		}
 
-		const threshold = 50_000_000 
+		const threshold = 50_000_000
 		if (amount >= threshold) {
 			const confirmButton = new ButtonBuilder()
 				.setCustomId("confirm_donation")
@@ -8714,13 +8716,11 @@ export async function handleGiveawayEnd(guildId: string, channelId: string, mess
 		logger.error("Error handling giveaway end:", error)
 	}
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const userTechniquesFight2 = new Map<string, any>()
-const RAID_DURATION = 300000 // 5 minutes in milliseconds
+const RAID_DURATION = 300000
 const TECHNIQUE_SELECTION_DURATION = 45000
 
 export async function handleRaidCommand(interaction: CommandInteraction) {
-	const raidBossList = await getRaidBosses() // Get list of all raid bosses
+	const raidBossList = await getRaidBosses()
 
 	if (raidBossList.length === 0) {
 		await interaction.reply({ content: "There are no raid bosses available at the moment.", ephemeral: true })
@@ -8767,7 +8767,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				.setStyle(ButtonStyle.Secondary)
 
 			const partyCloseTime = Date.now() + 20000
-			const participants: string[] = [interaction.user.id] // Automatically add the party creator
+			const participants: string[] = [interaction.user.id] 
 
 			const initialEmbed = new EmbedBuilder()
 				.setColor("#0099ff")

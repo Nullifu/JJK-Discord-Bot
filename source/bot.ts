@@ -542,7 +542,7 @@ const commands = [
 			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
 		)
 		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
 		),
 
 	new SlashCommandBuilder()
@@ -560,8 +560,8 @@ const commands = [
 					{ name: "High Stakes", value: "highstakes" }
 				)
 		)
-		.addIntegerOption(option =>
-			option.setName("amount").setDescription("The amount of coins to gamble").setRequired(true)
+		.addStringOption(option =>
+			option.setName("amount").setDescription("The amount to bet (e.g., all, 10m)").setRequired(true)
 		),
 
 	new SlashCommandBuilder().setName("craft").setDescription("Craft an item using components in your inventory."),
@@ -626,7 +626,8 @@ const commands = [
 					{ name: "Divine Essence", value: "Divine Essence" },
 					{ name: "Sorcerer's Essence", value: "Sorcerer's Essence" },
 					{ name: "Unleashed Inate Essence", value: "Unleashed Inate Essence" },
-					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" }
+					{ name: "Cursed Energy Vial", value: "Cursed Energy Vial" },
+					{ name: "Kenjaku's Brain", value: "Kenjaku's Brain" }
 				)
 		),
 

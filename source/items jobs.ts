@@ -1970,7 +1970,7 @@ export const items1: Item1[] = [
 				//
 				const randomNumber = Math.floor(Math.random() * 100) + 1
 
-				await new Promise(resolve => setTimeout(resolve, 2000)) // Delay
+				await new Promise(resolve => setTimeout(resolve, 2000))
 
 				const embedSecond = new EmbedBuilder()
 					.setColor("#8b0000")
@@ -2140,13 +2140,10 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			// Generate a random number between 0 and 1
 			const chance = Math.random()
 
-			// Set the chance threshold (e.g., 10% chance)
-			const threshold = 0.1
+			const threshold = 0.3
 
-			// Check if the random number is less than the threshold
 			if (chance < threshold) {
 				const startTime = new Date()
 				const endTime = new Date(startTime.getTime() + 60 * 60000)
