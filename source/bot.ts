@@ -397,7 +397,6 @@ const commands = [
 	new SlashCommandBuilder().setName("mentor").setDescription("Heed words from your mentor!"),
 	new SlashCommandBuilder().setName("selectjob").setDescription("Choose a Job"),
 	new SlashCommandBuilder().setName("search").setDescription("Search for an Item"),
-	new SlashCommandBuilder().setName("achievements").setDescription("View Achievements"),
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("alert").setDescription("Bot Alerts"),
 	new SlashCommandBuilder().setName("update").setDescription("Recent bot updates!"),
@@ -489,11 +488,22 @@ const commands = [
 
 	new SlashCommandBuilder()
 		.setName("donate")
-		.setDescription("Donate to the poor!")
-		.addUserOption(option => option.setName("user").setDescription("The user to donate to").setRequired(true))
-		.addIntegerOption(option =>
-			option.setName("amount").setDescription("How much you want to donate").setRequired(true)
-		),
+		.setDescription("Donate coins to another user or view donation logs")
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("coins")
+				.setDescription("Donate coins to another user")
+				.addUserOption(option =>
+					option.setName("user").setDescription("The user to donate to").setRequired(true)
+				)
+				.addStringOption(option =>
+					option
+						.setName("amount")
+						.setDescription("The amount to donate (e.g., 10M, 1m, 100k)")
+						.setRequired(true)
+				)
+		)
+		.addSubcommand(subcommand => subcommand.setName("logs").setDescription("Show your donation logs")),
 	new SlashCommandBuilder()
 		.setName("leaderboard")
 		.setDescription("View the global leaderboard!")

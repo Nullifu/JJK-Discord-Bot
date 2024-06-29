@@ -952,6 +952,47 @@ export async function createAchievementsEmbed(userId: string, page: number, inte
 	return embed
 }
 
+export function parseAmount(amountStr) {
+	amountStr = amountStr.toLowerCase().replace(/,/g, "")
+	let multiplier = 1
+
+	if (amountStr.endsWith("m")) {
+		multiplier = 1_000_000
+		amountStr = amountStr.slice(0, -1)
+	} else if (amountStr.endsWith("k")) {
+		multiplier = 1_000
+		amountStr = amountStr.slice(0, -1)
+	}
+
+	const amount = parseFloat(amountStr) * multiplier
+	if (isNaN(amount)) {
+		throw new Error("Invalid donation amount format")
+	}
+
+	return amount
+}
+
+export async function confirmHighDonation(interaction, amount) {
+	const threshold = 1_000_000
+	if (amount >= threshold) {
+		await interaction.reply({
+			content: `Are you sure you want to donate ${amount} coins? Respond with "yes" or "no".`,
+			ephemeral: true
+		})
+
+		const filter = response => {
+			return (
+				response.user.id === interaction.user.id &&
+				(response.content.toLowerCase() === "yes" || response.content.toLowerCase() === "no")
+			)
+		}
+
+		const collected = await interaction.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ["time"] })
+		return collected.first().content.toLowerCase() === "yes"
+	}
+	return true
+}
+
 export async function getApiLatency(): Promise<number> {
 	const start = Date.now()
 	try {

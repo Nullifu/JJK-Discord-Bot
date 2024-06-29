@@ -120,6 +120,7 @@ import {
 	createTradeRequest,
 	createUserTutorialState,
 	feedShikigami,
+	fetchDonationLogs,
 	getActiveTrades,
 	getAllShopItems,
 	getAllUserExperience,
@@ -178,6 +179,7 @@ import {
 	healShikigami,
 	initialAchievements,
 	isUserRegistered,
+	logDonation,
 	markStageAsMessaged,
 	mongoDatabase,
 	removeAllStatusEffects,
@@ -270,6 +272,7 @@ import {
 	jjkbotdevqutoes,
 	mentorDetails,
 	pageSize,
+	parseAmount,
 	raidShops,
 	rareChance,
 	spinSlots,
@@ -5210,7 +5213,9 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const embed = new EmbedBuilder()
 			.setColor("#FF0000")
 			.setTitle("Conflicting Effect")
-			.setDescription("You cannot use a Cursed Object while under the effect of a Blessed item, \nYou can use the special-grade cleaning spray to get rid of all effects!")
+			.setDescription(
+				"You cannot use a Cursed Object while under the effect of a Blessed item, \nYou can use the special-grade cleaning spray to get rid of all effects!"
+			)
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
 	}
@@ -5219,7 +5224,9 @@ export async function handleUseItemCommand(interaction: ChatInputCommandInteract
 		const embed = new EmbedBuilder()
 			.setColor("#FF0000")
 			.setTitle("Conflicting Effect")
-			.setDescription("You cannot use a Blessed Item while under the effect of a Cursed object, \nYou can use the special-grade cleaning spray to get rid of all effects!")
+			.setDescription(
+				"You cannot use a Blessed Item while under the effect of a Cursed object, \nYou can use the special-grade cleaning spray to get rid of all effects!"
+			)
 		await interaction.reply({ embeds: [embed], ephemeral: true })
 		return
 	}
@@ -5699,44 +5706,128 @@ async function paginateTrades(interaction, trades, title) {
 }
 
 export async function handleDonateCommand(interaction) {
-	await updateUserCommandsUsed(interaction.user.id)
+	if (interaction.options.getSubcommand() === "coins") {
+		await updateUserCommandsUsed(interaction.user.id)
 
-	const targetUser = interaction.options.getUser("user")
-	const amount = interaction.options.getInteger("amount")
+		const targetUser = interaction.options.getUser("user")
+		const amountStr = interaction.options.getString("amount")
 
-	if (!targetUser) {
-		await interaction.reply({ content: "The user you are trying to donate to does not exist.", ephemeral: true })
-		return
+		if (!targetUser) {
+			await interaction.reply({
+				content: "The user you are trying to donate to does not exist.",
+				ephemeral: true
+			})
+			return
+		}
+
+		let amount
+		try {
+			amount = parseAmount(amountStr)
+		} catch (error) {
+			await interaction.reply({ content: "Invalid donation amount format.", ephemeral: true })
+			return
+		}
+
+		const targetUserId = targetUser.id
+		const isTargetUserRegistered = await isUserRegistered(targetUserId)
+
+		if (!isTargetUserRegistered) {
+			await interaction.reply({
+				content: "The user you are trying to donate to is not registered.",
+				ephemeral: true
+			})
+			return
+		}
+
+		if (amount <= 0) {
+			await interaction.reply({ content: "You must donate a positive amount of coins.", ephemeral: true })
+			return
+		}
+
+		const userId = interaction.user.id
+		const userBalance = await getBalance(userId)
+
+		if (amount > userBalance) {
+			await interaction.reply({ content: "You do not have enough coins to donate.", ephemeral: true })
+			return
+		}
+
+		const threshold = 50_000_000 
+		if (amount >= threshold) {
+			const confirmButton = new ButtonBuilder()
+				.setCustomId("confirm_donation")
+				.setLabel("Confirm")
+				.setStyle(ButtonStyle.Primary)
+
+			const cancelButton = new ButtonBuilder()
+				.setCustomId("cancel_donation")
+				.setLabel("Cancel")
+				.setStyle(ButtonStyle.Danger)
+
+			const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton)
+
+			await interaction.reply({
+				content: `Are you sure you want to donate ${amount} coins to ${targetUser.username}?`,
+				components: [row],
+				ephemeral: true
+			})
+
+			const filter = i => i.customId === "confirm_donation" || i.customId === "cancel_donation"
+			const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 })
+
+			collector.on("collect", async i => {
+				if (i.customId === "confirm_donation") {
+					await updateBalance(userId, -amount)
+					await updateBalance(targetUserId, amount)
+					await logDonation(userId, targetUserId, amount)
+
+					await i.update({
+						content: `You have donated ${amount} coins to ${targetUser.username}.`,
+						components: [],
+						ephemeral: true
+					})
+				} else if (i.customId === "cancel_donation") {
+					await i.update({ content: "Donation cancelled.", components: [], ephemeral: true })
+				}
+			})
+
+			collector.on("end", collected => {
+				if (!collected.size) {
+					interaction.editReply({ content: "Donation timed out.", components: [], ephemeral: true })
+				}
+			})
+		} else {
+			await updateBalance(userId, -amount)
+			await updateBalance(targetUserId, amount)
+			await logDonation(userId, targetUserId, amount)
+
+			await interaction.reply({
+				content: `You have donated ${amount} coins to ${targetUser.username}.`,
+				ephemeral: true
+			})
+		}
+	} else if (interaction.options.getSubcommand() === "logs") {
+		const userId = interaction.user.id
+		const logs = await fetchDonationLogs(userId)
+
+		if (logs.length === 0) {
+			await interaction.reply({ content: "You have no donation logs.", ephemeral: true })
+			return
+		}
+
+		const logMessages = logs.map(log => {
+			const date = log.timestamp.toISOString().split("T")[0]
+			const direction = log.donorId === userId ? "donated to" : "received from"
+			const otherUserId = log.donorId === userId ? log.recipientId : log.donorId
+			const amount = log.amount
+
+			return `${date}: ${amount} coins ${direction} <@${otherUserId}>`
+		})
+
+		const message = logMessages.join("\n")
+
+		await interaction.reply({ content: `Your donation logs:\n${message}`, ephemeral: true })
 	}
-
-	const targetUserId = targetUser.id
-	const isTargetUserRegistered = await isUserRegistered(targetUserId)
-
-	if (!isTargetUserRegistered) {
-		await interaction.reply({ content: "The user you are trying to donate to is not registered.", ephemeral: true })
-		return
-	}
-
-	if (amount <= 0) {
-		await interaction.reply({ content: "You must donate a positive amount of coins.", ephemeral: true })
-		return
-	}
-
-	const userId = interaction.user.id
-	const userBalance = await getBalance(userId)
-
-	if (amount > userBalance) {
-		await interaction.reply({ content: "You do not have enough coins to donate.", ephemeral: true })
-		return
-	}
-
-	await updateBalance(userId, -amount)
-	await updateBalance(targetUserId, amount)
-
-	await interaction.reply({
-		content: `You have donated ${amount} coins to ${targetUser.username}.`,
-		ephemeral: true
-	})
 }
 
 export async function handleEquipTechniqueCommand(interaction) {

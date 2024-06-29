@@ -412,7 +412,7 @@ export async function updateBalance(id: string, amount: number, options?: any): 
 			)
 			logger.log(`Updated balance for user with ID: ${id}`)
 
-			await trackAchievementsAndQuests(id, amount)
+			// await trackAchievementsAndQuests(id, amount)
 		} else {
 			logger.log("Balance update prevented: would have resulted in negative balance")
 		}
@@ -2031,6 +2031,25 @@ export async function getUserActiveTechniques(userId: string): Promise<string[]>
 	} catch (error) {
 		logger.error(`Error when retrieving active techniques for user with ID: ${userId}`, error)
 		throw error
+	}
+}
+
+export async function logDonation(donorId, recipientId, amount) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const donations = database.collection("donations")
+
+		const donation = {
+			donorId: donorId,
+			recipientId: recipientId,
+			amount: amount,
+			timestamp: new Date()
+		}
+
+		await donations.insertOne(donation)
+	} catch (error) {
+		logger.error(`Error when logging donation for userid ${donorId}`)
 	}
 }
 
@@ -5210,17 +5229,14 @@ export async function addAndUnlockTitle(userId: string, titleName: string): Prom
 		const database = client.db(mongoDatabase)
 		const usersCollection: Collection<User> = database.collection(usersCollectionName)
 
-		// Check if the title already exists for the user
 		const user = await usersCollection.findOne({ "id": userId, "titles.name": titleName })
 
 		if (user) {
-			// If the title exists, just unlock it
 			await usersCollection.updateOne(
 				{ "id": userId, "titles.name": titleName },
 				{ $set: { "titles.$.unlocked": true } }
 			)
 		} else {
-			// If the title doesn't exist, add it and unlock it
 			await usersCollection.updateOne(
 				{ id: userId },
 				{ $push: { titles: { name: titleName, unlocked: true } as Title } }
@@ -5234,6 +5250,19 @@ export async function addAndUnlockTitle(userId: string, titleName: string): Prom
 	}
 }
 
+export async function fetchDonationLogs(userId) {
+	await client.connect()
+	const database = client.db(mongoDatabase)
+	const donations = database.collection("donations")
+
+	const logs = await donations
+		.find({
+			$or: [{ donorId: userId }, { recipientId: userId }]
+		})
+		.toArray()
+
+	return logs
+}
 await client.connect()
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])
