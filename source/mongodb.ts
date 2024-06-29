@@ -236,6 +236,8 @@ const initialTitles = [
 	{ name: "Strongest in History", unlocked: false, active: false }
 ]
 
+const accessories = [{ name: "Satoru Gojo's Blindfold", unlocked: false, equipped: false }]
+
 export async function userExists(discordId: string): Promise<boolean> {
 	await client.connect()
 	const database = client.db(mongoDatabase)
@@ -270,6 +272,7 @@ export async function addUser(
 			experience: initialExperience,
 			health: initialHealth,
 			maxhealth: initialmaxhealth,
+			// accessories: accessories,
 			owneddomains: [],
 			domain: null,
 			titles: initialTitles,

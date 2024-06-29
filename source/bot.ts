@@ -537,12 +537,12 @@ const commands = [
 					{ name: "Previous", value: "previous" }
 				)
 		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
-		.addStringOption(option =>
-			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
-		)
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName("item").setDescription("The item to trade").setRequired(true).setAutocomplete(true)
 		),
 
 	new SlashCommandBuilder()
