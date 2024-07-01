@@ -525,25 +525,30 @@ const commands = [
 	new SlashCommandBuilder()
 		.setName("trade")
 		.setDescription("Trading Command.")
-		.addStringOption(option =>
-			option
-				.setName("action")
-				.setDescription("The action to perform")
-				.setRequired(true)
-				.addChoices(
-					{ name: "Initiate", value: "initiate" },
-					{ name: "Accept", value: "accept" },
-					{ name: "View", value: "view" },
-					{ name: "Previous", value: "previous" }
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("initiate")
+				.setDescription("Initiate a trade with a user")
+				.addUserOption(option =>
+					option.setName("user").setDescription("The user to trade with").setRequired(true)
+				)
+				.addIntegerOption(option =>
+					option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+				)
+				.addStringOption(option =>
+					option.setName("item").setDescription("The item to trade").setRequired(true).setAutocomplete(true)
 				)
 		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(true))
-		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("accept")
+				.setDescription("Accept a trade")
+				.addUserOption(option =>
+					option.setName("user").setDescription("The user whose trade to accept").setRequired(true)
+				)
 		)
-		.addStringOption(option =>
-			option.setName("item").setDescription("The item to trade").setRequired(true).setAutocomplete(true)
-		),
+		.addSubcommand(subcommand => subcommand.setName("view").setDescription("View current trades"))
+		.addSubcommand(subcommand => subcommand.setName("previous").setDescription("View previous trades")),
 
 	new SlashCommandBuilder()
 		.setName("gamble")
@@ -919,9 +924,9 @@ client.on("interactionCreate", async interaction => {
 				await interaction.reply({ content: "Unknown subcommand.", ephemeral: true })
 		}
 	} else if (commandName === "trade") {
-		const action = interaction.options.getString("action")
+		const subcommand = interaction.options.getSubcommand()
 
-		switch (action) {
+		switch (subcommand) {
 			case "initiate":
 				await handleTradeCommand(interaction)
 				break
