@@ -112,6 +112,19 @@ export const craftingRecipes = {
 		craftedItemName: "Prison Realm",
 		emoji: "<:prison_realm:1193160559009484830>"
 	},
+	honored_glasses: {
+		requiredItems: [
+			{ name: "Six Eyes", quantity: 4 },
+			{ name: "(Broken) The Honored One's Glasses", quantity: 2 },
+			{ name: "Sacred Eye", quantity: 4 },
+			{ name: "Junpei", quantity: 6 },
+			{ name: "Nanami", quantity: 6 },
+			{ name: "Awakening Remnant", quantity: 1 },
+			{ name: "Split Shard", quantity: 16 },
+			{ name: "The Strongest's Decree", quantity: 8 }
+		],
+		craftedItemName: "Honored One's Glasses"
+	},
 	heavenly_pact: {
 		requiredItems: [
 			{ name: "Cursed Defect", quantity: 1 },
@@ -276,7 +289,7 @@ export const craftingRecipes = {
 		requiredItems: [
 			{ name: "Prison Realm", quantity: 1 },
 			{ name: "Rikugan Eye", quantity: 2 },
-			{ name: "Special-Grade Cursed Object" || "Special Grade Cursed Object", quantity: 4 },
+			{ name: "Special-Grade Cursed Object", quantity: 4 },
 			{ name: "Sukuna Finger", quantity: 1 }
 		],
 		craftedItemName: "Special-Grade Geo Locator",
@@ -1636,7 +1649,7 @@ export const consumeables: Item1[] = [
 				.setDescription("With a decisive motion, you touch the brain..")
 			await interaction.editReply({ embeds: [embedSecond] })
 
-			await updateUserUnlockedTransformations(interaction.user.id, ["Strongest Will"])
+			await updateUserUnlockedTransformations(interaction.user.id, "Strongest Will")
 
 			await new Promise(resolve => setTimeout(resolve, 4000))
 
@@ -1768,7 +1781,7 @@ export const consumeables: Item1[] = [
 			await interaction.deferReply()
 
 			try {
-				await updateUserUnlockedTransformations(interaction.user.id, ["Realized Six Eyes"])
+				await updateUserUnlockedTransformations(interaction.user.id, "Realized Six Eyes")
 				const embedFinal = new EmbedBuilder()
 					.setColor("#006400")
 					.setTitle("Inate Essence")
@@ -1926,15 +1939,19 @@ export const items1: Item1[] = [
 
 					let gainsMessage = ""
 					const targetProgress = 12
+
 					if (curseKingsTaskQuest.progress === targetProgress) {
 						const currentTransformations = (await getUserUnlockedTransformations(interaction.user.id)) || []
 
-						if (!currentTransformations.includes("Curse King")) {
-							const updatedTransformations = [...currentTransformations, "Curse King"]
-							await updateUserUnlockedTransformations(interaction.user.id, updatedTransformations)
+						const isCurseKingUnlocked = currentTransformations.some(
+							transformation => transformation.name === "Curse King" && transformation.unlocked
+						)
+
+						if (!isCurseKingUnlocked) {
+							await updateUserUnlockedTransformations(interaction.user.id, "Curse King")
 
 							gainsMessage =
-								"Hmph, you're still alive. I'll grant you a small gift. Use it well. [ CURSE KING TRANSFORMATION AQUIRED ]"
+								"Hmph, you're still alive. I'll grant you a small gift. Use it well. [ CURSE KING TRANSFORMATION ACQUIRED ]"
 						}
 					}
 
@@ -2214,7 +2231,7 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			await updateUserUnlockedTransformations(interaction.user.id, ["Heavenly Pact"])
+			await updateUserUnlockedTransformations(interaction.user.id, "Heavenly Pact")
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")
 				.setTitle("Pact of the Cursed")
@@ -2323,7 +2340,7 @@ export const items1: Item1[] = [
 		effect: async interaction => {
 			await interaction.deferReply()
 
-			await updateUserUnlockedTransformations(interaction.user.id, ["Body of Distorted Killing"])
+			await updateUserUnlockedTransformations(interaction.user.id, "Body of Distorted Killing")
 
 			const embedFinal = new EmbedBuilder()
 				.setColor("#006400")

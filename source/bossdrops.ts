@@ -95,6 +95,7 @@ export const bossDrops: Record<string, BossDrop[]> = {
 		{ name: "Transfigured Soul", rarity: "ultra rare" }
 	],
 	"The Honored One": [
+		{ name: "(Broken) The Honored One's Glasses", rarity: "rare" },
 		{ name: "Rikugan Eye", rarity: "rare" },
 		{ name: "Sukuna Finger", rarity: "rare" },
 		{ name: "Cleaning Kit", rarity: "rare" },
@@ -309,6 +310,7 @@ const raidBossDrops: { [bossName: string]: RaidDrops[] } = {
 	],
 	"The Honored One": [
 		{ name: "Rikugan Eye", rarity: "common", dropRate: 0.5 },
+		{ name: "(Broken) The Honored One's Glasses", rarity: "common", dropRate: 0.5 },
 		{ name: "Six Eyes", rarity: "common", dropRate: 0.2 },
 		{ name: "Strongest Sorcerer's Token", rarity: "rare", dropRate: 0.1 },
 		{ name: "The Strongest's Decree", rarity: "special grade", dropRate: 0.01 }

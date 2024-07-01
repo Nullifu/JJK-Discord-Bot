@@ -4,7 +4,7 @@
 /* eslint-disable indent */
 /* eslint-disable prettier/prettier */
 let contextKey: string
-import { ModalActionRowComponentBuilder, SelectMenuBuilder } from "@discordjs/builders"
+import { SelectMenuBuilder, TextInputBuilder } from "@discordjs/builders"
 import axios from "axios"
 import {
 	APIEmbed,
@@ -25,7 +25,6 @@ import {
 	StringSelectMenuInteraction,
 	TextBasedChannel,
 	TextChannel,
-	TextInputBuilder,
 	TextInputStyle,
 	User
 } from "discord.js"
@@ -42,7 +41,6 @@ import logger, { createClient, digCooldown, digCooldowns } from "./bot.js"
 import {
 	calculateDamage,
 	calculateEarnings,
-	createInventoryPage,
 	createStatsEmbed,
 	getRandomAmount,
 	getRandomLocation,
@@ -119,6 +117,7 @@ import {
 	createRaidParty,
 	createTradeRequest,
 	createUserTutorialState,
+	equipAccessory,
 	feedShikigami,
 	fetchDonationLogs,
 	getActiveTrades,
@@ -136,6 +135,7 @@ import {
 	getRaidBosses,
 	getRaidPartyById,
 	getShikigami,
+	getUserAccessories,
 	getUserActiveDefenseTechnique,
 	getUserActiveHeavenlyTechniques,
 	getUserActiveTechniques,
@@ -189,6 +189,7 @@ import {
 	setUserTutorialMessageId,
 	setUserTutorialState,
 	startNewSession,
+	unlockAccessory,
 	unlockAchievement,
 	updateBalance,
 	updateGamblersData,
@@ -251,7 +252,9 @@ import {
 	calculateHandValue,
 	checkWin,
 	createAchievementsEmbed,
+	createCraftingMenu,
 	createFeverMeterBar,
+	createNavigationButtons,
 	createProgressBar,
 	createRaidEmbed,
 	createTechniqueSelectMenu,
@@ -507,10 +510,61 @@ export async function handleInventoryCommand(interaction) {
 
 	const mentionedUser = interaction.options.getUser("user") || interaction.user
 	const inventoryItems = await getUserInventory(mentionedUser.id)
+	const accessories = await getUserAccessories(mentionedUser.id)
 	const itemsPerPage = 10
 	let pageIndex = 0
 
-	// Send the initial page
+	const createInventoryPage = (items, startIndex, itemsPerPage, user) => {
+		const embed = new EmbedBuilder()
+			.setTitle(`${user.username}'s Inventory`)
+			.setColor(getRandomColor())
+			.addFields(
+				items.slice(startIndex, startIndex + itemsPerPage).map(item => ({
+					name: item.name,
+					value: `Quantity: ${item.quantity}`,
+					inline: true
+				}))
+			)
+			.setFooter({ text: `Page ${startIndex / itemsPerPage + 1}` })
+
+		return embed
+	}
+
+	const createMainSelectMenu = () => {
+		return new ActionRowBuilder().addComponents(
+			new StringSelectMenuBuilder()
+				.setCustomId("main_select")
+				.setPlaceholder("Select category to view")
+				.addOptions([
+					{
+						label: "Items",
+						description: "View all items",
+						value: "items",
+						emoji: "📦"
+					},
+					{
+						label: "Accessories",
+						description: "View all accessories",
+						value: "accessories",
+						emoji: "🎩"
+					}
+				])
+		)
+	}
+
+	const createAllAccessoriesEmbed = (accessories, user) => {
+		return new EmbedBuilder()
+			.setTitle(`${user.username}'s Accessories`)
+			.setColor(getRandomColor())
+			.addFields(
+				accessories.map(accessory => ({
+					name: accessory.name,
+					value: accessory.equipped ? "Equipped" : "Not Equipped",
+					inline: true
+				}))
+			)
+	}
+
 	const embed = createInventoryPage(inventoryItems, pageIndex * itemsPerPage, itemsPerPage, mentionedUser)
 	const row = new ActionRowBuilder().addComponents(
 		new ButtonBuilder()
@@ -525,15 +579,33 @@ export async function handleInventoryCommand(interaction) {
 			.setDisabled(inventoryItems.length <= itemsPerPage)
 	)
 
-	const message = await interaction.editReply({ embeds: [embed], components: [row] })
+	const mainMenu = createMainSelectMenu()
+
+	const message = await interaction.editReply({ embeds: [embed], components: [row, mainMenu] })
 
 	const collector = message.createMessageComponentCollector({ time: 60000 })
+
 	collector.on("collect", async i => {
 		if (i.user.id === interaction.user.id || (mentionedUser && i.user.id === mentionedUser.id)) {
 			if (i.customId === "next" && (pageIndex + 1) * itemsPerPage < inventoryItems.length) {
 				pageIndex++
 			} else if (i.customId === "previous" && pageIndex > 0) {
 				pageIndex--
+			} else if (i.customId === "main_select") {
+				const selectedCategory = i.values[0]
+				if (selectedCategory === "accessories") {
+					const allAccessoriesEmbed = createAllAccessoriesEmbed(accessories, mentionedUser)
+					await i.update({ embeds: [allAccessoriesEmbed], components: [mainMenu] })
+				} else if (selectedCategory === "items") {
+					const newEmbed = createInventoryPage(
+						inventoryItems,
+						pageIndex * itemsPerPage,
+						itemsPerPage,
+						mentionedUser
+					)
+					await i.update({ embeds: [newEmbed], components: [row, mainMenu] })
+				}
+				return
 			}
 
 			const newEmbed = createInventoryPage(inventoryItems, pageIndex * itemsPerPage, itemsPerPage, mentionedUser)
@@ -550,13 +622,12 @@ export async function handleInventoryCommand(interaction) {
 					.setDisabled((pageIndex + 1) * itemsPerPage >= inventoryItems.length)
 			)
 
-			await i.update({ embeds: [newEmbed], components: [newRow] })
+			await i.update({ embeds: [newEmbed], components: [newRow, mainMenu] })
 		} else {
 			await i.reply({ content: "You cannot control this inventory navigation.", ephemeral: true })
 		}
 	})
 }
-
 export async function handleDigCommand(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply()
 	const userId = interaction.user.id
@@ -829,53 +900,48 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 			throw new Error("User inventory is not available.")
 		}
 
-		const craftableItemsMenu = new SelectMenuBuilder()
-			.setCustomId("selectCraftItem")
-			.setPlaceholder("Select an item to craft")
-			.addOptions(
-				Object.keys(craftingRecipes)
-					.map(key => {
-						const recipe = craftingRecipes[key]
-						if (!recipe) {
-							logger.error("Recipe details not found for key:", key)
-							return null
-						}
-						const emojiId = recipe.emoji && recipe.emoji.match(/:(\d+)>/)?.[1]
+		const updateMenu = async (category: string) => {
+			const craftingMenu = createCraftingMenu(craftingRecipes, category, userInventory)
+			const menuRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(craftingMenu)
+			const navRow = createNavigationButtons(category)
 
-						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-						const maxCraftableAmount = recipe.requiredItems.reduce((min, item) => {
-							const inventoryQuantity = inventoryMap.get(item.name) || 0
-							const maxCraftableForItem = Math.floor(inventoryQuantity / item.quantity)
-							return Math.min(min, maxCraftableForItem)
-						}, Infinity)
+			const embed = new EmbedBuilder()
+				.setColor(0x00ff00)
+				.setTitle(`Crafting Menu (${category})`)
+				.setDescription("Select an item to craft.")
 
-						return {
-							label: recipe.craftedItemName,
-							description: `Craftable Amount: ${maxCraftableAmount}`,
-							value: key,
-							emoji: emojiId ? { id: emojiId } : undefined
-						}
-					})
-					.filter(option => option !== null)
-			)
+			await interaction.editReply({ embeds: [embed], components: [menuRow, navRow] })
+		}
 
-		const row1 = new ActionRowBuilder<SelectMenuBuilder>().addComponents(craftableItemsMenu)
+		await interaction.deferReply()
+		await updateMenu("other")
 
-		await interaction.reply({ content: "", components: [row1] })
+		const buttonFilter = (i: any) =>
+			["prevCategory", "nextCategory", "selectCraftItem_other", "selectCraftItem_accessories"].includes(
+				i.customId
+			) && i.user.id === interaction.user.id
+		const buttonCollector = interaction.channel.createMessageComponentCollector({
+			filter: buttonFilter,
+			time: 60000
+		})
 
-		const menuFilter = i => i.customId === "selectCraftItem" && i.user.id === interaction.user.id
-		const menuCollector = interaction.channel.createMessageComponentCollector({ filter: menuFilter, time: 60000 })
+		let currentCategory = "other"
 
-		menuCollector.on("collect", async interaction => {
-			if (interaction.isStringSelectMenu()) {
-				await interaction.deferUpdate()
-				const selectedItemKey = interaction.values[0]
+		buttonCollector.on("collect", async (i: any) => {
+			await i.deferUpdate()
+
+			if (i.customId === "prevCategory") {
+				currentCategory = "other"
+			} else if (i.customId === "nextCategory") {
+				currentCategory = "accessories"
+			}
+
+			if (i.customId.startsWith("selectCraftItem")) {
+				const selectedItemKey = i.values[0]
 				const selectedItemRecipe = craftingRecipes[selectedItemKey]
 
-				const userInventory = await getUserInventory(interaction.user.id)
 				const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-
-				const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+				const missingItems = selectedItemRecipe.requiredItems.filter((item: any) => {
 					const inventoryQuantity = inventoryMap.get(item.name) || 0
 					return inventoryQuantity < item.quantity
 				})
@@ -886,7 +952,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					.addFields({
 						name: "Requirements",
 						value: selectedItemRecipe.requiredItems
-							.map(item => `${item.quantity}x ${item.name}`)
+							.map((item: any) => `${item.quantity}x ${item.name}`)
 							.join("\n"),
 						inline: false
 					})
@@ -899,20 +965,25 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							name: "Missing Items",
 							value: missingItems
 								.map(
-									item =>
+									(item: any) =>
 										`${item.name} (${item.quantity - (inventoryMap.get(item.name) || 0)} missing)`
 								)
 								.join("\n")
 						})
 
-					await interaction.editReply({
+					await i.editReply({
 						embeds: [craftEmbed],
-						components: [row1]
+						components: [
+							createNavigationButtons(currentCategory),
+							new ActionRowBuilder<SelectMenuBuilder>().addComponents(
+								createCraftingMenu(craftingRecipes, currentCategory, userInventory)
+							)
+						]
 					})
 					return
 				}
 
-				const maxCraftableAmount = selectedItemRecipe.requiredItems.reduce((min, item) => {
+				const maxCraftableAmount = selectedItemRecipe.requiredItems.reduce((min: number, item: any) => {
 					const inventoryQuantity = inventoryMap.get(item.name) || 0
 					const maxCraftableForItem = Math.floor(inventoryQuantity / item.quantity)
 					return Math.min(min, maxCraftableForItem)
@@ -930,40 +1001,48 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					.setStyle(ButtonStyle.Primary)
 					.setEmoji("🔧")
 
+				const customCraftButton = new ButtonBuilder()
+					.setCustomId("craftCustom")
+					.setLabel("Craft Custom Amount")
+					.setStyle(ButtonStyle.Secondary)
+					.setEmoji("🔢")
+
 				const cancelButton = new ButtonBuilder()
 					.setCustomId("cancelCraft")
 					.setLabel("Cancel")
 					.setStyle(ButtonStyle.Danger)
 					.setEmoji("❌")
 
-				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+				const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 					confirmButton,
 					craftMaxButton,
+					customCraftButton,
 					cancelButton
 				)
 
-				await interaction.editReply({
+				await i.editReply({
 					embeds: [craftEmbed],
-					components: [row, row1]
+					components: [
+						actionRow,
+						createNavigationButtons(currentCategory),
+						new ActionRowBuilder<SelectMenuBuilder>().addComponents(
+							createCraftingMenu(craftingRecipes, currentCategory, userInventory)
+						)
+					]
 				})
 
-				const buttonFilter = i =>
-					["confirmCraft", "craftMax", "craftCustom", "cancelCraft"].includes(i.customId) &&
-					i.user.id === interaction.user.id
-
 				const buttonCollector = interaction.channel.createMessageComponentCollector({
-					filter: buttonFilter,
+					filter: (i: any) =>
+						["confirmCraft", "craftMax", "craftCustom", "cancelCraft"].includes(i.customId) &&
+						i.user.id === interaction.user.id,
 					time: 20000
 				})
 
-				buttonCollector.on("collect", async buttonInteraction => {
+				buttonCollector.on("collect", async (buttonInteraction: any) => {
 					await buttonInteraction.deferReply()
 
 					if (buttonInteraction.customId === "confirmCraft") {
-						const userInventory = await getUserInventory(interaction.user.id)
-						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-
-						const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+						const missingItems = selectedItemRecipe.requiredItems.filter((item: any) => {
 							const inventoryQuantity = inventoryMap.get(item.name) || 0
 							return inventoryQuantity < item.quantity
 						})
@@ -977,7 +1056,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 									name: "Missing Items",
 									value: missingItems
 										.map(
-											item =>
+											(item: any) =>
 												`${item.name} (${item.quantity - (inventoryMap.get(item.name) || 0)})`
 										)
 										.join("\n")
@@ -991,19 +1070,18 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						}
 
 						try {
-							logger.info("Starting item removal for ITEM!")
-
 							for (const requiredItem of selectedItemRecipe.requiredItems) {
-								logger.info("Removing item:", requiredItem)
 								await removeItemFromUserInventory(
 									interaction.user.id,
 									requiredItem.name,
 									requiredItem.quantity
 								)
-								logger.info("Item removed!")
 							}
-							await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
-							logger.info("Item added! ", selectedItemRecipe.craftedItemName)
+							if (selectedItemKey === "honored_glasses") {
+								await unlockAccessory(interaction.user.id, selectedItemRecipe.craftedItemName)
+							} else {
+								await addItemToUserInventory(interaction.user.id, selectedItemRecipe.craftedItemName, 1)
+							}
 
 							await buttonInteraction.followUp({
 								ephemeral: true,
@@ -1011,21 +1089,21 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 								components: []
 							})
 						} catch (error) {
-							logger.fatal("Error during crafting:", error)
+							console.error("Error during crafting:", error)
 							await buttonInteraction.editReply({
 								content: "There was an error during the crafting process. Please try again.",
 								components: []
 							})
 						}
 					} else if (buttonInteraction.customId === "craftMax") {
-						const userInventory = await getUserInventory(interaction.user.id)
-						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-
-						const maxCraftableQuantity = selectedItemRecipe.requiredItems.reduce((acc, item) => {
-							const inventoryQuantity = inventoryMap.get(item.name) || 0
-							const craftableQuantity = Math.floor(inventoryQuantity / item.quantity)
-							return Math.min(acc, craftableQuantity)
-						}, Infinity)
+						const maxCraftableQuantity = selectedItemRecipe.requiredItems.reduce(
+							(acc: number, item: any) => {
+								const inventoryQuantity = inventoryMap.get(item.name) || 0
+								const craftableQuantity = Math.floor(inventoryQuantity / item.quantity)
+								return Math.min(acc, craftableQuantity)
+							},
+							Infinity
+						)
 
 						if (maxCraftableQuantity === 0) {
 							const errorEmbed = new EmbedBuilder()
@@ -1048,11 +1126,15 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 									requiredItem.quantity * maxCraftableQuantity
 								)
 							}
-							await addItemToUserInventory(
-								interaction.user.id,
-								selectedItemRecipe.craftedItemName,
-								maxCraftableQuantity
-							)
+							if (selectedItemKey === "honored_glasses") {
+								await unlockAccessory(interaction.user.id, selectedItemRecipe.craftedItemName)
+							} else {
+								await addItemToUserInventory(
+									interaction.user.id,
+									selectedItemRecipe.craftedItemName,
+									maxCraftableQuantity
+								)
+							}
 
 							await buttonInteraction.followUp({
 								ephemeral: true,
@@ -1060,13 +1142,13 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 								components: []
 							})
 						} catch (error) {
-							logger.fatal("Error during crafting:", error)
+							console.error("Error during crafting:", error)
 							await buttonInteraction.editReply({
 								content: "There was an error during the crafting process. Please try again.",
 								components: []
 							})
 						}
-					} else if (interaction.customId === "craftCustom") {
+					} else if (buttonInteraction.customId === "craftCustom") {
 						const modal = new ModalBuilder()
 							.setCustomId("craftCustomModal")
 							.setTitle("Custom Craft Quantity")
@@ -1078,25 +1160,24 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							.setRequired(true)
 							.setPlaceholder("Quantity")
 
-						const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-							quantityInput
-						)
+						const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(quantityInput)
 						modal.addComponents(actionRow)
 
-						await interaction.showModal(modal)
+						await buttonInteraction.showModal(modal)
 
-						const modalSubmitInteraction = await interaction
+						const modalSubmitInteraction = await buttonInteraction
 							.awaitModalSubmit({
 								time: 60000,
-								filter: i => i.customId === "craftCustomModal" && i.user.id === interaction.user.id
+								filter: (i: any) =>
+									i.customId === "craftCustomModal" && i.user.id === buttonInteraction.user.id
 							})
 							.catch(error => {
-								logger.error("Modal submit interaction error:", error)
+								console.error("Modal submit interaction error:", error)
 								return null
 							})
 
 						if (!modalSubmitInteraction) {
-							await interaction.followUp({
+							await buttonInteraction.followUp({
 								content: "Modal submission timed out.",
 								ephemeral: true
 							})
@@ -1115,10 +1196,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 							return
 						}
 
-						const userInventory = await getUserInventory(interaction.user.id)
-						const inventoryMap = new Map(userInventory.map(item => [item.name, item.quantity]))
-
-						const missingItems = selectedItemRecipe.requiredItems.filter(item => {
+						const missingItems = selectedItemRecipe.requiredItems.filter((item: any) => {
 							const inventoryQuantity = inventoryMap.get(item.name) || 0
 							return inventoryQuantity < item.quantity * quantity
 						})
@@ -1132,7 +1210,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 									name: "Missing Items",
 									value: missingItems
 										.map(
-											item =>
+											(item: any) =>
 												`${item.name} (${item.quantity * quantity - (inventoryMap.get(item.name) || 0)} missing)`
 										)
 										.join("\n")
@@ -1148,16 +1226,20 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 						try {
 							for (const requiredItem of selectedItemRecipe.requiredItems) {
 								await removeItemFromUserInventory(
-									interaction.user.id,
+									buttonInteraction.user.id,
 									requiredItem.name,
 									requiredItem.quantity * quantity
 								)
 							}
-							await addItemToUserInventory(
-								interaction.user.id,
-								selectedItemRecipe.craftedItemName,
-								quantity
-							)
+							if (selectedItemKey === "honored_glasses") {
+								await unlockAccessory(buttonInteraction.user.id, selectedItemRecipe.craftedItemName)
+							} else {
+								await addItemToUserInventory(
+									buttonInteraction.user.id,
+									selectedItemRecipe.craftedItemName,
+									quantity
+								)
+							}
 
 							await modalSubmitInteraction.followUp({
 								ephemeral: true,
@@ -1165,7 +1247,7 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 								components: []
 							})
 						} catch (error) {
-							logger.fatal("Error during crafting:", error)
+							console.error("Error during crafting:", error)
 							await modalSubmitInteraction.followUp({
 								content: "There was an error during the crafting process. Please try again.",
 								ephemeral: true
@@ -1176,15 +1258,17 @@ export async function handleCraftCommand(interaction: ChatInputCommandInteractio
 					}
 
 					buttonCollector.stop()
-					menuCollector.stop()
 				})
+			} else {
+				await updateMenu(currentCategory)
 			}
 		})
 	} catch (error) {
-		logger.error("Error in crafting command:", error)
+		console.error("Error in crafting command:", error)
 		await interaction.reply({ content: "There was an error while processing your request.", ephemeral: true })
 	}
 }
+
 export async function handleTitleSelectCommand(interaction: ChatInputCommandInteraction) {
 	const unlockedTitles = await getUserUnlockedTitles(interaction.user.id)
 
@@ -1758,6 +1842,7 @@ export async function handleJujutsuStatsCommand(interaction) {
 		const userMaxHealth = await getUserMaxHealth(userId)
 		const honors = (await getUserHonours(userId)) || []
 		const transform = await getUserTransformation(userId)
+		const activeTransformationName = transform.length > 0 ? transform[0].name : "None"
 		const userHeavenlyRestriction = await checkUserHasHeavenlyRestriction(userId)
 		const awakening = await getUserAwakening(userId)
 		const rctStats = await getUserReverseCursedTechniqueStats(userId)
@@ -1792,7 +1877,6 @@ export async function handleJujutsuStatsCommand(interaction) {
 			})
 			.join("\n\n")
 
-		// Add domain expansion if present at the top
 		if (userDomain && userDomain !== "None") {
 			techniquesDisplay = `**Domain Expansion: ${userDomain}**\n\n` + techniquesDisplay
 		}
@@ -1811,7 +1895,11 @@ export async function handleJujutsuStatsCommand(interaction) {
 					value: userHeavenlyRestriction ? "Active" : "Inactive",
 					inline: true
 				},
-				{ name: "🔪 Transformation", value: transform || "None", inline: false },
+				{
+					name: "🔪 Transformation",
+					value: activeTransformationName,
+					inline: false
+				},
 				{ name: "💪 RCT Stats", value: formatRCTStats(rctStats) || "Not Obtained", inline: false },
 				{ name: "🌀 Techniques & Domain Expansion", value: techniquesDisplay || "None", inline: false }
 			)
@@ -1889,16 +1977,20 @@ export async function handleGuideCommand(interaction) {
 		default: {
 			const guideEmbed = new EmbedBuilder()
 				.setAuthor({
-					name: "Trello Credits: AtomicApex.",
+					name: "Trello Credits: AtomicApex, Craken Aizen, Mrboby, The Strongest, Ram.",
 					iconURL:
 						"https://media.discordapp.net/attachments/1186763353494925404/1231808785090220042/Snapinsta.app_391524227_1278065773589666_2455587178141689864_n_1080.jpg?ex=66384e54&is=6625d954&hm=d208ac0a522cfc6446265782671b04d4207dd6fd6c102d779f8956ba25d9bec6&=&format=webp&width=554&height=554"
 				})
 				.setColor("#0099ff")
-				.setTitle("Jujutsu Kaisen Bot Guide")
-				.setDescription("JJK Bot, Trello.")
+				.setTitle("JJK Bot Guide")
+				.setDescription("Information.")
 				.addFields({
 					name: "Trello Board",
 					value: "You can find our Trello board at https://trello.com/b/JCCsLUX1/jjk-bot."
+				})
+				.addFields({
+					name: "Commands",
+					value: "Use `/help` to view all available commands.\nUse `/help <command>` to view detailed information about a specific command."
 				})
 				.setFooter({ text: getRandomQuote() })
 
@@ -1977,7 +2069,6 @@ export async function handleVoteCommand(interaction) {
 		.setTimestamp()
 		.setFooter({ text: "Your vote matters!" })
 
-	// Buttons with external emojis for attention
 	const voteButtonTopGG = new ButtonBuilder()
 		.setLabel("Vote on Top.gg + Free Rewards!")
 		.setStyle(ButtonStyle.Link)
@@ -2389,7 +2480,7 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 				const transformationInfo = await getUserTransformation(interaction.user.id)
 
-				if (!transformationInfo) {
+				if (!transformationInfo || transformationInfo.length === 0) {
 					await collectedInteraction.followUp({
 						content: "You do not have a transformation unlocked yet.",
 						ephemeral: true
@@ -2397,7 +2488,9 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					return
 				}
 
-				if (hasHeavenlyRestriction && transformationInfo !== "Heavenly Pact") {
+				const activeTransformation = transformationInfo.find(transformation => transformation.active)
+
+				if (hasHeavenlyRestriction && activeTransformation?.name !== "Heavenly Pact") {
 					await collectedInteraction.followUp({
 						content: "Your Heavenly Restriction negates the use of domain expansion.",
 						ephemeral: true
@@ -2405,12 +2498,12 @@ export async function handleFightCommand(interaction: ChatInputCommandInteractio
 					return
 				}
 
-				if (transformationInfo === "Heavenly Pact") {
-					transformationMap.set(interaction.user.id, transformationInfo)
+				if (activeTransformation?.name === "Heavenly Pact") {
+					transformationMap.set(interaction.user.id, activeTransformation)
 				}
 
 				const transformationObject = TRANSFORMATIONS.find(
-					transformation => transformation.name === transformationInfo
+					transformation => transformation.name === activeTransformation?.name
 				)
 				if (!transformationObject) {
 					logger.error("Invalid transformation found in the database.")
@@ -4805,7 +4898,7 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			if (claimedReinforcement) {
-				await updateUserUnlockedTransformations(userId, ["Cursed Energy Reinforcement"])
+				await updateUserUnlockedTransformations(userId, "Cursed Energy Reinforcement")
 				const reinforcementEmbed = new EmbedBuilder()
 					.setColor(0xff0000)
 					.setTitle("Power Released!")
@@ -4840,7 +4933,7 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			if (claimedNanami) {
-				await updateUserUnlockedTransformations(userId, ["Overtime"])
+				await updateUserUnlockedTransformations(userId, "Overtime")
 				const claimedNanami = new EmbedBuilder()
 					.setColor(0xff0000)
 					.setTitle("Overtime")
@@ -4885,7 +4978,7 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			if (claimedstage3) {
-				await updateUserUnlockedTransformations(userId, ["Awakening"])
+				await updateUserUnlockedTransformations(userId, "Awakening")
 				const curseking = new EmbedBuilder()
 					.setColor(0xff0000)
 					.setTitle("Awakening Unleashed!")
@@ -4902,7 +4995,7 @@ export async function claimQuestsCommand(interaction) {
 			}
 
 			if (claimedkashimo) {
-				await updateUserUnlockedTransformations(userId, ["Maximum Output"])
+				await updateUserUnlockedTransformations(userId, "Maximum Output")
 				const curseking = new EmbedBuilder()
 					.setColor(0xff0000)
 					.setTitle("bzzztbzzz-bzzzt")
@@ -6145,8 +6238,10 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 		await updateUserCommandsUsed(interaction.user.id)
 
 		const currentTransformation = await getUserTransformation(interaction.user.id)
-		const availableTransformations = unlockedTransformations.filter(transformationName => {
-			return transformationName && transformationName.trim() !== currentTransformation
+		const currentTransformationName = currentTransformation.length > 0 ? currentTransformation[0].name : ""
+
+		const availableTransformations = unlockedTransformations.filter(transformation => {
+			return transformation.name && transformation.name.trim() !== currentTransformationName
 		})
 
 		if (availableTransformations.length === 0) {
@@ -6175,9 +6270,7 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 
 			const selectedTransformationName = selectMenuInteraction.values[0]
 
-			await updateUserTransformation(interaction.user.id, selectedTransformationName, {
-				transformation: selectedTransformationName
-			})
+			await updateUserTransformation(interaction.user.id, selectedTransformationName, true) 
 
 			await selectMenuInteraction.editReply({
 				content: `You have equipped ${selectedTransformationName}!`,
@@ -6205,18 +6298,18 @@ export async function handleEquipTransformationCommand(interaction: ChatInputCom
 }
 
 function createTransformationSelectMenu(transformations) {
-	const selectMenu = new SelectMenuBuilder()
+	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("equip_transformation_menu")
 		.setPlaceholder("Select a Transformation")
 
-	transformations.forEach(transformationName => {
-		if (typeof transformationName === "string" && transformationName.trim() !== "") {
+	transformations.forEach(transformation => {
+		if (transformation.name && transformation.name.trim() !== "") {
 			selectMenu.addOptions({
-				label: transformationName,
-				value: transformationName
+				label: transformation.name,
+				value: transformation.name
 			})
 		} else {
-			logger.info("Invalid transformation name:", transformationName)
+			logger.info("Invalid transformation name:", transformation.name)
 		}
 	})
 
@@ -6622,6 +6715,9 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 	const transformname = await getUserTransformation(interaction.user.id)
 	const domainname = await getUserDomain(interaction.user.id)
 
+	// Assuming transformation is an array, get the first active transformation name
+	const activeTransformationName = transformname.length > 0 ? transformname[0].name : "No transformation available"
+
 	const techniqueOptions =
 		userTechniques && userTechniques.length > 0
 			? userTechniques.map(techniqueName => ({
@@ -6644,7 +6740,7 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 		{
 			label: "Transform",
 			value: "transform",
-			description: transformname || "No transformation available",
+			description: activeTransformationName,
 			emoji: {
 				name: "a:blueflame",
 				id: "990539090418098246"
@@ -6857,8 +6953,10 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 			}
 
 			try {
+				const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 				const transformationInfo = await getUserTransformation(interaction.user.id)
-				if (!transformationInfo) {
+
+				if (!transformationInfo || transformationInfo.length === 0) {
 					await collectedInteraction.followUp({
 						content: "You do not have a transformation unlocked yet.",
 						ephemeral: true
@@ -6866,8 +6964,18 @@ export async function handleTame(interaction: ChatInputCommandInteraction) {
 					return
 				}
 
+				const activeTransformation = transformationInfo.find(transformation => transformation.active)
+
+				if (hasHeavenlyRestriction && activeTransformation?.name !== "Heavenly Pact") {
+					await collectedInteraction.followUp({
+						content: "Your Heavenly Restriction negates the use of domain expansion.",
+						ephemeral: true
+					})
+					return
+				}
+
 				const transformationObject = TRANSFORMATIONS.find(
-					transformation => transformation.name === transformationInfo
+					transformation => transformation.name === activeTransformation?.name
 				)
 				if (!transformationObject) {
 					logger.error("Invalid transformation found in the database.")
@@ -8767,7 +8875,7 @@ export async function handleRaidCommand(interaction: CommandInteraction) {
 				.setStyle(ButtonStyle.Secondary)
 
 			const partyCloseTime = Date.now() + 20000
-			const participants: string[] = [interaction.user.id] 
+			const participants: string[] = [interaction.user.id]
 
 			const initialEmbed = new EmbedBuilder()
 				.setColor("#0099ff")
@@ -9981,8 +10089,10 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 						}
 
 						try {
+							const hasHeavenlyRestriction = await checkUserHasHeavenlyRestriction(interaction.user.id)
 							const transformationInfo = await getUserTransformation(interaction.user.id)
-							if (!transformationInfo) {
+
+							if (!transformationInfo || transformationInfo.length === 0) {
 								await collectedInteraction.followUp({
 									content: "You do not have a transformation unlocked yet.",
 									ephemeral: true
@@ -9990,8 +10100,20 @@ export async function handlePvpCommand(interaction: CommandInteraction) {
 								return
 							}
 
+							const activeTransformation = transformationInfo.find(
+								transformation => transformation.active
+							)
+
+							if (hasHeavenlyRestriction && activeTransformation?.name !== "Heavenly Pact") {
+								await collectedInteraction.followUp({
+									content: "Your Heavenly Restriction negates the use of domain expansion.",
+									ephemeral: true
+								})
+								return
+							}
+
 							const transformationObject = TRANSFORMATIONS.find(
-								transformation => transformation.name === transformationInfo
+								transformation => transformation.name === activeTransformation?.name
 							)
 							if (!transformationObject) {
 								console.error("Invalid transformation found in the database.")
@@ -10368,6 +10490,129 @@ export async function handleEquipTitleCommand(interaction: ChatInputCommandInter
 	} catch (error) {
 		logger.error("Error equipping title:", error)
 		await interaction.reply({ content: "An error occurred while equipping the title.", ephemeral: true })
+	}
+}
+
+export async function handleEquipAccessoryCommand(interaction): Promise<void> {
+	const accessoryName = interaction.options.getString("accessory")
+	const userId = interaction.user.id
+
+	console.log(`Received equip command from userId: ${userId} for accessory: ${accessoryName}`)
+
+	try {
+		const updatedUser = await equipAccessory(userId, accessoryName)
+
+		const equippedAccessories = updatedUser.accessories.filter((acc: any) => acc.equipped)
+
+		const sets = equippedAccessories.reduce((acc: any, accessory: any) => {
+			if (accessory.set) {
+				if (!acc[accessory.set]) {
+					acc[accessory.set] = []
+				}
+				acc[accessory.set].push(accessory)
+			}
+			return acc
+		}, {})
+
+		const setBonuses = Object.keys(sets).filter(set => sets[set].length >= 3)
+
+		const embed = new EmbedBuilder()
+			.setTitle("Accessory Equipped")
+			.setDescription(`Accessory "${accessoryName}" equipped successfully!`)
+			.addFields([
+				{
+					name: "Equipped Accessories",
+					value: equippedAccessories.map((acc: any) => `${acc.name} (Slot: ${acc.slot})`).join(", ")
+				}
+			])
+
+		if (setBonuses.length > 0) {
+			embed.addFields([
+				{
+					name: "Set Bonuses",
+					value: setBonuses
+						.map(set => {
+							const bonus = sets[set][0].setBonus
+							return `Set: ${set}, Bonus: ${bonus}`
+						})
+						.join("\n")
+				}
+			])
+		}
+
+		await interaction.reply({ embeds: [embed] })
+		console.log(`Reply sent with embed: ${JSON.stringify(embed)}`)
+	} catch (error) {
+		console.error(`Failed to equip accessory for userId: ${userId}. Error: ${error.message}`)
+		await interaction.reply({ content: `Failed to equip accessory: ${error.message}`, ephemeral: true })
+	}
+}
+
+export async function handleViewAccessoriesCommand(interaction: CommandInteraction): Promise<void> {
+	const userId = interaction.user.id
+
+	try {
+		const accessories = await getUserAccessories(userId)
+
+		const equippedAccessories = accessories.filter(acc => acc.equipped)
+
+		if (equippedAccessories.length === 0) {
+			await interaction.reply({ content: "You have no equipped accessories.", ephemeral: true })
+			return
+		}
+
+		const sets = equippedAccessories.reduce((acc: any, accessory: any) => {
+			if (accessory.set) {
+				if (!acc[accessory.set]) {
+					acc[accessory.set] = []
+				}
+				acc[accessory.set].push(accessory)
+			}
+			return acc
+		}, {})
+
+		// Collect set bonuses
+		const setBonuses = equippedAccessories.reduce((acc: any, accessory: any) => {
+			if (accessory.setBonus) {
+				if (!acc.includes(accessory.setBonus)) {
+					acc.push(accessory.setBonus)
+				}
+			}
+			return acc
+		}, [])
+
+		// Check if sets have at least 3 items to apply set bonuses
+		Object.keys(sets).forEach(set => {
+			if (sets[set].length >= 3) {
+				const bonus = sets[set][0].setBonus
+				if (!setBonuses.includes(bonus)) {
+					setBonuses.push(bonus)
+				}
+			}
+		})
+
+		const embed = new EmbedBuilder()
+			.setTitle("Equipped Accessories")
+			.setDescription("Here are your currently equipped accessories:")
+			.addFields(
+				equippedAccessories.map((acc: any) => ({
+					name: `${acc.name} (Slot: ${acc.slot})`,
+					value: `Set: ${acc.set || "None"}`
+				}))
+			)
+
+		if (setBonuses.length > 0) {
+			embed.addFields([
+				{
+					name: "Set Bonuses",
+					value: setBonuses.join("\n")
+				}
+			])
+		}
+
+		await interaction.reply({ embeds: [embed] })
+	} catch (error) {
+		await interaction.reply({ content: `Failed to fetch accessories: ${error.message}`, ephemeral: true })
 	}
 }
 

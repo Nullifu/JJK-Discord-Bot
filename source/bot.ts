@@ -22,11 +22,9 @@ import {
 import { config as dotenv } from "dotenv"
 import express from "express"
 import log4js from "log4js"
-import { AutoPoster } from "topgg-autoposter"
 import {
 	abandonQuestCommand,
 	claimQuestsCommand,
-	generateCombinedEmbed,
 	handleAcceptTrade,
 	handleAchievementsCommand,
 	handleActiveTradesCommand,
@@ -40,6 +38,7 @@ import {
 	handleDigCommand,
 	handleDomainSelection,
 	handleDonateCommand,
+	handleEquipAccessoryCommand,
 	handleEquipInateClanCommand,
 	handleEquipTechniqueCommand,
 	handleEquipTitleCommand,
@@ -64,17 +63,16 @@ import {
 	handleSearchCommand,
 	handleSellCommand,
 	handleSettingsCommand,
-	handleShikigamiShop,
 	handleShopCommand,
 	handleSupportCommand,
 	handleTame,
 	handleTechniqueShopCommand,
-	handleTestAchievementCommand,
 	handleTradeCommand,
 	handleTutorialCommand,
 	handleUnequipTechniqueCommand,
 	handleUpdateCommand,
 	handleUseItemCommand,
+	handleViewAccessoriesCommand,
 	handleViewEffectsCommand,
 	handleViewSettingsCommand,
 	handleViewShikigami,
@@ -82,7 +80,6 @@ import {
 	handleViewTechniquesCommand,
 	handleVoteCommand,
 	handleWorkCommand,
-	handlecreditcommand,
 	mentorNPCCommand,
 	processTradeSelection,
 	viewQuestsCommand
@@ -90,8 +87,8 @@ import {
 import { checkRegistrationMiddleware } from "./middleware.js"
 import {
 	addItemToUserInventory,
-	getShopLastReset,
 	getUserInventory,
+	getUserUnequippedAccessories,
 	handleToggleHeavenlyRestrictionCommand,
 	initializeDatabase,
 	updateBalance
@@ -339,35 +336,35 @@ client.on("guildCreate", guild => {
 	}
 })
 
-const channelId = "1222537263523696785"
-const statsMessageId = "1222537329378594951"
+// const channelId = "1222537263523696785"
+// const statsMessageId = "1222537329378594951"
 export const MODERATION_CHANNEL_ID = "1233723111619166329"
 
-import cron from "node-cron"
+// import cron from "node-cron"
 
-cron.schedule("*/30 * * * * *", async () => {
-	try {
-		const channel = await client.channels.fetch(channelId).catch(logger.error)
-		if (channel && channel.isTextBased()) {
-			const message = await channel.messages.fetch(statsMessageId).catch(logger.error)
-			if (message) {
-				const lastResetTime = await getShopLastReset().catch(logger.error)
-				if (lastResetTime instanceof Date) {
-					const resetIntervalMs = 1000 * 60 * 60 * 24
-					const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
-					const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
+// cron.schedule("*/30 * * * * *", async () => {
+// 	try {
+// 		const channel = await client.channels.fetch(channelId).catch(logger.error)
+// 		if (channel && channel.isTextBased()) {
+// 			const message = await channel.messages.fetch(statsMessageId).catch(logger.error)
+// 			if (message) {
+// 				const lastResetTime = await getShopLastReset().catch(logger.error)
+// 				if (lastResetTime instanceof Date) {
+// 					const resetIntervalMs = 1000 * 60 * 60 * 24
+// 					const nextResetTime = new Date(lastResetTime.getTime() + resetIntervalMs)
+// 					const discordTimestamp = Math.floor(nextResetTime.getTime() / 1000)
 
-					const embed = await generateCombinedEmbed(client, discordTimestamp)
-					await message.edit({ embeds: [embed] }).catch(logger.error)
-				} else {
-					logger.error("Failed to get the last shop reset time.")
-				}
-			}
-		}
-	} catch (error) {
-		logger.error("Error in scheduled job:", error)
-	}
-})
+// 					const embed = await generateCombinedEmbed(client, discordTimestamp)
+// 					await message.edit({ embeds: [embed] }).catch(logger.error)
+// 				} else {
+// 					logger.error("Failed to get the last shop reset time.")
+// 				}
+// 			}
+// 		}
+// 	} catch (error) {
+// 		logger.error("Error in scheduled job:", error)
+// 	}
+// })
 
 client.setMaxListeners(1000)
 export const digCooldowns = new Map<string, number>()
@@ -400,7 +397,6 @@ const commands = [
 	new SlashCommandBuilder().setName("vote").setDescription("Vote for the bot!"),
 	new SlashCommandBuilder().setName("alert").setDescription("Bot Alerts"),
 	new SlashCommandBuilder().setName("update").setDescription("Recent bot updates!"),
-	new SlashCommandBuilder().setName("activeffects").setDescription("Active item effects"),
 	new SlashCommandBuilder().setName("support").setDescription("Get a link to the support server."),
 	new SlashCommandBuilder()
 		.setName("inventory")
@@ -413,7 +409,6 @@ const commands = [
 	new SlashCommandBuilder().setName("fight").setDescription("Fight Fearsome Curses!"),
 	new SlashCommandBuilder().setName("raid").setDescription("Enter a raid!"),
 	new SlashCommandBuilder().setName("tutorial").setDescription("Get a tutorial on how to play the bot!"),
-	new SlashCommandBuilder().setName("equiptitle").setDescription("Equip a title from your unlocked titles"),
 	new SlashCommandBuilder()
 		.setName("settings")
 		.setDescription("Update your user settings")
@@ -465,10 +460,6 @@ const commands = [
 				)
 		),
 	new SlashCommandBuilder().setName("daily").setDescription("Daily Rewards!"),
-	new SlashCommandBuilder()
-		.setName("equipclan")
-		.setDescription("Equip Inate Clan")
-		.addStringOption(option => option.setName("clan").setDescription("The clan to equip").setRequired(true)),
 
 	new SlashCommandBuilder()
 		.setName("balance")
@@ -537,12 +528,12 @@ const commands = [
 					{ name: "Previous", value: "previous" }
 				)
 		)
-		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(true))
+		.addUserOption(option => option.setName("user").setDescription("The user to trade with").setRequired(false))
 		.addIntegerOption(option =>
-			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(true)
+			option.setName("quantity").setDescription("The quantity of the item to trade").setRequired(false)
 		)
 		.addStringOption(option =>
-			option.setName("item").setDescription("The item to trade").setRequired(true).setAutocomplete(true)
+			option.setName("item").setDescription("The item to trade").setRequired(false).setAutocomplete(true)
 		),
 
 	new SlashCommandBuilder()
@@ -706,6 +697,45 @@ const commands = [
 		)
 		.addSubcommand(subcommand => subcommand.setName("equipform").setDescription("Equip a transformation.")),
 
+	new SlashCommandBuilder()
+		.setName("equip")
+		.setDescription("Equip various items")
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("accessories")
+				.setDescription("Equip an accessory")
+				.addStringOption(option =>
+					option
+						.setName("accessory")
+						.setDescription("The accessory to equip")
+						.setRequired(true)
+						.setAutocomplete(true)
+				)
+		)
+		.addSubcommand(subcommand =>
+			subcommand.setName("title").setDescription("Equip a title from your unlocked titles")
+		)
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName("clan")
+				.setDescription("Equip Inate Clan")
+				.addStringOption(option => option.setName("clan").setDescription("The clan to equip").setRequired(true))
+		)
+		.addSubcommand(subcommand => subcommand.setName("form").setDescription("Equip a transformation")),
+
+	new SlashCommandBuilder()
+		.setName("view")
+		.setDescription("View various information")
+		.addSubcommand(subcommand => subcommand.setName("settings").setDescription("View settings"))
+		.addSubcommand(subcommand => subcommand.setName("effects").setDescription("View effects"))
+		.addSubcommand(subcommand => subcommand.setName("accessories").setDescription("View accessories")),
+
+	new SlashCommandBuilder()
+		.setName("bug")
+		.setDescription("Report a bug")
+		.addStringOption(option => option.setName("description").setDescription("Describe the bug").setRequired(true))
+		.addAttachmentOption(option => option.setName("image").setDescription("Upload an image related to the bug")),
+
 	// ADMIN ONLY COMMANDS
 	new SlashCommandBuilder()
 		.setName("owner-giveitem")
@@ -739,40 +769,7 @@ const commands = [
 				.setName("techniques")
 				.setDescription("Comma-separated list of techniques to add/update")
 				.setRequired(true)
-		),
-	new SlashCommandBuilder()
-		.setName("giveaway")
-		.setDescription("Create a new giveaway")
-		.addStringOption(option =>
-			option.setName("prize").setDescription("The prize for the giveaway").setRequired(true)
 		)
-		.addIntegerOption(option => option.setName("winners").setDescription("The number of winners").setRequired(true))
-		.addStringOption(option =>
-			option
-				.setName("duration")
-				.setDescription("The duration of the giveaway (e.g. 1d, 2h, 30m)")
-				.setRequired(true)
-		)
-		.addBooleanOption(option =>
-			option.setName("is_item").setDescription("Whether the prize is an item or not").setRequired(true)
-		)
-		.addIntegerOption(option =>
-			option
-				.setName("item_quantity")
-				.setDescription("The quantity of the item (if the prize is an item)")
-				.setRequired(false)
-		)
-		.addIntegerOption(option =>
-			option
-				.setName("prize_amount")
-				.setDescription("The amount of the prize (if the prize is not an item)")
-				.setRequired(false)
-		),
-	new SlashCommandBuilder()
-		.setName("bug")
-		.setDescription("Report a bug")
-		.addStringOption(option => option.setName("description").setDescription("Describe the bug").setRequired(true))
-		.addAttachmentOption(option => option.setName("image").setDescription("Upload an image related to the bug"))
 ].map(command => command.toJSON())
 
 const rest = new REST({ version: "10" }).setToken(process.env["DISCORD_BOT_TOKEN"])
@@ -847,6 +844,26 @@ client.on("interactionCreate", async interaction => {
 })
 
 client.on("interactionCreate", async interaction => {
+	if (interaction.isAutocomplete()) {
+		const focusedValue = interaction.options.getFocused()
+		const userId = interaction.user.id
+
+		try {
+			const unequippedAccessories = await getUserUnequippedAccessories(userId)
+
+			const filtered = unequippedAccessories
+				.filter(accessory => accessory.includes(focusedValue))
+				.map(accessory => ({ name: accessory, value: accessory }))
+
+			await interaction.respond(filtered)
+		} catch (error) {
+			console.error("Error fetching accessories:", error)
+			await interaction.respond([])
+		}
+	}
+})
+
+client.on("interactionCreate", async interaction => {
 	if (!interaction.isChatInputCommand()) return
 
 	const chatInputInteraction = interaction as ChatInputCommandInteraction
@@ -857,10 +874,6 @@ client.on("interactionCreate", async interaction => {
 	}
 	if (commandName === "register") {
 		await handleRegisterCommand(chatInputInteraction)
-		return
-	}
-	if (commandName === "credits") {
-		await handlecreditcommand(chatInputInteraction)
 		return
 	}
 
@@ -903,9 +916,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "equip":
 				await handleEquipTechniqueCommand(interaction)
-				break
-			case "equipform":
-				await handleEquipTransformationCommand(interaction)
 				break
 			case "shop":
 				const category = interaction.options.getString("category")
@@ -950,6 +960,25 @@ client.on("interactionCreate", async interaction => {
 			default:
 				await interaction.reply({ content: "Unknown action.", ephemeral: true })
 		}
+	} else if (commandName === "equip") {
+		const action = interaction.options.getString("action")
+
+		switch (action) {
+			case "accessories":
+				await handleEquipAccessoryCommand(interaction)
+				break
+			case "title":
+				await handleEquipTitleCommand(interaction)
+				break
+			case "form":
+				await handleEquipTransformationCommand(interaction)
+				break
+			case "clan":
+				await handleEquipInateClanCommand(interaction)
+				break
+			default:
+				await interaction.reply({ content: "Unknown action.", ephemeral: true })
+		}
 	} else if (commandName === "quests") {
 		const action = interaction.options.getString("action")
 
@@ -978,6 +1007,22 @@ client.on("interactionCreate", async interaction => {
 			default:
 				await interaction.reply({ content: "Unknown action.", ephemeral: true })
 		}
+	} else if (commandName === "view") {
+		const action = interaction.options.getSubcommand()
+
+		switch (action) {
+			case "settings":
+				await handleViewSettingsCommand(interaction)
+				break
+			case "accessories":
+				await handleViewAccessoriesCommand(interaction)
+				break
+			case "effects":
+				await handleViewEffectsCommand(interaction)
+				break
+			default:
+				await interaction.reply({ content: "Unknown action.", ephemeral: true })
+		}
 	} else {
 		switch (commandName) {
 			case "balance":
@@ -985,9 +1030,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "shop":
 				await handleShopCommand(chatInputInteraction)
-				break
-			case "equipclan":
-				await handleEquipInateClanCommand(chatInputInteraction)
 				break
 			case "mentor":
 				await mentorNPCCommand(chatInputInteraction)
@@ -1007,9 +1049,6 @@ client.on("interactionCreate", async interaction => {
 			case "settings":
 				await handleSettingsCommand(chatInputInteraction)
 				break
-			case "viewshikigami":
-				await handleViewShikigami(chatInputInteraction)
-				break
 			case "dig":
 				await handleDigCommand(chatInputInteraction)
 				break
@@ -1018,9 +1057,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "craft":
 				await handleCraftCommand(chatInputInteraction)
-				break
-			case "activeffects":
-				await handleViewEffectsCommand(chatInputInteraction)
 				break
 			case "settingsview":
 				await handleViewSettingsCommand(chatInputInteraction)
@@ -1037,9 +1073,6 @@ client.on("interactionCreate", async interaction => {
 			case "consume":
 				await handleConsumeItem(chatInputInteraction)
 				break
-			case "testachievement":
-				await handleTestAchievementCommand(chatInputInteraction)
-				break
 			case "selectjob":
 				await handleJobSelection(chatInputInteraction)
 				break
@@ -1054,9 +1087,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "use":
 				await handleUseItemCommand(chatInputInteraction)
-				break
-			case "shikigamishop":
-				await handleShikigamiShop(chatInputInteraction)
 				break
 			case "achievements":
 				await handleAchievementsCommand(chatInputInteraction)
@@ -1078,9 +1108,6 @@ client.on("interactionCreate", async interaction => {
 				break
 			case "beg":
 				await handleBegCommand(chatInputInteraction)
-				break
-			case "equiptitle":
-				await handleEquipTitleCommand(chatInputInteraction)
 				break
 			case "stats":
 				await handleViewStats(chatInputInteraction)
@@ -1131,10 +1158,10 @@ client.on("interactionCreate", async interaction => {
 
 ///////////////////////// TOP.GG AUTOPOSTER ///////////////////////////
 
-const poster = AutoPoster(process.env.TOPGG, client)
+// const poster = AutoPoster(process.env.TOPGG, client)
 
-poster.on("posted", stats => {
-	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
-})
+// poster.on("posted", stats => {
+// 	logger.info(`Posted stats to Top.gg | ${stats.serverCount} servers`)
+// })
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

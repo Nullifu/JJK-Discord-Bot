@@ -124,6 +124,11 @@ export function createBar(value: number, maxValue: number): string {
 	return bars.slice(0, percentage) + "░".repeat(10 - percentage)
 }
 
+export interface UserInventoryItem {
+	name: string
+	quantity: number
+}
+
 export interface User {
 	id: string
 	inventory: InventoryItem[]
@@ -136,9 +141,9 @@ export interface User {
 	activeTitle: string
 	lastAlertedVersion: string
 	heavenlyrestriction: string
+	transformation: { name: string; unlocked: boolean; active: boolean }
 	clan?: string | null
 	quests: Quest[]
-	unlockedTransformations: string[]
 	statusEffects: string[]
 	itemEffects: []
 	purchases: Purchase[]

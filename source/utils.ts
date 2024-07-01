@@ -10,8 +10,9 @@ import {
 	SelectMenuBuilder
 } from "discord.js"
 import { RaidDrops, getRaidBossDrop } from "./bossdrops.js"
-import { createClient } from "./bot.js"
+import logger, { createClient } from "./bot.js"
 import { generateHealthBar } from "./fight.js"
+import { UserInventoryItem } from "./interface.js"
 import { benefactors } from "./items jobs.js"
 import {
 	RaidBoss,
@@ -366,11 +367,16 @@ export async function handleRaidEnd(
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
-					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
-					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+					const isHeianEraAwakeningUnlocked = userUnlockedTransformations.some(
+						transformation => transformation.name === "Heian Era Awakening" && transformation.unlocked
+					)
+
+					if (!isHeianEraAwakeningUnlocked) {
+						await updateUserUnlockedTransformations(id, "Heian Era Awakening")
+					}
 				}
 			} catch (error) {
-				console.error(`Error adding item to user inventory for user ${id}:`, error)
+				logger.error(`Error processing drop ${drop.name} for user ${id}:`, error)
 			}
 		}
 
@@ -530,11 +536,16 @@ export async function handleRaidBossDefeat(interaction: CommandInteraction, raid
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
-					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
-					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+					const isHeianEraAwakeningUnlocked = userUnlockedTransformations.some(
+						transformation => transformation.name === "Heian Era Awakening" && transformation.unlocked
+					)
+
+					if (!isHeianEraAwakeningUnlocked) {
+						await updateUserUnlockedTransformations(id, "Heian Era Awakening")
+					}
 				}
 			} catch (error) {
-				console.error(`Error adding item to user inventory for user ${id}:`, error)
+				logger.error(`Error processing drop ${drop.name} for user ${id}:`, error)
 			}
 		}
 	}
@@ -1034,6 +1045,78 @@ export function parseBetAmount(amountString: string, currentBalance: number, max
 	}
 
 	return Math.min(betAmount, maxLimit)
+}
+
+// Function to create the accessories select menu
+export function createAllAccessoriesEmbed(accessories, user) {
+	return new EmbedBuilder()
+		.setTitle(`${user.username}'s Accessories`)
+		.setDescription(
+			accessories
+				.map(accessory => `${accessory.name} - ${accessory.equipped ? "Equipped" : "Not Equipped"}`)
+				.join("\n") || "No accessories available."
+		)
+}
+
+export const createNavigationButtons = (category: string) => {
+	const prevButton = new ButtonBuilder()
+		.setCustomId("prevCategory")
+		.setLabel("⬅️ Previous")
+		.setStyle(ButtonStyle.Secondary)
+		.setDisabled(category === "other")
+
+	const nextButton = new ButtonBuilder()
+		.setCustomId("nextCategory")
+		.setLabel("Next ➡️")
+		.setStyle(ButtonStyle.Secondary)
+		.setDisabled(category === "accessories")
+
+	return new ActionRowBuilder<ButtonBuilder>().addComponents(prevButton, nextButton)
+}
+
+export const createCraftingMenu = (recipes: any, category: string, userInventory: UserInventoryItem[]) => {
+	const inventoryMap = new Map<string, number>(userInventory.map(item => [item.name, item.quantity]))
+
+	const options = Object.keys(recipes)
+		.filter(key => (category === "accessories" ? key === "honored_glasses" : key !== "honored_glasses"))
+		.map(key => {
+			const recipe = recipes[key]
+			const emojiId = recipe.emoji && recipe.emoji.match(/:(\d+)>/)?.[1]
+
+			const maxCraftableAmount = recipe.requiredItems.reduce((min: number, item: any) => {
+				const inventoryQuantity = inventoryMap.get(item.name) || 0
+				const maxCraftableForItem = Math.floor(inventoryQuantity / item.quantity)
+				return Math.min(min, maxCraftableForItem)
+			}, Infinity)
+
+			return {
+				label: recipe.craftedItemName,
+				description: `Craftable Amount: ${maxCraftableAmount}`,
+				value: key,
+				emoji: emojiId ? { id: emojiId } : undefined
+			}
+		})
+		.slice(0, 25) // Ensure no more than 25 options are added
+
+	return new SelectMenuBuilder()
+		.setCustomId(`selectCraftItem_${category}`)
+		.setPlaceholder(`Select an item to craft (${category})`)
+		.addOptions(options)
+}
+
+export function createAccessoriesSelectMenu(accessories) {
+	return new ActionRowBuilder().addComponents(
+		new StringSelectMenuBuilder()
+			.setCustomId("accessory_select")
+			.setPlaceholder("Select to view all accessories")
+			.addOptions(
+				accessories.map(accessory => ({
+					label: accessory.name,
+					description: accessory.equipped ? "Equipped" : "Not Equipped",
+					value: accessory.name
+				}))
+			)
+	)
 }
 
 client.login(process.env["DISCORD_BOT_TOKEN"])

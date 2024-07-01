@@ -236,7 +236,78 @@ const initialTitles = [
 	{ name: "Strongest in History", unlocked: false, active: false }
 ]
 
-const accessories = [{ name: "Satoru Gojo's Blindfold", unlocked: false, equipped: false }]
+const initialAccessories = [
+	{
+		name: "Honored One's Glasses",
+		unlocked: true,
+		equipped: false,
+		set: "Honored One",
+		setBonus: "Perfect Vision: 2x DMG, Always Find Awakened Bosses",
+		slot: "Special",
+		restriction: "take_more_damage"
+	},
+	{
+		name: "Satoru Gojo's Blindfold",
+		unlocked: true,
+		equipped: false,
+		slot: "Head",
+		set: "The Strongest",
+		setBonus: "The Strongest Aura: 2.5x DMG"
+	},
+	{
+		name: "Satoru Gojo's Robe",
+		unlocked: true,
+		equipped: false,
+		slot: "Torso",
+		set: "The Strongest",
+		setBonus: "The Strongest Aura: 2.5x DMG"
+	},
+	{
+		name: "Satoru Gojo's Gloves",
+		unlocked: true,
+		equipped: false,
+		slot: "Arms",
+		set: "The Strongest",
+		setBonus: "The Strongest Aura: 2.5x DMG"
+	},
+	{
+		name: "Mahoraga Wheel",
+		unlocked: true,
+		equipped: false,
+		set: "Divine General",
+		setBonus: "Adaption: Adapt to any environment",
+		slot: "Special",
+		restriction: "no_other_accessories"
+	},
+	{
+		name: "Heian Era Robes",
+		unlocked: true,
+		equipped: false,
+		slot: "All",
+		set: "Curse King",
+		setBonus: "Curse King: 2x Curse DMG"
+	}
+]
+
+const initialDomain = [
+	{ name: "Malevolent Shrine", unlocked: false, active: false },
+	{ name: "Unlimited Void", unlocked: false, active: false },
+	{ name: "Idle Deaths Gamble", unlocked: false, active: false }
+]
+
+export const initialTransformation = [
+	{ name: "Realized Six Eyes", unlocked: false, active: false },
+	{ name: "Heian Era Awakening", unlocked: false, active: false },
+	{ name: "Awakening", unlocked: false, active: false },
+	{ name: "Maximum Output", unlocked: false, active: false },
+	{ name: "Overtime", unlocked: false, active: false },
+	{ name: "Cursed Energy Reinforcement", unlocked: false, active: false },
+	{ name: "Curse Queen", unlocked: false, active: false },
+	{ name: "Six Eyes Release", unlocked: false, active: false },
+	{ name: "Body of Distored Killing", unlocked: false, active: false },
+	{ name: "Curse King", unlocked: false, active: false },
+	{ name: "Strongest Will", unlocked: false, active: false }
+]
 
 export async function userExists(discordId: string): Promise<boolean> {
 	await client.connect()
@@ -254,7 +325,6 @@ export async function addUser(
 	initialExperience: number = 0,
 	initialHealth: number = 100,
 	initialJob: string = "Student",
-	initialBankBalance: number = 0,
 	initialmaxhealth: number = 100
 ): Promise<{ insertedId?: unknown; error?: string }> {
 	try {
@@ -266,15 +336,13 @@ export async function addUser(
 			id,
 			registered: new Date().toISOString(),
 			balance: initialBalance,
-			bankBalance: initialBankBalance,
 			job: initialJob,
 			grade: initialGrade,
 			experience: initialExperience,
 			health: initialHealth,
 			maxhealth: initialmaxhealth,
-			// accessories: accessories,
-			owneddomains: [],
-			domain: null,
+			accessories: initialAccessories,
+			domain: initialDomain,
 			titles: initialTitles,
 			inventory: [],
 			achievements: initialAchievements,
@@ -282,28 +350,26 @@ export async function addUser(
 				unlocked: false,
 				active: false
 			},
-			cursedEnergy: 100,
-			clan: null,
 			techniques: [],
-			transformation: null,
-			unlockedtransformations: [],
+			transformation: initialTransformation,
 			unlockedBosses: [],
 			activeTechniques: [],
 			heavenlytechniques: [],
 			activeheavenlytechniques: [],
 			inateclan: {},
-			activeinateclan: null,
 			level: 1,
 			quests: [],
-			permEffects: [],
-			statusEffects: [],
+			Effects: {
+				permEffects: [],
+				statusEffects: [],
+				itemEffects: [],
+				setBonus: []
+			},
 			betCount: 0,
 			honours: [],
 			purchases: [],
-			itemEffects: [],
 			cooldowns: [],
 			stats: [],
-			unlockedmentors: [],
 			mentors: null,
 			awakening: "Stage Zero",
 			shikigami: [],
@@ -2267,7 +2333,7 @@ export async function getUserUnlockedBosses(userId: string): Promise<string[]> {
 }
 
 // get users transformation
-export async function getUserTransformation(userId: string): Promise<string> {
+export async function getUserTransformation(userId: string): Promise<any[]> {
 	try {
 		await client.connect()
 		const database = client.db(mongoDatabase)
@@ -2275,9 +2341,13 @@ export async function getUserTransformation(userId: string): Promise<string> {
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.transformation : ""
+		if (user && user.transformation) {
+			return user.transformation.filter(transformation => transformation.active)
+		} else {
+			return []
+		}
 	} catch (error) {
-		logger.error(`Error when retrieving transformation for user with ID: ${userId}`, error)
+		logger.error(`Error when retrieving active transformations for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -2286,15 +2356,74 @@ export async function getUserTransformation(userId: string): Promise<string> {
 export async function updateUserTransformation(
 	userId: string,
 	transformationName: string,
-	updateData: { transformation: string }
+	isActive: boolean
 ): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
-		await usersCollection.updateOne({ id: userId }, { $set: updateData })
+		const user = await usersCollection.findOne({ id: userId })
+		if (user) {
+			const transformations = user.transformation.map(transformation => {
+				if (transformation.name === transformationName) {
+					return { ...transformation, active: isActive }
+				}
+				return transformation
+			})
+
+			await usersCollection.updateOne({ id: userId }, { $set: { transformation: transformations } })
+		} else {
+			throw new Error(`User with ID: ${userId} not found`)
+		}
 	} catch (error) {
 		logger.error("Error updating user transformation:", error)
+		throw error
+	}
+}
+
+interface transformationn {
+	name: string
+	unlocked: boolean
+	active: boolean
+}
+
+interface Userr {
+	id: string
+	transformation: transformationn[]
+}
+
+//unlock transformation
+export async function updateUserUnlockedTransformations(userId: string, transformationName: string): Promise<void> {
+	try {
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection<Userr>(usersCollectionName)
+
+		// Check if the transformation already exists
+		const user = await usersCollection.findOne({ "id": userId, "transformation.name": transformationName })
+
+		if (user) {
+			// Update the existing transformation
+			await usersCollection.updateOne(
+				{ "id": userId, "transformation.name": transformationName },
+				{ $set: { "transformation.$.unlocked": true } }
+			)
+		} else {
+			// Add the new transformation
+			await usersCollection.updateOne(
+				{ id: userId },
+				{
+					$push: {
+						transformation: {
+							name: transformationName,
+							unlocked: true,
+							active: false
+						} as transformationn
+					}
+				}
+			)
+		}
+	} catch (error) {
+		console.error("Error unlocking transformation:", error)
 		throw error
 	}
 }
@@ -2346,35 +2475,20 @@ export async function getUserInateClan(userId: string): Promise<{ clan: string; 
 	}
 }
 
-export async function updateUserUnlockedTransformations(
-	userId: string,
-	unlockedtransformations: string[],
-	options?: any
-): Promise<void> {
-	try {
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		await usersCollection.updateOne(
-			{ id: userId },
-			{ $set: { unlockedtransformations } },
-			{ ...options } // Spread the options object
-		)
-	} catch (error) {
-		logger.error("Error updating user unlocked transformations:", error)
-		throw error
-	}
-}
-
 // get user unlocked transformations
-export async function getUserUnlockedTransformations(userId: string): Promise<string[]> {
+export async function getUserUnlockedTransformations(userId: string): Promise<any[]> {
 	try {
+		await client.connect()
 		const database = client.db(mongoDatabase)
 		const usersCollection = database.collection(usersCollectionName)
 
 		const user = await usersCollection.findOne({ id: userId })
 
-		return user ? user.unlockedtransformations : []
+		if (user && user.transformation) {
+			return user.transformation.filter(transformation => transformation.unlocked)
+		} else {
+			return []
+		}
 	} catch (error) {
 		logger.error(`Error when retrieving unlocked transformations for user with ID: ${userId}`, error)
 		throw error
@@ -2796,21 +2910,6 @@ export async function updateUserShikigami(userId: string, newShikigami: UserShik
 		)
 	} catch (error) {
 		logger.error("Error updating user shikigami:", error)
-		throw error
-	}
-}
-
-// get user unlocked mentors
-export async function getUserUnlockedMentors(userId: string): Promise<string[]> {
-	try {
-		const database = client.db(mongoDatabase)
-		const usersCollection = database.collection(usersCollectionName)
-
-		const user = await usersCollection.findOne({ id: userId })
-
-		return user ? user.unlockedmentors : []
-	} catch (error) {
-		logger.error(`Error when retrieving unlocked mentors for user with ID: ${userId}`, error)
 		throw error
 	}
 }
@@ -4305,11 +4404,16 @@ export async function handleRaidBossDefeat(
 
 				if (drop.name === "Heian Era Awakening") {
 					const userUnlockedTransformations = await getUserUnlockedTransformations(id)
-					const updatedUnlockedTransformations = [...userUnlockedTransformations, "Heian Era Awakening"]
-					await updateUserUnlockedTransformations(id, updatedUnlockedTransformations)
+					const isHeianEraAwakeningUnlocked = userUnlockedTransformations.some(
+						transformation => transformation.name === "Heian Era Awakening" && transformation.unlocked
+					)
+
+					if (!isHeianEraAwakeningUnlocked) {
+						await updateUserUnlockedTransformations(id, "Heian Era Awakening")
+					}
 				}
 			} catch (error) {
-				console.error(`Error adding item to user inventory for user ${id}:`, error)
+				logger.error(`Error processing drop ${drop.name} for user ${id}:`, error)
 			}
 		}
 	}
@@ -5227,6 +5331,25 @@ interface Title {
 	active: boolean
 }
 
+export async function getUserAccessories(userId) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { accessories: 1 } })
+
+		if (user && user.accessories) {
+			return user.accessories.filter(acc => acc.unlocked)
+		} else {
+			return []
+		}
+	} catch (error) {
+		logger.error(`Failed to get accessories for user ${userId}:`, error)
+		return []
+	}
+}
+
 export async function addAndUnlockTitle(userId: string, titleName: string): Promise<void> {
 	try {
 		const database = client.db(mongoDatabase)
@@ -5266,6 +5389,247 @@ export async function fetchDonationLogs(userId) {
 
 	return logs
 }
+
+export async function getAvailableAccessories(userId) {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { accessories: 1 } })
+
+		if (user && user.accessories) {
+			return user.accessories.filter(acc => acc.unlocked && !acc.equipped)
+		} else {
+			console.error("No user or accessories found")
+			return []
+		}
+	} catch (error) {
+		console.error(`Failed to get accessories for user ${userId}:`, error)
+		throw error
+	}
+}
+
+// checkUserOwnsAccessory
+export async function checkUserOwnsAccessory(userId: string, accessoryName: string): Promise<boolean> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ "id": userId, "accessories.name": accessoryName })
+
+		return !!user
+	} catch (error) {
+		console.error("Error checking if user owns accessory:", error)
+		throw error
+	}
+}
+
+// equip accessory
+export async function equipAccessory(userId: string, accessoryName: string): Promise<any> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Fetch the current user data
+		const user = await usersCollection.findOne({ id: userId })
+		if (!user) {
+			throw new Error("User not found")
+		}
+
+		// Check if the accessory to be equipped has restrictions
+		const accessoryToEquip = user.accessories.find((acc: any) => acc.name === accessoryName)
+		if (!accessoryToEquip) {
+			throw new Error("Accessory not found")
+		}
+
+		if (accessoryToEquip.restriction === "no_other_accessories") {
+			// If the accessory has a restriction, unequip all other accessories
+			await usersCollection.updateOne({ id: userId }, { $set: { "accessories.$[].equipped": false } })
+
+			// Equip the accessory
+			await usersCollection.updateOne(
+				{ "id": userId, "accessories.name": accessoryName },
+				{ $set: { "accessories.$.equipped": true } }
+			)
+
+			// Set the set bonus directly
+			await usersCollection.updateOne(
+				{ id: userId },
+				{ $set: { "Effects.setBonus": [accessoryToEquip.setBonus] } }
+			)
+		} else {
+			// Check if there is any accessory with the "no_other_accessories" restriction already equipped
+			const restrictedAccessory = user.accessories.find(
+				(acc: any) => acc.equipped && acc.restriction === "no_other_accessories"
+			)
+			if (restrictedAccessory) {
+				throw new Error("Another accessory with the 'no_other_accessories' restriction is already equipped")
+			}
+
+			// Equip the accessory
+			await usersCollection.updateOne(
+				{ "id": userId, "accessories.name": accessoryName },
+				{ $set: { "accessories.$.equipped": true } }
+			)
+
+			// Fetch the updated user data
+			const updatedUser = await usersCollection.findOne({ id: userId })
+
+			// Check for set bonuses
+			const equippedAccessories = updatedUser.accessories.filter((acc: any) => acc.equipped)
+			const sets = equippedAccessories.reduce((acc: any, accessory: any) => {
+				if (accessory.set) {
+					if (!acc[accessory.set]) {
+						acc[accessory.set] = []
+					}
+					acc[accessory.set].push(accessory)
+				}
+				return acc
+			}, {})
+
+			const setBonuses = Object.keys(sets)
+				.filter(set => sets[set].length >= 3)
+				.map(set => sets[set][0].setBonus)
+
+			// Update the user's set bonuses
+			await usersCollection.updateOne({ id: userId }, { $set: { "Effects.setBonus": setBonuses } })
+		}
+
+		// Fetch the updated user data again to return
+		const finalUpdatedUser = await usersCollection.findOne({ id: userId })
+		return finalUpdatedUser
+	} catch (error) {
+		console.error("Error equipping accessory:", error)
+		throw error
+	}
+}
+
+// unlock accessory
+export async function unlockAccessory(userId: string, accessoryName: string): Promise<void> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Fetch the current user data
+		const user = await usersCollection.findOne({ id: userId })
+		if (!user) {
+			throw new Error("User not found")
+		}
+
+		// Check if the accessory is already unlocked
+		const accessory = user.accessories.find((acc: any) => acc.name === accessoryName)
+		if (!accessory) {
+			throw new Error("Accessory not found")
+		}
+
+		if (accessory.unlocked) {
+			throw new Error("Accessory is already unlocked")
+		}
+
+		// Unlock the accessory
+		await usersCollection.updateOne(
+			{ "id": userId, "accessories.name": accessoryName },
+			{ $set: { "accessories.$.unlocked": true } }
+		)
+	} catch (error) {
+		console.error("Error unlocking accessory:", error)
+		throw error
+	}
+}
+
+// unequip accessory
+export async function unequipAccessory(userId: string, accessoryName: string): Promise<any> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		// Fetch the current user data
+		const user = await usersCollection.findOne({ id: userId })
+		if (!user) {
+			throw new Error("User not found")
+		}
+
+		// Unequip the accessory
+		await usersCollection.updateOne(
+			{ "id": userId, "accessories.name": accessoryName },
+			{ $set: { "accessories.$.equipped": false } }
+		)
+
+		// Fetch the updated user data
+		const updatedUser = await usersCollection.findOne({ id: userId })
+
+		// Check for set bonuses
+		const equippedAccessories = updatedUser.accessories.filter((acc: any) => acc.equipped)
+		const sets = equippedAccessories.reduce((acc: any, accessory: any) => {
+			if (accessory.set) {
+				if (!acc[accessory.set]) {
+					acc[accessory.set] = []
+				}
+				acc[accessory.set].push(accessory)
+			}
+			return acc
+		}, {})
+
+		const setBonuses = Object.keys(sets)
+			.filter(set => sets[set].length >= 3)
+			.map(set => sets[set][0].setBonus)
+
+		// Update the user's set bonuses
+		await usersCollection.updateOne({ id: userId }, { $set: { "Effects.setBonus": setBonuses } })
+
+		// Fetch the updated user data again to return
+		const finalUpdatedUser = await usersCollection.findOne({ id: userId })
+		return finalUpdatedUser
+	} catch (error) {
+		console.error("Error unequipping accessory:", error)
+		throw error
+	}
+}
+
+// get user owned accessory
+export async function getUserOwnedAccessories(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { accessories: 1 } })
+
+		if (user && user.accessories) {
+			return user.accessories.filter(acc => acc.unlocked).map(acc => acc.name)
+		} else {
+			return []
+		}
+	} catch (error) {
+		console.error("Error getting user owned accessories:", error)
+		throw error
+	}
+}
+
+export async function getUserUnequippedAccessories(userId: string): Promise<string[]> {
+	try {
+		await client.connect()
+		const database = client.db(mongoDatabase)
+		const usersCollection = database.collection(usersCollectionName)
+
+		const user = await usersCollection.findOne({ id: userId }, { projection: { accessories: 1 } })
+
+		if (user && user.accessories) {
+			return user.accessories.filter(acc => acc.unlocked && !acc.equipped).map(acc => acc.name)
+		} else {
+			return []
+		}
+	} catch (error) {
+		console.error("Error getting user unequipped accessories:", error)
+		throw error
+	}
+}
+
 await client.connect()
 
 client1.login(process.env["DISCORD_BOT_TOKEN"])

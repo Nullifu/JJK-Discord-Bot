@@ -934,7 +934,7 @@ export async function exportRika(interaction, randomOpponent, primaryEmbed, row,
 		const unlockedTransformations = await getUserUnlockedTransformations(interaction.user.id)
 
 		if (!unlockedTransformations.includes("Curse Queen")) {
-			await updateUserUnlockedTransformations(interaction.user.id, ["Curse Queen"])
+			await updateUserUnlockedTransformations(interaction.user.id, "Curse Queen")
 
 			primaryEmbed.setImage("https://i.ytimg.com/vi/dwdsYVRpocc/maxresdefault.jpg")
 			primaryEmbed.setDescription(
